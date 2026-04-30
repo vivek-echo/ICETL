@@ -1,8 +1,13 @@
+[variables]
+NIXPACKS_PHP_VERSION = "8.2"
+
 [phases.setup]
-nixPkgs = ["php", "phpExtensions.pdo", "phpExtensions.pdo_mysql"]
+nixPkgs = ["php", "phpExtensions.pdo", "phpExtensions.pdo_mysql", "composer"]
 
 [phases.install]
-cmds = ["composer install"]
+cmds = [
+  "composer install --no-dev --optimize-autoloader"
+]
 
 [start]
 cmd = "php -S 0.0.0.0:$PORT -t public"
