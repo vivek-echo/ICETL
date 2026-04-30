@@ -11,6 +11,4 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 8080
-
 CMD php -S 0.0.0.0:$PORT -t public
