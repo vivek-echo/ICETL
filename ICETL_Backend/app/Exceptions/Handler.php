@@ -9,15 +9,24 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class Handler extends ExceptionHandler
 {
     public function render($request, Throwable $exception)
     {
-        // Force JSON for API
+        // ✅ Log all exceptions (important)
+        Log::error('Exception Occurred', [
+            'message' => $exception->getMessage(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+        ]);
+
+        // ============================
+        // 🔥 API RESPONSE
+        // ============================
         if ($request->is('api/*') || $request->expectsJson()) {
 
-            // 🔴 Validation Error
             if ($exception instanceof ValidationException) {
                 return response()->json([
                     'status' => false,
@@ -26,7 +35,6 @@ class Handler extends ExceptionHandler
                 ], 422);
             }
 
-            // 🔐 Unauthorized
             if ($exception instanceof AuthenticationException) {
                 return response()->json([
                     'status' => false,
@@ -34,7 +42,6 @@ class Handler extends ExceptionHandler
                 ], 401);
             }
 
-            // 🔍 Model not found
             if ($exception instanceof ModelNotFoundException) {
                 return response()->json([
                     'status' => false,
@@ -42,7 +49,6 @@ class Handler extends ExceptionHandler
                 ], 404);
             }
 
-            // 🌐 HTTP exceptions (404, 403, etc.)
             if ($exception instanceof HttpExceptionInterface) {
                 return response()->json([
                     'status' => false,
@@ -50,7 +56,6 @@ class Handler extends ExceptionHandler
                 ], $exception->getStatusCode());
             }
 
-            // 💥 General error
             return response()->json([
                 'status' => false,
                 'message' => config('app.debug')
@@ -59,19 +64,32 @@ class Handler extends ExceptionHandler
             ], 500);
         }
 
-        return parent::render($request, $exception);
-    }
+        // ============================
+        // 🌐 WEB RESPONSE
+        // ============================
 
-    protected function unauthenticated($request, AuthenticationException $exception)
-    {
-        if ($request->is('api/*') || $request->expectsJson()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthenticated'
-            ], 401);
+        // 🔴 404 Page
+        if (
+            $exception instanceof ModelNotFoundException ||
+            ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() == 404)
+        ) {
+
+            return response()->view('errors.404', [], 404);
         }
 
-        // fallback (not really needed for API, but safe)
-        return redirect()->guest(route('login'));
+        // 🔐 Unauthorized
+        if ($exception instanceof AuthenticationException) {
+            return redirect()->route('login')->with('error', 'Please login first');
+        }
+
+        // 🔒 Forbidden (403)
+        if ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() == 403) {
+            return response()->view('errors.403', [], 403);
+        }
+
+        // 💥 General Error (500)
+        return response()->view('errors.500', [
+            'message' => config('app.debug') ? $exception->getMessage() : null
+        ], 500);
     }
 }
