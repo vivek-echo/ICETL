@@ -190,7 +190,7 @@
 
     function loadRoles() {
         showLoader();
-        fetch('/console/getRolesList')
+        fetch("{{ url('/console/getRolesList') }}")
             .then(res => res.json())
             .then(data => {
                 let select = document.getElementById('roleSelect');
@@ -223,7 +223,7 @@
 
     function loadSavedPermissions(roleId) {
 
-        fetch(`/console/getRolePermissions/${roleId}`)
+        fetch(`{{ url('/console/getRolePermissions') }}/${roleId}`)
             .then(res => res.json())
             .then(data => {
 
@@ -248,7 +248,7 @@
 
     function loadMenuTree(callback = null) {
         showLoader();
-        fetch('/console/getMenuHierarchy')
+        fetch("{{ url('/console/getMenuHierarchy') }}")
             .then(res => res.json())
             .then(data => {
 
@@ -405,7 +405,7 @@
             menuIds.push(c.dataset.id);
         });
         showLoader();
-        fetch('/console/saveRolePermissions', {
+        fetch("{{ url('/console/saveRolePermissions') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

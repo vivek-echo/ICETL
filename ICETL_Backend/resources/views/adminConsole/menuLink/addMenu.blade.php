@@ -106,7 +106,7 @@
     function loadGlobalMenus() {
 
 
-        fetch('/console/getGlobalMenus')
+        fetch("{{ url('/console/getGlobalMenus') }}")
             .then(res => res.json())
             .then(data => {
                 let select = document.getElementById('globalLink');
@@ -125,7 +125,7 @@
         select.innerHTML = '<option>Loading...</option>';
         select.disabled = true;
 
-        fetch(`/console/getPrimaryMenus/${parentId}`)
+        fetch(`{{ url('/console/getPrimaryMenus') }}/${parentId}`)
             .then(res => res.json())
             .then(data => {
                 select.innerHTML = '<option value="">Select Primary Menu</option>';

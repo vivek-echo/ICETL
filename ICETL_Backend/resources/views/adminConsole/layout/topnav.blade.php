@@ -11,9 +11,9 @@
             <a href="/console/dashboard" class="{{ request()->is('console/dashboard') ? 'active' : '' }}">
                 <i class="fa-solid fa-desktop me-1"></i>Dashboard
             </a>
-            <a href="/console/manageRole" class="{{ request()->is('console/manageRole') ? 'active' : '' }}"><i class="fa-solid fa-user-gear me-1"></i>Manage Role</a>
-            <a href="/console/manageMenu" class="{{ request()->is('console/manageMenu') ? 'active' : '' }}"><i class="fa-solid fa-bars me-1"></i>Manage Menu</a>
-            <a href="/console/managePermission" class="{{ request()->is('console/managePermission') ? 'active' : '' }}"><i class="fa-solid fa-file-shield me-1"></i>Manage Menu Permission</a>
+            <a href="{{ url('/console/manageRole') }}" class="{{ request()->is('console/manageRole') ? 'active' : '' }}"><i class="fa-solid fa-user-gear me-1"></i>Manage Role</a>
+            <a href="{{ url('/console/manageMenu') }}" class="{{ request()->is('console/manageMenu') ? 'active' : '' }}"><i class="fa-solid fa-bars me-1"></i>Manage Menu</a>
+            <a href="{{ url('/console/managePermission') }}"  class="{{ request()->is('console/managePermission') ? 'active' : '' }}"><i class="fa-solid fa-file-shield me-1"></i>Manage Menu Permission</a>
             
             <!-- <a href="/console/systemLogs" class="{{ request()->is('console/systemLogs') ? 'active' : '' }}"><i class="fa-solid fa-file-contract me-1"></i>System Logs</a> -->
         </div>

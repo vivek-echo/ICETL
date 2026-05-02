@@ -1,0 +1,40 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.course-card {
+  height: 100%;
+}
+
+.course-card .rbt-card-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.course-card .rbt-card-bottom {
+  margin-top: auto;
+}
+
+.course-card__category {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(47, 87, 239, 0.08);
+  color: #2f57ef;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.course-card__save {
+  border: 0;
+  background: transparent;
+}
+
+.course-card .rbt-meta i,
+.course-card .rbt-btn-link i {
+  margin-right: 8px;
+}

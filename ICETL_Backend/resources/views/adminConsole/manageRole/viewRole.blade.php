@@ -48,7 +48,7 @@
 
         let search = document.getElementById('roleSearch').value;
 
-        fetch(`/console/getRoles?page=${page}&search=${search}`)
+        fetch(`{{ url('/console/getRoles') }}?page=${page}&search=${search}`)
             .then(res => res.json())
             .then(res => {
 

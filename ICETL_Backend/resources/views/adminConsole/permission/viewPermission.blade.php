@@ -88,7 +88,7 @@
     loadRoleDropdown();
 
     function loadRoleDropdown() {
-        fetch('/console/getRolesList')
+        fetch("{{ url('/console/getRolesList') }}")
             .then(res => res.json())
             .then(data => {
                 let select = document.getElementById('viewRoleSelect');
@@ -116,7 +116,7 @@
 
         showLoader();
 
-        fetch(`/console/getRolePermissionsTree/${roleId}`)
+        fetch(`{{ url('/console/getRolePermissionsTree') }}/${roleId}`)
             .then(res => res.json())
             .then(res => {
 

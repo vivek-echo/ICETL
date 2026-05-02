@@ -175,7 +175,7 @@
         <div class="login-right">
             <h4 class="form-title">Login</h4>
 
-            <form method="POST" action="/adminlogin">
+           <form method="POST" action="{{ url('/adminlogin') }}">
                 @csrf
 
                 <!-- Email -->

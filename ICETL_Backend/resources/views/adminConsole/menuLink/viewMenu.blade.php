@@ -1,69 +1,67 @@
+<!-- Header -->
+<div class="table-header">
+    <h5>Menu List</h5>
 
+    <div class="table-actions">
+        <div class="filter-bar">
 
-    <!-- Header -->
-    <div class="table-header">
-        <h5>Menu List</h5>
-
-        <div class="table-actions">
-            <div class="filter-bar">
-
-                <!-- Search -->
-                <div class="filter-item search-box">
-                    <i class="fa fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Search menu...">
-                </div>
-
-                <!-- Type Filter -->
-                <div class="filter-item">
-                    <select id="typeFilter">
-                        <option value="">All Types</option>
-                        <option value="1">Global</option>
-                        <option value="2">Primary</option>
-                        <option value="3">Tabs</option>
-                    </select>
-                </div>
-
-                <!-- Clear -->
-                <div class="filter-item">
-                    <button class="btn-clear" onclick="resetFilters()">
-                        <i class="fa fa-rotate-left"></i> Reset
-                    </button>
-                </div>
-
+            <!-- Search -->
+            <div class="filter-item search-box">
+                <i class="fa fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search menu...">
             </div>
+
+            <!-- Type Filter -->
+            <div class="filter-item">
+                <select id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="1">Global</option>
+                    <option value="2">Primary</option>
+                    <option value="3">Tabs</option>
+                </select>
+            </div>
+
+            <!-- Clear -->
+            <div class="filter-item">
+                <button class="btn-clear" onclick="resetFilters()">
+                    <i class="fa fa-rotate-left"></i> Reset
+                </button>
+            </div>
+
         </div>
     </div>
+</div>
 
-    <!-- Table -->
-    <div class="table-responsive">
-        <table class="modern-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Menu Name</th>
-                    <th>Menu Type</th>
-                    <th>Global</th>
-                    <th>Primary</th>
-                    <th>Menu URL</th>
-                    <th>Menu Icon</th>
-                    <th class="text-end">Action</th>
-                </tr>
-            </thead>
+<!-- Table -->
+<div class="table-responsive">
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Menu Name</th>
+                <th>Menu Type</th>
+                <th>Global</th>
+                <th>Primary</th>
+                <th>Menu URL</th>
+                <th>Menu Icon</th>
+                <th class="text-end">Action</th>
+            </tr>
+        </thead>
 
-            <tbody id="menuTableBody"></tbody>
-        </table>
+        <tbody id="menuTableBody"></tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<div class="table-footer">
+    <span>Showing 1 of 10</span>
+
+    <div class="pagination">
+        <button class="page-btn">Prev</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">Next</button>
     </div>
-
-    <!-- Pagination -->
-    <div class="table-footer">
-        <span>Showing 1 of 10</span>
-
-        <div class="pagination">
-            <button class="page-btn">Prev</button>
-            <button class="page-btn active">1</button>
-            <button class="page-btn">Next</button>
-        </div>
-    </div>
+</div>
 
 
 <script>
@@ -75,8 +73,7 @@
 
         let search = document.getElementById('searchInput').value;
         let type = document.getElementById('typeFilter').value;
-
-        fetch(`/console/getMenus?page=${page}&search=${search}&type=${type}`)
+        fetch(`{{ url('/console/getMenus') }}?page=${page}&search=${search}&type=${type}`)
             .then(res => res.json())
             .then(res => {
 
@@ -177,81 +174,83 @@
 </script>
 
 <script>
-function deleteMenu(id) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "This will delete the menu",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#8e2de2',
-        cancelButtonColor: '#ccc',
-        confirmButtonText: 'Yes, delete it'
-    }).then((result) => {
+    function deleteMenu(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will delete the menu",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#8e2de2',
+            cancelButtonColor: '#ccc',
+            confirmButtonText: 'Yes, delete it'
+        }).then((result) => {
 
-        if (!result.isConfirmed) return;
+            if (!result.isConfirmed) return;
 
-        showLoader();
+            showLoader();
 
-        fetch("{{ route('deleteMenu') }}", {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-            },
-            body: JSON.stringify({ id: id })
-        })
-        .then(async response => {
-            let data = await response.json();
+            fetch("{{ route('deleteMenu') }}", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                    },
+                    body: JSON.stringify({
+                        id: id
+                    })
+                })
+                .then(async response => {
+                    let data = await response.json();
 
-            if (response.status === 200) {
+                    if (response.status === 200) {
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted',
-                    text: data.message,
-                    timer: 1500,
-                    showConfirmButton: false
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        loadMenus(currentPage); // 🔥 refresh table
+                        return;
+                    }
+
+                    if (response.status === 409 || response.status === 422) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Warning',
+                            text: data.message
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Something went wrong'
+                    });
+
+                })
+                .catch(() => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Network Error'
+                    });
+                })
+                .finally(() => {
+                    hideLoader();
                 });
 
-                loadMenus(currentPage); // 🔥 refresh table
-                return;
-            }
-
-            if (response.status === 409 || response.status === 422) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Warning',
-                    text: data.message
-                });
-                return;
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Something went wrong'
-            });
-
-        })
-        .catch(() => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Network Error'
-            });
-        })
-        .finally(() => {
-            hideLoader();
         });
-
-    });
-}
+    }
 </script>
 
 <script>
-function resetFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('typeFilter').value = '';
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('typeFilter').value = '';
 
-    loadMenus(1); // reload table
-}
+        loadMenus(1); // reload table
+    }
 </script>

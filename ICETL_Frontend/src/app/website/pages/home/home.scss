@@ -1,0 +1,142 @@
+:host {
+  display: block;
+}
+
+.rbt-banner-1 .content {
+  position: relative;
+}
+
+.rbt-banner-1 .content .banner-card {
+  z-index: 3;
+}
+
+.rbt-banner-1 .content .banner-card::before,
+.rbt-banner-1 .content .banner-card::after {
+  content: '';
+  position: absolute;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-1);
+  pointer-events: none;
+}
+
+.rbt-banner-1 .content .banner-card::before {
+  inset: 28px -18px 18px 26px;
+  opacity: 0.82;
+  transform: rotate(4deg);
+  z-index: -1;
+}
+
+.rbt-banner-1 .content .banner-card::after {
+  inset: 48px -34px 34px 44px;
+  opacity: 0.56;
+  transform: rotate(8deg);
+  z-index: -2;
+}
+
+.rbt-banner-1 .content .banner-card .rbt-swiper-pagination {
+  position: absolute;
+  inset: auto 0 -24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.hero-pagination-button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #9b9fad;
+  transition: var(--transition);
+}
+
+.hero-pagination-button.is-active {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px #4b57f6;
+}
+
+.hero-pagination-button:hover {
+  background: #7b7f92;
+}
+
+.team-tab-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.team-tab-button .rbt-team-thumbnail {
+  width: 100%;
+}
+
+.team-tab-button.active {
+  opacity: 1;
+}
+
+.rbt-team-tab-thumb li {
+  list-style: none;
+}
+
+.transparent-button svg {
+  display: block;
+}
+
+.rbt-card .rbt-btn-link.left-icon i {
+  margin-right: 6px;
+}
+
+@media (max-width: 991.98px) {
+  .team-tab-button {
+    display: block;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .rbt-banner-1 .content .banner-card::after {
+    display: none;
+  }
+
+  .rbt-banner-1 .content .banner-card::before {
+    inset: 20px -10px 10px 14px;
+  }
+
+  .team-tab-button {
+    max-width: 120px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .rbt-banner-1 .content {
+    min-height: 820px;
+    align-items: flex-start;
+  }
+
+  .rbt-banner-1 .content .inner {
+    max-width: 42%;
+    padding-top: 110px;
+  }
+
+  .rbt-banner-1 .content .shape-wrapper {
+    margin-top: 60px;
+    left: -10px;
+  }
+
+  .rbt-banner-1 .content .banner-card {
+    position: absolute;
+    right: 6%;
+    bottom: 120px;
+    width: 100%;
+    max-width: 390px;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .rbt-banner-1 .content .banner-card {
+    right: 3%;
+    max-width: 360px;
+  }
+}

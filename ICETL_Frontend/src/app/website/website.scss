@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+.website-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.website-shell__content {
+  flex: 1 0 auto;
+}

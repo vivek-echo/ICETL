@@ -19,7 +19,7 @@ Route::get('/', function () {
 });
 
 Route::get('/adminConsoleLoginView', [AdminConsoleController::class, 'adminConsoleLoginView'])->name('login');
-Route::Post('/adminlogin', [AdminConsoleController::class, 'adminConsoleLogin']);
+Route::Post('/adminlogin', [AdminConsoleController::class, 'adminConsoleLogin'])->name('adminlogin');
 Route::POST('/adminLogout', [AdminConsoleController::class, 'adminLogout'])->name('adminLogout');
 
 Route::prefix('console')->middleware(['auth'])->group(function () {

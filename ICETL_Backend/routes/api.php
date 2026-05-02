@@ -24,3 +24,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/check',function(){
+    return response()->json([
+        'check'=>true
+        ]);
+});

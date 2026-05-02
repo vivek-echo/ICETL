@@ -1,0 +1,134 @@
+:host {
+  display: block;
+}
+
+.dashboard-metric,
+.dashboard-panel {
+  height: 100%;
+  padding: 28px;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-metric__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  background: rgba(47, 87, 239, 0.12);
+  color: #2f57ef;
+  font-size: 22px;
+}
+
+.dashboard-metric__value {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.dashboard-metric__label {
+  margin-bottom: 10px;
+}
+
+.dashboard-metric__detail,
+.dashboard-course-item__lesson,
+.dashboard-session-item p {
+  margin-bottom: 0;
+}
+
+.dashboard-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 26px;
+}
+
+.dashboard-panel__title {
+  margin-bottom: 0;
+}
+
+.dashboard-course-list,
+.dashboard-session-list {
+  display: grid;
+  gap: 22px;
+}
+
+.dashboard-course-item {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+}
+
+.dashboard-course-item img {
+  width: 100%;
+  border-radius: 22px;
+}
+
+.dashboard-course-item__title {
+  margin-bottom: 6px;
+}
+
+.dashboard-course-item__mentor {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: #6b7385;
+  font-size: 14px;
+}
+
+.dashboard-course-item__progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.dashboard-course-item__progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: #e8ecf3;
+  overflow: hidden;
+}
+
+.dashboard-course-item__progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f57ef 0%, #6f8df7 100%);
+}
+
+.dashboard-session-item {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.dashboard-session-item__time {
+  font-weight: 700;
+  color: #2f57ef;
+}
+
+.dashboard-panel--accent {
+  background: linear-gradient(135deg, #2f57ef 0%, #6f8df7 100%);
+  color: #ffffff;
+}
+
+.dashboard-panel--accent .subtitle {
+  color: #ffffff;
+}
+
+@media (max-width: 767.98px) {
+  .dashboard-panel__header,
+  .dashboard-course-item,
+  .dashboard-session-item {
+    grid-template-columns: 1fr;
+  }
+}

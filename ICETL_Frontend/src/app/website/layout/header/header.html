@@ -1,0 +1,483 @@
+<header class="rbt-header rbt-header-10">
+  <div class="rbt-sticky-placeholder"></div>
+
+  <div
+    class="rbt-header-top rbt-header-top-1 header-space-betwween bg-not-transparent bg-color-darker"
+  >
+    <div class="container-fluid">
+      <div class="top-expended-wrapper">
+        <div class="top-expended-inner rbt-header-sec align-items-center">
+          <div class="rbt-header-sec-col rbt-header-left d-none d-xl-block">
+            <div class="rbt-header-content">
+              <div class="header-info">
+                <ul class="rbt-information-list">
+                  <li>
+                    <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">
+                      <i class="fab fa-instagram"></i>100k
+                      <span class="d-none d-xxl-block">Followers</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.facebook.com/" target="_blank" rel="noreferrer">
+                      <i class="fab fa-facebook-square"></i>500k
+                      <span class="d-none d-xxl-block">Followers</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a [href]="'tel:' + phoneNumber">
+                      <i class="fas fa-phone-alt"></i>{{ phoneNumber }}
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="rbt-header-sec-col rbt-header-center">
+            <div class="rbt-header-content justify-content-start justify-content-xl-center">
+              <div class="header-info">
+                <div class="rbt-header-top-news">
+                  <div class="inner">
+                    <div class="content">
+                      <span
+                        class="rbt-badge variation-02 bg-color-primary color-white radius-round"
+                      >
+                        New
+                      </span>
+                      <span class="news-text">
+                        <img
+                          src="assets/images/icons/hand-emojji.svg"
+                          alt="Announcement icon"
+                        />
+                        Angular-ready LMS sections rebuilt from the Histudy template.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rbt-header-sec-col rbt-header-right d-none d-xl-block">
+            <div class="rbt-header-content justify-content-start justify-content-lg-end">
+              <div class="header-info">
+                <ul class="social-share-transparent">
+                  @for (social of socialLinks; track social.label) {
+                    <li>
+                      <a [href]="social.href" target="_blank" rel="noreferrer" [attr.aria-label]="social.label">
+                        <i [class]="social.iconClass"></i>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+
+              <div class="rbt-separator"></div>
+
+              <div class="header-info">
+                <ul class="rbt-dropdown-menu switcher-language">
+                  <li class="has-child-menu">
+                    <button
+                      type="button"
+                      class="header-link-button utility-button"
+                      (click)="toggleUtilityMenu('language')"
+                      [attr.aria-expanded]="openUtilityMenu() === 'language'"
+                    >
+                      <img
+                        class="left-image"
+                        [src]="selectedLanguage().flag"
+                        [alt]="selectedLanguage().label"
+                      />
+                      <span class="menu-item">{{ selectedLanguage().label }}</span>
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+
+                    @if (openUtilityMenu() === 'language') {
+                      <ul class="sub-menu header-utility-menu">
+                        @for (language of languages; track language.code) {
+                          <li>
+                            <button
+                              type="button"
+                              class="header-link-button utility-option"
+                              [class.utility-option--active]="selectedLanguage().code === language.code"
+                              (click)="setLanguage(language)"
+                            >
+                              <img class="left-image" [src]="language.flag" [alt]="language.label" />
+                              <span class="menu-item">{{ language.label }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </li>
+                </ul>
+              </div>
+
+              <div class="header-info">
+                <ul class="rbt-dropdown-menu currency-menu">
+                  <li class="has-child-menu">
+                    <button
+                      type="button"
+                      class="header-link-button utility-button"
+                      (click)="toggleUtilityMenu('currency')"
+                      [attr.aria-expanded]="openUtilityMenu() === 'currency'"
+                    >
+                      <span class="menu-item">{{ selectedCurrency() }}</span>
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+
+                    @if (openUtilityMenu() === 'currency') {
+                      <ul class="sub-menu header-utility-menu">
+                        @for (currency of currencies; track currency) {
+                          <li>
+                            <button
+                              type="button"
+                              class="header-link-button utility-option"
+                              [class.utility-option--active]="selectedCurrency() === currency"
+                              (click)="setCurrency(currency)"
+                            >
+                              <span class="menu-item">{{ currency }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="rbt-header-sec-col rbt-header-right d-xl-none">
+            <button
+              type="button"
+              class="topbar-expend-button rbt-round-btn"
+              (click)="toggleTopbar()"
+              [attr.aria-expanded]="isTopbarExpanded()"
+            >
+              <i class="fas" [class.fa-plus]="!isTopbarExpanded()" [class.fa-minus]="isTopbarExpanded()"></i>
+            </button>
+          </div>
+        </div>
+
+        @if (isTopbarExpanded()) {
+          <div class="header-top-mobile-panel d-xl-none">
+            <a class="header-top-mobile-panel__phone" [href]="'tel:' + phoneNumber">
+              <i class="fas fa-phone-alt"></i>{{ phoneNumber }}
+            </a>
+
+            <div class="header-top-mobile-panel__row">
+              <span>Language</span>
+              <div class="header-top-mobile-panel__chips">
+                @for (language of languages; track language.code) {
+                  <button
+                    type="button"
+                    class="header-top-mobile-panel__chip"
+                    [class.is-active]="selectedLanguage().code === language.code"
+                    (click)="setLanguage(language)"
+                  >
+                    {{ language.label }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="header-top-mobile-panel__row">
+              <span>Currency</span>
+              <div class="header-top-mobile-panel__chips">
+                @for (currency of currencies; track currency) {
+                  <button
+                    type="button"
+                    class="header-top-mobile-panel__chip"
+                    [class.is-active]="selectedCurrency() === currency"
+                    (click)="setCurrency(currency)"
+                  >
+                    {{ currency }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="rbt-header-wrapper header-space-betwween header-sticky">
+    <div class="container-fluid">
+      <div class="mainbar-row rbt-navigation-center align-items-center">
+        <div class="header-left rbt-header-content">
+          <div class="header-info">
+            <div class="logo logo-dark">
+              <a routerLink="/" (click)="closeAllMenus()">
+                <img src="assets/images/logo/logo.png" alt="ICETL logo" />
+              </a>
+            </div>
+          </div>
+
+          <div class="header-info d-none d-xl-block">
+            <div
+              class="rbt-category-menu-wrapper rbt-category-update"
+              [class.is-open]="isDesktopCategoryOpen()"
+            >
+              <button
+                type="button"
+                class="rbt-category-btn header-reset-button"
+                (click)="toggleDesktopCategory()"
+                [attr.aria-expanded]="isDesktopCategoryOpen()"
+              >
+                <span class="rbt-offcanvas-trigger md-size icon">
+                  <i class="fas fa-th-large"></i>
+                </span>
+                <span class="category-text d-none d-xl-block">Categories</span>
+              </button>
+
+              @if (isDesktopCategoryOpen()) {
+                @if (activeCategoryPanel(); as panel) {
+                  <div class="category-dropdown-menu d-none d-xl-block category-dropdown-menu--static">
+                    <div class="category-menu-item">
+                      <div class="rbt-vertical-nav">
+                        <ul class="rbt-vertical-nav-list-wrapper vertical-nav-menu">
+                          @for (category of categoryPanels; track category.id) {
+                            <li
+                              class="vertical-nav-item"
+                              [class.active]="activeCategoryId() === category.id"
+                            >
+                              <button
+                                type="button"
+                                class="header-reset-button category-tab-button"
+                                (click)="selectCategory(category.id)"
+                              >
+                                {{ category.label }}
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+
+                      <div class="rbt-vertical-nav-content">
+                        <div class="rbt-vertical-inner tab-content category-panel-content">
+                          <div class="rbt-vertical-single">
+                            <div class="row">
+                              @for (section of panel.sections; track section.title) {
+                                <div class="col-lg-6 col-sm-6 col-6">
+                                  <div class="vartical-nav-content-menu">
+                                    <h3 class="rbt-short-title">{{ section.title }}</h3>
+                                    <ul class="rbt-vertical-nav-list-wrapper">
+                                      @for (link of section.links; track link.label) {
+                                        <li>
+                                          <a [routerLink]="link.route" (click)="closeAllMenus()">
+                                            {{ link.label }}
+                                          </a>
+                                        </li>
+                                      }
+                                    </ul>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+
+                            @if (panel.cta) {
+                              <div class="read-more-btn mt--20">
+                                <a class="rbt-btn-link" [routerLink]="panel.cta.route" (click)="closeAllMenus()">
+                                  {{ panel.cta.label }} <i class="fas fa-arrow-right"></i>
+                                </a>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="rbt-main-navigation d-none d-xl-block">
+          <nav class="mainmenu-nav">
+            <ul class="mainmenu">
+              @for (item of navigation; track item.label) {
+                @if (item.children?.length) {
+                  <li
+                    class="has-menu-child-item position-relative"
+                    [class.open]="openDesktopDropdown() === item.label"
+                  >
+                    <button
+                      type="button"
+                      class="header-link-button mainmenu-button"
+                      (click)="toggleDesktopDropdown(item.label)"
+                      [attr.aria-expanded]="openDesktopDropdown() === item.label"
+                    >
+                      {{ item.label }} <i class="fas fa-chevron-down"></i>
+                    </button>
+
+                    @if (openDesktopDropdown() === item.label) {
+                      <div class="header-dropdown-menu header-dropdown-menu--nav">
+                        @for (child of item.children; track child.label) {
+                          <a class="header-dropdown-menu__item" [routerLink]="child.route" (click)="closeAllMenus()">
+                            <span class="header-dropdown-menu__title">
+                              {{ child.label }}
+                              <i class="feather-arrow-right"></i>
+                            </span>
+                            <span class="header-dropdown-menu__description">
+                              {{ child.description }}
+                            </span>
+                          </a>
+                        }
+                      </div>
+                    }
+                  </li>
+                } @else {
+                  <li>
+                    <a
+                      [routerLink]="item.route ?? '/'"
+                      routerLinkActive="active"
+                      [routerLinkActiveOptions]="{ exact: item.exact === true }"
+                      (click)="closeAllMenus()"
+                    >
+                      {{ item.label }}
+                    </a>
+                  </li>
+                }
+              }
+            </ul>
+          </nav>
+        </div>
+
+        <div class="header-right rbt-header-content">
+          <div class="header-info d-none d-md-block">
+            <a
+              class="rbt-btn btn-sm btn-border-gradient hover-icon-reverse"
+              routerLink="/dashboard"
+              (click)="closeAllMenus()"
+            >
+              Student Login
+            </a>
+          </div>
+
+          <div class="header-info d-none d-md-block">
+            <a
+              class="rbt-btn btn-sm btn-gradient hover-icon-reverse"
+              routerLink="/courses"
+              (click)="closeAllMenus()"
+            >
+              <span class="icon-reverse-wrapper">
+                <span class="btn-text">Enroll Now</span>
+                <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+              </span>
+            </a>
+          </div>
+
+          <div class="header-info d-xl-none">
+            <button
+              type="button"
+              class="rbt-round-btn"
+              (click)="toggleMobileMenu()"
+              [attr.aria-expanded]="isMobileMenuOpen()"
+            >
+              <i class="fas" [class.fa-bars]="!isMobileMenuOpen()" [class.fa-times]="isMobileMenuOpen()"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-menu-overlay" [class.active]="isMobileMenuOpen()" (click)="closeMobileMenu()"></div>
+
+  <aside class="mobile-menu-panel" [class.open]="isMobileMenuOpen()">
+    <div class="mobile-menu-panel__header">
+      <a routerLink="/" (click)="closeAllMenus()">
+        <img src="assets/images/logo/logo.png" alt="ICETL logo" />
+      </a>
+
+      <button type="button" class="rbt-round-btn" (click)="closeMobileMenu()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="mobile-menu-panel__body">
+      <ul class="mobile-menu-list">
+        @for (item of navigation; track item.label) {
+          <li>
+            @if (item.children?.length) {
+              <button
+                type="button"
+                class="mobile-menu-toggle"
+                (click)="toggleMobileSection(item.label)"
+                [attr.aria-expanded]="openMobileSection() === item.label"
+              >
+                <span>{{ item.label }}</span>
+                <i
+                  class="fas"
+                  [class.fa-chevron-down]="openMobileSection() !== item.label"
+                  [class.fa-chevron-up]="openMobileSection() === item.label"
+                ></i>
+              </button>
+
+              @if (openMobileSection() === item.label) {
+                <div class="mobile-submenu">
+                  @for (child of item.children; track child.label) {
+                    <a [routerLink]="child.route" (click)="closeAllMenus()">{{ child.label }}</a>
+                  }
+                </div>
+              }
+            } @else {
+              <a class="mobile-menu-link" [routerLink]="item.route ?? '/'" (click)="closeAllMenus()">
+                <span>{{ item.label }}</span>
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            }
+          </li>
+        }
+      </ul>
+
+      <div class="mobile-menu-panel__section">
+        <button
+          type="button"
+          class="mobile-menu-toggle"
+          (click)="toggleMobileSection('categories')"
+          [attr.aria-expanded]="openMobileSection() === 'categories'"
+        >
+          <span>Popular categories</span>
+          <i
+            class="fas"
+            [class.fa-chevron-down]="openMobileSection() !== 'categories'"
+            [class.fa-chevron-up]="openMobileSection() === 'categories'"
+          ></i>
+        </button>
+
+        @if (openMobileSection() === 'categories') {
+          <div class="mobile-submenu">
+            @for (category of categoryPanels; track category.id) {
+              <a routerLink="/courses" (click)="closeAllMenus()">{{ category.label }}</a>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="mobile-menu-panel__section">
+        <h6 class="mobile-menu-panel__section-title">Follow us</h6>
+        <div class="mobile-menu-panel__socials">
+          @for (social of socialLinks; track social.label) {
+            <a [href]="social.href" target="_blank" rel="noreferrer" [attr.aria-label]="social.label">
+              <i [class]="social.iconClass"></i>
+            </a>
+          }
+        </div>
+      </div>
+
+      <div class="mobile-menu-panel__actions">
+        <a class="rbt-btn btn-sm btn-gradient" routerLink="/courses" (click)="closeAllMenus()">
+          Explore Courses
+        </a>
+        <a class="rbt-btn btn-sm btn-border-gradient" routerLink="/dashboard" (click)="closeAllMenus()">
+          Open Dashboard
+        </a>
+      </div>
+    </div>
+  </aside>
+</header>

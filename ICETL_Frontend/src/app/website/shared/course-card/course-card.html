@@ -1,0 +1,64 @@
+<div class="rbt-card variation-01 rbt-hover course-card">
+  <div class="rbt-card-img">
+    <a [routerLink]="targetRoute()">
+      <img [src]="course().image" [alt]="course().title" />
+      <div class="rbt-badge-3 bg-white">
+        <span>{{ course().badge }}</span>
+        <span>Off</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="rbt-card-body">
+    <div class="rbt-card-top">
+      <div class="rbt-review">
+        <div class="rating">
+          @for (star of stars; track star) {
+            <i class="fas fa-star"></i>
+          }
+        </div>
+        <span class="rating-count">({{ course().reviews }} Reviews)</span>
+      </div>
+
+      <button type="button" class="rbt-round-btn course-card__save" title="Save course">
+        <i class="far fa-bookmark"></i>
+      </button>
+    </div>
+
+    <span class="course-card__category">{{ course().category }}</span>
+
+    <h4 class="rbt-card-title">
+      <a [routerLink]="targetRoute()">{{ course().title }}</a>
+    </h4>
+
+    <ul class="rbt-meta">
+      <li><i class="fas fa-book-open"></i>{{ course().lessons }} Lessons</li>
+      <li><i class="fas fa-users"></i>{{ course().students }} Students</li>
+      <li><i class="fas fa-signal"></i>{{ course().level }}</li>
+    </ul>
+
+    <p class="rbt-card-text">{{ course().description }}</p>
+
+    <div class="rbt-author-meta mb--20">
+      <div class="rbt-avater">
+        <a [routerLink]="targetRoute()">
+          <img [src]="course().authorImage" [alt]="course().author" />
+        </a>
+      </div>
+      <div class="rbt-author-info">
+        By <a [routerLink]="targetRoute()">{{ course().author }}</a> · {{ course().duration }}
+      </div>
+    </div>
+
+    <div class="rbt-card-bottom">
+      <div class="rbt-price">
+        <span class="current-price">${{ course().price }}</span>
+        <span class="off-price">${{ course().originalPrice }}</span>
+      </div>
+
+      <a class="rbt-btn-link" [routerLink]="targetRoute()">
+        View Details <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</div>

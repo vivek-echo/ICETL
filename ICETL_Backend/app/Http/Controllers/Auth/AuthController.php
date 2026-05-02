@@ -60,21 +60,21 @@ class AuthController extends Controller
             $tokenId = explode('|', $token)[0];
 
             // ⏳ Expiry
-            $expiresAt = now()->addMinutes(212);
+            $expiresAt = now()->addMinutes(60);
 
             $tokenModel = $tokenResult->accessToken;
             $tokenModel->expires_at = $expiresAt;
             $tokenModel->save();
 
             // ⚡ Cache in Redis (safe)
-            try {
-                Cache::put("auth_{$tokenId}", [
-                    'id' => $user->id,
-                    'name' => $user->name
-                ], $expiresAt);
-            } catch (\Exception $e) {
-                // Redis failure should NOT break login
-            }
+            // try {
+            //     Cache::put("auth_{$tokenId}", [
+            //         'id' => $user->id,
+            //         'name' => $user->name
+            //     ], $expiresAt);
+            // } catch (\Exception $e) {
+            //     // Redis failure should NOT break login
+            // }
 
             return response()->json([
                 'message' => 'Login successful',

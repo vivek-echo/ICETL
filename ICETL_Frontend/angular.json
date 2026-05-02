@@ -1,0 +1,79 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "analytics": false
+  },
+  "projects": {
+    "ICETL_Frontend": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "src/main.ts",
+            "tsConfig": "tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "favicon.ico",
+                "input": "public",
+                "output": "/"
+              },
+              "src/assets"
+            ],
+            "styles": [
+              "src/assets/css/vendor/bootstrap.min.css",
+              "src/assets/css/plugins/euclid-circulara.css",
+              "src/assets/css/plugins/feather.css",
+              "src/assets/css/plugins/fontawesome.min.css",
+              "src/assets/css/plugins/swiper.css",
+              "src/assets/css/plugins/plyr.css",
+              "src/assets/css/styles.css",
+              "src/styles.scss"
+            ],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true,
+              "outputHashing": "media"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "ICETL_Frontend:build:production"
+            },
+            "development": {
+              "buildTarget": "ICETL_Frontend:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}

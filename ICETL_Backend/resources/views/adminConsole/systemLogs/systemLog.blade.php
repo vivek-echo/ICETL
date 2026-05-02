@@ -70,8 +70,7 @@
         let search = document.getElementById('logSearch').value;
 
         showLoader();
-
-        fetch(`/console/getLogs?page=${page}&search=${search}`)
+        fetch(`{{ url('/console/getLogs') }}?page=${page}&search=${search}`)
             .then(res => res.json())
             .then(res => {
 
