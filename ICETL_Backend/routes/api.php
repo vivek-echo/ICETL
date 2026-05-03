@@ -1,10 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -29,3 +26,6 @@ Route::post('/check',function(){
         'check'=>true
         ]);
 });
+Route::post('/sendOtp', [AuthController::class, 'sendOtp']);
+Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
+Route::post('/completeProfile', [AuthController::class, 'completeProfile']);

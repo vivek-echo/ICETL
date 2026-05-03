@@ -1,0 +1,147 @@
+<!-- <div class="rbt-breadcrumb-default ptb--100 ptb_md--50 ptb_sm--30 bg-gradient-1">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="breadcrumb-inner text-center">
+          <h2 class="title">Login</h2>
+          <ul class="page-list">
+            <li class="rbt-breadcrumb-item"><a routerLink="/">Home</a></li>
+            <li>
+              <div class="icon-right"><i class="feather-chevron-right"></i></div>
+            </li>
+            <li class="rbt-breadcrumb-item active">Login</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> -->
+
+
+<div class="rbt-elements-area bg-color-white rbt-section-gap">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-5">
+
+        <div class="rbt-contact-form contact-form-style-1">
+          <h3 class="title text-center">
+            {{ isOtpSent ? 'Verify Your Account' : 'Login' }}
+          </h3>
+
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit($event)">
+
+            <!-- STEP 1: USER INPUT -->
+            <div class="form-group" *ngIf="!isOtpSent">
+              <input type="text" formControlName="user" placeholder=" " maxlength="10" minlength="10" (keypress)="onlyNumbers($event)" />
+              <label> Mobile *</label>
+
+              <div class="text-danger small mt-1" *ngIf="submitted && loginForm.get('user')?.errors">
+                Mobile is required
+              </div>
+            </div>
+
+            <!-- STEP 1 BUTTON -->
+            <div class="form-submit-group mb-3" *ngIf="!isOtpSent">
+              <button type="button" class="rbt-btn btn-md w-100" (click)="sendOtp()" [disabled]="isLoading">
+                {{ isLoading ? 'Sending...' : 'Proceed' }}
+              </button>
+            </div>
+
+            <!-- STEP 2: OTP -->
+            <div *ngIf="isOtpSent">
+
+              <p class="text-center mb-3">
+                OTP sent to <strong>{{ loginForm.value.user }}</strong>
+              </p>
+
+              <div class="otp-container text-center mb-3">
+                <input *ngFor="let digit of otpArray; let i = index" maxlength="1" type="text" class="otp-input"
+                  (input)="onOtpInput($event, i)" (keydown)="onKeyDown($event, i)" #otpBox />
+              </div>
+
+              <!-- RESEND -->
+              <div class="text-center mb-3">
+                <small *ngIf="timer > 0">
+                  Resend OTP in {{ timer }} sec
+                </small>
+
+                <button *ngIf="timer === 0" type="button" class="btn btn-link" (click)="resendOtp()">
+                  Resend OTP
+                </button>
+              </div>
+
+              <!-- VERIFY BUTTON -->
+              <div class="form-submit-group">
+                <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading">
+                  {{ isLoading ? 'Verifying...' : 'Verify & Login' }}
+                </button>
+              </div>
+
+              <!-- CHANGE NUMBER -->
+              <div class="text-center mt-3">
+                <button type="button" class="btn btn-link" (click)="backToUserInput()">
+                  Change Email / Mobile
+                </button>
+              </div>
+
+            </div>
+
+            <!-- ERROR -->
+            <div class="text-danger mt-3 text-center" *ngIf="errorMessage">
+              {{ errorMessage }}
+            </div>
+
+
+
+          </form>
+        </div>
+
+        <div *ngIf="isNewUser" class="mt-4" [formGroup]="profileForm">
+
+          <h5 class="text-center">Complete Your Profile</h5>
+
+          <!-- NAME -->
+          <div class="form-group">
+            <input type="text" formControlName="name" placeholder=" " />
+            <label>Name *</label>
+
+            <div class="text-danger small mt-1"
+              *ngIf="profileForm.get('name')?.touched && profileForm.get('name')?.errors">
+              <div *ngIf="profileForm.get('name')?.errors?.['required']">
+                Name is required
+              </div>
+              <div *ngIf="profileForm.get('name')?.errors?.['minlength']">
+                Minimum 3 characters required
+              </div>
+            </div>
+          </div>
+
+          <!-- EMAIL -->
+          <div class="form-group">
+            <input type="email" formControlName="email" placeholder=" " />
+            <label>Email *</label>
+
+            <div class="text-danger small mt-1"
+              *ngIf="profileForm.get('email')?.touched && profileForm.get('email')?.errors">
+              <div *ngIf="profileForm.get('email')?.errors?.['required']">
+                Email is required
+              </div>
+              <div *ngIf="profileForm.get('email')?.errors?.['email']">
+                Invalid email format
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBMIT -->
+          <button class="rbt-btn btn-gradient w-100 mt-3" [disabled]="profileForm.invalid || isLoading"
+            (click)="completeProfile()">
+            Continue
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<hr>

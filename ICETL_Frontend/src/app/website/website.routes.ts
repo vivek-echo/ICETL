@@ -23,6 +23,11 @@ export const websiteRoutes: Routes = [
         title: 'Dashboard | ICETL',
       },
       {
+        path: 'login',
+        loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+        title: 'Login | ICETL',
+      },
+      {
         path: '**',
         redirectTo: '',
       },
