@@ -4,10 +4,11 @@ import { HeaderComponent } from '../layout/header/header';
 import { FooterComponent } from '../layout/footer/footer';
 
 @Component({
-  selector: 'app-website',
-  imports: [RouterOutlet, HeaderComponent, FooterComponent],
-  templateUrl: './website.html',
-  styleUrl: './website.scss',
+  selector: 'app-application',
+  imports: [RouterOutlet,HeaderComponent,FooterComponent],
+  templateUrl: './application.html',
+  styleUrl: './application.scss',
 })
-export class WebsiteComponent {
+export class Application {
+
 }

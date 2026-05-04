@@ -205,7 +205,6 @@ class AuthController extends Controller
             Cache::forget($this->getProfileCompletionCacheKey($userKey));
 
             $tokenPayload = $this->issueToken($user);
-
             return response()->json([
                 'success' => true,
                 'is_new_user' => false,
@@ -238,7 +237,14 @@ class AuthController extends Controller
                     $isEmailLogin ? 'email' : $this->newFrontendUserUniqueRule($identifierField),
                 ],
                 'name' => 'required|string|min:3|max:255',
-                'email' => ['required', 'email', 'max:255', $this->newFrontendUserUniqueRule('email')],
+                'email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    Rule::unique('users', 'email')->where(function ($query) {
+                        return $query->where('userType', 1);
+                    }),
+                ],
             ]);
 
             if (!Cache::pull($this->getProfileCompletionCacheKey($userKey))) {
@@ -258,6 +264,7 @@ class AuthController extends Controller
             $attributes = [
                 'name' => trim((string) $request->name),
                 'email' => trim((string) $request->email),
+                'role' => 2
             ];
 
             if ($this->hasUserTypeColumn()) {
@@ -437,6 +444,31 @@ class AuthController extends Controller
     private function buildAuthData(User $user, array $tokenPayload): array
     {
         try {
+            $roleId = $user->role ;
+            
+            Log::debug($user);
+            $role = DB::table('roles')
+                ->where('id', $roleId)
+                ->where('deletedFlag', 0)
+                ->value('roleName');
+
+            $permissions = DB::table('role_menu_permissions')
+                ->where('roleId', $roleId)
+                ->where('deletedFlag', 0)
+                ->value('permissionJson');
+
+            $decoded = json_decode($permissions ?? '{}', true);
+
+            $allowedIds = is_array($decoded)
+                ? array_keys(array_filter($decoded))
+                : [];
+
+            $menus = DB::table('menus')
+                ->where('deletedFlag', 0)
+                ->whereIn('id', $allowedIds)
+                ->orderBy('parentId')
+                ->get();
+
             return [
                 'token' => $tokenPayload['token'],
                 'expires_at' => $tokenPayload['expires_at'],
@@ -444,6 +476,11 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'menus' => $menus,
+                    'dashboard' => [
+                        'dashboardName' => strtolower(trim((string) ($role ?? ''))),
+                        'dashboardUrl' => strtolower(trim((string) ($role ?? ''))) . 'Dashboard'
+                    ]
                 ],
             ];
         } catch (Throwable $e) {

@@ -1,12 +1,15 @@
 import { Injectable } from '@angular/core';
 import Swal from 'sweetalert2';
 
+type AlertIcon = 'success' | 'error' | 'warning' | 'info' | 'question';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AlertHelperService {
-  viewAlert(icon: 'success' | 'error' | 'warning' | 'info' | 'question', title: string, message: string) {
+  viewAlert(icon: AlertIcon, title: string, message: string) {
     return Swal.fire({
+      ...this.getBaseOptions(),
       icon,
       title,
       text: message,
@@ -14,8 +17,9 @@ export class AlertHelperService {
     });
   }
 
-  viewAlertHtml(icon: 'success' | 'error' | 'warning' | 'info' | 'question', title: string, html: string) {
+  viewAlertHtml(icon: AlertIcon, title: string, html: string) {
     return Swal.fire({
+      ...this.getBaseOptions(),
       icon,
       title,
       html,
@@ -46,6 +50,7 @@ export class AlertHelperService {
   // Confirm Dialog
   confirm(message: string, title: string = 'Are you sure?'): Promise<boolean> {
     return Swal.fire({
+      ...this.getBaseOptions(),
       icon: 'question',
       title: title,
       text: message,
@@ -60,6 +65,7 @@ export class AlertHelperService {
   // Loading
   loading(message: string = 'Please wait...') {
     Swal.fire({
+      ...this.getBaseOptions(),
       title: message,
       allowOutsideClick: false,
       didOpen: () => {
@@ -73,7 +79,19 @@ export class AlertHelperService {
     Swal.close();
   }
 
-  private getConfirmButtonColor(icon: 'success' | 'error' | 'warning' | 'info' | 'question'): string {
+  private getBaseOptions() {
+    return {
+      width: '36rem',
+      padding: '2rem',
+      customClass: {
+        popup: 'app-alert-popup',
+        title: 'app-alert-title',
+        htmlContainer: 'app-alert-content'
+      }
+    };
+  }
+
+  private getConfirmButtonColor(icon: AlertIcon): string {
     const colors = {
       success: '#5E35B1',
       error: '#d33',

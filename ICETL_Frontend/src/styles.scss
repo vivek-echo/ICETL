@@ -21,3 +21,32 @@ img {
 button {
   cursor: pointer;
 }
+
+.swal2-popup.app-alert-popup {
+  width: min(36rem, calc(100vw - 32px)) !important;
+  padding: 2rem !important;
+  border-radius: 2rem !important;
+}
+
+.swal2-title.app-alert-title {
+  font-size: 2.6rem !important;
+  line-height: 1.2 !important;
+}
+
+.swal2-html-container.app-alert-content {
+  margin-top: 1.2rem !important;
+  font-size: 1.6rem !important;
+  line-height: 1.6 !important;
+}
+
+.swal2-actions {
+  margin-top: 1.8rem !important;
+}
+
+.swal2-styled.swal2-confirm,
+.swal2-styled.swal2-cancel {
+  min-width: 11rem;
+  padding: 1rem 2rem !important;
+  font-size: 1.5rem !important;
+  border-radius: 999px !important;
+}

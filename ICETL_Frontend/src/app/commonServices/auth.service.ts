@@ -40,6 +40,14 @@ export interface ApiResponse<T> {
   errors?: Record<string, string[]>;
 }
 
+export interface VerifyOtpResponse<T> extends ApiResponse<T> {
+  is_new_user?: boolean;
+}
+
+export interface SendOtpResponse extends ApiResponse<null> {
+  otp?: number | string;
+}
+
 // =======================
 // LOGIN DATA
 // =======================
@@ -79,8 +87,8 @@ export class AuthService {
   // =======================
   // 📩 SEND OTP
   // =======================
-  sendOtp(user: string): Observable<ApiResponse<null>> {
-    return this.http.post<ApiResponse<null>>(
+  sendOtp(user: string): Observable<SendOtpResponse> {
+    return this.http.post<SendOtpResponse>(
       `${this.apiBaseUrl}/sendOtp`,
       { user }
     );
@@ -89,8 +97,8 @@ export class AuthService {
   // =======================
   // ✅ VERIFY OTP LOGIN
   // =======================
-  verifyOtp(payload: VerifyOtpPayload): Observable<ApiResponse<LoginData>> {
-    return this.http.post<ApiResponse<LoginData>>(
+  verifyOtp(payload: VerifyOtpPayload): Observable<VerifyOtpResponse<LoginData>> {
+    return this.http.post<VerifyOtpResponse<LoginData>>(
       `${this.apiBaseUrl}/verifyOtp`,
       payload
     ).pipe(

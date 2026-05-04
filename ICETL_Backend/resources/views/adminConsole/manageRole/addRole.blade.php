@@ -5,7 +5,7 @@
 
     <div class="form-group">
         <label class="form-label">Role Name <span class="text-danger">*</span></label>
-        <input type="text" name="roleName" class="form-control" placeholder="Enter role name">
+        <input type="text" name="roleName" class="form-control" placeholder="Enter role name" oninput="this.value = this.value.replace(/[^a-zA-Z ]/g, '')">
     </div>
 
     <div class="mt-3">
@@ -17,82 +17,96 @@
 </form>
 
 <script>
-document.getElementById('roleForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+    document.getElementById('roleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
 
-    let form = this;
-    let formData = new FormData(form);
+        let form = this;
+        let formData = new FormData(form);
 
-    // Trim
-    let roleName = formData.get('roleName')?.trim();
-    formData.set('roleName', roleName);
+        // Trim
+        let roleName = formData.get('roleName')?.trim();
 
-    if (!roleName) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Validation',
-            text: 'Role name is required'
-        });
-        return;
-    }
+        // remove extra spaces
+        roleName = roleName.replace(/\s+/g, ' ');
 
-    let btn = document.getElementById('roleSubmitBtn');
-    let text = document.getElementById('roleBtnText');
-    let spinner = document.getElementById('roleSpinner');
-
-    btn.disabled = true;
-    text.innerText = "Saving...";
-    spinner.classList.remove('d-none');
-
-    fetch("{{ route('storeRole') }}", {
-        method: "POST",
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-        },
-        body: formData
-    })
-    .then(async res => {
-        let data = await res.json();
-
-        if (res.status === 200) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: data.message,
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            form.reset();
-            return;
-        }
-
-        if (res.status === 409 || res.status === 422) {
+        // validation
+        if (!roleName) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Warning',
-                text: data.message
+                title: 'Validation',
+                text: 'Role name is required'
             });
             return;
         }
 
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: data.message || 'Something went wrong'
-        });
+        if (!/^[A-Za-z ]+$/.test(roleName)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation',
+                text: 'Only alphabets and spaces are allowed'
+            });
+            return;
+        }
 
-    })
-    .catch(() => {
-        Swal.fire({
-            icon: 'error',
-            title: 'Network Error'
-        });
-    })
-    .finally(() => {
-        btn.disabled = false;
-        text.innerText = "Save Role";
-        spinner.classList.add('d-none');
+        formData.set('roleName', roleName);
+
+        let btn = document.getElementById('roleSubmitBtn');
+        let text = document.getElementById('roleBtnText');
+        let spinner = document.getElementById('roleSpinner');
+
+        btn.disabled = true;
+        text.innerText = "Saving...";
+        spinner.classList.remove('d-none');
+
+        fetch("{{ route('storeRole') }}", {
+                method: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                },
+                body: formData
+            })
+            .then(async res => {
+                let data = await res.json();
+
+                if (res.status === 200) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    form.reset();
+                    return;
+                }
+
+                if (res.status === 409 || res.status === 422) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Warning',
+                        text: data.message
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message || 'Something went wrong'
+                });
+
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error'
+                });
+            })
+            .finally(() => {
+                btn.disabled = false;
+                text.innerText = "Save Role";
+                spinner.classList.add('d-none');
+            });
     });
-});
 </script>

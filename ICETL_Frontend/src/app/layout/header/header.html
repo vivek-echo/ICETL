@@ -180,13 +180,13 @@
 
           <div class="header-info d-none d-xl-block">
             <div class="rbt-category-menu-wrapper rbt-category-update" [class.is-open]="isDesktopCategoryOpen()">
-              <button type="button" class="rbt-category-btn header-reset-button" (click)="toggleDesktopCategory()"
+              <!-- <button type="button" class="rbt-category-btn header-reset-button" (click)="toggleDesktopCategory()"
                 [attr.aria-expanded]="isDesktopCategoryOpen()">
                 <span class="rbt-offcanvas-trigger md-size icon">
                   <i class="fas fa-th-large"></i>
                 </span>
                 <span class="category-text d-none d-xl-block">Categories</span>
-              </button>
+              </button> -->
 
               @if (isDesktopCategoryOpen()) {
               @if (activeCategoryPanel(); as panel) {
@@ -277,7 +277,8 @@
               <li>
                 <a [routerLink]="item.route ?? '/'" routerLinkActive="active"
                   [routerLinkActiveOptions]="{ exact: item.exact === true }" (click)="closeAllMenus()">
-                  {{ item.label }}
+                 <!-- <i [class]="item.icon" class="me-1"></i>  -->
+                 {{ item.label }}
                 </a>
               </li>
               }
@@ -294,6 +295,52 @@
             </a>
           </div> -->
 
+          @if (isLoggedIn()) {
+          <div class="header-info d-none d-md-block">
+            <ul class="quick-access">
+              <li class="account-access rbt-user-wrapper right-align-dropdown" [class.is-open]="openUtilityMenu() === 'account'">
+                <a href="#" (click)="toggleAccountMenu($event)" [attr.aria-expanded]="openUtilityMenu() === 'account'"
+                  aria-haspopup="menu" aria-label="Open account menu">
+                  <i class="feather-user"></i>{{ currentUserShortName() }}
+                </a>
+
+                <div class="rbt-user-menu-list-wrapper">
+                  <div class="inner">
+                    <div class="rbt-admin-profile">
+                      <div class="admin-thumbnail header-user-avatar">
+                        <span>{{ userInitials() }}</span>
+                      </div>
+                      <div class="admin-info">
+                        <span class="name">{{ currentUserDisplayName() }}</span>
+                        <span class="admin-info__email">{{ currentUserEmail() }}</span>
+                        <a class="rbt-btn-link color-primary" [routerLink]="profileRoute" (click)="closeAllMenus()">
+                          View Profile
+                        </a>
+                      </div>
+                    </div>
+
+                    <hr class="mt--10 mb--10" />
+
+                    <ul class="user-list-wrapper">
+                      <li>
+                        <a [routerLink]="profileRoute" (click)="closeAllMenus()">
+                          <i class="feather-user"></i>
+                          <span>Profile</span>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#" (click)="logoutUser($event)">
+                          <i class="feather-log-out"></i>
+                          <span>Logout</span>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          } @else {
           <div class="header-info d-none d-md-block">
             <a class="rbt-btn btn-sm btn-gradient hover-icon-reverse" routerLink="/login" (click)="closeAllMenus()">
               <span class="icon-reverse-wrapper">
@@ -303,6 +350,7 @@
               </span>
             </a>
           </div>
+          }
 
           <div class="header-info d-xl-none">
             <button type="button" class="rbt-round-btn" (click)="toggleMobileMenu()"
@@ -385,13 +433,38 @@
         </div>
       </div>
 
+      @if (isLoggedIn()) {
+      <div class="mobile-menu-panel__section mobile-menu-panel__account">
+        <div class="mobile-menu-panel__account-card">
+          <div class="rbt-admin-profile">
+            <div class="admin-thumbnail header-user-avatar">
+              <span>{{ userInitials() }}</span>
+            </div>
+            <div class="admin-info">
+              <span class="name">{{ currentUserDisplayName() }}</span>
+              <span class="admin-info__email">{{ currentUserEmail() }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+
       <div class="mobile-menu-panel__actions">
         <a class="rbt-btn btn-sm btn-gradient" routerLink="/courses" (click)="closeAllMenus()">
           Explore Courses
         </a>
-        <a class="rbt-btn btn-sm btn-border-gradient" routerLink="/dashboard" (click)="closeAllMenus()">
-          Open Dashboard
+        @if (isLoggedIn()) {
+        <a class="rbt-btn btn-sm btn-border-gradient" [routerLink]="profileRoute" (click)="closeAllMenus()">
+          Profile
         </a>
+        <a class="rbt-btn btn-sm btn-white" href="#" (click)="logoutUser($event)">
+          Logout
+        </a>
+        } @else {
+        <a class="rbt-btn btn-sm btn-border-gradient" routerLink="/login" (click)="closeAllMenus()">
+          My Account
+        </a>
+        }
       </div>
     </div>
   </aside>

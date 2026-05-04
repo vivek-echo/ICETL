@@ -1,6 +1,6 @@
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FEATURED_COURSES } from '../../data/site-content';
+import { FEATURED_COURSES } from '../../../data/site-content';
 import { CourseCardComponent } from '../../shared/course-card/course-card';
 
 @Component({

@@ -1,13 +1,21 @@
 import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AlertHelperService } from '../../commonServices/alert-helper-service';
+import { AuthService } from '../../commonServices/auth.service';
 import { HEADER_CATEGORY_PANELS, MAIN_NAVIGATION } from '../../data/site-content';
 
-type UtilityMenu = 'language' | 'currency' | null;
+type UtilityMenu = 'language' | 'currency' | 'account' | null;
 
 interface LanguageOption {
   code: string;
   label: string;
   flag: string;
+}
+
+interface AuthUser {
+  id?: number;
+  name: string;
+  email: string;
 }
 
 @Component({
@@ -17,14 +25,23 @@ interface LanguageOption {
   styleUrl: './header.scss',
 })
 export class HeaderComponent {
+  constructor(){
+    console.log("hedder hits ");
+  }
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly alertHelper = inject(AlertHelperService);
+  private readonly authService = inject(AuthService);
+
   readonly navigation = MAIN_NAVIGATION;
   readonly categoryPanels = HEADER_CATEGORY_PANELS;
+  readonly profileRoute = '/application/studentDashboard';
   readonly socialLinks = [
     { label: 'Facebook', href: 'https://www.facebook.com/', iconClass: 'fab fa-facebook-f' },
     { label: 'Twitter', href: 'https://www.twitter.com/', iconClass: 'fab fa-twitter' },
     { label: 'LinkedIn', href: 'https://www.linkedin.com/', iconClass: 'fab fa-linkedin-in' },
     { label: 'Instagram', href: 'https://www.instagram.com/', iconClass: 'fab fa-instagram' },
   ];
+  
   readonly languages: LanguageOption[] = [
     { code: 'en', label: 'English', flag: 'assets/images/icons/en-us.png' },
     { code: 'fr', label: 'French', flag: 'assets/images/icons/fr.png' },
@@ -42,13 +59,26 @@ export class HeaderComponent {
   readonly openMobileSection = signal<string | null>(null);
   readonly openUtilityMenu = signal<UtilityMenu>(null);
   readonly activeCategoryId = signal(this.categoryPanels[0]?.id ?? '');
+  readonly currentUser = signal<AuthUser | null>(this.readCurrentUser());
+  readonly isLoggedIn = computed(() => this.currentUser() !== null);
+  readonly currentUserDisplayName = computed(() => this.currentUser()?.name ?? 'Learner');
+  readonly currentUserShortName = computed(
+    () => this.currentUserDisplayName().trim().split(/\s+/)[0] || 'Account',
+  );
+  readonly currentUserEmail = computed(() => this.currentUser()?.email || 'Signed in learner');
+  readonly userInitials = computed(() =>
+    this.currentUserDisplayName()
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join(''),
+  );
   readonly activeCategoryPanel = computed(
     () =>
       this.categoryPanels.find((category) => category.id === this.activeCategoryId()) ??
       this.categoryPanels[0],
   );
-
-  private readonly elementRef = inject(ElementRef<HTMLElement>);
 
   toggleTopbar(): void {
     this.isTopbarExpanded.update((isExpanded) => !isExpanded);
@@ -74,6 +104,11 @@ export class HeaderComponent {
     this.openUtilityMenu.update((current) => (current === menu ? null : menu));
     this.openDesktopDropdown.set(null);
     this.isDesktopCategoryOpen.set(false);
+  }
+
+  toggleAccountMenu(event: Event): void {
+    event.preventDefault();
+    this.toggleUtilityMenu('account');
   }
 
   setLanguage(language: LanguageOption): void {
@@ -111,6 +146,23 @@ export class HeaderComponent {
     this.isTopbarExpanded.set(false);
   }
 
+  async logoutUser(event: Event): Promise<void> {
+    event.preventDefault();
+
+    const shouldLogout = await this.alertHelper.confirm(
+      'You will be signed out of your account.',
+      'Confirm logout',
+    );
+
+    if (!shouldLogout) {
+      return;
+    }
+
+    this.currentUser.set(null);
+    this.closeAllMenus();
+    this.authService.logout();
+  }
+
   @HostListener('document:click', ['$event'])
   handleDocumentClick(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target as Node)) {
@@ -122,5 +174,26 @@ export class HeaderComponent {
   @HostListener('document:keydown.escape')
   handleEscape(): void {
     this.closeAllMenus();
+  }
+
+  private readCurrentUser(): AuthUser | null {
+    if (!this.authService.isLoggedIn()) {
+      return null;
+    }
+
+    try {
+      const user = this.authService.getUser() as Partial<AuthUser>;
+
+      return {
+        id: user.id,
+        name: typeof user.name === 'string' && user.name.trim() ? user.name.trim() : 'Learner',
+        email: typeof user.email === 'string' ? user.email.trim() : '',
+      };
+    } catch {
+      return {
+        name: 'Learner',
+        email: '',
+      };
+    }
   }
 }

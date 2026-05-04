@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DASHBOARD_METRICS, DASHBOARD_PROGRESS, UPCOMING_SESSIONS } from '../../data/site-content';
+import { DASHBOARD_METRICS, DASHBOARD_PROGRESS, UPCOMING_SESSIONS } from '../../../data/site-content';
 
 @Component({
   selector: 'app-dashboard',

@@ -1,41 +1,74 @@
 .form-group {
-    label {
-        z-index: 1;
-        pointer-events: none;
-    }
+  label {
+    z-index: 1;
+    pointer-events: none;
+  }
 
-    input,
-    textarea {
-        position: relative;
-        z-index: 2;
+  input,
+  textarea {
+    position: relative;
+    z-index: 2;
+  }
 
-        &::placeholder {
-            color: transparent;
-        }
-    }
+  input:focus ~ label,
+  input.has-value ~ label,
+  input:-webkit-autofill ~ label,
+  textarea:focus ~ label,
+  textarea.has-value ~ label,
+  textarea:-webkit-autofill ~ label {
+    top: -10px;
+    font-size: 12px;
+    color: var(--color-primary);
+  }
 
-    input:focus ~ label,
-    input:not(:placeholder-shown) ~ label,
-    textarea:focus ~ label,
-    textarea:not(:placeholder-shown) ~ label {
-        top: -10px;
-        font-size: 12px;
-        color: var(--color-primary); 
-    }
-
-    input:focus ~ .focus-border,
-    input:not(:placeholder-shown) ~ .focus-border,
-    textarea:focus ~ .focus-border,
-    textarea:not(:placeholder-shown) ~ .focus-border {
-        width: 100%;
-    }
+  input:focus ~ .focus-border,
+  input.has-value ~ .focus-border,
+  input:-webkit-autofill ~ .focus-border,
+  textarea:focus ~ .focus-border,
+  textarea.has-value ~ .focus-border,
+  textarea:-webkit-autofill ~ .focus-border {
+    width: 100%;
+  }
 }
 
+.login-flow-card {
+  padding-top: 42px;
+}
+
+.login-flow-card__header {
+  margin-bottom: 28px;
+}
+
+.login-flow-card__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(45, 40, 255, 0.08);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-flow-card__description {
+  margin: 0;
+  color: var(--color-body);
+}
 
 .otp-container {
   display: flex;
   justify-content: center;
   gap: 10px;
+}
+
+.otp-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .otp-input {
@@ -50,4 +83,22 @@
 .otp-input:focus {
   border-color: #28a745;
   outline: none;
+}
+
+.login-link-button {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

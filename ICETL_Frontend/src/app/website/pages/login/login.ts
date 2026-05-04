@@ -10,7 +10,10 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
-import { AuthService } from '../../../commonServices/auth.service';
+import { environment } from '../../../../environments/environment';
+import { AuthService, SendOtpResponse, VerifyOtpResponse } from '../../../commonServices/auth.service';
+
+type LoginStep = 'identify' | 'otp' | 'profile';
 
 @Component({
   selector: 'app-login',
@@ -25,8 +28,7 @@ export class Login implements OnDestroy {
   submitted = false;
   isLoading = false;
   errorMessage = '';
-  isNewUser = false;
-  isOtpSent = false;
+  currentStep: LoginStep = 'identify';
   otpArray = [0, 1, 2, 3, 4, 5];
   otpValues: string[] = ['', '', '', '', '', ''];
 
@@ -51,6 +53,39 @@ export class Login implements OnDestroy {
     });
   }
 
+  get stepTitle(): string {
+    switch (this.currentStep) {
+      case 'otp':
+        return 'Verify OTP';
+      case 'profile':
+        return 'Complete Your Profile';
+      default:
+        return 'Login';
+    }
+  }
+
+  get stepDescription(): string {
+    switch (this.currentStep) {
+      case 'otp':
+        return `Enter the 6-digit code sent to ${this.loginForm.value.user}.`;
+      case 'profile':
+        return 'Your OTP is verified. Add the remaining details to finish creating the account.';
+      default:
+        return 'Use your mobile number to receive a one-time password and continue.';
+    }
+  }
+
+  get stepLabel(): string {
+    switch (this.currentStep) {
+      case 'otp':
+        return 'Step 2 of 3';
+      case 'profile':
+        return 'Step 3 of 3';
+      default:
+        return 'Step 1 of 3';
+    }
+  }
+
   onlyNumbers(event: KeyboardEvent): boolean {
     const charCode = event.which ? event.which : event.keyCode;
     if (charCode < 48 || charCode > 57) {
@@ -63,27 +98,32 @@ export class Login implements OnDestroy {
   async sendOtp(): Promise<void> {
     this.submitted = true;
 
-    if (this.loginForm.invalid) return;
+    if (this.loginForm.invalid) {
+      return;
+    }
 
     this.isLoading = true;
     this.errorMessage = '';
-    this.isNewUser = false;
+    this.resetOtpValues();
     this.profileForm.reset();
 
     try {
-      const response: any = await lastValueFrom(
-        this.authService.sendOtp(this.loginForm.value.user),
-      );
+      const response = await lastValueFrom(this.authService.sendOtp(this.loginForm.value.user));
 
       if (response.success) {
-        this.otpValues = Array(this.otpArray.length).fill('');
-        this.isOtpSent = true;
+        this.applyOtpFromResponse(response);
+        this.currentStep = 'otp';
         this.startTimer();
         this.isLoading = false;
         this.cdr.detectChanges();
 
         // Wait until the OTP inputs exist in the DOM before focusing.
-        setTimeout(() => this.focusInput(0), 0);
+        setTimeout(() => {
+          const focusIndex = this.getFirstEmptyOtpIndex();
+          if (focusIndex >= 0) {
+            this.focusInput(focusIndex);
+          }
+        }, 0);
         return;
       }
 
@@ -91,33 +131,38 @@ export class Login implements OnDestroy {
       this.isLoading = false;
       this.cdr.detectChanges();
     } catch (error) {
-      console.log(error);
       this.errorMessage = this.getApiErrorMessage(error, 'Failed to send OTP');
       this.isLoading = false;
       this.cdr.detectChanges();
     }
   }
 
-  onOtpInput(event: any, index: number) {
-    const value = event.target.value;
+  onOtpInput(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.trim();
 
     if (!/^[0-9]$/.test(value)) {
-      event.target.value = '';
+      input.value = '';
+      this.otpValues[index] = '';
       return;
     }
 
     this.otpValues[index] = value;
 
-    if (index < this.otpArray.length - 1) this.focusInput(index + 1);
+    if (index < this.otpArray.length - 1) {
+      this.focusInput(index + 1);
+    }
   }
 
-  onKeyDown(event: any, index: number) {
-    if (event.key === 'Backspace' && !event.target.value && index > 0) {
+  onKeyDown(event: KeyboardEvent, index: number): void {
+    const input = event.target as HTMLInputElement;
+
+    if (event.key === 'Backspace' && !input.value && index > 0) {
       this.focusInput(index - 1);
     }
   }
 
-  focusInput(index: number) {
+  focusInput(index: number): void {
     const inputs = this.otpInputs.toArray();
     inputs[index]?.nativeElement.focus();
   }
@@ -126,46 +171,46 @@ export class Login implements OnDestroy {
     return this.otpValues.join('');
   }
 
-  startTimer() {
-    clearInterval(this.interval);
+  startTimer(): void {
+    this.stopTimer(false);
     this.timer = 60;
 
     this.interval = setInterval(() => {
       this.timer--;
 
-      if (this.timer === 0) clearInterval(this.interval);
+      if (this.timer === 0) {
+        this.stopTimer(false);
+      }
 
       this.cdr.detectChanges();
     }, 1000);
   }
 
-  resendOtp() {
-    this.sendOtp();
+  resendOtp(): void {
+    void this.sendOtp();
   }
 
-  backToUserInput() {
-    clearInterval(this.interval);
-    this.timer = 60;
-    this.otpValues = Array(this.otpArray.length).fill('');
+  backToUserInput(): void {
+    this.stopTimer();
+    this.resetOtpValues();
     this.profileForm.reset();
     this.errorMessage = '';
-    this.isNewUser = false;
-    this.isOtpSent = false;
     this.isLoading = false;
+    this.submitted = false;
+    this.currentStep = 'identify';
     this.cdr.detectChanges();
   }
 
-  ngOnDestroy(): void {
-    clearInterval(this.interval);
+  onOtpSubmit(event: SubmitEvent): void {
+    event.preventDefault();
+    this.verifyOtp();
   }
 
-  onSubmit(event: Event) {
-    event.preventDefault();
-
+  verifyOtp(): void {
     const otp = this.getOtp();
 
     if (otp.length !== this.otpArray.length) {
-      this.errorMessage = 'Enter valid 6 digit OTP';
+      this.errorMessage = 'Enter a valid 6 digit OTP';
       return;
     }
 
@@ -178,9 +223,11 @@ export class Login implements OnDestroy {
         otp,
       })
       .subscribe({
-        next: (response: any) => {
+        next: (response: VerifyOtpResponse<unknown>) => {
           if (response.success && response.is_new_user) {
-            this.isNewUser = true;
+            this.stopTimer();
+            this.resetOtpValues();
+            this.currentStep = 'profile';
             this.isLoading = false;
             this.errorMessage = '';
             this.cdr.detectChanges();
@@ -188,8 +235,11 @@ export class Login implements OnDestroy {
           }
 
           if (response.success && response.data) {
-            clearInterval(this.interval);
-            void this.router.navigate(['/application/dashboard']);
+            this.stopTimer();
+            this.isLoading = false;
+            const data: any = response.data;
+            localStorage.setItem('dashboardsetting', data.user.dashboard.dashboardUrl);
+            void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
             return;
           }
 
@@ -205,7 +255,7 @@ export class Login implements OnDestroy {
       });
   }
 
-  completeProfile() {
+  completeProfile(): void {
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
       return;
@@ -220,10 +270,13 @@ export class Login implements OnDestroy {
         ...this.profileForm.value,
       })
       .subscribe({
-        next: (response: any) => {
+        next: (response) => {
           if (response.success && response.data) {
-            clearInterval(this.interval);
-            void this.router.navigate(['/application/dashboard']);
+            console.log(response.data);
+            this.isLoading = false;
+            const data: any = response.data;
+            localStorage.setItem('dashboardsetting', data.user.dashboard.dashboardUrl);
+            void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
             return;
           }
 
@@ -236,24 +289,65 @@ export class Login implements OnDestroy {
           this.isLoading = false;
           this.cdr.detectChanges();
         },
-        complete: () => {
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        },
       });
   }
 
-  private getApiErrorMessage(error: any, fallbackMessage: string): string {
-    const validationErrors = error?.error?.errors;
+  ngOnDestroy(): void {
+    this.stopTimer(false);
+  }
+
+  private resetOtpValues(): void {
+    this.otpValues = Array(this.otpArray.length).fill('');
+  }
+
+  private applyOtpFromResponse(response: SendOtpResponse): void {
+    if (environment.production) {
+      return;
+    }
+
+    const otp = response.otp?.toString().padStart(this.otpArray.length, '0');
+
+    if (!otp) {
+      return;
+    }
+
+    this.otpValues = otp.slice(0, this.otpArray.length).split('');
+  }
+
+  private getFirstEmptyOtpIndex(): number {
+    const index = this.otpValues.findIndex((value) => !value);
+    return index;
+  }
+
+  private stopTimer(resetValue = true): void {
+    clearInterval(this.interval);
+    this.interval = undefined;
+
+    if (resetValue) {
+      this.timer = 60;
+    }
+  }
+
+  private getApiErrorMessage(error: unknown, fallbackMessage: string): string {
+    const apiError = error as {
+      error?: {
+        message?: string;
+        errors?: Record<string, string[]>;
+      };
+    };
+
+    const validationErrors = apiError?.error?.errors;
 
     if (validationErrors) {
       const firstValidationError = Object.values(validationErrors)
         .flat()
         .find((message): message is string => typeof message === 'string' && message.length > 0);
 
-      if (firstValidationError) return firstValidationError;
+      if (firstValidationError) {
+        return firstValidationError;
+      }
     }
 
-    return error?.error?.message || fallbackMessage;
+    return apiError?.error?.message || fallbackMessage;
   }
 }

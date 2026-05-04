@@ -223,6 +223,50 @@
   color: #2f57ef;
 }
 
+.rbt-user-wrapper.is-open .rbt-user-menu-list-wrapper {
+  top: 100%;
+  visibility: visible;
+  opacity: 1;
+  clip: rect(0px, 100vw, 200vh, -30px);
+  transition: clip 0.6s linear, opacity 0.4s linear;
+}
+
+.header-user-avatar {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(47, 87, 239, 0.16);
+  background: linear-gradient(135deg, rgba(47, 87, 239, 0.12), rgba(249, 182, 75, 0.16));
+  color: #192335;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-info__email {
+  display: block;
+  margin: 6px 0 8px;
+  color: #6b7385;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mobile-menu-panel__account {
+  margin-top: 24px;
+}
+
+.mobile-menu-panel__account-card {
+  padding: 18px;
+  border: 1px solid #eef1f7;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
+}
+
 .mainmenu-button i,
 .utility-button i,
 .mobile-menu-toggle i {

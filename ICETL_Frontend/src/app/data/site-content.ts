@@ -8,6 +8,7 @@ export interface NavItem {
   label: string;
   route?: string;
   exact?: boolean;
+  icon?: string;
   children?: NavChild[];
 }
 
@@ -118,35 +119,36 @@ export const MAIN_NAVIGATION: NavItem[] = [
     label: 'Home',
     route: '/',
     exact: true,
+    icon: 'fa-solid fa-house-chimney',
   },
-  {
-    label: 'Courses',
-    route: '/courses',
-  },
+  // {
+  //   label: 'Courses',
+  //   route: '/courses',
+  // },
   {
     label: 'Dashboard',
-    route: '/dashboard',
+    route: '/application/' + localStorage.getItem('dashboardsetting'),
   },
-  {
-    label: 'Resources',
-    children: [
-      {
-        label: 'Browse Programs',
-        route: '/courses',
-        description: 'Explore catalog sections, learning paths, and featured cohorts.',
-      },
-      {
-        label: 'Student Workspace',
-        route: '/dashboard',
-        description: 'Track progress, upcoming sessions, and certifications in one place.',
-      },
-      {
-        label: 'Get Started',
-        route: '/',
-        description: 'Return to the main landing experience and onboarding calls to action.',
-      },
-    ],
-  },
+  // {
+  //   label: 'Resources',
+  //   children: [
+  //     {
+  //       label: 'Browse Programs',
+  //       route: '/courses',
+  //       description: 'Explore catalog sections, learning paths, and featured cohorts.',
+  //     },
+  //     {
+  //       label: 'Student Workspace',
+  //       route: '/dashboard',
+  //       description: 'Track progress, upcoming sessions, and certifications in one place.',
+  //     },
+  //     {
+  //       label: 'Get Started',
+  //       route: '/',
+  //       description: 'Return to the main landing experience and onboarding calls to action.',
+  //     },
+  //   ],
+  // },
 ];
 
 export const HEADER_CATEGORY_PANELS: HeaderCategoryPanel[] = [
@@ -331,7 +333,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Intermediate',
     duration: '8 weeks',
     badge: '-46%',
-    description: 'Build standalone Angular apps with routing, signals, forms, and reusable UI patterns.',
+    description:
+      'Build standalone Angular apps with routing, signals, forms, and reusable UI patterns.',
     route: '/courses',
   },
   {
@@ -349,7 +352,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Advanced',
     duration: '10 weeks',
     badge: '-47%',
-    description: 'Learn scalable component architecture, design systems, and performance workflows.',
+    description:
+      'Learn scalable component architecture, design systems, and performance workflows.',
     route: '/courses',
   },
   {
@@ -367,7 +371,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Beginner',
     duration: '6 weeks',
     badge: '-46%',
-    description: 'Move from research insight to polished UI concepts and stakeholder-ready prototypes.',
+    description:
+      'Move from research insight to polished UI concepts and stakeholder-ready prototypes.',
     route: '/courses',
   },
   {
@@ -385,7 +390,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Intermediate',
     duration: '5 weeks',
     badge: '-45%',
-    description: 'Build repeatable campaigns with sharper measurement, messaging, and growth loops.',
+    description:
+      'Build repeatable campaigns with sharper measurement, messaging, and growth loops.',
     route: '/courses',
   },
   {
@@ -403,7 +409,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Intermediate',
     duration: '4 weeks',
     badge: '-45%',
-    description: 'Translate metrics into decisions with crisp dashboards, narratives, and clear KPIs.',
+    description:
+      'Translate metrics into decisions with crisp dashboards, narratives, and clear KPIs.',
     route: '/courses',
   },
   {
@@ -421,7 +428,8 @@ export const FEATURED_COURSES: Course[] = [
     level: 'Manager',
     duration: '4 weeks',
     badge: '-44%',
-    description: 'Lead one-on-ones, feedback loops, and delivery rituals without losing team trust.',
+    description:
+      'Lead one-on-ones, feedback loops, and delivery rituals without losing team trust.',
     route: '/courses',
   },
 ];
@@ -447,22 +455,26 @@ export const HOME_HIGHLIGHTS: HighlightItem[] = [
 export const HOME_BENEFITS: HighlightItem[] = [
   {
     title: 'Template look, Angular behavior',
-    description: 'Keep the purchased Histudy visual language while rebuilding interactions with component state.',
+    description:
+      'Keep the purchased Histudy visual language while rebuilding interactions with component state.',
     iconClass: 'fas fa-code-branch',
   },
   {
     title: 'Scalable page architecture',
-    description: 'Separate layout, page routes, shared UI, and content data to reduce coupling as the LMS grows.',
+    description:
+      'Separate layout, page routes, shared UI, and content data to reduce coupling as the LMS grows.',
     iconClass: 'fas fa-sitemap',
   },
   {
     title: 'No jQuery dependency',
-    description: 'Menus, dropdowns, filters, and dashboard widgets are driven with Angular bindings only.',
+    description:
+      'Menus, dropdowns, filters, and dashboard widgets are driven with Angular bindings only.',
     iconClass: 'fas fa-ban',
   },
   {
     title: 'Ready for richer integrations',
-    description: 'The structure is prepared for Swiper, Plyr, APIs, course detail pages, and auth flows later on.',
+    description:
+      'The structure is prepared for Swiper, Plyr, APIs, course detail pages, and auth flows later on.',
     iconClass: 'fas fa-rocket',
   },
 ];
