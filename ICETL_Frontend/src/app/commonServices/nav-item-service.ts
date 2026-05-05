@@ -1,0 +1,48 @@
+import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
+
+export interface NavItem {
+  label: string;
+  route?: string;
+  exact?: boolean;
+  icon?: string;
+  children?: NavItem[]; // ✅ IMPORTANT
+  description?: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class NavigationService {
+  private navItems = new BehaviorSubject<NavItem []>([]);
+  navItems$ = this.navItems.asObservable();
+
+  constructor() {
+    this.loadNavigation();
+  }
+
+  loadNavigation() {
+    const dashboardRaw = localStorage.getItem('dashboardsetting');
+    let dashboard = null;
+
+    try {
+      dashboard = dashboardRaw ? JSON.parse(dashboardRaw) : null;
+    } catch (e) {}
+
+    const nav: NavItem [] = [
+      {
+        label: 'Home',
+        route: '/',
+        exact: true,
+        icon: 'fa-solid fa-house-chimney',
+      },
+    ];
+
+    if (dashboard) {
+      nav.push({
+        label: dashboard.dashboardName || '',
+        route: '/application/' + (dashboard.dashboardUrl || ''),
+      });
+    }
+
+    this.navItems.next(nav);
+  }
+}

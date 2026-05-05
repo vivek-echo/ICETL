@@ -248,41 +248,56 @@
         <div class="rbt-main-navigation d-none d-xl-block">
           <nav class="mainmenu-nav">
             <ul class="mainmenu">
+
+              @if (navItems$ | async; as navigation) {
+
               @for (item of navigation; track item.label) {
+
               @if (item.children?.length) {
               <li class="has-menu-child-item position-relative" [class.open]="openDesktopDropdown() === item.label">
+
                 <button type="button" class="header-link-button mainmenu-button"
                   (click)="toggleDesktopDropdown(item.label)"
                   [attr.aria-expanded]="openDesktopDropdown() === item.label">
+
                   {{ item.label }} <i class="fas fa-chevron-down"></i>
                 </button>
 
                 @if (openDesktopDropdown() === item.label) {
                 <div class="header-dropdown-menu header-dropdown-menu--nav">
+
                   @for (child of item.children; track child.label) {
                   <a class="header-dropdown-menu__item" [routerLink]="child.route" (click)="closeAllMenus()">
+
                     <span class="header-dropdown-menu__title">
                       {{ child.label }}
                       <i class="feather-arrow-right"></i>
                     </span>
+
                     <span class="header-dropdown-menu__description">
                       {{ child.description }}
                     </span>
                   </a>
                   }
+
                 </div>
                 }
+
               </li>
               } @else {
               <li>
                 <a [routerLink]="item.route ?? '/'" routerLinkActive="active"
                   [routerLinkActiveOptions]="{ exact: item.exact === true }" (click)="closeAllMenus()">
-                 <!-- <i [class]="item.icon" class="me-1"></i>  -->
-                 {{ item.label }}
+
+                  {{ item.label }}
                 </a>
               </li>
               }
+
               }
+
+              }
+
             </ul>
           </nav>
         </div>
@@ -298,7 +313,8 @@
           @if (isLoggedIn()) {
           <div class="header-info d-none d-md-block">
             <ul class="quick-access">
-              <li class="account-access rbt-user-wrapper right-align-dropdown" [class.is-open]="openUtilityMenu() === 'account'">
+              <li class="account-access rbt-user-wrapper right-align-dropdown"
+                [class.is-open]="openUtilityMenu() === 'account'">
                 <a href="#" (click)="toggleAccountMenu($event)" [attr.aria-expanded]="openUtilityMenu() === 'account'"
                   aria-haspopup="menu" aria-label="Open account menu">
                   <i class="feather-user"></i>{{ currentUserShortName() }}
@@ -377,6 +393,7 @@
     </div>
 
     <div class="mobile-menu-panel__body">
+      @if (navItems$ | async; as navigation) {
       <ul class="mobile-menu-list">
         @for (item of navigation; track item.label) {
         <li>
@@ -404,6 +421,7 @@
         </li>
         }
       </ul>
+      }
 
       <div class="mobile-menu-panel__section">
         <button type="button" class="mobile-menu-toggle" (click)="toggleMobileSection('categories')"

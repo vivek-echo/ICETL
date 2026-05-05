@@ -1,8 +1,10 @@
 import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AlertHelperService } from '../../commonServices/alert-helper-service';
 import { AuthService } from '../../commonServices/auth.service';
-import { HEADER_CATEGORY_PANELS, MAIN_NAVIGATION } from '../../data/site-content';
+import { HEADER_CATEGORY_PANELS } from '../../data/site-content';
+import { NavigationService } from '../../commonServices/nav-item-service';
+import { AsyncPipe } from '@angular/common';
 
 type UtilityMenu = 'language' | 'currency' | 'account' | null;
 
@@ -20,19 +22,17 @@ interface AuthUser {
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, AsyncPipe],
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
 export class HeaderComponent {
-  constructor(){
-    console.log("hedder hits ");
-  }
+  private readonly navItemService = inject(NavigationService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly alertHelper = inject(AlertHelperService);
   private readonly authService = inject(AuthService);
-
-  readonly navigation = MAIN_NAVIGATION;
+  private readonly router = inject(Router);
+  navItems$ = this.navItemService.navItems$;
   readonly categoryPanels = HEADER_CATEGORY_PANELS;
   readonly profileRoute = '/application/studentDashboard';
   readonly socialLinks = [
@@ -41,7 +41,7 @@ export class HeaderComponent {
     { label: 'LinkedIn', href: 'https://www.linkedin.com/', iconClass: 'fab fa-linkedin-in' },
     { label: 'Instagram', href: 'https://www.instagram.com/', iconClass: 'fab fa-instagram' },
   ];
-  
+
   readonly languages: LanguageOption[] = [
     { code: 'en', label: 'English', flag: 'assets/images/icons/en-us.png' },
     { code: 'fr', label: 'French', flag: 'assets/images/icons/fr.png' },
@@ -154,13 +154,27 @@ export class HeaderComponent {
       'Confirm logout',
     );
 
-    if (!shouldLogout) {
-      return;
-    }
+    if (!shouldLogout) return;
+
+    this.authService.logout().subscribe({
+      next: () => {
+        this.handleLogoutSuccess();
+      },
+      error: () => {
+        // Even if API fails, force logout locally
+        this.handleLogoutSuccess();
+      },
+    });
+  }
+
+  private handleLogoutSuccess(): void {
+    localStorage.clear(); // or remove specific keys
 
     this.currentUser.set(null);
     this.closeAllMenus();
-    this.authService.logout();
+    this.navItemService.loadNavigation();
+
+    this.router.navigate(['/login']);
   }
 
   @HostListener('document:click', ['$event'])

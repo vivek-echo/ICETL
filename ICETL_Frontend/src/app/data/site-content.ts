@@ -113,7 +113,14 @@ export interface FooterLinkGroup {
   title: string;
   links: FooterLink[];
 }
+const dashboardSettingRaw = localStorage.getItem('dashboardsetting');
+let dashboardSetting: any = null;
 
+try {
+  dashboardSetting = dashboardSettingRaw ? JSON.parse(dashboardSettingRaw) : null;
+} catch (e) {
+  console.error('Invalid dashboardsetting in localStorage', e);
+}
 export const MAIN_NAVIGATION: NavItem[] = [
   {
     label: 'Home',
@@ -121,35 +128,36 @@ export const MAIN_NAVIGATION: NavItem[] = [
     exact: true,
     icon: 'fa-solid fa-house-chimney',
   },
-  // {
-  //   label: 'Courses',
-  //   route: '/courses',
-  // },
-  {
-    label: 'Dashboard',
-    route: '/application/' + localStorage.getItem('dashboardsetting'),
-  },
-  // {
-  //   label: 'Resources',
-  //   children: [
-  //     {
-  //       label: 'Browse Programs',
-  //       route: '/courses',
-  //       description: 'Explore catalog sections, learning paths, and featured cohorts.',
-  //     },
-  //     {
-  //       label: 'Student Workspace',
-  //       route: '/dashboard',
-  //       description: 'Track progress, upcoming sessions, and certifications in one place.',
-  //     },
-  //     {
-  //       label: 'Get Started',
-  //       route: '/',
-  //       description: 'Return to the main landing experience and onboarding calls to action.',
-  //     },
-  //   ],
-  // },
+  ...(dashboardSetting
+    ? [
+        {
+          label: dashboardSetting.dashboardName || '',
+          route: '/application/' + (dashboardSetting.dashboardUrl || ''),
+        },
+      ]
+    : []),
 ];
+
+// {
+//   label: 'Resources',
+//   children: [
+//     {
+//       label: 'Browse Programs',
+//       route: '/courses',
+//       description: 'Explore catalog sections, learning paths, and featured cohorts.',
+//     },
+//     {
+//       label: 'Student Workspace',
+//       route: '/dashboard',
+//       description: 'Track progress, upcoming sessions, and certifications in one place.',
+//     },
+//     {
+//       label: 'Get Started',
+//       route: '/',
+//       description: 'Return to the main landing experience and onboarding calls to action.',
+//     },
+//   ],
+// },
 
 export const HEADER_CATEGORY_PANELS: HeaderCategoryPanel[] = [
   {

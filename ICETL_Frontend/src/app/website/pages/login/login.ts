@@ -1,19 +1,25 @@
 import {
+  AfterViewChecked,
   ChangeDetectorRef,
   Component,
   ElementRef,
+  Inject,
   OnDestroy,
+  PLATFORM_ID,
   QueryList,
   ViewChildren,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService, SendOtpResponse, VerifyOtpResponse } from '../../../commonServices/auth.service';
+import { NavigationService } from '../../../commonServices/nav-item-service';
 
 type LoginStep = 'identify' | 'otp' | 'profile';
+
+declare const $: any;
 
 @Component({
   selector: 'app-login',
@@ -22,9 +28,18 @@ type LoginStep = 'identify' | 'otp' | 'profile';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login implements OnDestroy {
+export class Login implements OnDestroy, AfterViewChecked {
   loginForm: FormGroup;
   profileForm: FormGroup;
+  private readonly dobInputSelector = '#profile-dob';
+  private readonly maxDobDate = new Date();
+  private readonly isBrowser: boolean;
+  private dobDatepickerInitialized = false;
+  readonly genderOptions = [
+    { label: 'Male', value: '1' },
+    { label: 'Female', value: '2' },
+    { label: 'Others', value: '3' },
+  ];
   submitted = false;
   isLoading = false;
   errorMessage = '';
@@ -42,15 +57,27 @@ export class Login implements OnDestroy {
     private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
+    private NavigationService: NavigationService,
+    @Inject(PLATFORM_ID) platformId: object,
   ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+
     this.loginForm = this.fb.group({
-      user: ['', Validators.required],
+      emailId: ['vivekjha0151@gmail.com', [Validators.required, Validators.email]],
     });
 
     this.profileForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
+      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+      dob: ['', Validators.required],
+      gender: ['', Validators.required],
     });
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.currentStep === 'profile' && !this.dobDatepickerInitialized) {
+      this.initializeDobDatepicker();
+    }
   }
 
   get stepTitle(): string {
@@ -67,11 +94,11 @@ export class Login implements OnDestroy {
   get stepDescription(): string {
     switch (this.currentStep) {
       case 'otp':
-        return `Enter the 6-digit code sent to ${this.loginForm.value.user}.`;
+        return `Enter the 6-digit code sent to ${this.loginForm.value.emailId}.`;
       case 'profile':
         return 'Your OTP is verified. Add the remaining details to finish creating the account.';
       default:
-        return 'Use your mobile number to receive a one-time password and continue.';
+        return 'Use your email ID to receive a one-time password and continue.';
     }
   }
 
@@ -105,33 +132,36 @@ export class Login implements OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
     this.resetOtpValues();
-    this.profileForm.reset();
+    this.profileForm.reset({
+      name: '',
+      phone: '',
+      dob: '',
+      gender: '',
+    });
+    this.destroyDobDatepicker();
 
     try {
-      const response = await lastValueFrom(this.authService.sendOtp(this.loginForm.value.user));
+      const response = await lastValueFrom(this.authService.sendOtp(this.loginForm.value.emailId));
 
-      if (response.success) {
-        this.applyOtpFromResponse(response);
-        this.currentStep = 'otp';
-        this.startTimer();
-        this.isLoading = false;
-        this.cdr.detectChanges();
-
-        // Wait until the OTP inputs exist in the DOM before focusing.
-        setTimeout(() => {
-          const focusIndex = this.getFirstEmptyOtpIndex();
-          if (focusIndex >= 0) {
-            this.focusInput(focusIndex);
-          }
-        }, 0);
+      if (response?.success === false) {
+        this.errorMessage = response.message || 'Failed to send OTP';
         return;
       }
 
-      this.errorMessage = response.message || 'Failed to send OTP';
-      this.isLoading = false;
+      this.currentStep = 'otp';
+      this.applyOtpFromResponse(response);
+      this.startTimer();
       this.cdr.detectChanges();
+
+      setTimeout(() => {
+        const focusIndex = this.getFirstEmptyOtpIndex();
+        if (focusIndex >= 0) {
+          this.focusInput(focusIndex);
+        }
+      }, 0);
     } catch (error) {
       this.errorMessage = this.getApiErrorMessage(error, 'Failed to send OTP');
+    } finally {
       this.isLoading = false;
       this.cdr.detectChanges();
     }
@@ -193,7 +223,13 @@ export class Login implements OnDestroy {
   backToUserInput(): void {
     this.stopTimer();
     this.resetOtpValues();
-    this.profileForm.reset();
+    this.profileForm.reset({
+      name: '',
+      phone: '',
+      dob: '',
+      gender: '',
+    });
+    this.destroyDobDatepicker();
     this.errorMessage = '';
     this.isLoading = false;
     this.submitted = false;
@@ -219,7 +255,7 @@ export class Login implements OnDestroy {
 
     this.authService
       .verifyOtp({
-        user: this.loginForm.value.user,
+        emailId: this.loginForm.value.emailId,
         otp,
       })
       .subscribe({
@@ -231,6 +267,7 @@ export class Login implements OnDestroy {
             this.isLoading = false;
             this.errorMessage = '';
             this.cdr.detectChanges();
+            setTimeout(() => this.initializeDobDatepicker(), 0);
             return;
           }
 
@@ -238,7 +275,8 @@ export class Login implements OnDestroy {
             this.stopTimer();
             this.isLoading = false;
             const data: any = response.data;
-            localStorage.setItem('dashboardsetting', data.user.dashboard.dashboardUrl);
+            localStorage.setItem('dashboardsetting', JSON.stringify( data.user.dashboard));
+            this.NavigationService.loadNavigation();
             void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
             return;
           }
@@ -261,21 +299,29 @@ export class Login implements OnDestroy {
       return;
     }
 
+    const dob = this.normalizeDob(this.profileForm.value.dob);
+
+    if (!dob) {
+      this.errorMessage = 'Please select a valid date of birth';
+      return;
+    }
+
     this.isLoading = true;
     this.errorMessage = '';
 
     this.authService
       .completeProfile({
-        user: this.loginForm.value.user,
+        email: this.loginForm.value.emailId,
         ...this.profileForm.value,
+        dob,
       })
       .subscribe({
         next: (response) => {
           if (response.success && response.data) {
-            console.log(response.data);
-            this.isLoading = false;
             const data: any = response.data;
-            localStorage.setItem('dashboardsetting', data.user.dashboard.dashboardUrl);
+            localStorage.setItem('dashboardsetting', JSON.stringify( data.user.dashboard));
+            this.NavigationService.loadNavigation();
+            this.isLoading = false;
             void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
             return;
           }
@@ -293,6 +339,7 @@ export class Login implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyDobDatepicker();
     this.stopTimer(false);
   }
 
@@ -300,12 +347,12 @@ export class Login implements OnDestroy {
     this.otpValues = Array(this.otpArray.length).fill('');
   }
 
-  private applyOtpFromResponse(response: SendOtpResponse): void {
+  private applyOtpFromResponse(response?: Partial<SendOtpResponse> | null): void {
     if (environment.production) {
       return;
     }
 
-    const otp = response.otp?.toString().padStart(this.otpArray.length, '0');
+    const otp = response?.otp?.toString().padStart(this.otpArray.length, '0');
 
     if (!otp) {
       return;
@@ -314,9 +361,110 @@ export class Login implements OnDestroy {
     this.otpValues = otp.slice(0, this.otpArray.length).split('');
   }
 
+  openDobDatepicker(): void {
+    this.initializeDobDatepicker();
+
+    if (!this.canUseDatepicker()) {
+      return;
+    }
+
+    $(this.dobInputSelector).datepicker('show');
+  }
+
+  private initializeDobDatepicker(): void {
+    if (this.dobDatepickerInitialized || this.currentStep !== 'profile' || !this.canUseDatepicker()) {
+      return;
+    }
+
+    const dobInput = $(this.dobInputSelector);
+
+    if (!dobInput.length) {
+      return;
+    }
+
+    dobInput
+      .datepicker({
+        autoclose: true,
+        clearBtn: true,
+        container: 'body',
+        endDate: this.maxDobDate,
+        forceParse: false,
+        format: 'yyyy-mm-dd',
+        orientation: 'top auto',
+        startView: 2,
+        todayHighlight: true,
+        zIndexOffset: 1100,
+      })
+      .on('changeDate.icetlDob', (event: { date?: Date }) => {
+        this.setDobValue(this.formatDatepickerDate(event.date));
+      })
+      .on('clearDate.icetlDob', () => {
+        this.setDobValue('');
+      })
+      .on('hide.icetlDob', () => {
+        this.profileForm.get('dob')?.markAsTouched();
+        this.cdr.detectChanges();
+      });
+
+    this.dobDatepickerInitialized = true;
+  }
+
+  private destroyDobDatepicker(): void {
+    if (!this.canUseDatepicker()) {
+      this.dobDatepickerInitialized = false;
+      return;
+    }
+
+    const dobInput = $(this.dobInputSelector);
+
+    if (dobInput.length) {
+      dobInput.off('.icetlDob');
+      dobInput.datepicker('destroy');
+    }
+
+    this.dobDatepickerInitialized = false;
+  }
+
+  private canUseDatepicker(): boolean {
+    return this.isBrowser && typeof $ !== 'undefined' && typeof $.fn?.datepicker === 'function';
+  }
+
+  private setDobValue(value: string): void {
+    const dobControl = this.profileForm.get('dob');
+
+    this.profileForm.patchValue({ dob: value });
+    dobControl?.markAsTouched();
+    dobControl?.updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
+  private formatDatepickerDate(date: Date | undefined): string {
+    if (!date || Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private normalizeDob(value: unknown): string {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : '';
+    }
+
+    if (value instanceof Date) {
+      return this.formatDatepickerDate(value);
+    }
+
+    return '';
+  }
+
   private getFirstEmptyOtpIndex(): number {
-    const index = this.otpValues.findIndex((value) => !value);
-    return index;
+    return this.otpValues.findIndex((value) => !value);
   }
 
   private stopTimer(resetValue = true): void {

@@ -224,9 +224,9 @@
   --transition-2: 256ms ease-in-out;
   --transition-3: transform .85s cubic-bezier(.23, 1, .32, 1), background .3s, border .3s, border-radius .3s, box-shadow .3s;
   --transition-4: all .25s cubic-bezier(.645, .045, .355, 1);
-  --font-primary: "Euclid Circular";
-  --font-secondary: "Euclid Circular";
-  --font-alt: "Source Serif Pro", serif;
+  --font-primary: 'Euclid Circular';
+  --font-secondary: 'Euclid Circular';
+  --font-alt: 'Source Serif Pro', serif;
   --font-size-b1: 24px;
   --font-size-b2: 18px;
   --font-size-b3: 16px;
@@ -8298,7 +8298,6 @@ textarea {
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   color: var(--color-body);
-  box-shadow: var(--shadow-10);
   /* -- Placeholder -- */
 }
 input[type=text]::placeholder,
@@ -11786,7 +11785,6 @@ ul.rbt-dropdown-menu.currency-menu li .sub-menu {
   color: var(--color-primary) !important;
 }
 .rbt-header .mainmenu-nav .mainmenu > li:hover > a i, .rbt-header .mainmenu-nav .mainmenu > li.active > a i {
-  transform: rotate(180deg);
   margin-top: 2px;
 }
 .rbt-header .mainmenu-nav .mainmenu li {
@@ -16205,11 +16203,11 @@ span.transparent-button:hover i {
   background: var(--gradient-8);
   opacity: 0;
 }
-.rbt-arrow-between .rbt-swiper-arrow.style_2:hover {
-  color: var(--color-white);
-}
 .rbt-arrow-between .rbt-swiper-arrow.style_2:hover::after {
   opacity: 1;
+}
+.rbt-arrow-between .rbt-swiper-arrow.style_2:hover {
+  color: var(--color-white);
 }
 .rbt-arrow-between .rbt-swiper-arrow .custom-overfolow {
   position: relative;
@@ -16369,13 +16367,13 @@ span.transparent-button:hover i {
   right: 40px;
   bottom: 50px;
 }
-.rbt-arrow-between .rbt-swiper-arrow-2.swiper-button-disabled {
-  cursor: not-allowed;
-}
 .rbt-arrow-between .rbt-swiper-arrow-2.swiper-button-disabled .text {
   max-width: 0px;
   opacity: 0;
   margin-left: -8px;
+}
+.rbt-arrow-between .rbt-swiper-arrow-2.swiper-button-disabled {
+  cursor: not-allowed;
 }
 
 .parent-swiper {
@@ -34136,7 +34134,7 @@ Course Sidebar
 .single-demo .content .label-new {
   background: var(--color-primary);
   background: linear-gradient(145deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="var(--color-primary)", endColorstr="var(--color-secondary)", GradientType=1);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='var(--color-primary)', endColorstr='var(--color-secondary)', GradientType=1);
   padding: 5px 11px;
   color: #fff;
   border-radius: 4px;
@@ -35771,7 +35769,7 @@ Course Sidebar
 .single-demo .content .label-new {
   background: var(--color-primary);
   background: linear-gradient(145deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="var(--color-primary)", endColorstr="var(--color-secondary)", GradientType=1);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='var(--color-primary)', endColorstr='var(--color-secondary)', GradientType=1);
   padding: 5px 11px;
   color: #fff;
   border-radius: 4px;
@@ -39010,4 +39008,5 @@ Course Sidebar
 .active-dark-mode .feature-style-1 .bg-primary-opacity {
   background: var(--primary-opacity) !important;
 }
-/*# sourceMappingURL=../maps/styles.css.map */
+
+/*# sourceMappingURL=styles.css.map */

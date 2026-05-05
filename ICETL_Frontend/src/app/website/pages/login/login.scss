@@ -1,10 +1,13 @@
 .form-group {
+  position: relative;
+
   label {
     z-index: 1;
     pointer-events: none;
   }
 
   input,
+  select,
   textarea {
     position: relative;
     z-index: 2;
@@ -13,6 +16,8 @@
   input:focus ~ label,
   input.has-value ~ label,
   input:-webkit-autofill ~ label,
+  select:focus ~ label,
+  select.has-value ~ label,
   textarea:focus ~ label,
   textarea.has-value ~ label,
   textarea:-webkit-autofill ~ label {
@@ -24,6 +29,8 @@
   input:focus ~ .focus-border,
   input.has-value ~ .focus-border,
   input:-webkit-autofill ~ .focus-border,
+  select:focus ~ .focus-border,
+  select.has-value ~ .focus-border,
   textarea:focus ~ .focus-border,
   textarea.has-value ~ .focus-border,
   textarea:-webkit-autofill ~ .focus-border {
@@ -83,6 +90,145 @@
 .otp-input:focus {
   border-color: #28a745;
   outline: none;
+}
+
+.form-group select {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--color-body);
+  appearance: none;
+}
+
+.form-group select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.form-group--select {
+  label {
+    top: -10px;
+    font-size: 12px;
+    color: var(--color-primary);
+  }
+
+  select {
+    padding-top: 20px;
+    padding-right: 40px;
+  }
+}
+
+.form-group--date {
+  margin-bottom: 30px;
+
+  input {
+    padding-right: 56px;
+    padding-top: 20px;
+    background-color: transparent;
+    cursor: pointer;
+  }
+
+  label {
+    top: -10px;
+    font-size: 12px;
+    color: var(--color-primary);
+  }
+
+  .date-picker-toggle {
+    position: absolute;
+    right: 0;
+    top: 14px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(45, 40, 255, 0.08);
+    color: var(--color-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .date-picker-toggle:hover {
+    background: rgba(45, 40, 255, 0.14);
+    transform: translateY(-1px);
+  }
+}
+
+::ng-deep .datepicker.dropdown-menu {
+  z-index: 2200 !important;
+  padding: 14px;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(18, 27, 62, 0.18);
+  font-family: inherit;
+  overflow: hidden;
+}
+
+::ng-deep .datepicker-dropdown::before,
+::ng-deep .datepicker-dropdown::after {
+  display: none;
+}
+
+::ng-deep .datepicker table {
+  margin: 0;
+}
+
+::ng-deep .datepicker table tr th,
+::ng-deep .datepicker table tr td {
+  width: 34px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--color-heading);
+  font-size: 13px;
+}
+
+::ng-deep .datepicker table tr th {
+  font-weight: 700;
+}
+
+::ng-deep .datepicker .datepicker-switch,
+::ng-deep .datepicker .prev,
+::ng-deep .datepicker .next {
+  border-radius: 10px;
+}
+
+::ng-deep .datepicker .datepicker-switch:hover,
+::ng-deep .datepicker .prev:hover,
+::ng-deep .datepicker .next:hover,
+::ng-deep .datepicker table tr td.day:hover,
+::ng-deep .datepicker table tr td span:hover {
+  background: rgba(45, 40, 255, 0.1);
+}
+
+::ng-deep .datepicker table tr td.today {
+  background: rgba(45, 40, 255, 0.08);
+  color: var(--color-primary);
+}
+
+::ng-deep .datepicker table tr td.active,
+::ng-deep .datepicker table tr td.active:hover,
+::ng-deep .datepicker table tr td span.active,
+::ng-deep .datepicker table tr td span.active:hover {
+  background: linear-gradient(135deg, var(--color-primary), #8a5cf6) !important;
+  color: #fff !important;
+  text-shadow: none;
+}
+
+::ng-deep .datepicker table tr td.old,
+::ng-deep .datepicker table tr td.new,
+::ng-deep .datepicker table tr td.disabled,
+::ng-deep .datepicker table tr td.disabled:hover {
+  color: #b7bfd3;
+}
+
+::ng-deep .datepicker table tr td span {
+  border-radius: 12px;
 }
 
 .login-link-button {

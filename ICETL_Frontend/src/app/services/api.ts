@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { AuthService } from '../commonServices/auth.service';
 
 export interface LoginRequest {
-  login: string;
+  emailId: string;
   loginBy: 1 | 2;
   password?: string;
   otp?: string;
@@ -12,6 +13,10 @@ export interface LoginRequest {
 export interface LoginUser {
   id: number;
   name: string;
+  email?: string;
+  phone?: string;
+  dob?: string;
+  gender?: string;
 }
 
 export interface LoginResponse {
@@ -27,10 +32,15 @@ export interface LoginResponse {
 export class ApiService {
   private readonly baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) {}
 
   getRolesList() {
-    return this.http.post(`${this.baseUrl}/check`, {});
+    return this.http.post(`${this.baseUrl}/check`, {}, {
+      headers: this.authService.getAuthHeaders(),
+    });
   }
 
   login(payload: LoginRequest) {

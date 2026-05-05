@@ -11,36 +11,26 @@
             </p>
           </div>
 
-          <form *ngIf="currentStep === 'identify'" [formGroup]="loginForm" (ngSubmit)="sendOtp()">
+          <form *ngIf="currentStep === 'identify'" [formGroup]="loginForm" (ngSubmit)="sendOtp()" novalidate>
             <div class="form-group">
-              <input
-                id="login-mobile"
-                type="text"
-                formControlName="user"
-                maxlength="10"
-                minlength="10"
-                inputmode="numeric"
-                autocomplete="tel"
-                [class.has-value]="!!loginForm.get('user')?.value"
-                [attr.aria-describedby]="submitted && loginForm.get('user')?.errors ? 'login-mobile-error' : null"
-                [attr.aria-invalid]="submitted && loginForm.get('user')?.invalid ? 'true' : null"
-                (keypress)="onlyNumbers($event)"
-              />
-              <label for="login-mobile">Mobile *</label>
+              <input id="login-email" type="email" formControlName="emailId" autocomplete="off"
+                [class.has-value]="!!loginForm.get('emailId')?.value"
+                [attr.aria-describedby]="submitted && loginForm.get('emailId')?.errors ? 'login-email-error' : null"
+                [attr.aria-invalid]="submitted && loginForm.get('emailId')?.invalid ? 'true' : null"
+                (keydown.enter)="sendOtp()" />
+              <label for="login-email">Email ID *</label>
               <span class="focus-border"></span>
 
-              <div
-                id="login-mobile-error"
-                class="text-danger small mt-1"
-                *ngIf="submitted && loginForm.get('user')?.errors"
-              >
-                Mobile is required
+              <div id="login-email-error" class="text-danger small mt-1"
+                *ngIf="submitted && loginForm.get('emailId')?.errors">
+                <div *ngIf="loginForm.get('emailId')?.errors?.['required']">Email ID is required</div>
+                <div *ngIf="loginForm.get('emailId')?.errors?.['email']">Enter a valid email ID</div>
               </div>
             </div>
 
             <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-md w-100" [disabled]="isLoading">
-                {{ isLoading ? 'Sending...' : 'Proceed' }}
+              <button type="button" class="rbt-btn btn-md w-100" [disabled]="isLoading" (click)="sendOtp()">
+                {{ isLoading ? 'Sending...' : 'Send OTP' }}
               </button>
             </div>
           </form>
@@ -50,20 +40,10 @@
               <legend class="sr-only">Enter the 6-digit OTP</legend>
 
               <div class="otp-container text-center">
-                <input
-                  *ngFor="let digit of otpArray; let i = index"
-                  [id]="'otp-digit-' + i"
-                  [value]="otpValues[i]"
-                  maxlength="1"
-                  type="text"
-                  class="otp-input"
-                  inputmode="numeric"
-                  autocomplete="one-time-code"
-                  [attr.aria-label]="'OTP digit ' + (i + 1) + ' of ' + otpArray.length"
-                  (input)="onOtpInput($event, i)"
-                  (keydown)="onKeyDown($event, i)"
-                  #otpBox
-                />
+                <input *ngFor="let digit of otpArray; let i = index" [id]="'otp-digit-' + i" [value]="otpValues[i]"
+                  maxlength="1" type="text" class="otp-input" inputmode="numeric" autocomplete="one-time-code"
+                  [attr.aria-label]="'OTP digit ' + (i + 1) + ' of ' + otpArray.length" (input)="onOtpInput($event, i)"
+                  (keydown)="onKeyDown($event, i)" #otpBox />
               </div>
             </fieldset>
 
@@ -83,34 +63,25 @@
 
             <div class="text-center mt-3">
               <button type="button" class="btn btn-link login-link-button" (click)="backToUserInput()">
-                Change mobile number
+                Change email ID
               </button>
             </div>
           </form>
 
           <form *ngIf="currentStep === 'profile'" [formGroup]="profileForm" (ngSubmit)="completeProfile()">
             <div class="form-group">
-              <input
-                id="profile-name"
-                type="text"
-                formControlName="name"
-                autocomplete="name"
-                [class.has-value]="!!profileForm.get('name')?.value"
-                [attr.aria-describedby]="
+              <input id="profile-name" type="text" formControlName="name" autocomplete="name"
+                [class.has-value]="!!profileForm.get('name')?.value" [attr.aria-describedby]="
                   profileForm.get('name')?.touched && profileForm.get('name')?.errors
                     ? 'profile-name-error'
                     : null
-                "
-                [attr.aria-invalid]="
+                " [attr.aria-invalid]="
                   profileForm.get('name')?.touched && profileForm.get('name')?.invalid ? 'true' : null
-                "
-              />
+                " />
               <label for="profile-name">Name *</label>
               <span class="focus-border"></span>
 
-              <div
-                id="profile-name-error"
-                class="text-danger small mt-1"
+              <div id="profile-name-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('name')?.touched && profileForm.get('name')?.errors">
                 <div *ngIf="profileForm.get('name')?.errors?.['required']">Name is required</div>
                 <div *ngIf="profileForm.get('name')?.errors?.['minlength']">
@@ -120,30 +91,58 @@
             </div>
 
             <div class="form-group">
-              <input
-                id="profile-email"
-                type="email"
-                formControlName="email"
-                autocomplete="email"
-                [class.has-value]="!!profileForm.get('email')?.value"
-                [attr.aria-describedby]="
-                  profileForm.get('email')?.touched && profileForm.get('email')?.errors
-                    ? 'profile-email-error'
+              <input id="profile-phone" type="tel" formControlName="phone" autocomplete="tel" inputmode="numeric"
+                maxlength="10" [class.has-value]="!!profileForm.get('phone')?.value" [attr.aria-describedby]="
+                  profileForm.get('phone')?.touched && profileForm.get('phone')?.errors
+                    ? 'profile-phone-error'
                     : null
-                "
-                [attr.aria-invalid]="
-                  profileForm.get('email')?.touched && profileForm.get('email')?.invalid ? 'true' : null
-                "
-              />
-              <label for="profile-email">Email *</label>
+                " [attr.aria-invalid]="
+                  profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid ? 'true' : null
+                " (keypress)="onlyNumbers($event)" />
+              <label for="profile-phone">Phone Number *</label>
               <span class="focus-border"></span>
 
-              <div
-                id="profile-email-error"
-                class="text-danger small mt-1"
-                *ngIf="profileForm.get('email')?.touched && profileForm.get('email')?.errors">
-                <div *ngIf="profileForm.get('email')?.errors?.['required']">Email is required</div>
-                <div *ngIf="profileForm.get('email')?.errors?.['email']">Invalid email format</div>
+              <div id="profile-phone-error" class="text-danger small mt-1"
+                *ngIf="profileForm.get('phone')?.touched && profileForm.get('phone')?.errors">
+                <div *ngIf="profileForm.get('phone')?.errors?.['required']">Phone number is required</div>
+                <div *ngIf="profileForm.get('phone')?.errors?.['pattern']">Enter a valid 10 digit phone number</div>
+              </div>
+            </div>
+
+            <div class="form-group form-group--date">
+              <input id="profile-dob" type="text" formControlName="dob" autocomplete="bday" placeholder="yyyy-mm-dd"
+                readonly [class.has-value]="!!profileForm.get('dob')?.value" [attr.aria-describedby]="
+                  profileForm.get('dob')?.touched && profileForm.get('dob')?.errors
+                    ? 'profile-dob-error'
+                    : null
+                " [attr.aria-invalid]="
+                  profileForm.get('dob')?.touched && profileForm.get('dob')?.invalid ? 'true' : null
+                " (click)="openDobDatepicker()" (focus)="openDobDatepicker()" />
+              <label for="profile-dob">Date of Birth *</label>
+              <span class="focus-border"></span>
+              <button type="button" class="date-picker-toggle" (click)="openDobDatepicker()"
+                aria-label="Open date picker">
+                <i class="feather-calendar"></i>
+              </button>
+
+              <div id="profile-dob-error" class="text-danger small mt-1"
+                *ngIf="profileForm.get('dob')?.touched && profileForm.get('dob')?.errors">
+                <div *ngIf="profileForm.get('dob')?.errors?.['required']">Date of birth is required</div>
+              </div>
+            </div>
+
+            <div class="form-group form-group--select">
+              <select id="profile-gender" formControlName="gender">
+                <option value="" disabled hidden>Please Select gender</option>
+                <option *ngFor="let option of genderOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+              <span class="focus-border"></span>
+
+              <div id="profile-gender-error" class="text-danger small mt-1"
+                *ngIf="profileForm.get('gender')?.touched && profileForm.get('gender')?.errors">
+                <div *ngIf="profileForm.get('gender')?.errors?.['required']">Gender is required</div>
               </div>
             </div>
 
@@ -155,7 +154,7 @@
 
             <div class="text-center mt-3">
               <button type="button" class="btn btn-link login-link-button" (click)="backToUserInput()">
-                Use a different mobile number
+                Use a different email ID
               </button>
             </div>
           </form>
@@ -170,7 +169,7 @@
 </div>
 
 <div class="rbt-separator-mid">
-        <div class="container">
-            <hr class="rbt-separator m-0">
-        </div>
-    </div>
+  <div class="container">
+    <hr class="rbt-separator m-0">
+  </div>
+</div>

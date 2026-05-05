@@ -1,6 +1,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Preserve bearer tokens for Laravel/Sanctum requests
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Serve existing files directly (VERY IMPORTANT)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]

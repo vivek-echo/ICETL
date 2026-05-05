@@ -1,5 +1,6 @@
+import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
 import { catchError, retry } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -8,22 +9,42 @@ import { HTTP_STATUS } from './http-status.constants';
 
 export const serverErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const alertHelper = inject(AlertHelperService);
+  const platformId = inject(PLATFORM_ID);
+  const isBrowser = isPlatformBrowser(platformId);
 
-  const handleBadRequest = () => {
-    return alertHelper.viewAlert('error', 'Error', 'Something went wrong. Please try again.');
+  const getBackendMessage = (error: HttpErrorResponse, fallback: string): string => {
+    const payload = error.error;
+
+    if (typeof payload === 'string' && payload.trim()) {
+      return payload;
+    }
+
+    return payload?.message || payload?.msg || error.message || fallback;
   };
 
-  const handleNotFound = () => {
-    return alertHelper.viewAlert('error', 'Not Found', 'The requested resource was not found.');
+  const handleBadRequest = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'Error', getBackendMessage(error, 'Something went wrong. Please try again.'));
   };
 
-  const handleDBErrors = (error: HttpErrorResponse) => {
-    const message = error.error?.msg || error.error?.message || 'A database error occurred.';
-    return alertHelper.viewAlert('error', 'QUERY_EXECUTION_ERROR', message);
+  const handleForbidden = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert(
+      'error',
+      'Forbidden',
+      getBackendMessage(error, 'You do not have permission to perform this action.'),
+    );
+  };
+
+  const handleNotFound = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'Not Found', getBackendMessage(error, 'The requested resource was not found.'));
   };
 
   const handleValidationErrors = (error: HttpErrorResponse) => {
-    const validationPayload = error.error?.errors || error.error?.msg;
+    if (!isBrowser) return null;
+
+    const validationPayload = error.error?.errors || error.error?.msg || error.error?.message;
     let errorMessage = '';
 
     if (typeof validationPayload === 'string') {
@@ -47,17 +68,35 @@ export const serverErrorInterceptor: HttpInterceptorFn = (request, next) => {
     return alertHelper.viewAlertHtml('error', 'VALIDATION_ERROR', errorMessage);
   };
 
-  const handleServerError = () => {
-    return alertHelper.viewAlert('error', 'Server Error', 'A server error occurred. Please try again later.');
+  const handleConflict = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'Conflict', getBackendMessage(error, 'The request conflicts with the current state.'));
   };
 
-  const handleUnexpectedError = () => {
+  const handleTooManyRequests = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'Too Many Requests', getBackendMessage(error, 'Please wait before trying again.'));
+  };
+
+  const handleDBErrors = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'QUERY_EXECUTION_ERROR', getBackendMessage(error, 'A database error occurred.'));
+  };
+
+  const handleServerError = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+    return alertHelper.viewAlert('error', 'Server Error', getBackendMessage(error, 'A server error occurred. Please try again later.'));
+  };
+
+  const handleUnexpectedError = (error: HttpErrorResponse) => {
+    if (!isBrowser) return null;
+
     if (environment.production) {
       console.log('Non-critical error suppressed.');
       return null;
     }
 
-    return alertHelper.viewAlert('error', 'Error', 'An unexpected error occurred. Please try again.');
+    return alertHelper.viewAlert('error', 'Error', getBackendMessage(error, 'An unexpected error occurred. Please try again.'));
   };
 
   return next(request).pipe(
@@ -65,10 +104,16 @@ export const serverErrorInterceptor: HttpInterceptorFn = (request, next) => {
     catchError((error: HttpErrorResponse) => {
       switch (error.status) {
         case HTTP_STATUS.BAD_REQUEST:
-          void handleBadRequest();
+          void handleBadRequest(error);
+          break;
+        case HTTP_STATUS.FORBIDDEN:
+          void handleForbidden(error);
           break;
         case HTTP_STATUS.NOT_FOUND:
-          void handleNotFound();
+          void handleNotFound(error);
+          break;
+        case HTTP_STATUS.CONFLICT:
+          void handleConflict(error);
           break;
         case HTTP_STATUS.UNPROCESSABLE_ENTITY:
           void handleValidationErrors(error);
@@ -76,12 +121,15 @@ export const serverErrorInterceptor: HttpInterceptorFn = (request, next) => {
         case HTTP_STATUS.LOCKED:
           void handleDBErrors(error);
           break;
+        case HTTP_STATUS.TOO_MANY_REQUESTS:
+          void handleTooManyRequests(error);
+          break;
         case HTTP_STATUS.INTERNAL_SERVER_ERROR:
-          void handleServerError();
+          void handleServerError(error);
           break;
         default:
           if (error.status !== HTTP_STATUS.UNAUTHORIZED) {
-            void handleUnexpectedError();
+            void handleUnexpectedError(error);
           }
       }
 

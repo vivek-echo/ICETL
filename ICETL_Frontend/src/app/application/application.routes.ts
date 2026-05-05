@@ -7,6 +7,12 @@ export const applicationRoutes: Routes = [
     component: Application,
     children: [
       {
+        path: 'learner',
+        loadComponent: () =>
+          import('./learner/welcome/welcome').then((m) => m.Welcome),
+        title: 'Dashboard | ICETL',
+      },
+      {
         path: 'learnerDashboard',
         loadComponent: () =>
           import('./learner/dashboard/dashboard').then((m) => m.Dashboard),

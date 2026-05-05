@@ -20,15 +20,16 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'dob',
+        'gender',
         'role',
         'userType',
         'user_type',
         'mobile',
-        'phone',
         'password',
-        'role',
         'otp',
-        'otp_expires_at'
+        'otp_expires_at',
     ];
 
     /**
@@ -36,15 +37,16 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-     protected $hidden = [
+    protected $hidden = [
         'password',
         'otp',
-        'remember_token'
+        'remember_token',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'otp_expires_at' => 'datetime', // ✅ important
+        'dob' => 'date',
+        'otp_expires_at' => 'datetime',
         'password' => 'hashed',
     ];
 }

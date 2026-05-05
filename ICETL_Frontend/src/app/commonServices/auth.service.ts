@@ -3,12 +3,13 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { NavigationService } from './nav-item-service';
 
 // =======================
 // OLD LOGIN (OPTIONAL)
 // =======================
 export interface LoginPayload {
-  email: string;
+  emailId: string;
   password: string;
 }
 
@@ -16,18 +17,20 @@ export interface LoginPayload {
 // OTP LOGIN PAYLOAD
 // =======================
 export interface SendOtpPayload {
-  user: string; // email or phone
+  emailId: string;
 }
 
 export interface VerifyOtpPayload {
-  user: string;
+  emailId: string;
   otp: string;
 }
 
 export interface CompleteProfilePayload {
-  user: string;
+  emailId: string;
   name: string;
-  email: string;
+  phone: string;
+  dob: string;
+  gender: string;
 }
 
 // =======================
@@ -57,65 +60,61 @@ export interface LoginData {
     id: number;
     name: string;
     email: string;
+    phone?: string | null;
+    dob?: string | null;
+    gender?: string | null;
+    menus?: unknown[];
+    dashboard?: {
+      dashboardName: string;
+      dashboardUrl: string;
+    };
   };
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
-
   private readonly apiBaseUrl = environment.apiUrl;
 
   constructor(
     private readonly http: HttpClient,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly NavigationService: NavigationService,
   ) {}
 
   // =======================
   // 🔐 PASSWORD LOGIN (OPTIONAL)
   // =======================
   login(payload: LoginPayload): Observable<ApiResponse<LoginData>> {
-    return this.http.post<ApiResponse<LoginData>>(
-      `${this.apiBaseUrl}/login`,
-      payload
-    ).pipe(
-      tap(res => this.handleAuthSuccess(res))
-    );
+    return this.http
+      .post<ApiResponse<LoginData>>(`${this.apiBaseUrl}/login`, payload)
+      .pipe(tap((res) => this.handleAuthSuccess(res)));
   }
 
   // =======================
   // 📩 SEND OTP
   // =======================
-  sendOtp(user: string): Observable<SendOtpResponse> {
-    return this.http.post<SendOtpResponse>(
-      `${this.apiBaseUrl}/sendOtp`,
-      { user }
-    );
+  sendOtp(emailId: string): Observable<SendOtpResponse> {
+    return this.http.post<SendOtpResponse>(`${this.apiBaseUrl}/sendOtp`, { emailId });
   }
 
   // =======================
   // ✅ VERIFY OTP LOGIN
   // =======================
   verifyOtp(payload: VerifyOtpPayload): Observable<VerifyOtpResponse<LoginData>> {
-    return this.http.post<VerifyOtpResponse<LoginData>>(
-      `${this.apiBaseUrl}/verifyOtp`,
-      payload
-    ).pipe(
-      tap(res => this.handleAuthSuccess(res))
-    );
+    return this.http
+      .post<VerifyOtpResponse<LoginData>>(`${this.apiBaseUrl}/verifyOtp`, payload)
+      .pipe(tap((res) => this.handleAuthSuccess(res)));
   }
 
   // =======================
   // 🧾 COMPLETE PROFILE
   // =======================
   completeProfile(payload: CompleteProfilePayload): Observable<ApiResponse<LoginData>> {
-    return this.http.post<ApiResponse<LoginData>>(
-      `${this.apiBaseUrl}/completeProfile`,
-      payload
-    ).pipe(
-      tap(res => this.handleAuthSuccess(res))
-    );
+    return this.http
+      .post<ApiResponse<LoginData>>(`${this.apiBaseUrl}/completeProfile`, payload)
+      .pipe(tap((res) => this.handleAuthSuccess(res)));
   }
 
   // =======================
@@ -139,9 +138,18 @@ export class AuthService {
   // 📦 AUTH HEADERS
   // =======================
   getAuthHeaders(): HttpHeaders {
-    return new HttpHeaders({
-      Authorization: `Bearer ${this.getToken()}`
-    });
+    const token = this.getToken();
+
+    return new HttpHeaders(
+      token
+        ? {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          }
+        : {
+            Accept: 'application/json',
+          },
+    );
   }
 
   // =======================
@@ -161,9 +169,9 @@ export class AuthService {
   // =======================
   // 🚪 LOGOUT
   // =======================
-  logout(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    void this.router.navigate(['/login']);
+  logout() {
+    return this.http.post(`${this.apiBaseUrl}/logout`, {},{
+      headers: this.getAuthHeaders(),
+    });
   }
 }
