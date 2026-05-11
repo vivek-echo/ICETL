@@ -9,6 +9,8 @@ import { environment } from '../../environments/environment';
 import { AlertHelperService } from './alert-helper-service';
 import { HTTP_STATUS } from './http-status.constants';
 
+let isHandlingSessionExpiry = false;
+
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const alertHelper = inject(AlertHelperService);
   const modalService = inject(NgbModal);
@@ -30,16 +32,23 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       : request;
 
   const handleSessionExpired = () => {
-    if (!isBrowser) {
+    if (!isBrowser || isHandlingSessionExpiry) {
       return Promise.resolve();
     }
+
+    isHandlingSessionExpiry = true;
 
     return alertHelper.viewAlert('error', 'EXPIRED', 'Session Expired! Please log in again.').then(() => {
       modalService.dismissAll();
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_expires_at');
       localStorage.removeItem('auth_user');
       localStorage.removeItem('dashboardsetting');
+      localStorage.removeItem('menus');
+      window.dispatchEvent(new Event('auth-session-cleared'));
       void router.navigate(['/login']);
+    }).finally(() => {
+      isHandlingSessionExpiry = false;
     });
   };
 

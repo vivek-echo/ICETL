@@ -34,6 +34,11 @@ export class NavigationService {
         exact: true,
         icon: 'fa-solid fa-house-chimney',
       },
+      // {
+      //   label: 'Become Instructor',
+      //   route: '/become-instructor',
+      //   icon: 'fa-solid fa-chalkboard-user',
+      // },
     ];
 
     if (dashboard) {

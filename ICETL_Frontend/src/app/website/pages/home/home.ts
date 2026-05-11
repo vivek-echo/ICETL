@@ -1,6 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
+import { afterNextRender, Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-
+import { lastValueFrom } from 'rxjs';
+import { Course } from '../../../application/courses/services/course';
 interface BannerCourse {
   title: string;
   image: string;
@@ -14,9 +15,23 @@ interface BannerCourse {
 }
 
 interface CategoryBox {
+  id: number;
   title: string;
   image: string;
   courseCount: number;
+}
+
+interface CourseCategoryResponseItem {
+  id: number;
+  categoryName: string;
+  iconUrl?: string | null;
+  icon?: string | null;
+  courseCount?: number | null;
+}
+
+interface CourseCategoryResponse {
+  status: boolean;
+  data: CourseCategoryResponseItem[];
 }
 
 interface PopularCourse {
@@ -101,6 +116,11 @@ interface NewsletterCounter {
 export class HomeComponent {
   readonly courseRoute = '/courses';
   readonly dashboardRoute = '/dashboard';
+  constructor(private courseService: Course) {
+    afterNextRender(() => {
+      void this.getCourseCategories();
+    });
+  }
 
   readonly heroCourses: BannerCourse[] = [
     {
@@ -143,16 +163,45 @@ export class HomeComponent {
     () => this.heroCourses[this.activeHeroIndex()] ?? this.heroCourses[0],
   );
 
-  readonly categoryBoxes: CategoryBox[] = [
-    { title: 'Web Design', image: 'assets/images/category/web-design.png', courseCount: 25 },
-    { title: 'Graphic Design', image: 'assets/images/category/design.png', courseCount: 30 },
-    { title: 'Personal Development', image: 'assets/images/category/personal.png', courseCount: 20 },
-    { title: 'IT and Software', image: 'assets/images/category/server.png', courseCount: 15 },
-    { title: 'Sales Marketing', image: 'assets/images/category/pantone.png', courseCount: 15 },
-    { title: 'Art & Humanities', image: 'assets/images/category/paint-palette.png', courseCount: 15 },
-    { title: 'Mobile Application', image: 'assets/images/category/smartphone.png', courseCount: 15 },
-    { title: 'Finance & Accounting', image: 'assets/images/category/infographic.png', courseCount: 15 },
-  ];
+  readonly categoryBoxes = signal<CategoryBox[]>([]);
+  //   { title: 'Web Design', image: 'assets/images/category/web-design.png', courseCount: 25 },
+  //   { title: 'Graphic Design', image: 'assets/images/category/design.png', courseCount: 30 },
+  //   { title: 'Personal Development', image: 'assets/images/category/personal.png', courseCount: 20 },
+  //   { title: 'IT and Software', image: 'assets/images/category/server.png', courseCount: 15 },
+  //   { title: 'Sales Marketing', image: 'assets/images/category/pantone.png', courseCount: 15 },
+  //   { title: 'Art & Humanities', image: 'assets/images/category/paint-palette.png', courseCount: 15 },
+  //   { title: 'Mobile Application', image: 'assets/images/category/smartphone.png', courseCount: 15 },
+  //   { title: 'Finance & Accounting', image: 'assets/images/category/infographic.png', courseCount: 15 },
+  // ];
+
+  async getCourseCategories(): Promise<void> {
+    const payload = {
+      search: '',
+      status: 1,
+    };
+
+    try {
+      const response: CourseCategoryResponse = await lastValueFrom(
+        this.courseService.getCourseCategories(payload),
+      );
+
+      if (response.status) {
+        this.categoryBoxes.set(
+          (response.data ?? []).map((category) => ({
+            id: category.id,
+            title: category.categoryName,
+            image: category.iconUrl || 'assets/images/category/default.png',
+            courseCount: category.courseCount ?? 0,
+          })),
+        );
+      } else {
+        this.categoryBoxes.set([]);
+      }
+    } catch (error) {
+      console.error(error);
+      this.categoryBoxes.set([]);
+    }
+  }
 
   readonly popularCourses: PopularCourse[] = [
     {
@@ -178,7 +227,8 @@ export class HomeComponent {
       lessons: 12,
       students: 50,
       reviews: 15,
-      description: 'It is a long established fact that a reader will be distracted by the readable.',
+      description:
+        'It is a long established fact that a reader will be distracted by the readable.',
       author: 'Angela',
       authorImage: 'assets/images/client/avatar-02.png',
       category: 'Development',
@@ -543,7 +593,8 @@ export class HomeComponent {
 
   readonly activeTeacherId = signal(this.teachers[0].id);
   readonly activeTeacher = computed(
-    () => this.teachers.find((teacher) => teacher.id === this.activeTeacherId()) ?? this.teachers[0],
+    () =>
+      this.teachers.find((teacher) => teacher.id === this.activeTeacherId()) ?? this.teachers[0],
   );
 
   handleNewsletterSubmit(event: Event): void {

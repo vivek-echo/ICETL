@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { WebsiteComponent } from './website';
+import { becomeInstructorGuard } from './guards/become-instructor.guard';
 
 export const websiteRoutes: Routes = [
   {
@@ -12,15 +13,15 @@ export const websiteRoutes: Routes = [
         title: 'Home | ICETL',
       },
       {
-        path: 'courses',
-        loadComponent: () => import('./pages/courses/courses').then((m) => m.CoursesComponent),
-        title: 'Courses | ICETL',
+        path: 'become-instructor',
+        loadComponent: () => import('./pages/become-instructor/become-instructor').then((m) => m.BecomeInstructor),
+        canActivate: [becomeInstructorGuard],
+        title: 'Become an Instructor | ICETL',
       },
       {
-        path: 'dashboard',
-        loadComponent: () =>
-          import('./pages/dashboard/dashboard').then((m) => m.DashboardComponent),
-        title: 'Dashboard | ICETL',
+        path: 'becomeInstructor',
+        redirectTo: 'become-instructor',
+        pathMatch: 'full',
       },
       {
         path: 'login',

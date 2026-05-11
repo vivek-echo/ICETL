@@ -1,0 +1,312 @@
+<div class="category-browser">
+
+  <div class="category-browser__header">
+
+    <div>
+
+      <h3 class="category-browser__title">
+        Course Categories
+      </h3>
+
+      <p class="category-browser__subtitle">
+        Manage, update, and remove learning categories.
+      </p>
+
+    </div>
+
+    <button class="rbt-btn btn-gradient" routerLink="../add">
+
+      <i class="feather-plus"></i>
+
+      <span>Add Category</span>
+
+    </button>
+
+  </div>
+
+  <div class="row g-4 mb--30">
+
+    @for (metric of metrics; track metric.label) {
+
+    <div class="col-xl-4 col-md-6">
+
+      <div class="category-metric-card">
+
+        <div class="metric-value">
+          {{ metric.value }}
+        </div>
+
+        <div class="metric-content">
+
+          <h6>{{ metric.label }}</h6>
+
+          <p>{{ metric.note }}</p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    }
+
+  </div>
+
+  <div class="category-browser__toolbar">
+
+    <div class="rbt-form-group">
+
+      <label>Search Categories</label>
+
+      <div class="search-box">
+
+        <i class="feather-search"></i>
+
+        <input type="text" placeholder="Search category..." [(ngModel)]="search" (keyup)="onSearch()">
+
+      </div>
+
+    </div>
+
+    <div class="rbt-form-group">
+
+      <label>Status</label>
+
+      <select class="category-filter-select" [(ngModel)]="status" (change)="onSearch()">
+
+        <option value="">
+          All Categories
+        </option>
+
+        <option value="1">
+          Active
+        </option>
+
+        <option value="0">
+          Inactive
+        </option>
+
+      </select>
+
+    </div>
+
+  </div>
+
+  @if (loading) {
+
+  <div class="text-center py-5">
+
+    <div class="spinner-border text-primary"></div>
+
+  </div>
+
+  }
+
+  @if (!loading && categories.length === 0) {
+
+  <div class="empty-state">
+
+    <i class="feather-folder"></i>
+
+    <h5>No Categories Found</h5>
+
+    <p>
+      No categories available right now.
+    </p>
+
+  </div>
+
+  }
+
+  @if (!loading && categories.length > 0) {
+
+  <div class="row g-4">
+
+    @for (category of categories; track trackByCategoryId($index, category)) {
+
+    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
+
+      <div class="category-card-view">
+
+        <div class="category-card-view__top">
+
+          <div class="category-card-view__icon">
+
+            @if (hasDisplayableIcon(category)) {
+
+            <img
+              [src]="getCategoryIconUrl(category)"
+              [alt]="category.categoryName + ' icon'"
+              (error)="onCategoryIconError(category)">
+
+            } @else {
+
+            <span>
+              {{ getCategoryInitial(category.categoryName) }}
+            </span>
+
+            }
+
+          </div>
+
+          <span class="category-status" [class.review]="!isActive(category.status)">
+
+            {{ getStatusLabel(category.status) }}
+
+          </span>
+
+        </div>
+
+        <div class="category-card-view__content">
+
+          <h5>
+            {{ category.categoryName }}
+          </h5>
+
+          <p class="courses">
+            Slug: {{ category.slug }}
+          </p>
+
+          <div class="category-meta">
+
+            <div>
+
+              <span>Created</span>
+
+              <strong>
+                {{ category.created_at ? (category.created_at | date:'mediumDate') : 'N/A' }}
+              </strong>
+
+            </div>
+
+            <div>
+
+              <span>Updated</span>
+
+              <strong>
+                {{ category.updated_at ? (category.updated_at | date:'mediumDate') : 'N/A' }}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="category-card-view__actions">
+
+          <button type="button" class="edit-btn" (click)="openEditModal(category)">
+
+            <i class="feather-edit-2"></i>
+
+          </button>
+
+          <button type="button" class="delete-btn" (click)="confirmDeleteCategory(category)">
+
+            <i class="feather-trash-2"></i>
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    }
+
+  </div>
+
+  }
+
+</div>
+
+@if (isEditModalOpen) {
+<div class="category-modal-backdrop" (click)="closeEditModal()"></div>
+
+<section class="category-modal" role="dialog" aria-modal="true" aria-labelledby="edit-category-title">
+  <div class="category-modal__dialog">
+    <button type="button" class="category-modal__close" (click)="closeEditModal()" aria-label="Close">
+      <i class="feather-x"></i>
+    </button>
+
+    <div class="category-modal-card">
+      <div class="category-modal-card__content">
+        <div class="section-title mb--20">
+          <h4 id="edit-category-title" class="rbt-title-style-3">Edit Course Category</h4>
+        </div>
+
+        <form class="row g-4" [formGroup]="editCategoryForm" (ngSubmit)="submitEditCategory()">
+          <div class="col-lg-6">
+            <div class="rbt-form-group">
+              <label for="edit-category-name">Category Name</label>
+              <input
+                id="edit-category-name"
+                type="text"
+                formControlName="categoryName"
+                placeholder="Enter category name">
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="rbt-form-group">
+              <label for="edit-category-status">Status</label>
+              <select id="edit-category-status" class="category-modal-select" formControlName="status">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="rbt-form-group">
+              <label>Category Icon</label>
+
+              <div class="upload-box">
+                <input
+                  type="file"
+                  class="upload-input"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  (change)="onEditFileChange($event)">
+
+                @if (!editIconPreview) {
+                <div class="upload-content">
+                  <i class="feather-upload-cloud upload-icon"></i>
+                  <h6>Upload Category Icon</h6>
+                  <p>PNG, JPG or SVG recommended</p>
+                </div>
+                }
+
+                @if (editIconPreview) {
+                <div class="preview-wrapper">
+                  <img
+                    [src]="editIconPreview"
+                    alt="Category preview"
+                    class="preview-image">
+
+                  <div class="preview-overlay">
+                    Change Image
+                  </div>
+                </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="category-modal__actions">
+              <button type="button" class="rbt-btn btn-border" (click)="closeEditModal()" [disabled]="isSavingEdit">
+                Cancel
+              </button>
+
+              <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingEdit">
+                {{ isSavingEdit ? 'Updating...' : 'Update Category' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+}

@@ -13,30 +13,35 @@
           <div class="col-lg-12">
             <!-- Start Dashboard Top  -->
             <div class="rbt-dashboard-content-wrapper">
-              <div class="tutor-bg-photo bg_image bg_image--23 height-350"></div>
+              <div class="tutor-bg-photo bg_image bg_image--23 height-350 dashboard-cover-photo"
+                [class.dashboard-cover-photo--custom]="coverImageSrc">
+                @if (coverImageSrc) {
+                <img class="dashboard-cover-photo__image" [src]="coverImageSrc" alt="Cover photo">
+                }
+              </div>
               <!-- Start Tutor Information  -->
               <div class="rbt-tutor-information">
                 <div class="rbt-tutor-information-left">
                   <div class="thumbnail rbt-avatars size-lg">
-                    <img src="assets/images/team/avatar-2.jpg" alt="Instructor">
+                    <img [src]="profileImageSrc" [alt]="displayName + ' profile image'">
                   </div>
                   <div class="tutor-content">
-                    <h5 class="title">Emily Hannah</h5>
+                    <h5 class="title">{{ displayName }}</h5>
                     <ul class="rbt-meta rbt-meta-white mt--5">
-                      <li><i class="feather-book"></i>5 Courses Enroled</li>
-                      <li><i class="feather-award"></i>4 Certificate</li>
+                      <li><i class="feather-mail"></i>{{userProfile?.email}}</li>
                     </ul>
                   </div>
                 </div>
                 <div class="rbt-tutor-information-right">
                   <div class="tutor-btn">
-                    <a class="rbt-btn btn-md hover-icon-reverse" href="#">
+                    <button type="button" class="rbt-btn btn-md hover-icon-reverse"
+                      (click)="openProfileSettings($event)">
                       <span class="icon-reverse-wrapper">
-                        <span class="btn-text">Become an Instructor</span>
+                        <span class="btn-text">Update Profile</span>
                         <span class="btn-icon"><i class="feather-arrow-right"></i></span>
                         <span class="btn-icon"><i class="feather-arrow-right"></i></span>
                       </span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -44,34 +49,18 @@
             </div>
             <!-- End Dashboard Top  -->
 
-            <div class="row g-5">
-              <div class="col-lg-3">
+            <div class="row g-5" >
+              <div class="col-lg-3" >
                 <!-- Start Dashboard Sidebar  -->
                 <div class="rbt-default-sidebar sticky-top rbt-shadow-box rbt-gradient-border">
                   <div class="inner">
                     <div class="content-item-content">
 
                       <div class="rbt-default-sidebar-wrapper">
-                        <div class="section-title mb--20">
-                          <h6 class="rbt-title-style-2">Welcome, Jone Due</h6>
-                        </div>
-                        <nav class="mainmenu-nav">
-                          <ul class="dashboard-mainmenu rbt-default-sidebar-list">
-                            <li><a href="student-dashboard.html"><i class="feather-home"></i><span>Dashboard</span></a>
-                            </li>
-                            <li><a href="student-profile.html"><i class="feather-user"></i><span>My Profile</span></a>
-                            </li>
-                            <li><a href="student-enrolled-courses.html"><i class="feather-book-open"></i><span>Enrolled
-                                  Courses</span></a></li>
-                            <li><a href="student-wishlist.html"><i
-                                  class="feather-bookmark"></i><span>Wishlist</span></a></li>
-                            <li><a href="student-reviews.html"><i class="feather-star"></i><span>Reviews</span></a></li>
-                            <li><a href="student-my-quiz-attempts.html"><i class="feather-help-circle"></i><span>My Quiz
-                                  Attempts</span></a></li>
-                            <li><a href="student-order-history.html"><i class="feather-shopping-bag"></i><span>Order
-                                  History</span></a></li>
-                          </ul>
-                        </nav>
+                        <!-- <div class="section-title mb--20">
+                          <h6 class="rbt-title-style-2">Welcome, {{ displayName }}</h6>
+                        </div> -->
+                        <app-side-nav></app-side-nav>
 
                         <div class="section-title mt--40 mb--20">
                           <h6 class="rbt-title-style-2">User</h6>
@@ -79,9 +68,10 @@
 
                         <nav class="mainmenu-nav">
                           <ul class="dashboard-mainmenu rbt-default-sidebar-list">
-                            <li><a href="student-settings.html"><i
+                            <li><a (click)="openProfileSettings($event)" href="javascript:void(0);"><i
                                   class="feather-settings"></i><span>Settings</span></a></li>
-                            <li><a href="index.html"><i class="feather-log-out"></i><span>Logout</span></a></li>
+                            <li><a href="javascript:void(0);" (click)="logoutUser($event)"><i
+                                  class="feather-log-out"></i><span>Logout</span></a></li>
                           </ul>
                         </nav>
                       </div>
@@ -92,7 +82,7 @@
                 <!-- End Dashboard Sidebar  -->
               </div>
 
-              <div class="col-lg-9">
+              <div class="col-lg-9" >
                 <router-outlet />
               </div>
             </div>
@@ -107,5 +97,136 @@
       </div>
     </div>
   </main>
+
+  @if (isProfileModalOpen) {
+  <div class="profile-modal-backdrop" (click)="closeUpdateProfileModal()"></div>
+  <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="update-profile-title">
+    <div class="profile-modal__dialog">
+      <button type="button" class="profile-modal__close" (click)="closeUpdateProfileModal()" aria-label="Close">
+        <i class="feather-x"></i>
+      </button>
+
+      <div class="rbt-dashboard-content bg-color-white rbt-shadow-box profile-update-card">
+        <div class="content">
+          <div class="section-title">
+            <h4 id="update-profile-title" class="rbt-title-style-3">Settings</h4>
+          </div>
+
+          <!-- <div class="advance-tab-button mb--30">
+            <ul class="nav nav-tabs tab-button-style-2 justify-content-start" role="tablist">
+              <li role="presentation">
+                <a class="tab-button active" href="#" role="tab" aria-selected="true" (click)="$event.preventDefault()">
+                  <span class="title">Profile</span>
+                </a>
+              </li>
+            </ul>
+          </div> -->
+
+          <form class="rbt-profile-row rbt-default-form row row--15" [formGroup]="profileForm"
+            (ngSubmit)="submitProfileUpdate()" novalidate>
+            <div class="col-12">
+              <div class="profile-cover-stage"
+                [class.profile-cover-stage--has-image]="coverImagePreview || coverImageSrc">
+                @if (coverImagePreview || coverImageSrc) {
+                <img class="profile-cover-stage__image" [src]="coverImagePreview || coverImageSrc"
+                  alt="Cover photo preview">
+                } @else {
+                <div class="profile-cover-stage__size">2610x700</div>
+                }
+
+                <label class="profile-cover-action">
+                  <span>Edit Cover Photo</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" (change)="onCoverFileChange($event)">
+                </label>
+
+                <div class="profile-cover-user">
+                  <label class="profile-avatar-upload" title="Upload Photo">
+                    <img [src]="profileImagePreview || profileImageSrc" alt="Profile preview">
+                    <span class="profile-avatar-upload__camera">
+                      <i class="feather-camera"></i>
+                    </span>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" (change)="onProfileFileChange($event)">
+                  </label>
+
+                  <div class="profile-cover-user__content">
+                    <h5>{{ displayName }}</h5>
+                    <p><i class="feather-mail"></i>{{ profileForm.get('email')?.value || 'Email not available' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6 col-md-6 col-sm-6 col-12 mt-4">
+              <div class="rbt-form-group">
+                <label for="profile-update-name">Name *</label>
+                <input id="profile-update-name" type="text" formControlName="name" autocomplete="name">
+                @if (profileForm.get('name')?.touched && profileForm.get('name')?.errors) {
+                <small class="text-danger">Minimum 3 characters required</small>
+                }
+              </div>
+            </div>
+
+            <div class="col-lg-6 col-md-6 col-sm-6 col-12 mt-4">
+              <div class="rbt-form-group">
+                <label for="profile-update-email">Email ID</label>
+                <input id="profile-update-email" type="email" formControlName="email">
+                <small class="profile-form-note">Email ID cannot be changed.</small>
+              </div>
+            </div>
+
+            <div class="col-lg-6 col-md-6 col-sm-6 col-12">
+              <div class="rbt-form-group">
+                <label for="profile-update-phone">Phone Number</label>
+                <input id="profile-update-phone" type="tel" formControlName="phone" maxlength="10" inputmode="numeric"
+                  autocomplete="tel" (keypress)="onlyNumbers($event)">
+                @if (profileForm.get('phone')?.touched && profileForm.get('phone')?.errors) {
+                <small class="text-danger">Enter a valid 10 digit phone number</small>
+                }
+              </div>
+            </div>
+
+            <div class="col-lg-6 col-md-6 col-sm-6 col-12">
+              <div class="rbt-form-group">
+                <label for="profile-update-dob">Date of Birth</label>
+                <input id="profile-update-dob" type="date" formControlName="dob" autocomplete="bday">
+              </div>
+            </div>
+
+            <div class="col-lg-6 col-md-6 col-sm-6 col-12">
+              <div class="rbt-form-group">
+                <label for="profile-update-gender">Gender</label>
+                <select id="profile-update-gender" class="profile-form-select" formControlName="gender">
+                  <option value="">Select gender</option>
+                  @for (option of genderOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            @if (profileErrorMessage) {
+            <div class="col-12">
+              <div class="profile-modal__error">{{ profileErrorMessage }}</div>
+            </div>
+            }
+
+            <div class="col-12 mt--20">
+              <div class="profile-modal__actions">
+                <button type="button" class="rbt-btn btn-border" (click)="closeUpdateProfileModal()"
+                  [disabled]="isSavingProfile">
+                  Cancel
+                </button>
+                <button type="submit" class="rbt-btn btn-gradient" [disabled]="profileForm.invalid || isSavingProfile">
+                  {{ isSavingProfile ? 'Saving...' : 'Update Info' }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+  }
+
   <app-footer></app-footer>
 </div>

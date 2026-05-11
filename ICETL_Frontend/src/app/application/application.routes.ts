@@ -5,18 +5,44 @@ export const applicationRoutes: Routes = [
   {
     path: '',
     component: Application,
+
     children: [
       {
-        path: 'learner',
-        loadComponent: () =>
-          import('./learner/welcome/welcome').then((m) => m.Welcome),
-        title: 'Dashboard | ICETL',
+        path: 'instructor',
+
+        loadChildren: () =>
+          import('./instructor/instructor.routes').then(
+            (m) => m.instructorRoutes
+          ),
+
+        title: 'Instructor | ICETL',
       },
       {
-        path: 'learnerDashboard',
-        loadComponent: () =>
-          import('./learner/dashboard/dashboard').then((m) => m.Dashboard),
-        title: 'Dashboard | ICETL',
+        path: 'learner',
+        loadChildren: () =>
+          import('./learner/learner.routes').then(
+            (m) => m.learnerRoutes
+          ),
+
+        title: 'Learner | ICETL',
+      },
+      {
+        path: 'admin',
+        loadChildren: () =>
+          import('./admin/admin.routes').then(
+            (m) => m.adminRoutes
+          ),
+
+        title: 'Learner | ICETL',
+      },
+      {
+        path: 'courses',
+        loadChildren: () =>
+          import('./courses/courses.routes').then(
+            (m) => m.coursesRoutes
+          ),
+
+        title: 'Learner | ICETL',
       },
     ],
   },

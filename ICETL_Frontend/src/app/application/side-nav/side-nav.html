@@ -1,1 +1,103 @@
-<p>side-nav works!</p>
+<nav class="mainmenu-nav">
+  <ul class="dashboard-mainmenu rbt-default-sidebar-list side-nav-list">
+    @if (menuItems.length) {
+      @for (menu of menuItems; track menu.id) {
+
+        @if (menu.children.length) {
+          <li class="side-nav-section">
+            <div class="side-nav-section__title">
+              {{ menu.name }}
+            </div>
+
+            <ul class="dashboard-mainmenu rbt-default-sidebar-list side-nav-children">
+              <ng-container
+                *ngTemplateOutlet="menuTree; context: { $implicit: menu.children, level: 0 }">
+              </ng-container>
+            </ul>
+          </li>
+
+        } @else if (menu.route) {
+
+          <li class="side-nav-item side-nav-item--single">
+            <a
+              class="side-nav-link"
+              [routerLink]="menu.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{
+                exact: shouldUseExactActiveMatch(menu.route)
+              }">
+
+              <i [class]="menu.icon || defaultMenuIcon"></i>
+              <span>{{ menu.name }}</span>
+            </a>
+          </li>
+
+        } @else {
+
+          <li class="side-nav-section">
+            <div class="side-nav-section__title">
+              {{ menu.name }}
+            </div>
+          </li>
+
+        }
+      }
+
+    } @else if (getDashboardRoute()) {
+
+      <li class="side-nav-item side-nav-item--single">
+        <a
+          class="side-nav-link"
+          [routerLink]="getDashboardRoute()"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }">
+
+          <i class="feather-home"></i>
+          <span>{{ dashboardSetting?.dashboardName }}</span>
+        </a>
+      </li>
+
+    }
+  </ul>
+</nav>
+
+<!-- MENU TREE -->
+<ng-template #menuTree let-items let-level="level">
+
+  @for (menu of items; track menu.id) {
+
+    <li class="side-nav-item">
+
+      <!-- SHOW ONLY FIRST LEVEL -->
+      @if (level === 0) {
+
+        @if (menu.route) {
+
+          <a
+            class="side-nav-link"
+            [routerLink]="menu.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{
+              exact: shouldUseExactActiveMatch(menu.route)
+            }">
+
+            <i [class]="menu.icon || defaultMenuIcon"></i>
+            <span>{{ menu.name }}</span>
+          </a>
+
+        } @else {
+
+          <div class="side-nav-link side-nav-link--static">
+            <i [class]="menu.icon || defaultMenuIcon"></i>
+            <span>{{ menu.name }}</span>
+          </div>
+
+        }
+
+      }
+
+    </li>
+
+  }
+
+</ng-template>

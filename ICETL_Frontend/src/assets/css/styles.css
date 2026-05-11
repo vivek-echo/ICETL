@@ -8031,7 +8031,7 @@ hr {
 }
 
 .bg_image--23 {
-  background-image: url(../images/bg/bg-image-23.jpg);
+  background-image: url(../images/bg/bg-image-23.png);
 }
 
 .bg_image--24 {
@@ -21247,7 +21247,7 @@ span.transparent-button:hover i {
   padding: 50px;
   position: relative;
   z-index: 1;
-  max-width: 490px;
+  max-width: 550px;
   padding-left: 60px;
   z-index: 2;
   background: var(--color-white);

@@ -1,0 +1,109 @@
+:host {
+  display: block;
+}
+
+.side-nav-list,
+.side-nav-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.side-nav-list li,
+.side-nav-children li {
+  border-top: 0 !important;
+  display: block !important;
+  justify-content: flex-start !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.side-nav-section + .side-nav-section,
+.side-nav-section + .side-nav-item,
+.side-nav-item + .side-nav-section,
+.side-nav-item + .side-nav-item {
+  margin-top: 18px;
+}
+
+.side-nav-section__title {
+  color: #7f8798;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.side-nav-section__title--nested {
+  margin-bottom: 8px;
+  margin-top: 8px;
+}
+
+.side-nav-link {
+  align-items: center;
+  border-bottom: 1px solid #ebeef5;
+  color: #5d6577;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 10px 0 12px;
+  width: 100%;
+  transition: color 0.2s ease;
+}
+
+.side-nav-link i {
+  color: #7c8498;
+  font-size: 18px;
+  margin-right: 0;
+  min-width: 20px;
+  text-align: center;
+  transition: color 0.2s ease;
+}
+
+.side-nav-link span {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.side-nav-link:hover,
+.side-nav-link.active {
+  color: var(--color-primary);
+}
+
+.side-nav-link:hover i,
+.side-nav-link.active i {
+  color: var(--color-primary);
+}
+
+.side-nav-link--static {
+  color: var(--color-heading);
+  cursor: default;
+}
+
+.side-nav-children {
+  padding-left: 0;
+}
+
+.side-nav-section .side-nav-item + .side-nav-item,
+.side-nav-children .side-nav-item + .side-nav-item {
+  margin-top: 0;
+}
+
+.side-nav-item--single > .side-nav-link {
+  border-top: 0;
+}
+
+.side-nav-item--nested .side-nav-link {
+  padding-left: 0;
+}
+
+.side-nav-item--nested .side-nav-link span,
+.side-nav-item--nested .side-nav-link--static span {
+  font-size: 17px;
+}
+
+.side-nav-item:last-child > .side-nav-link,
+.side-nav-section:last-child .side-nav-item:last-child > .side-nav-link {
+  border-bottom: 0;
+}

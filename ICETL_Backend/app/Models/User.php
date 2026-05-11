@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'email_verified_at',
         'dob',
         'gender',
         'role',
@@ -30,6 +31,10 @@ class User extends Authenticatable
         'password',
         'otp',
         'otp_expires_at',
+        'profileImg',
+        'thumbnailImg',
+        'coverImg',
+        'profileStage',
     ];
 
     /**
@@ -47,6 +52,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'dob' => 'date',
         'otp_expires_at' => 'datetime',
+        'profileStage' => 'integer',
         'password' => 'hashed',
     ];
 }

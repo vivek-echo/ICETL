@@ -10,13 +10,13 @@
               <div class="header-info">
                 <ul class="rbt-information-list">
                   <li>
-                    <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">
+                    <a href="https://www.instagram.com/icetlindia/" target="_blank" rel="noreferrer">
                       <i class="fab fa-instagram"></i>100k
                       <span class="d-none d-xxl-block">Followers</span>
                     </a>
                   </li>
                   <li>
-                    <a href="https://www.facebook.com/" target="_blank" rel="noreferrer">
+                    <a href="https://www.facebook.com/icetechnologylab" target="_blank" rel="noreferrer">
                       <i class="fab fa-facebook-square"></i>500k
                       <span class="d-none d-xxl-block">Followers</span>
                     </a>
@@ -65,7 +65,7 @@
                 </ul>
               </div>
 
-              <div class="rbt-separator"></div>
+              <!-- <div class="rbt-separator"></div> -->
 
               <!-- <div class="header-info">
                 <ul class="rbt-dropdown-menu switcher-language">
@@ -324,28 +324,32 @@
                   <div class="inner">
                     <div class="rbt-admin-profile">
                       <div class="admin-thumbnail header-user-avatar">
+                        @if (currentUserAvatarUrl()) {
+                        <img [src]="currentUserAvatarUrl()" [alt]="currentUserDisplayName() + ' thumbnail image'" />
+                        } @else {
                         <span>{{ userInitials() }}</span>
+                        }
                       </div>
                       <div class="admin-info">
                         <span class="name">{{ currentUserDisplayName() }}</span>
                         <span class="admin-info__email">{{ currentUserEmail() }}</span>
-                        <a class="rbt-btn-link color-primary" [routerLink]="profileRoute" (click)="closeAllMenus()">
+                        <!-- <a class="rbt-btn-link color-primary" [routerLink]="profileRoute" (click)="closeAllMenus()">
                           View Profile
-                        </a>
+                        </a> -->
                       </div>
                     </div>
 
                     <hr class="mt--10 mb--10" />
 
                     <ul class="user-list-wrapper">
-                      <li>
+                      <!-- <li>
                         <a [routerLink]="profileRoute" (click)="closeAllMenus()">
                           <i class="feather-user"></i>
                           <span>Profile</span>
                         </a>
-                      </li>
+                      </li> -->
                       <li>
-                        <a href="#" (click)="logoutUser($event)">
+                        <a href="javascript:void(0);" (click)="logoutUser($event)">
                           <i class="feather-log-out"></i>
                           <span>Logout</span>
                         </a>
@@ -456,7 +460,11 @@
         <div class="mobile-menu-panel__account-card">
           <div class="rbt-admin-profile">
             <div class="admin-thumbnail header-user-avatar">
+              @if (currentUserAvatarUrl()) {
+              <img [src]="currentUserAvatarUrl()" [alt]="currentUserDisplayName() + ' thumbnail image'" />
+              } @else {
               <span>{{ userInitials() }}</span>
+              }
             </div>
             <div class="admin-info">
               <span class="name">{{ currentUserDisplayName() }}</span>

@@ -14,10 +14,18 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { AuthService, SendOtpResponse, VerifyOtpResponse } from '../../../commonServices/auth.service';
+import {
+  AuthService,
+  LoginData,
+  RoleSelectionOption,
+  SendOtpResponse,
+  VerifyOtpResponse,
+} from '../../../commonServices/auth.service';
 import { NavigationService } from '../../../commonServices/nav-item-service';
+import { SpinnerService } from '../../../commonServices/spinner/spinner.service';
+import { UserProfileService } from '../../../commonServices/user-profile.service';
 
-type LoginStep = 'identify' | 'otp' | 'profile';
+type LoginStep = 'identify' | 'otp' | 'role' | 'profile';
 
 declare const $: any;
 
@@ -44,6 +52,8 @@ export class Login implements OnDestroy, AfterViewChecked {
   isLoading = false;
   errorMessage = '';
   currentStep: LoginStep = 'identify';
+  availableRoles: RoleSelectionOption[] = [];
+  selectedRoleUserId: number | null = null;
   otpArray = [0, 1, 2, 3, 4, 5];
   otpValues: string[] = ['', '', '', '', '', ''];
 
@@ -58,6 +68,8 @@ export class Login implements OnDestroy, AfterViewChecked {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private NavigationService: NavigationService,
+    private spinner: SpinnerService,
+    private userProfileService: UserProfileService,
     @Inject(PLATFORM_ID) platformId: object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -84,6 +96,8 @@ export class Login implements OnDestroy, AfterViewChecked {
     switch (this.currentStep) {
       case 'otp':
         return 'Verify OTP';
+      case 'role':
+        return 'Choose Your Role';
       case 'profile':
         return 'Complete Your Profile';
       default:
@@ -95,6 +109,8 @@ export class Login implements OnDestroy, AfterViewChecked {
     switch (this.currentStep) {
       case 'otp':
         return `Enter the 6-digit code sent to ${this.loginForm.value.emailId}.`;
+      case 'role':
+        return 'Multiple accounts were found for this email. Select the role you want to continue with.';
       case 'profile':
         return 'Your OTP is verified. Add the remaining details to finish creating the account.';
       default:
@@ -106,6 +122,8 @@ export class Login implements OnDestroy, AfterViewChecked {
     switch (this.currentStep) {
       case 'otp':
         return 'Step 2 of 3';
+      case 'role':
+        return 'Step 3 of 4';
       case 'profile':
         return 'Step 3 of 3';
       default:
@@ -132,6 +150,7 @@ export class Login implements OnDestroy, AfterViewChecked {
     this.isLoading = true;
     this.errorMessage = '';
     this.resetOtpValues();
+    this.resetRoleSelection();
     this.profileForm.reset({
       name: '',
       phone: '',
@@ -229,6 +248,7 @@ export class Login implements OnDestroy, AfterViewChecked {
       dob: '',
       gender: '',
     });
+    this.resetRoleSelection();
     this.destroyDobDatepicker();
     this.errorMessage = '';
     this.isLoading = false;
@@ -259,10 +279,11 @@ export class Login implements OnDestroy, AfterViewChecked {
         otp,
       })
       .subscribe({
-        next: (response: VerifyOtpResponse<unknown>) => {
+        next: (response: VerifyOtpResponse<LoginData>) => {
           if (response.success && response.is_new_user) {
             this.stopTimer();
             this.resetOtpValues();
+            this.resetRoleSelection();
             this.currentStep = 'profile';
             this.isLoading = false;
             this.errorMessage = '';
@@ -271,13 +292,22 @@ export class Login implements OnDestroy, AfterViewChecked {
             return;
           }
 
+          if (response.success && response.is_multi_role_user && Array.isArray(response.roles) && response.roles.length > 0) {
+            this.stopTimer();
+            this.resetOtpValues();
+            this.availableRoles = response.roles;
+            this.selectedRoleUserId = response.roles[0]?.user_id ?? null;
+            this.currentStep = 'role';
+            this.isLoading = false;
+            this.errorMessage = '';
+            this.cdr.detectChanges();
+            return;
+          }
+
           if (response.success && response.data) {
             this.stopTimer();
             this.isLoading = false;
-            const data: any = response.data;
-            localStorage.setItem('dashboardsetting', JSON.stringify( data.user.dashboard));
-            this.NavigationService.loadNavigation();
-            void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
+            this.navigateAfterAuth(response.data);
             return;
           }
 
@@ -287,6 +317,41 @@ export class Login implements OnDestroy, AfterViewChecked {
         },
         error: (error) => {
           this.errorMessage = this.getApiErrorMessage(error, 'Login failed');
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  selectRole(role: RoleSelectionOption): void {
+    if (!role?.user_id) {
+      this.errorMessage = 'Please select a valid role';
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.selectedRoleUserId = role.user_id;
+
+    this.authService
+      .selectRole({
+        email: this.loginForm.value.emailId,
+        user_id: role.user_id,
+      })
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            this.isLoading = false;
+            this.navigateAfterAuth(response.data);
+            return;
+          }
+
+          this.errorMessage = response.message || 'Role selection failed';
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.errorMessage = this.getApiErrorMessage(error, 'Role selection failed');
           this.isLoading = false;
           this.cdr.detectChanges();
         },
@@ -318,11 +383,8 @@ export class Login implements OnDestroy, AfterViewChecked {
       .subscribe({
         next: (response) => {
           if (response.success && response.data) {
-            const data: any = response.data;
-            localStorage.setItem('dashboardsetting', JSON.stringify( data.user.dashboard));
-            this.NavigationService.loadNavigation();
             this.isLoading = false;
-            void this.router.navigate(['/application', data.user.dashboard.dashboardUrl]);
+            this.navigateAfterAuth(response.data);
             return;
           }
 
@@ -345,6 +407,11 @@ export class Login implements OnDestroy, AfterViewChecked {
 
   private resetOtpValues(): void {
     this.otpValues = Array(this.otpArray.length).fill('');
+  }
+
+  private resetRoleSelection(): void {
+    this.availableRoles = [];
+    this.selectedRoleUserId = null;
   }
 
   private applyOtpFromResponse(response?: Partial<SendOtpResponse> | null): void {
@@ -465,6 +532,43 @@ export class Login implements OnDestroy, AfterViewChecked {
 
   private getFirstEmptyOtpIndex(): number {
     return this.otpValues.findIndex((value) => !value);
+  }
+
+  private navigateAfterAuth(data: LoginData): void {
+    localStorage.setItem('dashboardsetting', JSON.stringify(data.user.dashboard));
+    this.NavigationService.loadNavigation();
+    this.userProfileService.loadProfileFromStorage();
+    void this.router.navigate(['/application', data.user.dashboard?.dashboardUrl]);
+  }
+
+  roleProfileImageUrl(role: RoleSelectionOption): string | null {
+    const fileName = typeof role.profile_img === 'string' ? role.profile_img.trim() : '';
+
+    if (!fileName) {
+      return null;
+    }
+
+    const normalizedFileName = fileName.split('/').pop();
+
+    if (!normalizedFileName) {
+      return null;
+    }
+
+    return this.userProfileService.buildPrivateFileUrl(`uploads/user/profile/${normalizedFileName}`);
+  }
+
+  roleInitials(role: RoleSelectionOption): string {
+    const source = (role.role_name || 'Role').trim();
+    const parts = source.split(/\s+/).filter(Boolean);
+
+    if (parts.length === 0) {
+      return 'R';
+    }
+
+    return parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('');
   }
 
   private stopTimer(resetValue = true): void {

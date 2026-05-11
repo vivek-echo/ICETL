@@ -18,7 +18,7 @@
                 [attr.aria-describedby]="submitted && loginForm.get('emailId')?.errors ? 'login-email-error' : null"
                 [attr.aria-invalid]="submitted && loginForm.get('emailId')?.invalid ? 'true' : null"
                 (keydown.enter)="sendOtp()" />
-              <label for="login-email">Email ID *</label>
+              <label for="login-email"><i class="fa-solid fa-envelope me-1"></i> Email ID *</label>
               <span class="focus-border"></span>
 
               <div id="login-email-error" class="text-danger small mt-1"
@@ -68,6 +68,46 @@
             </div>
           </form>
 
+          <div *ngIf="currentStep === 'role'" class="role-selection">
+            <div class="role-selection__list">
+              <button
+                *ngFor="let role of availableRoles"
+                type="button"
+                class="role-option"
+                [class.role-option--active]="selectedRoleUserId === role.user_id"
+                [disabled]="isLoading"
+                (click)="selectRole(role)">
+                <span class="role-option__avatar">
+                  <img
+                    *ngIf="roleProfileImageUrl(role) as profileImageUrl; else roleInitialAvatar"
+                    [src]="profileImageUrl"
+                    [alt]="role.role_name + ' profile image'" />
+                  <ng-template #roleInitialAvatar>
+                    <span>{{ roleInitials(role) }}</span>
+                  </ng-template>
+                </span>
+
+                <span class="role-option__content">
+                  <span class="role-option__title">{{ role.role_name || 'Role' }}</span>
+                  <span class="role-option__subtitle">User ID: {{ role.user_id }}</span>
+                  <span class="role-option__subtitle" *ngIf="role.dashboard_url">
+                    Dashboard: /application/{{ role.dashboard_url }}
+                  </span>
+                </span>
+
+                <span class="role-option__action">
+                  {{ isLoading && selectedRoleUserId === role.user_id ? 'Continuing...' : 'Continue' }}
+                </span>
+              </button>
+            </div>
+
+            <div class="text-center mt-3">
+              <button type="button" class="btn btn-link login-link-button" (click)="backToUserInput()">
+                Use a different email ID
+              </button>
+            </div>
+          </div>
+
           <form *ngIf="currentStep === 'profile'" [formGroup]="profileForm" (ngSubmit)="completeProfile()">
             <div class="form-group">
               <input id="profile-name" type="text" formControlName="name" autocomplete="name"
@@ -78,7 +118,7 @@
                 " [attr.aria-invalid]="
                   profileForm.get('name')?.touched && profileForm.get('name')?.invalid ? 'true' : null
                 " />
-              <label for="profile-name">Name *</label>
+              <label for="profile-name"><i class="fa-solid fa-user me-1"></i>Name *</label>
               <span class="focus-border"></span>
 
               <div id="profile-name-error" class="text-danger small mt-1"
@@ -99,7 +139,7 @@
                 " [attr.aria-invalid]="
                   profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid ? 'true' : null
                 " (keypress)="onlyNumbers($event)" />
-              <label for="profile-phone">Phone Number *</label>
+              <label for="profile-phone"><i class="fa-solid fa-phone me-1"></i>Phone Number *</label>
               <span class="focus-border"></span>
 
               <div id="profile-phone-error" class="text-danger small mt-1"
@@ -118,7 +158,7 @@
                 " [attr.aria-invalid]="
                   profileForm.get('dob')?.touched && profileForm.get('dob')?.invalid ? 'true' : null
                 " (click)="openDobDatepicker()" (focus)="openDobDatepicker()" />
-              <label for="profile-dob">Date of Birth *</label>
+              <label for="profile-dob"><i class="fa-solid fa-calendar-days me-1"></i> Date of Birth *</label>
               <span class="focus-border"></span>
               <button type="button" class="date-picker-toggle" (click)="openDobDatepicker()"
                 aria-label="Open date picker">
@@ -165,11 +205,5 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="rbt-separator-mid">
-  <div class="container">
-    <hr class="rbt-separator m-0">
   </div>
 </div>

@@ -1,2 +1,6 @@
 ALTER TABLE `users` 
 ADD COLUMN `role` INT(11) NULL DEFAULT NULL AFTER `updated_at`;
+
+
+ALTER TABLE `ictel`.`users` 
+ADD COLUMN `deletedFlag` INT NULL DEFAULT 0 AFTER `coverImg`;

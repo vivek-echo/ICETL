@@ -1,10 +1,12 @@
-import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AlertHelperService } from '../../commonServices/alert-helper-service';
 import { AuthService } from '../../commonServices/auth.service';
 import { HEADER_CATEGORY_PANELS } from '../../data/site-content';
 import { NavigationService } from '../../commonServices/nav-item-service';
 import { AsyncPipe } from '@angular/common';
+import { Subscription } from 'rxjs';
+import { UserProfile, UserProfileService } from '../../commonServices/user-profile.service';
 
 type UtilityMenu = 'language' | 'currency' | 'account' | null;
 
@@ -18,6 +20,8 @@ interface AuthUser {
   id?: number;
   name: string;
   email: string;
+  profileImgUrl?: string | null;
+  thumbnailImgUrl?: string | null;
 }
 
 @Component({
@@ -26,20 +30,24 @@ interface AuthUser {
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit, OnDestroy {
   private readonly navItemService = inject(NavigationService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly alertHelper = inject(AlertHelperService);
   private readonly authService = inject(AuthService);
+  private readonly userProfileService = inject(UserProfileService);
   private readonly router = inject(Router);
+  private readonly subscriptions = new Subscription();
+  private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
   navItems$ = this.navItemService.navItems$;
   readonly categoryPanels = HEADER_CATEGORY_PANELS;
   readonly profileRoute = '/application/studentDashboard';
   readonly socialLinks = [
-    { label: 'Facebook', href: 'https://www.facebook.com/', iconClass: 'fab fa-facebook-f' },
-    { label: 'Twitter', href: 'https://www.twitter.com/', iconClass: 'fab fa-twitter' },
-    { label: 'LinkedIn', href: 'https://www.linkedin.com/', iconClass: 'fab fa-linkedin-in' },
-    { label: 'Instagram', href: 'https://www.instagram.com/', iconClass: 'fab fa-instagram' },
+    { label: 'Facebook', href: 'https://www.facebook.com/icetechnologylab', iconClass: 'fab fa-facebook-f' },
+    { label: 'Twitter', href: 'https://x.com/icetlindia', iconClass: 'fab fa-twitter' },
+    { label: 'LinkedIn', href: 'https://in.linkedin.com/company/ice-technology-lab', iconClass: 'fab fa-linkedin-in' },
+    { label: 'Instagram', href: 'https://www.instagram.com/icetlindia/', iconClass: 'fab fa-instagram' },
+    { label: 'YouTube', href: 'https://www.youtube.com/@icetechnologylab2073', iconClass: 'fab fa-youtube' },
   ];
 
   readonly languages: LanguageOption[] = [
@@ -48,7 +56,7 @@ export class HeaderComponent {
     { code: 'de', label: 'German', flag: 'assets/images/icons/de.png' },
   ];
   readonly currencies = ['USD', 'EUR', 'GBP'];
-  readonly phoneNumber = '+1-202-555-0174';
+  readonly phoneNumber = '+91 8797078611 , +91 8797078612';
 
   readonly selectedLanguage = signal<LanguageOption>(this.languages[0]);
   readonly selectedCurrency = signal(this.currencies[0]);
@@ -59,13 +67,20 @@ export class HeaderComponent {
   readonly openMobileSection = signal<string | null>(null);
   readonly openUtilityMenu = signal<UtilityMenu>(null);
   readonly activeCategoryId = signal(this.categoryPanels[0]?.id ?? '');
-  readonly currentUser = signal<AuthUser | null>(this.readCurrentUser());
+  readonly currentUser = signal<AuthUser | null>(
+    this.userProfileService.currentProfile
+      ? this.mapProfileToAuthUser(this.userProfileService.currentProfile)
+      : this.readCurrentUser(),
+  );
   readonly isLoggedIn = computed(() => this.currentUser() !== null);
   readonly currentUserDisplayName = computed(() => this.currentUser()?.name ?? 'Learner');
   readonly currentUserShortName = computed(
     () => this.currentUserDisplayName().trim().split(/\s+/)[0] || 'Account',
   );
   readonly currentUserEmail = computed(() => this.currentUser()?.email || 'Signed in learner');
+  readonly currentUserAvatarUrl = computed(
+    () => this.currentUser()?.thumbnailImgUrl || this.currentUser()?.profileImgUrl || '',
+  );
   readonly userInitials = computed(() =>
     this.currentUserDisplayName()
       .trim()
@@ -79,6 +94,19 @@ export class HeaderComponent {
       this.categoryPanels.find((category) => category.id === this.activeCategoryId()) ??
       this.categoryPanels[0],
   );
+
+  ngOnInit(): void {
+    this.subscriptions.add(
+      this.userProfileService.profile$.subscribe((profile) => {
+        this.scheduleCurrentUserSync(profile);
+      }),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.clearProfileSyncTimer();
+    this.subscriptions.unsubscribe();
+  }
 
   toggleTopbar(): void {
     this.isTopbarExpanded.update((isExpanded) => !isExpanded);
@@ -168,13 +196,27 @@ export class HeaderComponent {
   }
 
   private handleLogoutSuccess(): void {
-    localStorage.clear(); // or remove specific keys
+    this.userProfileService.clearProfile();
+    this.authService.logoutLocally(false);
+    this.currentUser.set(null);
+    this.closeAllMenus();
 
+    this.router.navigate(['/login']);
+  }
+
+  @HostListener('window:auth-session-cleared')
+  handleAuthSessionCleared(): void {
+    this.userProfileService.clearProfile();
     this.currentUser.set(null);
     this.closeAllMenus();
     this.navItemService.loadNavigation();
+  }
 
-    this.router.navigate(['/login']);
+  @HostListener('window:auth-user-updated')
+  handleAuthUserUpdated(): void {
+    const profile = this.userProfileService.loadProfileFromStorage();
+
+    this.currentUser.set(profile ? this.mapProfileToAuthUser(profile) : this.readCurrentUser());
   }
 
   @HostListener('document:click', ['$event'])
@@ -202,12 +244,47 @@ export class HeaderComponent {
         id: user.id,
         name: typeof user.name === 'string' && user.name.trim() ? user.name.trim() : 'Learner',
         email: typeof user.email === 'string' ? user.email.trim() : '',
+        profileImgUrl: this.sanitizeDisplayUrl(user.profileImgUrl),
+        thumbnailImgUrl: this.sanitizeDisplayUrl(user.thumbnailImgUrl),
       };
     } catch {
       return {
         name: 'Learner',
         email: '',
       };
+    }
+  }
+
+  private mapProfileToAuthUser(profile: UserProfile): AuthUser {
+    return {
+      id: profile.id,
+      name: profile.name?.trim() || 'Learner',
+      email: profile.email?.trim() || '',
+      profileImgUrl: profile.profileImgUrl ?? null,
+      thumbnailImgUrl: profile.thumbnailImgUrl ?? null,
+    };
+  }
+
+  private sanitizeDisplayUrl(value: unknown): string | null {
+    if (typeof value !== 'string' || !value.trim()) {
+      return null;
+    }
+
+    return value.startsWith('blob:') || value.startsWith('data:') ? value : null;
+  }
+
+  private scheduleCurrentUserSync(profile: UserProfile | null): void {
+    this.clearProfileSyncTimer();
+
+    this.profileSyncTimer = setTimeout(() => {
+      this.currentUser.set(profile ? this.mapProfileToAuthUser(profile) : null);
+    });
+  }
+
+  private clearProfileSyncTimer(): void {
+    if (this.profileSyncTimer) {
+      clearTimeout(this.profileSyncTimer);
+      this.profileSyncTimer = null;
     }
   }
 }

@@ -1,0 +1,1469 @@
+<section class="instructor-onboarding" #pageTop>
+  <div class="bg-orb bg-orb--one"></div>
+  <div class="bg-orb bg-orb--two"></div>
+  <div class="bg-orb bg-orb--three"></div>
+
+  <section class="instructor-hero">
+    <div class="container-fluid p-5">
+      <div class="hero-shell glass-panel">
+        <div class="row align-items-center gy-5">
+          <div class="col-lg-6">
+            <div class="hero-copy">
+              <span class="hero-kicker">
+                <i class="fa-solid fa-star"></i>
+                Premium Instructor Network
+              </span>
+              <h1>Design a world-class instructor profile that feels as strong as your expertise.</h1>
+              <p>
+                Verify your email, build a premium teaching identity, and move through a polished
+                ICETL onboarding flow inspired by the best modern learning platforms.
+              </p>
+
+              <div class="hero-actions">
+                <button
+                  type="button"
+                  class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                  (click)="scrollToRegistrationSection()"
+                >
+                  <span class="icon-reverse-wrapper">
+                    <span class="btn-text">Start Onboarding</span>
+                    <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                    <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  </span>
+                </button>
+                <a class="hero-link" routerLink="/login">Already have an account?</a>
+              </div>
+
+              <div class="hero-proof-grid">
+                <div class="hero-proof-card">
+                  <span class="hero-proof-card__label">Email Security</span>
+                  <strong>OTP First</strong>
+                  <p>Secure verification before any onboarding data is unlocked.</p>
+                </div>
+                <div class="hero-proof-card">
+                  <span class="hero-proof-card__label">Draft Recovery</span>
+                  <strong>Resume Anytime</strong>
+                  <p>Return later and continue from your last saved instructor step.</p>
+                </div>
+              </div>
+
+              <div class="hero-metrics">
+                @for (stat of statistics; track stat.label) {
+                  <div class="hero-metric">
+                    <div class="hero-metric__icon">
+                      <i [class]="stat.icon"></i>
+                    </div>
+                    <div>
+                      <strong>{{ stat.value }}</strong>
+                      <span>{{ stat.label }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="hero-showcase">
+              <div class="floating-badge floating-badge--top">
+                <i class="fa-solid fa-shield-halved"></i>
+                Verified onboarding
+              </div>
+              <div class="floating-badge floating-badge--bottom">
+                <i class="fa-solid fa-sparkles"></i>
+                Premium profile builder
+              </div>
+
+              <div class="hero-showcase__card glass-panel">
+                <div class="hero-showcase__header">
+                  <div class="hero-showcase__dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span class="hero-showcase__tag">Instructor Dashboard Preview</span>
+                </div>
+
+                <div class="hero-showcase__body">
+                  <div class="preview-profile">
+                    <div class="preview-profile__avatar">
+                      <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div class="preview-profile__content">
+                      <strong>Premium Instructor Identity</strong>
+                      <span>Headline, proof, expertise, and trust signals in one flow.</span>
+                    </div>
+                  </div>
+
+                  <div class="preview-progress">
+                    <div class="preview-progress__row">
+                      <span>Onboarding progress</span>
+                      <strong>5 guided steps</strong>
+                    </div>
+                    <div class="preview-progress__track">
+                      <span></span>
+                    </div>
+                  </div>
+
+                  <div class="preview-grid">
+                    <div class="preview-grid__item">
+                      <span class="preview-grid__eyebrow">Verification</span>
+                      <strong>6 digit OTP</strong>
+                    </div>
+                    <div class="preview-grid__item">
+                      <span class="preview-grid__eyebrow">Documents</span>
+                      <strong>Trust-based review</strong>
+                    </div>
+                    <div class="preview-grid__item">
+                      <span class="preview-grid__eyebrow">Profile</span>
+                      <strong>Glassmorphism UI</strong>
+                    </div>
+                    <div class="preview-grid__item">
+                      <span class="preview-grid__eyebrow">Status</span>
+                      <strong>Draft resume ready</strong>
+                    </div>
+                  </div>
+
+                  <img
+                    src="assets/images/about/about-01.png"
+                    alt="Instructor onboarding preview"
+                    class="hero-showcase__image"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="benefits-section">
+    <div class="container-fluid p-5">
+      <div class="section-heading text-center">
+        <span class="section-badge">Why Teach With ICETL</span>
+        <h2>Built for instructors who want elegance, scale, and credibility from day one.</h2>
+        <p>
+          Launch a premium instructor presence with an onboarding flow that feels intentional,
+          trusted, and built for long-term growth.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        @for (benefit of benefits; track benefit.title) {
+          <div class="col-xl-3 col-md-6">
+            <article class="benefit-card glass-panel">
+              <div class="benefit-card__glow"></div>
+              <div class="benefit-card__icon">
+                <i [class]="benefit.icon"></i>
+              </div>
+              <h3>{{ benefit.title }}</h3>
+              <p>{{ benefit.description }}</p>
+            </article>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="statistics-section">
+    <div class="container-fluid p-5">
+      <div class="stats-shell glass-panel">
+        <div class="stats-shell__copy">
+          <span class="section-badge">Platform Momentum</span>
+          <h2>Join a fast-growing learning ecosystem built for trusted, modern educators.</h2>
+          <p>
+            Publish courses, verify your expertise, and manage a premium teaching brand through a
+            secure, design-led instructor onboarding experience.
+          </p>
+        </div>
+
+        <div class="stats-grid">
+          @for (stat of statistics; track stat.label) {
+            <div class="stats-card">
+              <div class="stats-card__icon">
+                <i [class]="stat.icon"></i>
+              </div>
+              <strong>{{ stat.value }}</strong>
+              <span>{{ stat.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="registration-section" #journeyStart>
+    <div class="container-fluid p-5">
+      <div
+        class="registration-shell"
+        [class.registration-shell--preform]="stage !== 'form'"
+      >
+        <div class="row g-4 align-items-start">
+          <div class="col-12" [class.col-xl-4]="stage === 'form'" [class.col-xl-3]="stage !== 'form'">
+            <div class="sidebar-stack">
+             <aside class="journey-card glass-panel" *ngIf="stage === 'email' || stage === 'otp'"  >
+                <span class="section-badge">How It Works</span>
+                <h3>Verify your email first, then complete a spacious five-step instructor application.</h3>
+
+                <div class="journey-card__list">
+                  @for (item of journeyHighlights; track item.title) {
+                    <article class="journey-card__item">
+                      <div class="journey-card__icon">
+                        <i [class]="item.icon"></i>
+                      </div>
+                      <div>
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.description }}</p>
+                      </div>
+                    </article>
+                  }
+                </div>
+
+                <div class="journey-card__note">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <div>
+                    <strong>Protected verification flow</strong>
+                    <p>
+                      OTP codes expire in 5 minutes and resend requests are throttled to protect your
+                      instructor onboarding.
+                    </p>
+                  </div>
+                </div>
+              </aside>
+
+              @if (stage === 'form') {
+                <aside class="progress-sidebar glass-panel">
+                  <div class="progress-sidebar__head">
+                    <span class="section-badge">Application Progress</span>
+                    <h3>Track every milestone in one premium progress rail.</h3>
+                    <p>
+                      Your instructor draft is saved after each successful step, so you can return
+                      anytime and continue seamlessly.
+                    </p>
+                  </div>
+
+                  <div class="progress-overview">
+                    <div class="progress-ring-card">
+                      <div class="step-progress-circle">
+                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                          <circle cx="60" cy="60" r="52"></circle>
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="52"
+                            class="progress-ring"
+                            [style.stroke-dashoffset]="327 - (327 * progressPercentage) / 100"
+                          ></circle>
+                        </svg>
+                        <span>{{ progressPercentage | number: '1.0-0' }}%</span>
+                      </div>
+                      <div class="progress-ring-card__copy">
+                        <strong>{{ stepLabel }}</strong>
+                        <p>{{ completionPercentage }}% profile completion</p>
+                      </div>
+                    </div>
+
+                    <div class="stepper-list">
+                      @for (step of stepMeta; track step.title; let index = $index) {
+                        <button
+                          type="button"
+                          class="stepper-item"
+                          [class.is-active]="index === currentStep"
+                          [class.is-complete]="index < currentStep"
+                          [disabled]="!canNavigateToStep(index)"
+                          (click)="goToStep(index)"
+                        >
+                          <span class="stepper-item__line"></span>
+                          <span class="stepper-item__index">
+                            <i
+                              [class]="index < currentStep ? 'fa-solid fa-check' : step.icon"
+                            ></i>
+                          </span>
+                          <span class="stepper-item__content">
+                            <strong>{{ step.title }}</strong>
+                            <small>{{ step.caption }}</small>
+                          </span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </aside>
+              }
+            </div>
+          </div>
+
+          <div class="col-12" [class.col-xl-8]="stage === 'form'" [class.col-xl-9]="stage !== 'form'">
+            @if (stage === 'email') {
+              <form
+                class="stage-card stage-card--entry glass-panel"
+                [formGroup]="emailEntryForm"
+                (ngSubmit)="submitEmail()"
+              >
+                <div class="stage-card__header">
+                  <span class="section-badge">Step 0 of 5</span>
+                  <h2>Verify your email to unlock the instructor onboarding workspace.</h2>
+                  <p>
+                    We’ll check your instructor status, send a secure 6-digit OTP, and restore any
+                    saved draft automatically.
+                  </p>
+                </div>
+
+                <div class="entry-grid">
+                  <div class="entry-grid__form">
+                    <div
+                      class="premium-field premium-field--email"
+                      [class.is-invalid]="
+                        emailEntryForm.get('email')?.invalid && emailEntryForm.get('email')?.touched
+                      "
+                      [class.is-filled]="!!emailEntryForm.get('email')?.value?.trim()"
+                      [class.is-success]="
+                        !!emailEntryForm.get('email')?.value?.trim() &&
+                        emailEntryForm.get('email')?.valid &&
+                        (emailEntryForm.get('email')?.dirty || emailEntryForm.get('email')?.touched)
+                      "
+                    >
+                      <fieldset class="premium-field__outline">
+                        <legend class="premium-field__legend">
+                          <span>Email Address</span>
+                        </legend>
+                        <input
+                          id="instructorEmail"
+                          type="email"
+                          class="form-control"
+                          formControlName="email"
+                          placeholder=" "
+                          aria-label="Email Address"
+                          [class.is-invalid]="
+                            emailEntryForm.get('email')?.invalid && emailEntryForm.get('email')?.touched
+                          "
+                        />
+                      </fieldset>
+                    </div>
+                    <div
+                      class="invalid-feedback d-block"
+                      *ngIf="
+                        emailEntryForm.get('email')?.invalid && emailEntryForm.get('email')?.touched
+                      "
+                    >
+                      Enter a valid email address to continue.
+                    </div>
+
+                    <div class="stage-card__footer">
+                      <button type="submit" class="rbt-btn btn-gradient btn-xl hover-icon-reverse">
+                        <span class="icon-reverse-wrapper">
+                          <span class="btn-text">Continue to Verification</span>
+                          <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                          <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="entry-grid__copy">
+                    <div class="entry-list">
+                      <div class="entry-list__item">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                        <div>
+                          <strong>Secure verification</strong>
+                          <span>Only verified email addresses can access or resume onboarding.</span>
+                        </div>
+                      </div>
+                      <div class="entry-list__item">
+                        <i class="fa-solid fa-floppy-disk-circle-arrow-right"></i>
+                        <div>
+                          <strong>Draft resume support</strong>
+                          <span>Existing instructor drafts reopen at the exact saved step.</span>
+                        </div>
+                      </div>
+                      <div class="entry-list__item">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <div>
+                          <strong>Trusted onboarding flow</strong>
+                          <span>OTP expiry and resend throttling protect instructor access.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            } @else if (stage === 'otp') {
+              <form class="stage-card stage-card--otp glass-panel" (submit)="handleOtpSubmit($event)">
+                <div class="stage-card__header">
+                  <span class="section-badge">OTP Verification</span>
+                  <h2>Enter the 6-digit code sent to {{ onboardingEmail }}.</h2>
+                  <p>{{ otpStatusMessage }}</p>
+                </div>
+
+                <div class="otp-shell">
+                  <div class="otp-summary">
+                    <div class="otp-meta">
+                      <div class="otp-meta__item">
+                        <span>Code expires in</span>
+                        <strong>{{ formattedOtpTimer }}</strong>
+                      </div>
+                      <div class="otp-meta__item">
+                        <span>Onboarding flow</span>
+                        <strong>
+                          {{
+                            flowType === 'resume'
+                              ? 'Resume draft'
+                              : flowType === 'roleUpgrade'
+                                ? 'Role upgrade'
+                                : 'New onboarding'
+                          }}
+                        </strong>
+                      </div>
+                    </div>
+
+                    @if (developmentOtp) {
+                      <div class="dev-otp-banner">
+                        <i class="fa-solid fa-code"></i>
+                        <span>Local OTP preview: {{ developmentOtp }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="otp-inputs" (paste)="onOtpPaste($event)">
+                    @for (digit of otpValues; track $index) {
+                      <input
+                        #otpBox
+                        type="text"
+                        inputmode="numeric"
+                        maxlength="1"
+                        autocomplete="one-time-code"
+                        [value]="digit"
+                        (input)="onOtpInput($event, $index)"
+                        (keydown)="onOtpKeyDown($event, $index)"
+                      />
+                    }
+                  </div>
+
+                  <div class="otp-actions">
+                    <button type="submit" class="rbt-btn btn-gradient btn-xl hover-icon-reverse">
+                      <span class="icon-reverse-wrapper">
+                        <span class="btn-text">Verify OTP</span>
+                        <span class="btn-icon"><i class="fa-solid fa-check"></i></span>
+                        <span class="btn-icon"><i class="fa-solid fa-check"></i></span>
+                      </span>
+                    </button>
+
+                    <button type="button" class="rbt-btn btn-border btn-xl" (click)="backToEmail()">
+                      Change Email
+                    </button>
+                  </div>
+
+                  <div class="otp-footer">
+                    <button
+                      type="button"
+                      class="otp-link-button"
+                      (click)="resendOtp()"
+                      [disabled]="!otpCanResend"
+                    >
+                      {{ otpCanResend ? 'Resend OTP' : 'Resend available in ' + formattedResendTimer }}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            } @else {
+              <div class="mobile-progress glass-panel">
+                <div class="mobile-progress__top">
+                  <div>
+                    <span class="section-badge">Progress</span>
+                    <strong>{{ stepLabel }}</strong>
+                  </div>
+                  <span class="mobile-progress__value">{{ progressPercentage | number: '1.0-0' }}%</span>
+                </div>
+                <div class="progress mobile-progress__track">
+                  <div
+                    class="progress-bar"
+                    role="progressbar"
+                    [style.width.%]="progressPercentage"
+                    [attr.aria-valuenow]="progressPercentage"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  ></div>
+                </div>
+                <div class="mobile-stepper">
+                  @for (step of stepMeta; track step.title; let index = $index) {
+                    <button
+                      type="button"
+                      class="mobile-stepper__item"
+                      [class.is-active]="index === currentStep"
+                      [class.is-complete]="index < currentStep"
+                      [disabled]="!canNavigateToStep(index)"
+                      (click)="goToStep(index)"
+                    >
+                      <span>
+                        <i [class]="index < currentStep ? 'fa-solid fa-check' : step.icon"></i>
+                      </span>
+                      <small>{{ index + 1 }}</small>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <form
+                class="registration-card glass-panel"
+                #formCard
+                [formGroup]="registrationForm"
+                (ngSubmit)="submitApplication()"
+              >
+                <div class="registration-card__header">
+                  <div>
+                    <span class="section-badge">{{ stepLabel }}</span>
+                    <h2>{{ stepMeta[currentStep].title }}</h2>
+                    <p>{{ stepMeta[currentStep].caption }}</p>
+                    <div class="verified-email-pill">
+                      <i class="fa-solid fa-envelope-circle-check"></i>
+                      Verified email: {{ onboardingEmail }}
+                    </div>
+                  </div>
+                  <div class="header-status-chip">
+                    <span>Profile completion</span>
+                    <strong>{{ completionPercentage }}%</strong>
+                  </div>
+                </div>
+
+                @if (resumeBannerMessage) {
+                  <div class="resume-banner">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>{{ resumeBannerMessage }}</span>
+                  </div>
+                }
+
+                <div class="form-step" [style.display]="currentStep === 0 ? 'block' : 'none'" formGroupName="account">
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Account setup</span>
+                      <h3>Secure your instructor account and personalize your teaching identity.</h3>
+                      <p>
+                        These details shape how learners recognize you and how your instructor profile
+                        is created inside the platform.
+                      </p>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('account.fullName')"
+                          [class.is-filled]="hasControlValue('account.fullName')"
+                          [class.is-success]="isControlSuccessful('account.fullName')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Full Name</span>
+                            </legend>
+                            <input
+                              id="fullName"
+                              type="text"
+                              class="form-control"
+                              formControlName="fullName"
+                              placeholder=" "
+                              aria-label="Full Name"
+                              [class.is-invalid]="isInvalid('account.fullName')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.fullName')">
+                          {{ errorFor('account.fullName') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('account.mobileNumber')"
+                          [class.is-filled]="hasControlValue('account.mobileNumber')"
+                          [class.is-success]="isControlSuccessful('account.mobileNumber')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Mobile Number</span>
+                            </legend>
+                            <input
+                              id="mobileNumber"
+                              type="tel"
+                              class="form-control"
+                              formControlName="mobileNumber"
+                              placeholder=" "
+                              aria-label="Mobile Number"
+                              [class.is-invalid]="isInvalid('account.mobileNumber')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.mobileNumber')">
+                          {{ errorFor('account.mobileNumber') }}
+                        </div>
+                      </div>
+
+                      @if (hasExistingPassword) {
+                        <div class="col-12">
+                          <div class="inline-note">
+                            <i class="fa-solid fa-lock"></i>
+                            A password already exists for this verified account. Add a new password
+                            only if you want to change it.
+                          </div>
+                        </div>
+                      }
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('account.password')"
+                          [class.is-filled]="hasControlValue('account.password')"
+                          [class.is-success]="isControlSuccessful('account.password')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Password</span>
+                            </legend>
+                            <input
+                              id="password"
+                              type="password"
+                              class="form-control"
+                              formControlName="password"
+                              placeholder=" "
+                              aria-label="Password"
+                              [class.is-invalid]="isInvalid('account.password')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.password')">
+                          {{ errorFor('account.password') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('account.confirmPassword')"
+                          [class.is-filled]="hasControlValue('account.confirmPassword')"
+                          [class.is-success]="isControlSuccessful('account.confirmPassword')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Confirm Password</span>
+                            </legend>
+                            <input
+                              id="confirmPassword"
+                              type="password"
+                              class="form-control"
+                              formControlName="confirmPassword"
+                              placeholder=" "
+                              aria-label="Confirm Password"
+                              [class.is-invalid]="isInvalid('account.confirmPassword')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.confirmPassword')">
+                          {{ errorFor('account.confirmPassword') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-field--select"
+                          [class.is-invalid]="isInvalid('account.country')"
+                          [class.is-filled]="hasControlValue('account.country')"
+                          [class.is-success]="isControlSuccessful('account.country')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Country</span>
+                            </legend>
+                            <select
+                              id="country"
+                              class="form-select"
+                              formControlName="country"
+                              aria-label="Country"
+                              [class.is-invalid]="isInvalid('account.country')"
+                            >
+                              <option value="" disabled>Select country</option>
+                              @for (country of countries; track country) {
+                                <option [value]="country">{{ country }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.country')">
+                          {{ errorFor('account.country') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-field--select"
+                          [class.is-invalid]="isInvalid('account.preferredLanguage')"
+                          [class.is-filled]="hasControlValue('account.preferredLanguage')"
+                          [class.is-success]="isControlSuccessful('account.preferredLanguage')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Preferred Language</span>
+                            </legend>
+                            <select
+                              id="preferredLanguage"
+                              class="form-select"
+                              formControlName="preferredLanguage"
+                              aria-label="Preferred Language"
+                              [class.is-invalid]="isInvalid('account.preferredLanguage')"
+                            >
+                              <option value="" disabled>Select preferred language</option>
+                              @for (language of preferredLanguages; track language) {
+                                <option [value]="language">{{ language }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.preferredLanguage')">
+                          {{ errorFor('account.preferredLanguage') }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="form-step"
+                  [style.display]="currentStep === 1 ? 'block' : 'none'"
+                  formGroupName="professional"
+                >
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Professional profile</span>
+                      <h3>Present your credibility with a polished instructor introduction.</h3>
+                      <p>
+                        Your headline, bio, profile image, and professional background help learners
+                        trust your expertise immediately.
+                      </p>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-12">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('professional.professionalHeadline')"
+                          [class.is-filled]="hasControlValue('professional.professionalHeadline')"
+                          [class.is-success]="isControlSuccessful('professional.professionalHeadline')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Professional Headline</span>
+                            </legend>
+                            <input
+                              id="professionalHeadline"
+                              type="text"
+                              class="form-control"
+                              formControlName="professionalHeadline"
+                              placeholder=" "
+                              aria-label="Professional Headline"
+                              [class.is-invalid]="isInvalid('professional.professionalHeadline')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div
+                          class="invalid-feedback d-block"
+                          *ngIf="isInvalid('professional.professionalHeadline')"
+                        >
+                          {{ errorFor('professional.professionalHeadline') }}
+                        </div>
+                      </div>
+
+                      <div class="col-12">
+                        <div
+                          class="premium-field premium-field--textarea"
+                          [class.is-invalid]="isInvalid('professional.bio')"
+                          [class.is-filled]="hasControlValue('professional.bio')"
+                          [class.is-success]="isControlSuccessful('professional.bio')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Bio / About</span>
+                            </legend>
+                            <textarea
+                              id="bio"
+                              class="form-control form-control--textarea"
+                              formControlName="bio"
+                              placeholder=" "
+                              aria-label="Bio / About"
+                              [class.is-invalid]="isInvalid('professional.bio')"
+                            ></textarea>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('professional.bio')">
+                          {{ errorFor('professional.bio') }}
+                        </div>
+                      </div>
+
+                      <div class="col-lg-7">
+                        <div class="upload-block" [class.is-invalid]="isInvalid('professional.profilePhoto')">
+                          <input
+                            #profilePhotoInput
+                            type="file"
+                            class="d-none"
+                            [accept]="uploads.profilePhoto.accept"
+                            (change)="onFilesSelected($event, 'profilePhoto')"
+                          />
+                          <button
+                            type="button"
+                            class="upload-dropzone upload-dropzone--avatar"
+                            [class.is-dragging]="uploads.profilePhoto.dragging"
+                            (click)="profilePhotoInput.click()"
+                            (dragover)="onDragOver($event, 'profilePhoto')"
+                            (dragleave)="onDragLeave($event, 'profilePhoto')"
+                            (drop)="onDrop($event, 'profilePhoto')"
+                          >
+                            <span class="upload-dropzone__icon">
+                              <i [class]="uploads.profilePhoto.icon"></i>
+                            </span>
+                            <strong>{{ uploads.profilePhoto.title }}</strong>
+                            <p>{{ uploads.profilePhoto.hint }}</p>
+                            <span class="upload-dropzone__cta">Click or drag a file here</span>
+                          </button>
+
+                          @if (uploads.profilePhoto.fileNames.length) {
+                            <div class="upload-file-chip">
+                              <span>{{ uploads.profilePhoto.fileNames[0] }}</span>
+                              @if (!uploads.profilePhoto.persisted) {
+                                <button type="button" (click)="removeUpload('profilePhoto')">
+                                  <i class="fa-solid fa-xmark"></i>
+                                </button>
+                              }
+                            </div>
+                          }
+
+                          <div class="invalid-feedback d-block" *ngIf="isInvalid('professional.profilePhoto')">
+                            {{ errorFor('professional.profilePhoto') }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="col-lg-5">
+                        <div class="profile-preview glass-panel">
+                          @if (uploads.profilePhoto.previewUrl) {
+                            <img [src]="uploads.profilePhoto.previewUrl" alt="Profile photo preview" />
+                          } @else {
+                            <div class="profile-preview__placeholder">
+                              <i class="fa-solid fa-image-portrait"></i>
+                              <span>Profile photo preview will appear here</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <div class="col-md-4">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('professional.yearsOfExperience')"
+                          [class.is-filled]="hasControlValue('professional.yearsOfExperience')"
+                          [class.is-success]="isControlSuccessful('professional.yearsOfExperience')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Years Of Experience</span>
+                            </legend>
+                            <input
+                              id="yearsOfExperience"
+                              type="number"
+                              class="form-control"
+                              formControlName="yearsOfExperience"
+                              placeholder=" "
+                              aria-label="Years Of Experience"
+                              [class.is-invalid]="isInvalid('professional.yearsOfExperience')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div
+                          class="invalid-feedback d-block"
+                          *ngIf="isInvalid('professional.yearsOfExperience')"
+                        >
+                          {{ errorFor('professional.yearsOfExperience') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-4">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('professional.currentJobTitle')"
+                          [class.is-filled]="hasControlValue('professional.currentJobTitle')"
+                          [class.is-success]="isControlSuccessful('professional.currentJobTitle')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Current Job Title</span>
+                            </legend>
+                            <input
+                              id="currentJobTitle"
+                              type="text"
+                              class="form-control"
+                              formControlName="currentJobTitle"
+                              placeholder=" "
+                              aria-label="Current Job Title"
+                              [class.is-invalid]="isInvalid('professional.currentJobTitle')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('professional.currentJobTitle')">
+                          {{ errorFor('professional.currentJobTitle') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-4">
+                        <div
+                          class="premium-field premium-field--select"
+                          [class.is-invalid]="isInvalid('professional.highestQualification')"
+                          [class.is-filled]="hasControlValue('professional.highestQualification')"
+                          [class.is-success]="isControlSuccessful('professional.highestQualification')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Highest Qualification</span>
+                            </legend>
+                            <select
+                              id="highestQualification"
+                              class="form-select"
+                              formControlName="highestQualification"
+                              aria-label="Highest Qualification"
+                              [class.is-invalid]="isInvalid('professional.highestQualification')"
+                            >
+                              <option value="" disabled>Select qualification</option>
+                              @for (qualification of qualifications; track qualification) {
+                                <option [value]="qualification">{{ qualification }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                        <div
+                          class="invalid-feedback d-block"
+                          *ngIf="isInvalid('professional.highestQualification')"
+                        >
+                          {{ errorFor('professional.highestQualification') }}
+                        </div>
+                      </div>
+
+                      <div class="col-12">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('professional.currentOrganization')"
+                          [class.is-filled]="hasControlValue('professional.currentOrganization')"
+                          [class.is-success]="isControlSuccessful('professional.currentOrganization')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Current Organization</span>
+                            </legend>
+                            <input
+                              id="currentOrganization"
+                              type="text"
+                              class="form-control"
+                              formControlName="currentOrganization"
+                              placeholder=" "
+                              aria-label="Current Organization"
+                              [class.is-invalid]="isInvalid('professional.currentOrganization')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div
+                          class="invalid-feedback d-block"
+                          *ngIf="isInvalid('professional.currentOrganization')"
+                        >
+                          {{ errorFor('professional.currentOrganization') }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-step" [style.display]="currentStep === 2 ? 'block' : 'none'" formGroupName="expertise">
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Expertise mapping</span>
+                      <h3>Choose the skills, categories, and teaching languages that define your edge.</h3>
+                      <p>
+                        This helps us shape how your instructor profile is positioned and how learners
+                        discover the right teaching fit.
+                      </p>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-12">
+                        <div
+                          class="premium-multiselect"
+                          [class.is-invalid]="isInvalid('expertise.skills')"
+                          [class.is-filled]="hasControlValue('expertise.skills')"
+                          [class.is-success]="isControlSuccessful('expertise.skills')"
+                        >
+                          <fieldset class="premium-multiselect__outline">
+                            <legend class="premium-multiselect__legend">
+                              <span>Skills</span>
+                            </legend>
+                            <ng-multiselect-dropdown
+                              id="skills"
+                              formControlName="skills"
+                              [placeholder]="'Select your strongest teaching skills'"
+                              [settings]="dropdownSettings"
+                              [data]="skillOptions"
+                            ></ng-multiselect-dropdown>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('expertise.skills')">
+                          {{ errorFor('expertise.skills') }}
+                        </div>
+                      </div>
+
+                      <div class="col-12">
+                        <div
+                          class="premium-multiselect"
+                          [class.is-invalid]="isInvalid('expertise.teachingCategories')"
+                          [class.is-filled]="hasControlValue('expertise.teachingCategories')"
+                          [class.is-success]="isControlSuccessful('expertise.teachingCategories')"
+                        >
+                          <fieldset class="premium-multiselect__outline">
+                            <legend class="premium-multiselect__legend">
+                              <span>Teaching Categories</span>
+                            </legend>
+                            <ng-multiselect-dropdown
+                              id="teachingCategories"
+                              formControlName="teachingCategories"
+                              [placeholder]="'Choose the course categories you want to teach'"
+                              [settings]="dropdownSettings"
+                              [data]="categoryOptions"
+                            ></ng-multiselect-dropdown>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('expertise.teachingCategories')">
+                          {{ errorFor('expertise.teachingCategories') }}
+                        </div>
+                      </div>
+
+                      <div class="col-12">
+                        <div
+                          class="premium-multiselect"
+                          [class.is-invalid]="isInvalid('expertise.languagesYouCanTeach')"
+                          [class.is-filled]="hasControlValue('expertise.languagesYouCanTeach')"
+                          [class.is-success]="isControlSuccessful('expertise.languagesYouCanTeach')"
+                        >
+                          <fieldset class="premium-multiselect__outline">
+                            <legend class="premium-multiselect__legend">
+                              <span>Languages You Can Teach</span>
+                            </legend>
+                            <ng-multiselect-dropdown
+                              id="languagesYouCanTeach"
+                              formControlName="languagesYouCanTeach"
+                              [placeholder]="'Select one or more teaching languages'"
+                              [settings]="dropdownSettings"
+                              [data]="teachingLanguageOptions"
+                            ></ng-multiselect-dropdown>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('expertise.languagesYouCanTeach')">
+                          {{ errorFor('expertise.languagesYouCanTeach') }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-step" [style.display]="currentStep === 3 ? 'block' : 'none'" formGroupName="documents">
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Verification & social proof</span>
+                      <h3>Upload high-trust documents and add public links that strengthen approval.</h3>
+                      <p>
+                        Documents help verify authenticity, while your public profiles reinforce your
+                        authority and credibility.
+                      </p>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-lg-4 col-md-6">
+                        <div class="upload-block" [class.is-invalid]="isInvalid('documents.governmentId')">
+                          <input
+                            #governmentIdInput
+                            type="file"
+                            class="d-none"
+                            [accept]="uploads.governmentId.accept"
+                            (change)="onFilesSelected($event, 'governmentId')"
+                          />
+                          <button
+                            type="button"
+                            class="upload-dropzone upload-dropzone--small"
+                            [class.is-dragging]="uploads.governmentId.dragging"
+                            (click)="governmentIdInput.click()"
+                            (dragover)="onDragOver($event, 'governmentId')"
+                            (dragleave)="onDragLeave($event, 'governmentId')"
+                            (drop)="onDrop($event, 'governmentId')"
+                          >
+                            <span class="upload-dropzone__icon">
+                              <i [class]="uploads.governmentId.icon"></i>
+                            </span>
+                            <strong>{{ uploads.governmentId.title }}</strong>
+                            <p>{{ uploads.governmentId.hint }}</p>
+                          </button>
+
+                          @if (uploads.governmentId.fileNames.length) {
+                            <div class="upload-file-list">
+                              @for (name of uploads.governmentId.fileNames; track name; let i = $index) {
+                                <span>{{ name }}</span>
+                                @if (uploads.governmentId.persisted) {
+                                  <button type="button" class="upload-clear-btn" (click)="downloadPersistedUpload('governmentId', i)">
+                                    Preview
+                                  </button>
+                                }
+                              }
+                            </div>
+                            @if (!uploads.governmentId.persisted) {
+                              <button type="button" class="upload-clear-btn" (click)="removeUpload('governmentId')">
+                                Remove file
+                              </button>
+                            }
+                          }
+
+                          <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.governmentId')">
+                            {{ errorFor('documents.governmentId') }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="col-lg-4 col-md-6">
+                        <div class="upload-block" [class.is-invalid]="isInvalid('documents.resume')">
+                          <input
+                            #resumeInput
+                            type="file"
+                            class="d-none"
+                            [accept]="uploads.resume.accept"
+                            (change)="onFilesSelected($event, 'resume')"
+                          />
+                          <button
+                            type="button"
+                            class="upload-dropzone upload-dropzone--small"
+                            [class.is-dragging]="uploads.resume.dragging"
+                            (click)="resumeInput.click()"
+                            (dragover)="onDragOver($event, 'resume')"
+                            (dragleave)="onDragLeave($event, 'resume')"
+                            (drop)="onDrop($event, 'resume')"
+                          >
+                            <span class="upload-dropzone__icon">
+                              <i [class]="uploads.resume.icon"></i>
+                            </span>
+                            <strong>{{ uploads.resume.title }}</strong>
+                            <p>{{ uploads.resume.hint }}</p>
+                          </button>
+
+                          @if (uploads.resume.fileNames.length) {
+                            <div class="upload-file-list">
+                              @for (name of uploads.resume.fileNames; track name; let i = $index) {
+                                <span>{{ name }}</span>
+                                @if (uploads.resume.persisted) {
+                                  <button type="button" class="upload-clear-btn" (click)="downloadPersistedUpload('resume', i)">
+                                    Preview
+                                  </button>
+                                }
+                              }
+                            </div>
+                            @if (!uploads.resume.persisted) {
+                              <button type="button" class="upload-clear-btn" (click)="removeUpload('resume')">
+                                Remove file
+                              </button>
+                            }
+                          }
+
+                          <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.resume')">
+                            {{ errorFor('documents.resume') }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="col-lg-4 col-md-12">
+                        <div class="upload-block" [class.is-invalid]="isInvalid('documents.certifications')">
+                          <input
+                            #certificationsInput
+                            type="file"
+                            class="d-none"
+                            multiple
+                            [accept]="uploads.certifications.accept"
+                            (change)="onFilesSelected($event, 'certifications')"
+                          />
+                          <button
+                            type="button"
+                            class="upload-dropzone upload-dropzone--small"
+                            [class.is-dragging]="uploads.certifications.dragging"
+                            (click)="certificationsInput.click()"
+                            (dragover)="onDragOver($event, 'certifications')"
+                            (dragleave)="onDragLeave($event, 'certifications')"
+                            (drop)="onDrop($event, 'certifications')"
+                          >
+                            <span class="upload-dropzone__icon">
+                              <i [class]="uploads.certifications.icon"></i>
+                            </span>
+                            <strong>{{ uploads.certifications.title }}</strong>
+                            <p>{{ uploads.certifications.hint }}</p>
+                          </button>
+
+                          @if (uploads.certifications.fileNames.length) {
+                            <div class="upload-file-list">
+                              @for (name of uploads.certifications.fileNames; track name; let i = $index) {
+                                <span>{{ name }}</span>
+                                @if (uploads.certifications.persisted) {
+                                  <button type="button" class="upload-clear-btn" (click)="downloadPersistedUpload('certifications', i)">
+                                    Preview
+                                  </button>
+                                }
+                              }
+                            </div>
+                            @if (!uploads.certifications.persisted) {
+                              <button
+                                type="button"
+                                class="upload-clear-btn"
+                                (click)="removeUpload('certifications')"
+                              >
+                                Remove files
+                              </button>
+                            }
+                          }
+
+                          <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.certifications')">
+                            {{ errorFor('documents.certifications') }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('documents.linkedInUrl')"
+                          [class.is-filled]="hasControlValue('documents.linkedInUrl')"
+                          [class.is-success]="isControlSuccessful('documents.linkedInUrl')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>LinkedIn URL</span>
+                            </legend>
+                            <input
+                              id="linkedInUrl"
+                              type="url"
+                              class="form-control"
+                              formControlName="linkedInUrl"
+                              placeholder=" "
+                              aria-label="LinkedIn URL"
+                              [class.is-invalid]="isInvalid('documents.linkedInUrl')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.linkedInUrl')">
+                          {{ errorFor('documents.linkedInUrl') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('documents.gitHubUrl')"
+                          [class.is-filled]="hasControlValue('documents.gitHubUrl')"
+                          [class.is-success]="isControlSuccessful('documents.gitHubUrl')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>GitHub URL</span>
+                            </legend>
+                            <input
+                              id="gitHubUrl"
+                              type="url"
+                              class="form-control"
+                              formControlName="gitHubUrl"
+                              placeholder=" "
+                              aria-label="GitHub URL"
+                              [class.is-invalid]="isInvalid('documents.gitHubUrl')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.gitHubUrl')">
+                          {{ errorFor('documents.gitHubUrl') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('documents.youTubeUrl')"
+                          [class.is-filled]="hasControlValue('documents.youTubeUrl')"
+                          [class.is-success]="isControlSuccessful('documents.youTubeUrl')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>YouTube URL</span>
+                            </legend>
+                            <input
+                              id="youTubeUrl"
+                              type="url"
+                              class="form-control"
+                              formControlName="youTubeUrl"
+                              placeholder=" "
+                              aria-label="YouTube URL"
+                              [class.is-invalid]="isInvalid('documents.youTubeUrl')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.youTubeUrl')">
+                          {{ errorFor('documents.youTubeUrl') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('documents.portfolioWebsite')"
+                          [class.is-filled]="hasControlValue('documents.portfolioWebsite')"
+                          [class.is-success]="isControlSuccessful('documents.portfolioWebsite')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Portfolio Website</span>
+                            </legend>
+                            <input
+                              id="portfolioWebsite"
+                              type="url"
+                              class="form-control"
+                              formControlName="portfolioWebsite"
+                              placeholder=" "
+                              aria-label="Portfolio Website"
+                              [class.is-invalid]="isInvalid('documents.portfolioWebsite')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('documents.portfolioWebsite')">
+                          {{ errorFor('documents.portfolioWebsite') }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-step" [style.display]="currentStep === 4 ? 'block' : 'none'" formGroupName="agreements">
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Final review</span>
+                      <h3>Confirm your accuracy, accept the platform policies, and submit with confidence.</h3>
+                      <p>
+                        This is the final step before your premium instructor application moves into
+                        review.
+                      </p>
+                    </div>
+
+                    <div class="agreements-panel">
+                      <label class="agreement-item" [class.is-invalid]="isInvalid('agreements.acceptTerms')">
+                        <input type="checkbox" formControlName="acceptTerms" />
+                        <span class="agreement-item__control" aria-hidden="true"></span>
+                        <span class="agreement-item__text">
+                          I accept the ICETL terms and conditions for publishing and managing
+                          instructor content.
+                        </span>
+                      </label>
+                      <div class="invalid-feedback d-block" *ngIf="isInvalid('agreements.acceptTerms')">
+                        {{ errorFor('agreements.acceptTerms') }}
+                      </div>
+
+                      <label
+                        class="agreement-item"
+                        [class.is-invalid]="isInvalid('agreements.acceptInstructorPolicy')"
+                      >
+                        <input type="checkbox" formControlName="acceptInstructorPolicy" />
+                        <span class="agreement-item__control" aria-hidden="true"></span>
+                        <span class="agreement-item__text">
+                          I agree to the instructor quality policy, learner trust guidelines, and
+                          community standards.
+                        </span>
+                      </label>
+                      <div
+                        class="invalid-feedback d-block"
+                        *ngIf="isInvalid('agreements.acceptInstructorPolicy')"
+                      >
+                        {{ errorFor('agreements.acceptInstructorPolicy') }}
+                      </div>
+
+                      <label
+                        class="agreement-item"
+                        [class.is-invalid]="isInvalid('agreements.verifyInformation')"
+                      >
+                        <input type="checkbox" formControlName="verifyInformation" />
+                        <span class="agreement-item__control" aria-hidden="true"></span>
+                        <span class="agreement-item__text">
+                          I confirm that all details and uploaded documents are accurate and belong
+                          to me.
+                        </span>
+                      </label>
+                      <div
+                        class="invalid-feedback d-block"
+                        *ngIf="isInvalid('agreements.verifyInformation')"
+                      >
+                        {{ errorFor('agreements.verifyInformation') }}
+                      </div>
+                    </div>
+
+                    <div class="review-card">
+                      <h3>Ready to submit</h3>
+                      <p>
+                        Your verified email, saved draft, uploaded documents, and final agreements
+                        will now be packaged into one instructor application.
+                      </p>
+                      <ul>
+                        <li><i class="fa-solid fa-check"></i> Profile completion: {{ completionPercentage }}%</li>
+                        <li><i class="fa-solid fa-check"></i> OTP-verified email: {{ onboardingEmail }}</li>
+                        <li><i class="fa-solid fa-check"></i> Application year: {{ currentYear }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="registration-card__footer">
+                  <button
+                    type="button"
+                    class="rbt-btn btn-border btn-xl"
+                    (click)="previousStep()"
+                    [disabled]="currentStep === 0 || isStepSaving || isSubmitting"
+                  >
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Previous
+                  </button>
+
+                  <div class="footer-actions">
+                    @if (currentStep < stepMeta.length - 1) {
+                      <button
+                        type="button"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        (click)="nextStep()"
+                        [disabled]="isStepSaving || isSubmitting"
+                      >
+                        <span class="icon-reverse-wrapper">
+                          <span class="btn-text">{{ isStepSaving ? 'Saving...' : 'Save & Continue' }}</span>
+                          <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                          <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                        </span>
+                      </button>
+                    } @else {
+                      <button
+                        type="submit"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        [disabled]="isSubmitting"
+                      >
+                        <span class="icon-reverse-wrapper">
+                          <span class="btn-text">
+                            {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+                          </span>
+                          <span class="btn-icon"><i class="fa-solid fa-paper-plane"></i></span>
+                          <span class="btn-icon"><i class="fa-solid fa-paper-plane"></i></span>
+                        </span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              </form>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>

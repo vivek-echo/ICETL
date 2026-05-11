@@ -31,6 +31,7 @@
               "src/assets"
             ],
             "styles": [
+              "node_modules/ngx-spinner/animations/ball-scale-multiple.css",
               "src/assets/css/vendor/bootstrap.min.css",
               "node_modules/bootstrap-datepicker/dist/css/bootstrap-datepicker3.min.css",
               "src/assets/css/plugins/euclid-circulara.css",
@@ -54,7 +55,16 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": {
+                  "inline": false
+                }
+              },
               "outputHashing": "all"
             },
             "development": {

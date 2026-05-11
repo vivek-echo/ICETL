@@ -1,14 +1,334 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../layout/header/header';
 import { FooterComponent } from '../layout/footer/footer';
+import { Subscription } from 'rxjs';
+import { AlertHelperService } from '../commonServices/alert-helper-service';
+import { UserProfile, UserProfileService } from '../commonServices/user-profile.service';
+import { SideNav } from './side-nav/side-nav';
+import { AuthService } from '../commonServices/auth.service';
+import { ProfileModalService } from '../commonServices/profile-modal.service';
 
 @Component({
   selector: 'app-application',
-  imports: [RouterOutlet,HeaderComponent,FooterComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterOutlet, HeaderComponent, FooterComponent, SideNav],
   templateUrl: './application.html',
   styleUrl: './application.scss',
 })
-export class Application {
+export class Application implements OnInit, OnDestroy {
+  private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
+  readonly defaultProfileImage = 'assets/images/team/avatar-2.jpg';
+  readonly genderOptions = [
+    { label: 'Male', value: '1' },
+    { label: 'Female', value: '2' },
+    { label: 'Others', value: '3' },
+  ];
+
+  userProfile: UserProfile | null = null;
+  isProfileModalOpen = false;
+  isSavingProfile = false;
+  profileImagePreview = '';
+  coverImagePreview = '';
+  profileImageFile: File | null = null;
+  coverImageFile: File | null = null;
+  profileErrorMessage = '';
+
+  readonly profileForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    email: [{ value: '', disabled: true }],
+    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
+    dob: [''],
+    gender: [''],
+  });
+
+  private readonly subscriptions = new Subscription();
+
+  constructor(
+    private readonly userProfileService: UserProfileService,
+    private readonly alertHelper: AlertHelperService,
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly profileModalService: ProfileModalService,
+  ) {
+    this.userProfile = this.userProfileService.currentProfile;
+  }
+
+  ngOnInit(): void {
+    this.subscriptions.add(
+      this.userProfileService.profile$.subscribe((profile) => {
+        this.scheduleProfileSync(profile);
+      }),
+    );
+
+    this.subscriptions.add(
+      this.profileModalService.openModal$.subscribe(() => {
+        this.openProfileSettings();
+      }),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.clearProfileSyncTimer();
+    this.subscriptions.unsubscribe();
+  }
+
+  get profileImageSrc(): string {
+    return this.userProfile?.profileImgUrl || this.defaultProfileImage;
+  }
+
+  get thumbnailImageSrc(): string {
+    return this.userProfile?.thumbnailImgUrl || this.defaultProfileImage;
+  }
+
+  get coverImageSrc(): string {
+    return this.userProfile?.coverImgUrl || '';
+  }
+
+  get displayName(): string {
+    return this.userProfile?.name?.trim() || 'Learner';
+  }
+
+  get isInstructorRole(): boolean {
+    const dashboardUrl = `${this.authService.getUser()?.dashboard?.dashboardUrl ?? ''}`
+      .trim()
+      .toLowerCase();
+    return dashboardUrl === 'instructor';
+  }
+
+  get isInstructorProfileRoute(): boolean {
+    return this.router.url.includes('/application/instructorProfile');
+  }
+
+  openProfileSettings(event?: Event): void {
+    event?.preventDefault();
+
+   
+
+    this.openUpdateProfileModal();
+  }
+
+  openUpdateProfileModal(): void {
+    this.profileErrorMessage = '';
+    this.profileImageFile = null;
+    this.coverImageFile = null;
+    this.profileImagePreview = this.profileImageSrc;
+    this.coverImagePreview = this.coverImageSrc;
+
+    if (this.userProfile) {
+      this.populateProfileForm(this.userProfile);
+    }
+
+    this.isProfileModalOpen = true;
+
+    this.subscriptions.add(
+      this.userProfileService.getUserProfileData().subscribe({
+        next: (response) => {
+          if (!response.success || !response.data) {
+            this.profileErrorMessage = response.message || 'Unable to load latest profile data';
+            return;
+          }
+
+          this.populateProfileForm(response.data);
+          this.profileImagePreview = this.profileImageSrc;
+          this.coverImagePreview = this.coverImageSrc;
+        },
+        error: (error) => {
+          this.profileErrorMessage = this.getApiErrorMessage(
+            error,
+            'Unable to load latest profile data',
+          );
+        },
+      }),
+    );
+  }
+
+  closeUpdateProfileModal(): void {
+    if (this.isSavingProfile) {
+      return;
+    }
+
+    this.isProfileModalOpen = false;
+    this.profileErrorMessage = '';
+  }
+
+  onProfileFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    this.profileImageFile = file;
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = typeof reader.result === 'string' ? reader.result : '';
+
+      this.profileImagePreview = preview;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  onCoverFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    this.coverImageFile = file;
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = typeof reader.result === 'string' ? reader.result : '';
+
+      this.coverImagePreview = preview;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  submitProfileUpdate(): void {
+    if (this.profileForm.invalid) {
+      this.profileForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue = this.profileForm.getRawValue();
+    const formData = new FormData();
+    formData.append('name', formValue.name || '');
+    formData.append('phone', formValue.phone || '');
+    formData.append('dob', formValue.dob || '');
+    formData.append('gender', formValue.gender || '');
+
+    if (this.profileImageFile) {
+      formData.append('profileImg', this.profileImageFile);
+    }
+
+    if (this.coverImageFile) {
+      formData.append('coverImg', this.coverImageFile);
+    }
+
+    this.isSavingProfile = true;
+    this.profileErrorMessage = '';
+
+    this.userProfileService.updateUserProfileData(formData).subscribe({
+      next: (response) => {
+        this.isSavingProfile = false;
+
+        if (response.success && response.data) {
+          this.isProfileModalOpen = false;
+          void this.alertHelper.success('Profile updated successfully');
+          return;
+        }
+
+        this.profileErrorMessage = response.message || 'Profile update failed';
+      },
+      error: (error) => {
+        this.isSavingProfile = false;
+        this.profileErrorMessage = this.getApiErrorMessage(error, 'Profile update failed');
+      },
+    });
+  }
+
+  onlyNumbers(event: KeyboardEvent): boolean {
+    const charCode = event.which ? event.which : event.keyCode;
+
+    if (charCode < 48 || charCode > 57) {
+      event.preventDefault();
+      return false;
+    }
+
+    return true;
+  }
+
+  private populateProfileForm(profile: UserProfile): void {
+    this.profileForm.patchValue({
+      name: profile.name || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      dob: profile.dob || '',
+      gender: profile.gender || '',
+    });
+  }
+
+  private scheduleProfileSync(profile: UserProfile | null): void {
+    this.clearProfileSyncTimer();
+
+    this.profileSyncTimer = setTimeout(() => {
+      this.userProfile = profile;
+
+      if (profile && !this.isProfileModalOpen) {
+        this.populateProfileForm(profile);
+      }
+
+      this.cdr.detectChanges();
+    });
+  }
+
+  private clearProfileSyncTimer(): void {
+    if (this.profileSyncTimer) {
+      clearTimeout(this.profileSyncTimer);
+      this.profileSyncTimer = null;
+    }
+  }
+
+  private getApiErrorMessage(error: unknown, fallbackMessage: string): string {
+    const apiError = error as {
+      error?: {
+        message?: string;
+        errors?: Record<string, string[]>;
+      };
+    };
+
+    const validationErrors = apiError?.error?.errors;
+
+    if (validationErrors) {
+      const firstValidationError = Object.values(validationErrors)
+        .flat()
+        .find((message): message is string => typeof message === 'string' && message.length > 0);
+
+      if (firstValidationError) {
+        return firstValidationError;
+      }
+    }
+
+    return apiError?.error?.message || fallbackMessage;
+  }
+
+  async logoutUser(event: Event): Promise<void> {
+    event.preventDefault();
+
+    const shouldLogout = await this.alertHelper.confirm(
+      'You will be signed out of your account.',
+      'Confirm logout',
+    );
+
+    if (!shouldLogout) return;
+
+    this.authService.logout().subscribe({
+      next: () => {
+        this.handleLogoutSuccess();
+      },
+      error: () => {
+        this.handleLogoutSuccess();
+      },
+    });
+  }
+
+  private handleLogoutSuccess(): void {
+    this.userProfileService.clearProfile();
+    this.userProfile = null;
+    this.authService.logoutLocally(false);
+
+    this.router.navigate(['/login']);
+  }
 }

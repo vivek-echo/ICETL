@@ -1,0 +1,31 @@
+<div class="rbt-dashboard-content bg-color-white rbt-shadow-box mb--60 course-categories-page">
+  <div class="content">
+    <div class="advance-tab-button mb--30">
+      <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs" role="tablist">
+        <li role="presentation">
+          <a
+            class="tab-button"
+            [routerLink]="['add']"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            #addTab="routerLinkActive"
+            [attr.aria-selected]="addTab.isActive">
+            <span class="title">Add Categories</span>
+          </a>
+        </li>
+        <li role="presentation">
+          <a
+            class="tab-button"
+            [routerLink]="['view']"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            #viewTab="routerLinkActive"
+            [attr.aria-selected]="viewTab.isActive">
+            <span class="title">View Categories</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <router-outlet />
+  </div>
+</div>

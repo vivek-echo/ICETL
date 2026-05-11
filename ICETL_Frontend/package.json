@@ -24,6 +24,7 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "dependencies": {
+    "@angular/animations": "^21.2.11",
     "@angular/common": "^21.0.0",
     "@angular/compiler": "^21.0.0",
     "@angular/core": "^21.0.0",
@@ -39,6 +40,8 @@
     "bootstrap-datepicker": "^1.10.1",
     "express": "^5.1.0",
     "jquery": "^3.7.1",
+    "ng-multiselect-dropdown": "^1.0.0",
+    "ngx-spinner": "^21.1.0",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.24",
     "tslib": "^2.3.0"

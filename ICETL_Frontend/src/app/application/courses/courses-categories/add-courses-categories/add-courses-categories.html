@@ -1,0 +1,93 @@
+<div class="category-workspace">
+  <form class="rbt-profile-row row g-4" [formGroup]="categoryForm" (ngSubmit)="submitCategory()">
+
+    <!-- Category Name -->
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label>Category Name</label>
+
+        <input type="text" formControlName="categoryName" placeholder="Enter category name" name="categoryName">
+        @if (categoryForm.get('categoryName')?.touched &&
+        categoryForm.get('categoryName')?.invalid) {
+        <small class="text-danger">
+          Category name is required
+        </small>
+        }
+      </div>
+    </div>
+
+    <!-- Icon Upload -->
+    <div class="col-12">
+  <div class="rbt-form-group">
+    <label>Category Icon</label>
+    <div class="upload-box">
+      <!-- FILE INPUT -->
+      <input
+        type="file"
+        class="upload-input"
+        accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+        (change)="onFileChange($event)"
+      >
+
+      <!-- UPLOAD CONTENT -->
+      @if (iconPreview === null) {
+        <div class="upload-content">
+          <i class="feather-upload-cloud upload-icon"></i>
+          <h6>Upload Category Icon</h6>
+          <p>PNG, JPG or SVG recommended</p>
+        </div>
+      }
+      <!-- PREVIEW -->
+      @if (iconPreview !== null) {
+        <div class="preview-wrapper">
+          <img
+            [src]="iconPreview"
+            alt="Preview"
+            class="preview-image"
+          >
+          <div class="preview-overlay">
+            Change Image
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+    <!-- Status -->
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label>Status</label>
+
+        <select class="category-select" formControlName="status" name="status">
+          <option value='1'>Active</option>
+          <option value='0'>Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="col-12">
+      <div class="category-actions">
+
+        <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse">
+
+          <span class="icon-reverse-wrapper">
+            <span class="btn-text">Add Category</span>
+
+            <span class="btn-icon">
+              <i class="feather-arrow-right"></i>
+            </span>
+
+            <span class="btn-icon">
+              <i class="feather-arrow-right"></i>
+            </span>
+          </span>
+
+        </button>
+
+      </div>
+    </div>
+
+  </form>
+</div>
