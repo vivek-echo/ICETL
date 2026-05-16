@@ -1,60 +1,398 @@
-<section class="rbt-course-area rbt-section-gap bg-color-extra2 courses-page">
-  <div class="container">
-    <div class="row align-items-center g-5 mb--60">
-      <div class="col-lg-7">
-        <div class="section-title text-start">
-          <span class="subtitle bg-secondary-opacity">Course Catalog</span>
-          <h1 class="title">A routed, reusable course experience for your Angular LMS.</h1>
-          <p class="description">
-            This page turns the static course listings from the template into a maintainable
-            Angular catalog with filter state, shared cards, and route-based navigation.
-          </p>
+<section class="courses-page">
+  <section class="courses-banner rbt-section-gap">
+    <div class="container">
+      <div class="courses-banner__shell">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-8">
+            <nav class="courses-banner__breadcrumb" aria-label="Breadcrumb">
+              <a [routerLink]="homeRoute">Home</a>
+              <span>/</span>
+              <span aria-current="page">Courses</span>
+            </nav>
+
+            <div class="section-title text-start mb--0">
+              <span class="subtitle bg-primary-opacity">ICTEL Course Catalog</span>
+              <h1 class="title">Explore Professional IT Courses</h1>
+              <p class="description courses-banner__description">
+                Learn industry-ready skills through practical training, live projects, and
+                certification programs.
+              </p>
+            </div>
+
+            <div class="courses-banner__actions">
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="loginRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Explore Courses</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="courses-banner__panel">
+              <span class="courses-banner__panel-badge">Professional Learning</span>
+              <h4>Structured programs for modern IT careers.</h4>
+              <p>
+                Discover practical, mentor-led courses designed to help learners build skills with
+                clarity and confidence.
+              </p>
+
+              <div class="courses-banner__highlights">
+                @for (stat of bannerStats; track stat.label) {
+                  <div class="courses-banner__highlight">
+                    <div>
+                      <strong>{{ stat.value }}</strong>
+                      <span>{{ stat.label }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="courses-search pb--60">
+    <div class="container">
+      <div class="courses-search__card">
+        <div class="row g-4 align-items-end">
+          <div class="col-lg-5 col-md-12">
+            <label class="courses-search__label" for="courseSearch">Search courses</label>
+            <div class="courses-search__input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                id="courseSearch"
+                type="text"
+                class="form-control"
+                placeholder="Search by course title or topic"
+                [ngModel]="filters().search"
+                (ngModelChange)="updateSearchQuery($event)"
+              />
+            </div>
+          </div>
+
+          <div class="col-lg-3 col-md-6">
+            <label class="courses-search__label" for="courseCategory">Category</label>
+            <select
+              id="courseCategory"
+              class="form-select"
+              [ngModel]="filters().category"
+              (ngModelChange)="updateCategory($event)"
+            >
+              @for (category of categories(); track category) {
+                <option [ngValue]="category">{{ category }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="col-lg-3 col-md-6">
+            <label class="courses-search__label" for="courseDuration">Duration</label>
+            <select
+              id="courseDuration"
+              class="form-select"
+              [ngModel]="filters().duration"
+              (ngModelChange)="updateDuration($event)"
+            >
+              @for (duration of durations(); track duration) {
+                <option [ngValue]="duration">{{ duration }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="col-lg-1 col-md-12">
+            <button type="button" class="courses-search__clear-btn" (click)="clearFilters()">
+              Clear
+            </button>
+          </div>
         </div>
 
-        <div class="courses-page__actions">
-          <a class="rbt-btn btn-gradient hover-icon-reverse" routerLink="/dashboard">
-            <span class="icon-reverse-wrapper">
-              <span class="btn-text">Open Dashboard</span>
-              <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
-              <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+        <div class="courses-search__footer">
+          <p class="courses-search__summary">{{ resultsSummary() }}</p>
+
+          @if (hasActiveFilters()) {
+            <button type="button" class="courses-search__reset" (click)="clearFilters()">
+              Clear filters
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="courses-categories rbt-section-gapBottom courses-categories--refined">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-secondary-opacity">Course Categories</span>
+            <h2 class="title">Explore course categories designed for current technology careers.</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 courses-categories__grid justify-content-center">
+        @for (category of categoryCards(); track category.title) {
+          <div class="col-lg-4 col-md-6 col-12 d-flex">
+            <button
+              type="button"
+              class="courses-category-card"
+              [class.is-active]="filters().category === category.title"
+              (click)="updateCategory(category.title)"
+            >
+              <span class="courses-category-card__icon">
+                <i [class]="category.iconClass"></i>
+              </span>
+              <div class="courses-category-card__content">
+                <span class="courses-category-card__label">{{ category.accentLabel }}</span>
+                <div class="courses-category-card__head">
+                  <h5 class="courses-category-card__title">{{ category.title }}</h5>
+                  <span class="courses-category-card__count">{{ category.courseCount }} Courses</span>
+                </div>
+                <p>{{ category.description }}</p>
+                <span class="courses-category-card__link">
+                  View Courses
+                  <i class="fa-solid fa-arrow-right"></i>
+                </span>
+              </div>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="courses-grid-section rbt-section-gap bg-color-extra2">
+    <div class="container">
+      <div class="row align-items-end g-4 mb--40">
+        <div class="col-lg-8">
+          <div class="section-title text-start mb--0">
+            <span class="subtitle bg-primary-opacity">Course Grid</span>
+            <h2 class="title">Browse ICTEL programs across skill levels and focus areas.</h2>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="courses-grid-section__meta">
+            <span>{{ filteredCourses().length }} results</span>
+            <a [routerLink]="loginRoute">Need learner access?</a>
+          </div>
+        </div>
+      </div>
+
+      @if (filteredCourses().length) {
+        <div class="row g-5">
+          @for (course of filteredCourses(); track course.id) {
+            <div class="col-lg-4 col-md-6 col-12">
+              <article class="courses-grid-card rbt-card variation-01 rbt-hover h-100">
+                <div class="rbt-card-img courses-grid-card__image-wrap">
+                  <a [routerLink]="course.route">
+                    <img
+                      class="courses-grid-card__image"
+                      [src]="course.image"
+                      [alt]="course.title"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <div class="rbt-badge-3 bg-white">
+                      <span>{{ course.badge }}</span>
+                      <span>Off</span>
+                    </div>
+                  </a>
+                </div>
+
+                <div class="rbt-card-body courses-grid-card__body">
+                  <div class="rbt-card-top courses-grid-card__top">
+                    <div class="rbt-review">
+                      <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                      </div>
+                      <span class="rating-count">({{ course.reviews }} Reviews)</span>
+                    </div>
+                    <div class="rbt-bookmark-btn">
+                      <span class="rbt-round-btn" aria-hidden="true">
+                        <i class="feather-bookmark"></i>
+                      </span>
+                    </div>
+                  </div>
+
+                  <h4 class="rbt-card-title courses-grid-card__title">
+                    <a [routerLink]="course.route">{{ course.title }}</a>
+                  </h4>
+
+                  <ul class="rbt-meta courses-grid-card__meta-list">
+                    <li><i class="feather-book"></i>{{ course.lessons }} Lessons</li>
+                    <li><i class="feather-users"></i>{{ course.students }} Students</li>
+                  </ul>
+
+                  <p class="rbt-card-text courses-grid-card__description">{{ course.description }}</p>
+
+                  <div class="courses-grid-card__info">
+                    <span class="courses-grid-card__info-item">
+                      <i class="fa-regular fa-clock"></i>
+                      {{ course.duration }}
+                    </span>
+                    <span class="courses-grid-card__info-item">
+                      <i class="fa-solid fa-signal"></i>
+                      {{ course.level }}
+                    </span>
+                  </div>
+
+                  <div class="rbt-author-meta courses-grid-card__author">
+                    <div class="rbt-avater">
+                      <a [routerLink]="course.route">
+                        <img [src]="course.authorImage" [alt]="course.author" loading="lazy" decoding="async" />
+                      </a>
+                    </div>
+                    <div class="rbt-author-info">
+                      By <a [routerLink]="course.route">{{ course.author }}</a> In
+                      <a [routerLink]="course.route">{{ course.category }}</a>
+                    </div>
+                  </div>
+
+                  <div class="rbt-card-bottom courses-grid-card__footer">
+                    <div class="rbt-price">
+                      <span class="current-price">${{ course.price }}</span>
+                      <span class="off-price">${{ course.originalPrice }}</span>
+                    </div>
+                    <a class="rbt-btn-link courses-grid-card__button" [routerLink]="course.route">
+                      Enroll Now<i class="feather-arrow-right"></i>
+                    </a>
+                  </div>
+                </div>
+              </article>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="courses-empty-state">
+          <div class="courses-empty-state__icon">
+            <i class="fa-solid fa-folder-open"></i>
+          </div>
+          <h4>No courses matched your search.</h4>
+          <p>Try adjusting the keyword, category, or level filter to explore more programs.</p>
+          <button type="button" class="rbt-btn btn-border" (click)="clearFilters()">
+            Reset Filters
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="courses-features bg-color-white rbt-section-gap">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-primary-opacity">Course Features</span>
+            <h2 class="title">Why learners choose ICTEL for career-focused IT training.</h2>
+            <p class="description courses-features__description mx-auto">
+              Every ICTEL course is designed to combine practical learning, industry exposure, and
+              structured support for professional growth.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-solid fa-diagram-project"></i>
             </span>
-          </a>
+            <h5>Live Projects</h5>
+            <p>Work on practical project tasks that reflect real development and business needs.</p>
+          </div>
+        </div>
 
-          <a class="rbt-btn btn-border-gradient" routerLink="/">Back to Home</a>
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-solid fa-briefcase"></i>
+            </span>
+            <h5>Internship Support</h5>
+            <p>Gain guided support that helps learners prepare for internships and industry exposure.</p>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-solid fa-certificate"></i>
+            </span>
+            <h5>Industry Certification</h5>
+            <p>Strengthen your profile with certification-oriented learning and structured preparation.</p>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-solid fa-user-tie"></i>
+            </span>
+            <h5>Expert Trainers</h5>
+            <p>Learn from experienced trainers who focus on practical skills and clear guidance.</p>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-solid fa-user-check"></i>
+            </span>
+            <h5>Placement Assistance</h5>
+            <p>Get support for interview readiness, career direction, and professional opportunities.</p>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="courses-feature-card">
+            <span class="courses-feature-card__icon">
+              <i class="fa-regular fa-clock"></i>
+            </span>
+            <h5>Flexible Learning</h5>
+            <p>Choose training formats that balance structured guidance with flexible learning time.</p>
+          </div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <div class="col-lg-5">
-        <div class="courses-page__spotlight">
-          <span class="courses-page__spotlight-label">Catalog Ready</span>
-          <h4>Shared course cards mean the landing page and catalog stay visually consistent.</h4>
-          <p>
-            Add API data later without rewriting the layout structure. The filters are already
-            Angular-managed and jQuery-free.
-          </p>
+  <section class="courses-cta pb--120">
+    <div class="container">
+      <div class="courses-cta__card">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <span class="courses-cta__eyebrow">Take The Next Step</span>
+            <h2>Start Your Tech Career Today</h2>
+            <p>
+              Join ICTEL and gain industry-ready skills with practical learning.
+            </p>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="courses-cta__actions">
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="loginRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Enroll Now</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+              <a class="rbt-btn btn-border" [routerLink]="homeRoute">
+                Contact Us
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-
-    <div class="courses-page__filters">
-      @for (category of categories; track category) {
-        <button
-          type="button"
-          class="rbt-btn btn-sm btn-border-gradient courses-page__filter"
-          [class.courses-page__filter--active]="selectedCategory() === category"
-          (click)="selectCategory(category)"
-        >
-          {{ category }}
-        </button>
-      }
-    </div>
-
-    <div class="row g-5 mt--10">
-      @for (course of filteredCourses(); track course.id) {
-        <div class="col-lg-4 col-md-6 col-12">
-          <app-course-card [course]="course" />
-        </div>
-      }
-    </div>
-  </div>
+  </section>
 </section>

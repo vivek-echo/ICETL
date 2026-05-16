@@ -1,0 +1,338 @@
+<section class="about-page">
+  <section class="about-hero rbt-section-gap" aria-labelledby="about-hero-title">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="about-hero__content">
+            <div class="section-title text-start mb--0">
+              <span class="subtitle bg-primary-opacity">ABOUT ICTEL</span>
+              <h1 id="about-hero-title" class="title">
+                Empowering Future IT Professionals With Industry-Ready Skills
+              </h1>
+              <p class="description about-hero__description">
+                ICTEL helps learners build practical technology skills through expert-led training,
+                real-world projects, internships, and certification-focused programs designed for
+                modern IT careers.
+              </p>
+            </div>
+
+            <div class="about-hero__actions">
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="coursesRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Explore Courses</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+
+              <a class="rbt-btn btn-border" [href]="'mailto:' + contactEmail">Contact Us</a>
+            </div>
+
+            <div class="about-hero__tech-list" aria-label="ICTEL training focus areas">
+              @for (badge of heroBadges; track badge.label) {
+                <span class="about-hero__tech-pill">
+                  <i [class]="badge.iconClass"></i>
+                  {{ badge.label }}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="about-hero__visual">
+            <div class="about-hero__floating about-hero__floating--one">
+              <i class="fa-solid fa-terminal"></i>
+              <span>Live Labs</span>
+            </div>
+            <div class="about-hero__floating about-hero__floating--two">
+              <i class="fa-solid fa-rocket"></i>
+              <span>Career Ready</span>
+            </div>
+
+            <div class="about-hero__collage">
+              <figure class="about-hero__image about-hero__image--primary">
+                <img
+                  [src]="aboutImages[0]"
+                  alt="ICTEL students learning practical IT skills"
+                  decoding="async"
+                />
+              </figure>
+
+              <figure class="about-hero__image about-hero__image--secondary">
+                <img
+                  [src]="aboutImages[1]"
+                  alt="ICTEL mentor guiding technology learners"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+
+              <figure class="about-hero__image about-hero__image--tertiary">
+                <img
+                  [src]="aboutImages[2]"
+                  alt="ICTEL learner working on a live project"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+            </div>
+
+            <div class="about-hero__summary-card">
+              <span>Practical Learning</span>
+              <strong>Projects, mentorship, internships, and certifications.</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-who bg-color-white rbt-section-gapBottom" aria-labelledby="about-who-title">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="about-who__media">
+            <img
+              [src]="aboutImages[0]"
+              alt="ICTEL classroom training environment"
+              loading="lazy"
+              decoding="async"
+            />
+            <div class="about-who__floating-card">
+              <span class="about-who__floating-icon">
+                <i class="fa-solid fa-user-graduate"></i>
+              </span>
+              <div>
+                <strong>1000+</strong>
+                <span>Students Trained</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="about-who__content">
+            <div class="section-title text-start mb--0">
+              <span class="subtitle bg-secondary-opacity">Who We Are</span>
+              <h2 id="about-who-title" class="title">Who We Are</h2>
+            </div>
+
+            <p>
+              ICTEL is a career-focused IT training institute dedicated to helping students and
+              professionals build practical technical skills through industry-oriented learning
+              programs. Our training combines real-world projects, expert mentorship, internships,
+              and certification-focused education to prepare learners for modern technology
+              careers.
+            </p>
+
+            <p>
+              We provide training across software development, AI, cloud computing, cyber security,
+              networking, digital marketing, embedded systems, CAD training, and emerging
+              technologies.
+            </p>
+
+            <div class="row g-3 about-who__stats">
+              @for (stat of whoStats; track stat.label) {
+                <div class="col-sm-6">
+                  <article class="about-stat-card">
+                    <span class="about-stat-card__icon">
+                      <i [class]="stat.iconClass"></i>
+                    </span>
+                    <div>
+                      <strong>{{ stat.value }}</strong>
+                      <span>{{ stat.label }}</span>
+                    </div>
+                  </article>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-features bg-color-extra2 rbt-section-gap" aria-labelledby="about-features-title">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-primary-opacity">Why Choose ICTEL</span>
+            <h2 id="about-features-title" class="title">Why Learners Choose ICTEL</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        @for (feature of features; track feature.title) {
+          <div class="col-lg-4 col-md-6">
+            <article class="about-feature-card">
+              <span class="about-feature-card__icon">
+                <i [class]="feature.iconClass"></i>
+              </span>
+              <h3>{{ feature.title }}</h3>
+              <p>{{ feature.description }}</p>
+            </article>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="about-mission rbt-section-gap" aria-labelledby="about-mission-title">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-secondary-opacity">Mission & Vision</span>
+            <h2 id="about-mission-title" class="title">Building Skills For The Future Of Work</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <article class="about-purpose-card about-purpose-card--mission">
+            <span class="about-purpose-card__icon">
+              <i class="fa-solid fa-bullseye"></i>
+            </span>
+            <h3>Mission</h3>
+            <p>
+              Our mission is to bridge the gap between academic learning and industry requirements
+              by delivering practical, career-oriented IT education.
+            </p>
+          </article>
+        </div>
+
+        <div class="col-lg-6">
+          <article class="about-purpose-card about-purpose-card--vision">
+            <span class="about-purpose-card__icon">
+              <i class="fa-solid fa-eye"></i>
+            </span>
+            <h3>Vision</h3>
+            <p>
+              Our vision is to become a leading technology training institute that empowers learners
+              with future-ready digital skills.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-domains bg-color-white rbt-section-gapBottom" aria-labelledby="about-domains-title">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-primary-opacity">Training Domains</span>
+            <h2 id="about-domains-title" class="title">Explore ICTEL Training Domains</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        @for (domain of trainingDomains; track domain.title) {
+          <div class="col-xl-3 col-lg-4 col-md-6">
+            <article class="about-domain-card">
+              <span class="about-domain-card__icon">
+                <i [class]="domain.iconClass"></i>
+              </span>
+              <h3>{{ domain.title }}</h3>
+              <p>{{ domain.description }}</p>
+            </article>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="about-timeline bg-color-extra2 rbt-section-gap" aria-labelledby="about-timeline-title">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-secondary-opacity">Student Experience</span>
+            <h2 id="about-timeline-title" class="title">Your Learning Journey At ICTEL</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-timeline__track">
+        @for (step of timelineSteps; track step.title) {
+          <article class="about-timeline__item">
+            <span class="about-timeline__number">{{ $index + 1 }}</span>
+            <span class="about-timeline__icon">
+              <i [class]="step.iconClass"></i>
+            </span>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="about-achievements rbt-section-gap" aria-labelledby="about-achievements-title">
+    <div class="container">
+      <div class="about-achievements__panel">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-4">
+            <div class="section-title text-start mb--0">
+              <span class="subtitle">ICTEL Impact</span>
+              <h2 id="about-achievements-title" class="title">Achievements That Reflect Our Growth</h2>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="row g-4">
+              @for (counter of achievementCounters; track counter.label) {
+                <div class="col-md-6 col-xl-3">
+                  <article class="about-achievement-card">
+                    <span class="about-achievement-card__icon">
+                      <i [class]="counter.iconClass"></i>
+                    </span>
+                    <strong>{{ counter.value }}</strong>
+                    <span>{{ counter.label }}</span>
+                  </article>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-cta pb--120" aria-labelledby="about-cta-title">
+    <div class="container">
+      <div class="about-cta__panel">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <span class="about-cta__eyebrow">Take The Next Step</span>
+            <h2 id="about-cta-title">Start Your IT Career Journey With ICTEL</h2>
+            <p>
+              Gain practical skills, industry exposure, and career-focused training designed for the
+              modern technology industry.
+            </p>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="about-cta__actions">
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="coursesRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Explore Courses</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+
+              <a class="rbt-btn btn-border" [href]="'mailto:' + contactEmail">Contact Us</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>

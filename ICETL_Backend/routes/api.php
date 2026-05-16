@@ -35,13 +35,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);
-    Route::post(
-    '/getCourseCategories',
-    [CoursesController::class, 'getCourseCategories']);
+    
     Route::post('/updateCourseCategory', [CoursesController::class, 'updateCourseCategory']);
     Route::post('/deleteCourseCategory', [CoursesController::class, 'deleteCourseCategory']);
 });
-
+Route::post(
+    '/getCourseCategories',
+    [CoursesController::class, 'getCourseCategories']);
 Route::get('/user-profile/image/{type}/{filename}', [UserProfileController::class, 'image'])
     ->where('type', 'profile|thumbnail|cover')
     ->where('filename', '[A-Za-z0-9._-]+');

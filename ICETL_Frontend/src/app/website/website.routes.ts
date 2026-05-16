@@ -29,6 +29,21 @@ export const websiteRoutes: Routes = [
         title: 'Login | ICETL',
       },
       {
+        path: 'about',
+        loadComponent: () => import('./pages/about/about').then((m) => m.AboutComponent),
+        title: 'About Us | ICETL',
+      },
+      {
+        path: 'contact',
+        loadComponent: () => import('./pages/contact/contact').then((m) => m.ContactComponent),
+        title: 'Contact Us | ICETL',
+      },
+      {
+        path: 'courses',
+        loadComponent: () => import('./pages/courses/courses').then((m) => m.CoursesComponent),
+        title: 'Courses | ICETL',
+      },
+      {
         path: '**',
         redirectTo: '',
       },

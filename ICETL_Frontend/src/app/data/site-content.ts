@@ -128,6 +128,12 @@ export const MAIN_NAVIGATION: NavItem[] = [
     exact: true,
     icon: 'fa-solid fa-house-chimney',
   },
+  {
+    label: 'Courses',
+    route: '/courses',
+    exact: true,
+    icon: 'fa-solid fa-graduation-cap',
+  },
   ...(dashboardSetting
     ? [
         {

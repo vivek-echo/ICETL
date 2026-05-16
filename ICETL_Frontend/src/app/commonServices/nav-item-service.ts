@@ -34,6 +34,24 @@ export class NavigationService {
         exact: true,
         icon: 'fa-solid fa-house-chimney',
       },
+      {
+        label: 'Courses',
+        route: '/courses',
+        exact: true,
+        icon: 'fa-solid fa-graduation-cap',
+      },
+      {
+        label: 'About Us',
+        route: '/about',
+        exact: true,
+        icon: 'fa-solid fa-graduation-cap',
+      },
+      {
+        label: 'Contact Us',
+        route: '/contact',
+        exact: true,
+        icon: 'fa-solid fa-phone',
+      },
       // {
       //   label: 'Become Instructor',
       //   route: '/become-instructor',
