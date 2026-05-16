@@ -164,15 +164,6 @@ export class HomeComponent {
   );
 
   readonly categoryBoxes = signal<CategoryBox[]>([]);
-  //   { title: 'Web Design', image: 'assets/images/category/web-design.png', courseCount: 25 },
-  //   { title: 'Graphic Design', image: 'assets/images/category/design.png', courseCount: 30 },
-  //   { title: 'Personal Development', image: 'assets/images/category/personal.png', courseCount: 20 },
-  //   { title: 'IT and Software', image: 'assets/images/category/server.png', courseCount: 15 },
-  //   { title: 'Sales Marketing', image: 'assets/images/category/pantone.png', courseCount: 15 },
-  //   { title: 'Art & Humanities', image: 'assets/images/category/paint-palette.png', courseCount: 15 },
-  //   { title: 'Mobile Application', image: 'assets/images/category/smartphone.png', courseCount: 15 },
-  //   { title: 'Finance & Accounting', image: 'assets/images/category/infographic.png', courseCount: 15 },
-  // ];
 
   async getCourseCategories(): Promise<void> {
     const payload = {
