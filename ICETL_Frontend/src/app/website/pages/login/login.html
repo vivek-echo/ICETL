@@ -4,7 +4,7 @@
       <div class="col-lg-5">
         <div class="rbt-contact-form contact-form-style-1 login-flow-card">
           <div class="login-flow-card__header text-center">
-            <span class="login-flow-card__step">{{ stepLabel }}</span>
+            <!-- <span class="login-flow-card__step">{{ stepLabel }}</span> -->
             <h3 class="title">{{ stepTitle }}</h3>
             <p class="login-flow-card__description">
               {{ stepDescription }}
@@ -29,8 +29,8 @@
             </div>
 
             <div class="form-submit-group">
-              <button type="button" class="rbt-btn btn-md w-100" [disabled]="isLoading" (click)="sendOtp()">
-                {{ isLoading ? 'Sending...' : 'Send OTP' }}
+              <button type="button" class="rbt-btn btn-md w-100 rbt-btn btn-gradient" [disabled]="isLoading" (click)="sendOtp()">
+                <i class="fa-solid fa-right-to-bracket me-1"></i> {{ isLoading ? 'Sending...' : 'Send OTP' }}
               </button>
             </div>
           </form>
@@ -110,16 +110,41 @@
 
           <form *ngIf="currentStep === 'profile'" [formGroup]="profileForm" (ngSubmit)="completeProfile()">
             <div class="form-group">
-              <input id="profile-name" type="text" formControlName="name" autocomplete="name"
-                [class.has-value]="!!profileForm.get('name')?.value" [attr.aria-describedby]="
-                  profileForm.get('name')?.touched && profileForm.get('name')?.errors
-                    ? 'profile-name-error'
-                    : null
-                " [attr.aria-invalid]="
-                  profileForm.get('name')?.touched && profileForm.get('name')?.invalid ? 'true' : null
-                " />
-              <label for="profile-name"><i class="fa-solid fa-user me-1"></i>Name *</label>
-              <span class="focus-border"></span>
+              <div
+                class="premium-field"
+                [class.is-invalid]="profileForm.get('name')?.touched && profileForm.get('name')?.invalid"
+                [class.is-filled]="!!profileForm.get('name')?.value"
+                [class.is-success]="
+                  !!profileForm.get('name')?.value &&
+                  profileForm.get('name')?.valid &&
+                  (profileForm.get('name')?.dirty || profileForm.get('name')?.touched)
+                "
+              >
+                <fieldset class="premium-field__outline">
+                  <legend class="premium-field__legend">
+                    <span><i class="fa-solid fa-user me-1"></i>Name *</span>
+                  </legend>
+                  <input
+                    id="profile-name"
+                    type="text"
+                    class="form-control"
+                    formControlName="name"
+                    autocomplete="name"
+                    maxlength="150"
+                    placeholder=" "
+                    [attr.aria-describedby]="
+                      profileForm.get('name')?.touched && profileForm.get('name')?.errors
+                        ? 'profile-name-error'
+                        : null
+                    "
+                    [attr.aria-invalid]="
+                      profileForm.get('name')?.touched && profileForm.get('name')?.invalid ? 'true' : null
+                    "
+                    (input)="sanitizeNameInput($event)"
+                    (blur)="trimNameInput($event)"
+                  />
+                </fieldset>
+              </div>
 
               <div id="profile-name-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('name')?.touched && profileForm.get('name')?.errors">
@@ -127,20 +152,52 @@
                 <div *ngIf="profileForm.get('name')?.errors?.['minlength']">
                   Minimum 3 characters required
                 </div>
+                <div *ngIf="profileForm.get('name')?.errors?.['maxlength']">
+                  Maximum 150 characters allowed
+                </div>
+                <div *ngIf="profileForm.get('name')?.errors?.['pattern']">
+                  Name can contain only alphabets and spaces
+                </div>
               </div>
             </div>
 
             <div class="form-group">
-              <input id="profile-phone" type="tel" formControlName="phone" autocomplete="tel" inputmode="numeric"
-                maxlength="10" [class.has-value]="!!profileForm.get('phone')?.value" [attr.aria-describedby]="
-                  profileForm.get('phone')?.touched && profileForm.get('phone')?.errors
-                    ? 'profile-phone-error'
-                    : null
-                " [attr.aria-invalid]="
-                  profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid ? 'true' : null
-                " (keypress)="onlyNumbers($event)" />
-              <label for="profile-phone"><i class="fa-solid fa-phone me-1"></i>Phone Number *</label>
-              <span class="focus-border"></span>
+              <div
+                class="premium-field"
+                [class.is-invalid]="profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid"
+                [class.is-filled]="!!profileForm.get('phone')?.value"
+                [class.is-success]="
+                  !!profileForm.get('phone')?.value &&
+                  profileForm.get('phone')?.valid &&
+                  (profileForm.get('phone')?.dirty || profileForm.get('phone')?.touched)
+                "
+              >
+                <fieldset class="premium-field__outline">
+                  <legend class="premium-field__legend">
+                    <span><i class="fa-solid fa-phone me-1"></i>Phone Number *</span>
+                  </legend>
+                  <input
+                    id="profile-phone"
+                    type="tel"
+                    class="form-control"
+                    formControlName="phone"
+                    autocomplete="tel"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder=" "
+                    [attr.aria-describedby]="
+                      profileForm.get('phone')?.touched && profileForm.get('phone')?.errors
+                        ? 'profile-phone-error'
+                        : null
+                    "
+                    [attr.aria-invalid]="
+                      profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid ? 'true' : null
+                    "
+                    (input)="sanitizePhoneInput($event)"
+                    (keypress)="onlyNumbers($event)"
+                  />
+                </fieldset>
+              </div>
 
               <div id="profile-phone-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('phone')?.touched && profileForm.get('phone')?.errors">
@@ -149,40 +206,149 @@
               </div>
             </div>
 
-            <div class="form-group form-group--date">
-              <input id="profile-dob" type="text" formControlName="dob" autocomplete="bday" placeholder="yyyy-mm-dd"
-                readonly [class.has-value]="!!profileForm.get('dob')?.value" [attr.aria-describedby]="
-                  profileForm.get('dob')?.touched && profileForm.get('dob')?.errors
-                    ? 'profile-dob-error'
-                    : null
-                " [attr.aria-invalid]="
-                  profileForm.get('dob')?.touched && profileForm.get('dob')?.invalid ? 'true' : null
-                " (click)="openDobDatepicker()" (focus)="openDobDatepicker()" />
-              <label for="profile-dob"><i class="fa-solid fa-calendar-days me-1"></i> Date of Birth *</label>
-              <span class="focus-border"></span>
-              <button type="button" class="date-picker-toggle" (click)="openDobDatepicker()"
-                aria-label="Open date picker">
-                <i class="feather-calendar"></i>
-              </button>
+            <div class="form-group form-group--date profile-dob-field" [class.is-calendar-open]="isDobCalendarOpen">
+              <div
+                class="premium-field premium-date-field"
+                [class.is-invalid]="profileForm.get('dob')?.touched && profileForm.get('dob')?.invalid"
+                [class.is-filled]="!!profileForm.get('dob')?.value"
+                [class.is-success]="
+                  !!profileForm.get('dob')?.value &&
+                  profileForm.get('dob')?.valid &&
+                  (profileForm.get('dob')?.dirty || profileForm.get('dob')?.touched)
+                "
+                (click)="keepDobCalendarOpen($event)"
+              >
+                <fieldset class="premium-field__outline">
+                  <legend class="premium-field__legend">
+                    <span>Date of Birth *</span>
+                  </legend>
+                  <button
+                    id="profile-dob"
+                    type="button"
+                    class="date-picker-trigger"
+                    aria-label="Date of Birth"
+                    [attr.aria-describedby]="
+                      profileForm.get('dob')?.touched && profileForm.get('dob')?.errors
+                        ? 'profile-dob-error'
+                        : null
+                    "
+                    [attr.aria-invalid]="
+                      profileForm.get('dob')?.touched && profileForm.get('dob')?.invalid ? 'true' : null
+                    "
+                    [attr.aria-expanded]="isDobCalendarOpen"
+                    (click)="toggleDobCalendar($event)"
+                  >
+                    <span [class.is-placeholder]="!dobDisplayValue">
+                      {{ dobDisplayValue || 'dd-mm-yyyy' }}
+                    </span>
+                    <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+                  </button>
+                  <input type="hidden" formControlName="dob" autocomplete="bday" />
+                </fieldset>
 
+                <div class="premium-calendar" *ngIf="isDobCalendarOpen" (click)="keepDobCalendarOpen($event)">
+                  <div class="premium-calendar__header">
+                    <button
+                      type="button"
+                      class="premium-calendar__nav"
+                      aria-label="Previous month"
+                      (click)="changeDobCalendarMonth(-1)"
+                    >
+                      <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div class="premium-calendar__selects">
+                      <select
+                        aria-label="Calendar month"
+                        [value]="dobCalendarView.getMonth()"
+                        (change)="setDobCalendarMonth($event)"
+                      >
+                        <option
+                          *ngFor="let month of calendarMonths; let monthIndex = index"
+                          [value]="monthIndex"
+                        >
+                          {{ month }}
+                        </option>
+                      </select>
+                      <select
+                        aria-label="Calendar year"
+                        [value]="dobCalendarView.getFullYear()"
+                        (change)="setDobCalendarYear($event)"
+                      >
+                        <option *ngFor="let year of dobYearOptions" [value]="year">{{ year }}</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      class="premium-calendar__nav"
+                      aria-label="Next month"
+                      (click)="changeDobCalendarMonth(1)"
+                    >
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                  </div>
+
+                  <div class="premium-calendar__weekdays">
+                    <span *ngFor="let weekday of calendarWeekdays">{{ weekday }}</span>
+                  </div>
+
+                  <div class="premium-calendar__grid">
+                    <button
+                      *ngFor="let day of dobCalendarDays"
+                      type="button"
+                      class="premium-calendar__day"
+                      [class.is-muted]="!day.isCurrentMonth"
+                      [class.is-selected]="day.isSelected"
+                      [class.is-today]="day.isToday"
+                      [disabled]="day.isDisabled"
+                      (click)="selectDobDate(day)"
+                    >
+                      {{ day.day }}
+                    </button>
+                  </div>
+
+                  <div class="premium-calendar__footer">
+                    <button type="button" (click)="clearDobDate($event)">Clear</button>
+                    <span>Format: dd-mm-yyyy</span>
+                  </div>
+                </div>
+              </div>
               <div id="profile-dob-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('dob')?.touched && profileForm.get('dob')?.errors">
                 <div *ngIf="profileForm.get('dob')?.errors?.['required']">Date of birth is required</div>
+                <div *ngIf="profileForm.get('dob')?.errors?.['dateBeforeToday']">
+                  Select a valid past date of birth
+                </div>
               </div>
             </div>
 
             <div class="form-group form-group--select">
-              <select id="profile-gender" formControlName="gender">
-                <option value="" disabled hidden>Please Select gender</option>
-                <option *ngFor="let option of genderOptions" [value]="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
-              <span class="focus-border"></span>
+              <div
+                class="premium-field premium-field--select"
+                [class.is-invalid]="profileForm.get('gender')?.touched && profileForm.get('gender')?.invalid"
+                [class.is-filled]="!!profileForm.get('gender')?.value"
+                [class.is-success]="
+                  !!profileForm.get('gender')?.value &&
+                  profileForm.get('gender')?.valid &&
+                  (profileForm.get('gender')?.dirty || profileForm.get('gender')?.touched)
+                "
+              >
+                <fieldset class="premium-field__outline">
+                  <legend class="premium-field__legend">
+                    <span>Gender *</span>
+                  </legend>
+                  <select id="profile-gender" class="form-select" formControlName="gender">
+                    <option value="" disabled hidden>Please Select gender</option>
+                    <option *ngFor="let option of genderOptions" [value]="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </fieldset>
+              </div>
 
               <div id="profile-gender-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('gender')?.touched && profileForm.get('gender')?.errors">
                 <div *ngIf="profileForm.get('gender')?.errors?.['required']">Gender is required</div>
+                <div *ngIf="profileForm.get('gender')?.errors?.['pattern']">Please select a valid gender</div>
               </div>
             </div>
 

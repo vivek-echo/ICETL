@@ -41,12 +41,16 @@ export interface InstructorProfileUser {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
+  dob?: string | null;
+  gender?: string | null;
   hasPassword?: boolean;
 }
 
 export interface InstructorProfile {
   id: number;
   userId: number;
+  dob?: string | null;
+  gender?: string | null;
   headline?: string | null;
   bio?: string | null;
   experienceYears?: number | null;
@@ -101,6 +105,8 @@ export interface InstructorFinalRegistrationData {
 export interface SaveAccountInformationPayload {
   fullName: string;
   mobileNumber: string;
+  gender: string;
+  dob: string;
   password?: string;
   confirmPassword?: string;
   country: string;

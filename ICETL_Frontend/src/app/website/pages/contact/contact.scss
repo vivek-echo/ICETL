@@ -43,7 +43,6 @@
 .contact-info .container,
 .contact-connect .container,
 .contact-reasons .container,
-.contact-faq .container,
 .contact-cta .container {
   position: relative;
   z-index: 1;
@@ -274,8 +273,7 @@
 .contact-info-card,
 .contact-form-card,
 .contact-map-card,
-.contact-reason-card,
-.contact-faq__item {
+.contact-reason-card {
   border: 1px solid var(--icetl-border);
   background: #ffffff;
   box-shadow: var(--icetl-shadow);
@@ -298,8 +296,7 @@
 }
 
 .contact-info-card:hover,
-.contact-reason-card:hover,
-.contact-faq__item:hover {
+.contact-reason-card:hover {
   border-color: rgba(37, 99, 235, 0.3);
   background: #fcfdff;
   box-shadow: 0 20px 42px rgba(37, 99, 235, 0.11);
@@ -338,7 +335,6 @@
 .contact-info-card__content span,
 .contact-reason-card p,
 .contact-map-card__body p,
-.contact-faq__answer p,
 .contact-cta__panel p {
   color: var(--icetl-muted);
   font-size: 15px;
@@ -356,7 +352,7 @@
 }
 
 .contact-form-card {
-  padding: 38px;
+  padding: 70px;
 }
 
 .contact-form-card .title {
@@ -587,61 +583,6 @@
   margin: 0;
 }
 
-.contact-faq__accordion {
-  display: grid;
-  gap: 16px;
-}
-
-.contact-faq__item {
-  overflow: hidden;
-  border-radius: 18px;
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    background-color 0.25s ease,
-    transform 0.25s ease;
-}
-
-.contact-faq__item.is-open {
-  border-color: rgba(37, 99, 235, 0.3);
-  box-shadow: 0 20px 42px rgba(37, 99, 235, 0.11);
-}
-
-.contact-faq__question {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  width: 100%;
-  padding: 22px 24px;
-  border: 0;
-  background: transparent;
-  color: var(--icetl-text);
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.4;
-  text-align: left;
-}
-
-.contact-faq__question i {
-  flex-shrink: 0;
-  color: var(--icetl-blue);
-  font-size: 14px;
-  transition: transform 0.25s ease;
-}
-
-.contact-faq__item.is-open .contact-faq__question i {
-  transform: rotate(180deg);
-}
-
-.contact-faq__answer {
-  padding: 0 24px 22px;
-}
-
-.contact-faq__answer p {
-  margin: 0;
-}
-
 .contact-cta__panel {
   position: relative;
   overflow: hidden;
@@ -847,15 +788,6 @@
 
   .contact-map-card__body {
     padding: 24px 20px;
-  }
-
-  .contact-faq__question {
-    padding: 20px;
-    font-size: 16px;
-  }
-
-  .contact-faq__answer {
-    padding: 0 20px 20px;
   }
 
   .contact-cta__panel {

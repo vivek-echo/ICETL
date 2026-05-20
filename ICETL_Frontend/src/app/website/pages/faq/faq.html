@@ -1,0 +1,248 @@
+<section class="faq-page">
+  <section class="faq-hero rbt-section-gap" aria-labelledby="faq-hero-title">
+    <div class="container">
+      <div class="faq-hero__inner">
+        <div class="section-title text-center mb--0">
+          <span class="subtitle bg-primary-opacity">FAQ &amp; HELP CENTER</span>
+          <h1 id="faq-hero-title" class="title">
+            Frequently Asked Questions About ICTEL
+          </h1>
+          <p class="description faq-hero__description">
+            Find answers about courses, certifications, internships, admissions, training programs,
+            and career support.
+          </p>
+        </div>
+
+        <div class="faq-hero__actions">
+          <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="coursesRoute">
+            <span class="icon-reverse-wrapper">
+              <span class="btn-text">Explore Courses</span>
+              <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+              <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+            </span>
+          </a>
+
+          <a class="rbt-btn btn-border" [routerLink]="contactRoute">Contact Support</a>
+        </div>
+
+        <div class="faq-hero__quick-row" aria-label="ICTEL support highlights">
+          <span><i class="fa-solid fa-circle-question"></i> Course answers</span>
+          <span><i class="fa-solid fa-user-graduate"></i> Learner support</span>
+          <span><i class="fa-solid fa-briefcase"></i> Career guidance</span>
+        </div>
+
+        <div class="faq-hero__help-panel" aria-label="ICTEL FAQ help topics">
+          <div class="faq-hero__search-card">
+            <span class="faq-hero__search-icon">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <div>
+              <strong>Search Common Questions</strong>
+              <span>Quick answers for courses, admissions, certificates, payments, and support.</span>
+            </div>
+            <a class="faq-hero__search-link" href="#faq-main" (click)="scrollToFaqSection($event)">
+              View FAQs
+              <i class="fa-solid fa-arrow-down"></i>
+            </a>
+          </div>
+
+          <div class="row g-3 faq-hero__support-grid">
+            <div class="col-md-4">
+              <article class="faq-hero__mini-card">
+                <span><i class="fa-solid fa-laptop-code"></i></span>
+                <div>
+                  <h3>Course Guidance</h3>
+                  <p>Choose the right training path for your current skill level.</p>
+                </div>
+              </article>
+            </div>
+
+            <div class="col-md-4">
+              <article class="faq-hero__mini-card">
+                <span><i class="fa-solid fa-certificate"></i></span>
+                <div>
+                  <h3>Certification Help</h3>
+                  <p>Understand certificates, completion requirements, and projects.</p>
+                </div>
+              </article>
+            </div>
+
+            <div class="col-md-4">
+              <article class="faq-hero__mini-card">
+                <span><i class="fa-solid fa-headset"></i></span>
+                <div>
+                  <h3>Student Support</h3>
+                  <p>Get help with admissions, schedules, payments, and access.</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-categories bg-color-white rbt-section-gapBottom" aria-labelledby="faq-categories-title">
+    <div class="container">
+      <div class="row mb--40">
+        <div class="col-lg-12">
+          <div class="section-title text-center">
+            <span class="subtitle bg-secondary-opacity">Browse By Topic</span>
+            <h2 id="faq-categories-title" class="title">FAQ Categories</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 faq-categories__grid">
+        @for (category of categories; track category.title) {
+          <div class="col-xl-4 col-md-6">
+            <article class="faq-category-card">
+              <span class="faq-category-card__icon">
+                <i [class]="category.iconClass"></i>
+              </span>
+              <h3>{{ category.title }}</h3>
+              <p>{{ category.description }}</p>
+            </article>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="faq-main" class="faq-main bg-color-extra2 rbt-section-gap" aria-labelledby="faq-main-title">
+    <div class="container">
+      <div class="row justify-content-center mb--40">
+        <div class="col-xl-8 col-lg-10">
+          <div class="section-title text-center">
+            <span class="subtitle bg-primary-opacity">Quick Answers</span>
+            <h2 id="faq-main-title" class="title">Main Frequently Asked Questions</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-main__groups">
+        @for (group of faqGroups; track group.id) {
+          <section class="faq-group" [id]="'faq-' + group.id" [attr.aria-labelledby]="'faq-group-title-' + group.id">
+            <div class="faq-group__header">
+              <span class="faq-group__icon">
+                <i [class]="group.iconClass"></i>
+              </span>
+              <div>
+                <span class="faq-group__eyebrow">{{ group.eyebrow }}</span>
+                <h3 [id]="'faq-group-title-' + group.id">{{ group.title }}</h3>
+                <p>{{ group.description }}</p>
+              </div>
+            </div>
+
+            <div class="accordion faq-accordion" [id]="'accordion-' + group.id">
+              @for (faq of group.items; track faq.question) {
+                <div class="accordion-item faq-accordion__item" [class.is-open]="isFaqOpen(group.id, $index)">
+                  <h4 class="accordion-header" [id]="faqHeadingId(group.id, $index)">
+                    <button
+                      class="accordion-button faq-accordion__button"
+                      [class.collapsed]="!isFaqOpen(group.id, $index)"
+                      type="button"
+                      [attr.aria-expanded]="isFaqOpen(group.id, $index)"
+                      [attr.aria-controls]="faqPanelId(group.id, $index)"
+                      (click)="toggleFaq(group.id, $index)"
+                    >
+                      <span>{{ faq.question }}</span>
+                      <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                  </h4>
+
+                  <div
+                    class="accordion-collapse collapse faq-accordion__collapse"
+                    [class.show]="isFaqOpen(group.id, $index)"
+                    [id]="faqPanelId(group.id, $index)"
+                    role="region"
+                    [attr.aria-labelledby]="faqHeadingId(group.id, $index)"
+                    [attr.aria-hidden]="!isFaqOpen(group.id, $index)"
+                  >
+                    <div class="faq-accordion__body-wrap">
+                      <div class="accordion-body">
+                        <p>{{ faq.answer }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-support rbt-section-gap" aria-labelledby="faq-support-title">
+    <div class="container">
+      <div class="faq-support__panel">
+        <span class="faq-support__floating faq-support__floating--one">
+          <i class="fa-solid fa-headset"></i>
+        </span>
+        <span class="faq-support__floating faq-support__floating--two">
+          <i class="fa-solid fa-comments"></i>
+        </span>
+        <span class="faq-support__floating faq-support__floating--three">
+          <i class="fa-solid fa-lightbulb"></i>
+        </span>
+
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <div class="section-title text-start mb--0">
+              <span class="subtitle">Student Support</span>
+              <h2 id="faq-support-title" class="title">Still Have Questions?</h2>
+              <p class="description">
+                Our support team is here to help you choose the right learning path.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="faq-support__actions">
+              <a class="rbt-btn btn-border" [routerLink]="contactRoute">Contact Us</a>
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="coursesRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Explore Courses</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-cta bg-color-white pb--120" aria-labelledby="faq-cta-title">
+    <div class="container">
+      <div class="faq-cta__panel">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <span class="faq-cta__eyebrow">Start Learning With ICTEL</span>
+            <h2 id="faq-cta-title">Start Your IT Learning Journey With ICTEL</h2>
+            <p>
+              Build practical skills through industry-focused training, certifications, and live
+              projects.
+            </p>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="faq-cta__actions">
+              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="coursesRoute">
+                <span class="icon-reverse-wrapper">
+                  <span class="btn-text">Explore Courses</span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                  <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+                </span>
+              </a>
+
+              <a class="rbt-btn btn-border" [routerLink]="contactRoute">Contact Support</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>

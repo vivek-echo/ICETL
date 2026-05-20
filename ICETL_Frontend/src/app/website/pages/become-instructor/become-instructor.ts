@@ -12,6 +12,7 @@ import {
   Component,
   ChangeDetectorRef,
   ElementRef,
+  HostListener,
   Inject,
   OnDestroy,
   PLATFORM_ID,
@@ -80,6 +81,16 @@ interface UploadState {
   allowedExtensions: string[];
 }
 
+interface CalendarDay {
+  date: Date;
+  day: number;
+  iso: string;
+  isCurrentMonth: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  isDisabled: boolean;
+}
+
 @Component({
   selector: 'app-become-instructor',
   imports: [CommonModule, ReactiveFormsModule, RouterLink, NgMultiSelectDropDownModule],
@@ -110,6 +121,22 @@ export class BecomeInstructor implements OnDestroy {
   private resendInterval?: ReturnType<typeof setInterval>;
 
   readonly currentYear = new Date().getFullYear();
+  readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  readonly calendarMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  readonly dobYearOptions = this.buildDobYearOptions();
   readonly stepMeta: StepMeta[] = [
     {
       title: 'Account Information',
@@ -207,6 +234,10 @@ export class BecomeInstructor implements OnDestroy {
     'Arabic',
     'Tamil',
     'Bengali',
+  ];
+  readonly genderOptions = [
+    { label: 'Male', value: '1' },
+    { label: 'Female', value: '2' },
   ];
   readonly qualifications = [
     "Bachelor's Degree",
@@ -319,8 +350,18 @@ export class BecomeInstructor implements OnDestroy {
   readonly registrationForm = this.fb.group({
     account: this.fb.group(
       {
-        fullName: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
-        mobileNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{10,15}$/)]],
+        fullName: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(3),
+            Validators.maxLength(150),
+            Validators.pattern(/^[A-Za-z ]+$/),
+          ],
+        ],
+        mobileNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+        gender: ['', Validators.required],
+        dob: ['', Validators.required],
         password: ['', [Validators.required, Validators.minLength(8)]],
         confirmPassword: ['', [Validators.required]],
         country: ['', Validators.required],
@@ -335,7 +376,10 @@ export class BecomeInstructor implements OnDestroy {
       ],
       bio: ['', [Validators.required, Validators.minLength(80), Validators.maxLength(2000)]],
       profilePhoto: [null, Validators.required],
-      yearsOfExperience: [null, [Validators.required, Validators.min(0), Validators.max(60)]],
+      yearsOfExperience: [
+        null,
+        [Validators.required, Validators.min(0), Validators.max(60), Validators.pattern(/^[0-9]+$/)],
+      ],
       currentJobTitle: ['', [Validators.required, Validators.maxLength(150)]],
       currentOrganization: ['', [Validators.required, Validators.maxLength(150)]],
       highestQualification: ['', Validators.required],
@@ -369,6 +413,8 @@ export class BecomeInstructor implements OnDestroy {
   hasExistingPassword = false;
   isSubmitting = false;
   isStepSaving = false;
+  isDobCalendarOpen = false;
+  dobCalendarView = this.defaultDobCalendarView();
   otpValues: string[] = ['', '', '', '', '', ''];
   otpExpiresIn = 0;
   resendIn = 0;
@@ -410,6 +456,8 @@ export class BecomeInstructor implements OnDestroy {
     const trackedPaths = [
       'account.fullName',
       'account.mobileNumber',
+      'account.gender',
+      'account.dob',
       'account.country',
       'account.preferredLanguage',
       'professional.professionalHeadline',
@@ -461,8 +509,102 @@ export class BecomeInstructor implements OnDestroy {
     return this.formatTimer(this.resendIn);
   }
 
+  get dobDisplayValue(): string {
+    return this.formatIsoDateForDisplay(`${this.accountGroup.get('dob')?.value ?? ''}`);
+  }
+
+  get dobCalendarTitle(): string {
+    return `${this.calendarMonths[this.dobCalendarView.getMonth()]} ${this.dobCalendarView.getFullYear()}`;
+  }
+
+  get dobCalendarDays(): CalendarDay[] {
+    const selectedIso = `${this.accountGroup.get('dob')?.value ?? ''}`;
+    const todayIso = this.toIsoDate(new Date());
+    const firstOfMonth = new Date(
+      this.dobCalendarView.getFullYear(),
+      this.dobCalendarView.getMonth(),
+      1,
+    );
+    const startDate = new Date(firstOfMonth);
+    startDate.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      const iso = this.toIsoDate(date);
+
+      return {
+        date,
+        day: date.getDate(),
+        iso,
+        isCurrentMonth: date.getMonth() === this.dobCalendarView.getMonth(),
+        isSelected: iso === selectedIso,
+        isToday: iso === todayIso,
+        isDisabled: iso >= todayIso,
+      };
+    });
+  }
+
+  @HostListener('document:click')
+  closeDobCalendar(): void {
+    this.isDobCalendarOpen = false;
+  }
+
   scrollToRegistrationSection(): void {
     this.journeyStart?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  toggleDobCalendar(event: Event): void {
+    event.stopPropagation();
+    if (!this.isDobCalendarOpen) {
+      this.syncDobCalendarView();
+    }
+    this.isDobCalendarOpen = !this.isDobCalendarOpen;
+  }
+
+  keepDobCalendarOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
+  changeDobCalendarMonth(offset: number): void {
+    this.dobCalendarView = new Date(
+      this.dobCalendarView.getFullYear(),
+      this.dobCalendarView.getMonth() + offset,
+      1,
+    );
+  }
+
+  setDobCalendarMonth(event: Event): void {
+    const month = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(this.dobCalendarView.getFullYear(), month, 1);
+  }
+
+  setDobCalendarYear(event: Event): void {
+    const year = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(year, this.dobCalendarView.getMonth(), 1);
+  }
+
+  selectDobDate(day: CalendarDay): void {
+    if (day.isDisabled) {
+      return;
+    }
+
+    const control = this.accountGroup.get('dob');
+    control?.setValue(day.iso);
+    control?.markAsDirty();
+    control?.markAsTouched();
+    control?.updateValueAndValidity();
+    this.isDobCalendarOpen = false;
+  }
+
+  clearDobDate(event: Event): void {
+    event.stopPropagation();
+    const control = this.accountGroup.get('dob');
+    control?.setValue('');
+    control?.markAsDirty();
+    control?.markAsTouched();
+    control?.updateValueAndValidity();
+    this.syncDobCalendarView();
   }
 
   async submitEmail(): Promise<void> {
@@ -819,6 +961,18 @@ export class BecomeInstructor implements OnDestroy {
     }
 
     if (control.errors['pattern']) {
+      if (path === 'account.fullName') {
+        return 'Full name can contain only alphabets and spaces.';
+      }
+
+      if (path === 'account.mobileNumber') {
+        return 'Mobile number must be exactly 10 digits.';
+      }
+
+      if (path === 'professional.yearsOfExperience') {
+        return 'Years of experience must be a whole number.';
+      }
+
       return 'Enter a valid value in the expected format.';
     }
 
@@ -835,6 +989,42 @@ export class BecomeInstructor implements OnDestroy {
     }
 
     return 'Please review this field.';
+  }
+
+  sanitizeFullNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '');
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+      this.accountGroup.get('fullName')?.setValue(sanitized);
+    }
+  }
+
+  sanitizeMobileNumberInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '').slice(0, 10);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+      this.accountGroup.get('mobileNumber')?.setValue(sanitized);
+    }
+  }
+
+  preventNegativeNumberKeys(event: KeyboardEvent): void {
+    if (['-', '+', 'e', 'E', '.'].includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  sanitizeYearsOfExperienceInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '');
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+      this.professionalGroup.get('yearsOfExperience')?.setValue(sanitized);
+    }
   }
 
   onFilesSelected(event: Event, key: UploadKey): void {
@@ -965,6 +1155,8 @@ export class BecomeInstructor implements OnDestroy {
     return {
       fullName: `${this.accountGroup.get('fullName')?.value ?? ''}`.trim(),
       mobileNumber: `${this.accountGroup.get('mobileNumber')?.value ?? ''}`.trim(),
+      gender: `${this.accountGroup.get('gender')?.value ?? ''}`.trim(),
+      dob: `${this.accountGroup.get('dob')?.value ?? ''}`.trim(),
       password: `${this.accountGroup.get('password')?.value ?? ''}`.trim() || undefined,
       confirmPassword:
         `${this.accountGroup.get('confirmPassword')?.value ?? ''}`.trim() || undefined,
@@ -1022,6 +1214,8 @@ export class BecomeInstructor implements OnDestroy {
       {
         fullName: profile.user?.name?.trim() || '',
         mobileNumber: profile.user?.phone?.trim() || '',
+        gender: profile.gender || profile.user?.gender || '',
+        dob: profile.dob || profile.user?.dob || '',
         password: '',
         confirmPassword: '',
         country: profile.country || '',
@@ -1302,6 +1496,55 @@ export class BecomeInstructor implements OnDestroy {
       .padStart(2, '0');
 
     return `${minutes}:${seconds}`;
+  }
+
+  private defaultDobCalendarView(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear() - 25, today.getMonth(), 1);
+  }
+
+  private buildDobYearOptions(): number[] {
+    return Array.from({ length: 100 }, (_, index) => this.currentYear - 1 - index);
+  }
+
+  private syncDobCalendarView(): void {
+    const selectedDate = this.parseIsoDate(`${this.accountGroup.get('dob')?.value ?? ''}`);
+    this.dobCalendarView = selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      : this.defaultDobCalendarView();
+  }
+
+  private parseIsoDate(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatIsoDateForDisplay(value: string): string {
+    const date = this.parseIsoDate(value);
+
+    if (!date) {
+      return '';
+    }
+
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+
+    return `${day}-${month}-${date.getFullYear()}`;
   }
 
   private async transitionToStage(stage: OnboardingStage): Promise<void> {

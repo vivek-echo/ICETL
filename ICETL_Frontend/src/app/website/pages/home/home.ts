@@ -176,7 +176,7 @@ export class HomeComponent {
 
     try {
       const response: CourseCategoryResponse = await lastValueFrom(
-        this.courseService.getCourseCategories(payload),
+        this.courseService.getCourseCategoriesPreLogin(payload),
       );
 
       if (response.status) {
@@ -280,7 +280,7 @@ export class HomeComponent {
     },
     {
       image: 'assets/images/icons/counter-03.png',
-      value: '5000',
+      value: '50000',
       label: 'Certified Students',
       extraClasses: 'mt_md--60 mt_sm--60',
     },

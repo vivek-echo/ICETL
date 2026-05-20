@@ -1,16 +1,22 @@
 import {
-  AfterViewChecked,
   ChangeDetectorRef,
   Component,
   ElementRef,
-  Inject,
+  HostListener,
   OnDestroy,
-  PLATFORM_ID,
   QueryList,
   ViewChildren,
 } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
@@ -27,7 +33,14 @@ import { UserProfileService } from '../../../commonServices/user-profile.service
 
 type LoginStep = 'identify' | 'otp' | 'role' | 'profile';
 
-declare const $: any;
+interface CalendarDay {
+  day: number;
+  iso: string;
+  isCurrentMonth: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  isDisabled: boolean;
+}
 
 @Component({
   selector: 'app-login',
@@ -36,13 +49,26 @@ declare const $: any;
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login implements OnDestroy, AfterViewChecked {
+export class Login implements OnDestroy {
   loginForm: FormGroup;
   profileForm: FormGroup;
-  private readonly dobInputSelector = '#profile-dob';
-  private readonly maxDobDate = new Date();
-  private readonly isBrowser: boolean;
-  private dobDatepickerInitialized = false;
+  readonly currentYear = new Date().getFullYear();
+  readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  readonly calendarMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  readonly dobYearOptions = this.buildDobYearOptions();
   readonly genderOptions = [
     { label: 'Male', value: '1' },
     { label: 'Female', value: '2' },
@@ -54,6 +80,8 @@ export class Login implements OnDestroy, AfterViewChecked {
   currentStep: LoginStep = 'identify';
   availableRoles: RoleSelectionOption[] = [];
   selectedRoleUserId: number | null = null;
+  isDobCalendarOpen = false;
+  dobCalendarView = this.defaultDobCalendarView();
   otpArray = [0, 1, 2, 3, 4, 5];
   otpValues: string[] = ['', '', '', '', '', ''];
 
@@ -70,26 +98,36 @@ export class Login implements OnDestroy, AfterViewChecked {
     private NavigationService: NavigationService,
     private spinner: SpinnerService,
     private userProfileService: UserProfileService,
-    @Inject(PLATFORM_ID) platformId: object,
   ) {
-    this.isBrowser = isPlatformBrowser(platformId);
-
-    this.loginForm = this.fb.group({
-      emailId: ['vivekjha0151@gmail.com', [Validators.required, Validators.email]],
-    });
+    if (environment.production === false) {
+      this.loginForm = this.fb.group({
+        emailId: ['vivekjha0151@gmail.com', [Validators.required, Validators.email]],
+      });
+    } else {
+      this.loginForm = this.fb.group({
+        emailId: ['', [Validators.required, Validators.email]],
+      });
+    }
 
     this.profileForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
+      name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(150),
+          Validators.pattern(/^[A-Za-z](?:[A-Za-z ]*[A-Za-z])?$/),
+        ],
+      ],
       phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
-      dob: ['', Validators.required],
-      gender: ['', Validators.required],
+      dob: ['', [Validators.required, this.dobBeforeTodayValidator()]],
+      gender: ['', [Validators.required, Validators.pattern(/^[123]$/)]],
     });
   }
 
-  ngAfterViewChecked(): void {
-    if (this.currentStep === 'profile' && !this.dobDatepickerInitialized) {
-      this.initializeDobDatepicker();
-    }
+  @HostListener('document:click')
+  closeDobCalendar(): void {
+    this.isDobCalendarOpen = false;
   }
 
   get stepTitle(): string {
@@ -131,6 +169,82 @@ export class Login implements OnDestroy, AfterViewChecked {
     }
   }
 
+  get dobDisplayValue(): string {
+    return this.formatIsoDateForDisplay(`${this.profileForm.get('dob')?.value ?? ''}`);
+  }
+
+  get dobCalendarDays(): CalendarDay[] {
+    const selectedIso = `${this.profileForm.get('dob')?.value ?? ''}`;
+    const todayIso = this.toIsoDate(new Date());
+    const firstOfMonth = new Date(
+      this.dobCalendarView.getFullYear(),
+      this.dobCalendarView.getMonth(),
+      1,
+    );
+    const startDate = new Date(firstOfMonth);
+    startDate.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      const iso = this.toIsoDate(date);
+
+      return {
+        day: date.getDate(),
+        iso,
+        isCurrentMonth: date.getMonth() === this.dobCalendarView.getMonth(),
+        isSelected: iso === selectedIso,
+        isToday: iso === todayIso,
+        isDisabled: iso >= todayIso,
+      };
+    });
+  }
+
+  toggleDobCalendar(event: Event): void {
+    event.stopPropagation();
+    if (!this.isDobCalendarOpen) {
+      this.syncDobCalendarView();
+    }
+    this.isDobCalendarOpen = !this.isDobCalendarOpen;
+  }
+
+  keepDobCalendarOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
+  changeDobCalendarMonth(offset: number): void {
+    this.dobCalendarView = new Date(
+      this.dobCalendarView.getFullYear(),
+      this.dobCalendarView.getMonth() + offset,
+      1,
+    );
+  }
+
+  setDobCalendarMonth(event: Event): void {
+    const month = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(this.dobCalendarView.getFullYear(), month, 1);
+  }
+
+  setDobCalendarYear(event: Event): void {
+    const year = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(year, this.dobCalendarView.getMonth(), 1);
+  }
+
+  selectDobDate(day: CalendarDay): void {
+    if (day.isDisabled) {
+      return;
+    }
+
+    this.setDobValue(day.iso);
+    this.isDobCalendarOpen = false;
+  }
+
+  clearDobDate(event: Event): void {
+    event.stopPropagation();
+    this.setDobValue('');
+    this.syncDobCalendarView();
+  }
+
   onlyNumbers(event: KeyboardEvent): boolean {
     const charCode = event.which ? event.which : event.keyCode;
     if (charCode < 48 || charCode > 57) {
@@ -138,6 +252,39 @@ export class Login implements OnDestroy, AfterViewChecked {
       return false;
     }
     return true;
+  }
+
+  sanitizeNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '');
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    this.profileForm.get('name')?.setValue(sanitized);
+  }
+
+  trimNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const trimmed = input.value.trim();
+
+    if (input.value !== trimmed) {
+      input.value = trimmed;
+    }
+
+    this.profileForm.get('name')?.setValue(trimmed);
+  }
+
+  sanitizePhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '').slice(0, 10);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    this.profileForm.get('phone')?.setValue(sanitized);
   }
 
   async sendOtp(): Promise<void> {
@@ -157,7 +304,7 @@ export class Login implements OnDestroy, AfterViewChecked {
       dob: '',
       gender: '',
     });
-    this.destroyDobDatepicker();
+    this.isDobCalendarOpen = false;
 
     try {
       const response = await lastValueFrom(this.authService.sendOtp(this.loginForm.value.emailId));
@@ -249,7 +396,7 @@ export class Login implements OnDestroy, AfterViewChecked {
       gender: '',
     });
     this.resetRoleSelection();
-    this.destroyDobDatepicker();
+    this.isDobCalendarOpen = false;
     this.errorMessage = '';
     this.isLoading = false;
     this.submitted = false;
@@ -288,11 +435,15 @@ export class Login implements OnDestroy, AfterViewChecked {
             this.isLoading = false;
             this.errorMessage = '';
             this.cdr.detectChanges();
-            setTimeout(() => this.initializeDobDatepicker(), 0);
             return;
           }
 
-          if (response.success && response.is_multi_role_user && Array.isArray(response.roles) && response.roles.length > 0) {
+          if (
+            response.success &&
+            response.is_multi_role_user &&
+            Array.isArray(response.roles) &&
+            response.roles.length > 0
+          ) {
             this.stopTimer();
             this.resetOtpValues();
             this.availableRoles = response.roles;
@@ -359,6 +510,8 @@ export class Login implements OnDestroy, AfterViewChecked {
   }
 
   completeProfile(): void {
+    this.prepareProfileFormForSubmit();
+
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
       return;
@@ -401,7 +554,6 @@ export class Login implements OnDestroy, AfterViewChecked {
   }
 
   ngOnDestroy(): void {
-    this.destroyDobDatepicker();
     this.stopTimer(false);
   }
 
@@ -428,88 +580,17 @@ export class Login implements OnDestroy, AfterViewChecked {
     this.otpValues = otp.slice(0, this.otpArray.length).split('');
   }
 
-  openDobDatepicker(): void {
-    this.initializeDobDatepicker();
-
-    if (!this.canUseDatepicker()) {
-      return;
-    }
-
-    $(this.dobInputSelector).datepicker('show');
-  }
-
-  private initializeDobDatepicker(): void {
-    if (this.dobDatepickerInitialized || this.currentStep !== 'profile' || !this.canUseDatepicker()) {
-      return;
-    }
-
-    const dobInput = $(this.dobInputSelector);
-
-    if (!dobInput.length) {
-      return;
-    }
-
-    dobInput
-      .datepicker({
-        autoclose: true,
-        clearBtn: true,
-        container: 'body',
-        endDate: this.maxDobDate,
-        forceParse: false,
-        format: 'yyyy-mm-dd',
-        orientation: 'top auto',
-        startView: 2,
-        todayHighlight: true,
-        zIndexOffset: 1100,
-      })
-      .on('changeDate.icetlDob', (event: { date?: Date }) => {
-        this.setDobValue(this.formatDatepickerDate(event.date));
-      })
-      .on('clearDate.icetlDob', () => {
-        this.setDobValue('');
-      })
-      .on('hide.icetlDob', () => {
-        this.profileForm.get('dob')?.markAsTouched();
-        this.cdr.detectChanges();
-      });
-
-    this.dobDatepickerInitialized = true;
-  }
-
-  private destroyDobDatepicker(): void {
-    if (!this.canUseDatepicker()) {
-      this.dobDatepickerInitialized = false;
-      return;
-    }
-
-    const dobInput = $(this.dobInputSelector);
-
-    if (dobInput.length) {
-      dobInput.off('.icetlDob');
-      dobInput.datepicker('destroy');
-    }
-
-    this.dobDatepickerInitialized = false;
-  }
-
-  private canUseDatepicker(): boolean {
-    return this.isBrowser && typeof $ !== 'undefined' && typeof $.fn?.datepicker === 'function';
-  }
-
   private setDobValue(value: string): void {
     const dobControl = this.profileForm.get('dob');
 
     this.profileForm.patchValue({ dob: value });
     dobControl?.markAsTouched();
+    dobControl?.markAsDirty();
     dobControl?.updateValueAndValidity();
     this.cdr.detectChanges();
   }
 
-  private formatDatepickerDate(date: Date | undefined): string {
-    if (!date || Number.isNaN(date.getTime())) {
-      return '';
-    }
-
+  private toIsoDate(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -517,17 +598,110 @@ export class Login implements OnDestroy, AfterViewChecked {
     return `${year}-${month}-${day}`;
   }
 
+  private parseIsoDate(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const isSameDate =
+      date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+
+    return isSameDate ? date : null;
+  }
+
+  private formatDateValue(date: Date | undefined): string {
+    if (!date || Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return this.toIsoDate(date);
+  }
+
+  private formatIsoDateForDisplay(value: string): string {
+    const date = this.parseIsoDate(value);
+
+    if (!date) {
+      return '';
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+
+    return `${day}-${month}-${date.getFullYear()}`;
+  }
+
+  private defaultDobCalendarView(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear() - 25, today.getMonth(), 1);
+  }
+
+  private syncDobCalendarView(): void {
+    const selectedDate = this.parseIsoDate(`${this.profileForm.get('dob')?.value ?? ''}`);
+    this.dobCalendarView = selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      : this.defaultDobCalendarView();
+  }
+
+  private buildDobYearOptions(): number[] {
+    return Array.from({ length: 100 }, (_, index) => this.currentYear - 1 - index);
+  }
+
   private normalizeDob(value: unknown): string {
+    let normalized = '';
+
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : '';
+      normalized = /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : '';
+    } else if (value instanceof Date) {
+      normalized = this.formatDateValue(value);
     }
 
-    if (value instanceof Date) {
-      return this.formatDatepickerDate(value);
+    const date = normalized ? this.parseIsoDate(normalized) : null;
+
+    if (!date || !this.isBeforeToday(date)) {
+      return '';
     }
 
-    return '';
+    return normalized;
+  }
+
+  private prepareProfileFormForSubmit(): void {
+    const name = `${this.profileForm.get('name')?.value ?? ''}`.trim();
+    const phone = `${this.profileForm.get('phone')?.value ?? ''}`.replace(/\D+/g, '').slice(0, 10);
+
+    this.profileForm.patchValue({ name, phone });
+  }
+
+  private dobBeforeTodayValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = `${control.value ?? ''}`.trim();
+
+      if (!value) {
+        return null;
+      }
+
+      const date = this.parseIsoDate(value);
+
+      return date && this.isBeforeToday(date) ? null : { dateBeforeToday: true };
+    };
+  }
+
+  private isBeforeToday(date: Date): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    return selectedDate < today;
   }
 
   private getFirstEmptyOtpIndex(): number {
@@ -554,7 +728,9 @@ export class Login implements OnDestroy, AfterViewChecked {
       return null;
     }
 
-    return this.userProfileService.buildPrivateFileUrl(`uploads/user/profile/${normalizedFileName}`);
+    return this.userProfileService.buildPrivateFileUrl(
+      `uploads/user/profile/${normalizedFileName}`,
+    );
   }
 
   roleInitials(role: RoleSelectionOption): string {

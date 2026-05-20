@@ -1,306 +1,128 @@
 <div class="course-builder">
-
     <div class="row g-5">
-
-        <!-- LEFT -->
         <div class="col-xl-8">
-
             <div class="">
-
-                <div class="section-title mb--35">
-
-                    <h4 class="title mt--10">
-                        Add New Course
-                    </h4>
-                    <p class="description">
-                        Create beautiful courses with live preview.
-                    </p>
-                </div>
-
                 <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="row g-4">
-
-                    <!-- TITLE -->
                     <div class="col-12">
-
                         <div class="rbt-form-group">
-
                             <label>Course Title</label>
-
                             <input type="text" formControlName="title" placeholder="React Front To Back">
-
                         </div>
-
                     </div>
-
-                    <!-- CATEGORY -->
-                    <div class="col-lg-6">
-
+                    <div class="col-md-6">
                         <div class="rbt-form-group">
-
                             <label>Category</label>
-
-                            <select class="course-select" formControlName="category">
-
-                                @for (category of categories; track category) {
-
-                                <option [value]="category">
-                                    {{ category }}
+                            <select formControlName="category">
+                                <option value="">
+                                    Select Category
                                 </option>
-
-                                }
-
+                                <option *ngFor="let item of categories" [value]="item.id">
+                                    {{item.categoryName}}
+                                </option>
                             </select>
-
                         </div>
-
                     </div>
 
-                    <!-- INSTRUCTOR -->
-                    <div class="col-lg-6">
-
+                    <div class="col-md-6">
                         <div class="rbt-form-group">
-
                             <label>Instructor</label>
-
-                            <input type="text" formControlName="instructor" placeholder="Patrick">
-
+                            <ng-multiselect-dropdown [data]="instructorList" [settings]="dropdownSettings"
+                                formControlName="instructor">
+                            </ng-multiselect-dropdown>
                         </div>
-
                     </div>
-
-                    <!-- PRICE -->
-                    <div class="col-lg-6">
-
+                    <div class="col-md-6">
                         <div class="rbt-form-group">
-
-                            <label>Course Price</label>
-
-                            <input type="number" formControlName="price" placeholder="60">
-
+                            <label>Price</label>
+                            <input type="number" formControlName="price">
                         </div>
-
                     </div>
-
-                    <!-- OLD PRICE -->
-                    <div class="col-lg-6">
-
+                    <div class="col-md-6">
                         <div class="rbt-form-group">
-
                             <label>Old Price</label>
-
-                            <input type="number" formControlName="oldPrice" placeholder="120">
-
+                            <input type="number" formControlName="oldPrice">
                         </div>
-
                     </div>
-
-                    <!-- LESSONS -->
-                    <div class="col-lg-6">
-
-                        <div class="rbt-form-group">
-
-                            <label>Total Lessons</label>
-
-                            <input type="number" formControlName="lessons" placeholder="20">
-
-                        </div>
-
-                    </div>
-
-                    <!-- STUDENTS -->
-                    <div class="col-lg-6">
-
-                        <div class="rbt-form-group">
-
-                            <label>Total Students</label>
-
-                            <input type="number" formControlName="students" placeholder="40">
-
-                        </div>
-
-                    </div>
-
-                    <!-- THUMBNAIL -->
                     <div class="col-12">
+                        <div class="upload-box">
+                            <label for="thumbnailUpload">
+                                <i class="feather-upload"></i>
+                                <h6>Upload Thumbnail</h6>
+                                <p>Recommended 710 × 488</p>
+                            </label>
+                            <input id="thumbnailUpload" type="file" hidden (change)="onThumbnailChange($event)">
+                        </div>
 
+                    </div>
+                    <div class="col-12">
                         <div class="rbt-form-group">
-
-                            <label>Course Thumbnail</label>
-
-                            <div class="upload-box">
-
-                                <i class="feather-image"></i>
-
-                                <h6>Upload Course Thumbnail</h6>
-
-                                <p>Recommended size 710x488</p>
-
-                                <input type="file" (change)="onThumbnailChange($event)">
+                            <label>Description</label>
+                            <textarea rows="5" formControlName="description"></textarea>
+                            <div class="text-end mt-2">
+                                {{f['description'].value?.length ||0}}
+                                /100
 
                             </div>
-
                         </div>
-
                     </div>
-
-                    <!-- DESCRIPTION -->
-                    <div class="col-12">
-
+                    <div class="col-md-12">
                         <div class="rbt-form-group">
+                            <label>Publish Status</label>
+                            <select formControlName="status">
+                                <option value="0">
+                                    Draft
+                                </option>
+                                <option value="1">
+                                    Published
+                                </option>
 
-                            <label>Short Description</label>
-
-                            <textarea rows="5" formControlName="description"></textarea>
-
+                            </select>
                         </div>
-
                     </div>
-
-                    <!-- BUTTON -->
                     <div class="col-12">
-
-                        <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse">
-
-                            <span class="icon-reverse-wrapper">
-
-                                <span class="btn-text">
-                                    Publish Course
-                                </span>
-
-                                <span class="btn-icon">
-                                    <i class="feather-arrow-right"></i>
-                                </span>
-
-                                <span class="btn-icon">
-                                    <i class="feather-arrow-right"></i>
-                                </span>
-
-                            </span>
-
+                        <button class="rbt-btn btn-gradient w-100">
+                            Publish Course
                         </button>
-
                     </div>
-
                 </form>
-
             </div>
-
         </div>
-
-        <!-- RIGHT -->
         <div class="col-xl-4">
-
             <div class="course-preview-card">
-
-                <!-- IMAGE -->
                 <div class="preview-image">
-
-                    <img [src]="previewImage" alt="course">
-
-                    <span class="discount-badge">
-                        -50%
+                    <img [src]="previewImage">
+                    <span *ngIf="discountPercentage" class="discount-badge">
+                        -{{discountPercentage}}%
                     </span>
-
                 </div>
-
-                <!-- RATING -->
-                <div class="preview-rating">
-
-                    <i class="feather-star"></i>
-                    <i class="feather-star"></i>
-                    <i class="feather-star"></i>
-                    <i class="feather-star"></i>
-                    <i class="feather-star"></i>
-
-                    <span>(15 Reviews)</span>
-
-                </div>
-
-                <!-- TITLE -->
                 <h4>
-                    {{ courseForm.get('title')?.value }}
+                    {{f['title'].value || 'Course Title'}}
                 </h4>
-
-                <!-- META -->
-                <div class="preview-meta">
-
-                    <span>
-
-                        <i class="feather-book-open"></i>
-
-                        {{ courseForm.get('lessons')?.value }}
-                        Lessons
-
-                    </span>
-
-                    <span>
-
-                        <i class="feather-users"></i>
-
-                        {{ courseForm.get('students')?.value }}
-                        Students
-
-                    </span>
-
-                </div>
-
-                <!-- DESCRIPTION -->
                 <p class="preview-description">
-
-                    {{ courseForm.get('description')?.value }}
-
+                    {{f['description'].value}}
                 </p>
-
-                <!-- INSTRUCTOR -->
                 <div class="preview-instructor">
-
                     <div class="preview-avatar"></div>
-
                     <span>
-
                         By
-
                         <strong>
-                            {{ courseForm.get('instructor')?.value }}
+                            {{instructorNames}}
                         </strong>
-
                         In
-
-                        {{ courseForm.get('category')?.value }}
-
+                        {{selectedCategory}}
                     </span>
-
                 </div>
-
-                <!-- FOOTER -->
                 <div class="preview-footer">
-
                     <div class="preview-price">
-
                         <strong>
-                            ${{ courseForm.get('price')?.value }}
+                            ₹{{f['price'].value}}
                         </strong>
-
                         <span>
-                            ${{ courseForm.get('oldPrice')?.value }}
+                            ₹{{f['oldPrice'].value}}
                         </span>
-
                     </div>
-
-                    <button class="learn-btn">
-
-                        Learn More
-
-                        <i class="feather-arrow-right"></i>
-
-                    </button>
-
                 </div>
-
             </div>
-
         </div>
-
     </div>
-
 </div>

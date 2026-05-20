@@ -41,7 +41,6 @@
 .rbt-form-group textarea {
   width: 100%;
   border: 1px solid #dbe4f0;
-  border-radius: 16px;
   background: #ffffff;
   transition: 0.3s ease;
   font-size: 15px;
@@ -70,6 +69,10 @@
    Upload Box
 ========================= */
 
+/* =========================
+   Upload Box
+========================= */
+
 .upload-box {
   position: relative;
   padding: 50px 20px;
@@ -77,13 +80,25 @@
   border: 2px dashed #cfd8ea;
   background: #f8fbff;
   text-align: center;
-  transition: 0.3s ease;
+  transition: .3s ease;
   overflow: hidden;
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-box:hover {
   border-color: #2f57ef;
   background: #f3f7ff;
+}
+
+.upload-box i,
+.upload-box h6,
+.upload-box p {
+  pointer-events: none; /* important */
 }
 
 .upload-box i {
@@ -101,13 +116,22 @@
   color: #6b7280;
 }
 
-.upload-box input {
+.upload-box input[type="file"] {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
   opacity: 0;
   cursor: pointer;
+  z-index: 10;
 }
-
+.upload-box label{
+  width:100%;
+  cursor:pointer;
+}
 /* =========================
    ACTION
 ========================= */
@@ -279,5 +303,47 @@
     align-items: flex-start;
     gap: 18px;
   }
+
+}
+.text-danger{
+    color:#ef4444;
+    font-size:13px;
+}
+
+button:disabled{
+
+opacity:.6;
+cursor:not-allowed;
+
+}
+
+
+
+.preview-avatar{
+
+background:linear-gradient(
+135deg,
+#2f57ef,
+#7b61ff
+);
+
+}
+
+.preview-meta{
+
+margin-top:15px;
+
+}
+
+.course-builder{
+
+padding:20px;
+
+}
+
+.rbt-btn{
+
+height:58px;
+border-radius:16px;
 
 }

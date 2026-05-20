@@ -5,13 +5,6 @@
 
     <div>
 
-      <span class="subtitle bg-primary-opacity">
-        Course Management
-      </span>
-
-      <h3 class="title mt--10">
-        All Courses
-      </h3>
 
       <p class="description">
         Manage and monitor all platform courses.
@@ -20,43 +13,39 @@
     </div>
 
     <button class="rbt-btn btn-gradient">
-
       <i class="feather-plus"></i>
-
       Add Course
-
     </button>
-
   </div>
 
   <!-- STATS -->
-  <div class="row g-4 mb--40">
+  <!-- <div class="row g-4 mb--40">
 
     @for (metric of metrics; track metric.label) {
 
-      <div class="col-xl-3 col-lg-6 col-md-6 col-12">
+    <div class="col-xl-3 col-lg-6 col-md-6 col-12">
 
-        <div class="course-metric-card">
+      <div class="course-metric-card">
 
-          <div class="metric-icon">
+        <div class="metric-icon">
 
-            <i [class]="metric.icon"></i>
-
-          </div>
-
-          <span>{{ metric.label }}</span>
-
-          <strong>{{ metric.value }}</strong>
-
-          <p>{{ metric.note }}</p>
+          <i [class]="metric.icon"></i>
 
         </div>
 
+        <span>{{ metric.label }}</span>
+
+        <strong>{{ metric.value }}</strong>
+
+        <p>{{ metric.note }}</p>
+
       </div>
+
+    </div>
 
     }
 
-  </div>
+  </div> -->
 
   <!-- TOOLBAR -->
   <div class="course-toolbar">
@@ -65,9 +54,7 @@
 
       <label>Search Course</label>
 
-      <input
-        type="text"
-        placeholder="Search by course title...">
+      <input type="text" placeholder="Search by course title...">
 
     </div>
 
@@ -93,147 +80,145 @@
 
     @for (course of courses; track course.id) {
 
-      <div class="col-xl-4 col-lg-6 col-md-6 col-12">
+    <div class="col-xl-4 col-lg-6 col-md-6 col-12">
 
-        <div class="course-card">
+      <div class="course-card">
 
-          <!-- IMAGE -->
-          <div class="course-card__image">
+        <!-- IMAGE -->
+        <div class="course-card__image">
 
-            <img
-              [src]="course.thumbnail"
-              alt="course">
+          <img [src]="course.thumbnail" alt="course">
 
-            <span class="discount-badge">
-              {{ course.discount }}
+          <span class="discount-badge">
+            {{ course.discount }}
+          </span>
+
+          <button class="wishlist-btn">
+
+            <i class="feather-bookmark"></i>
+
+          </button>
+
+        </div>
+
+        <!-- BODY -->
+        <div class="course-card__body">
+
+          <!-- RATING -->
+          <div class="course-rating">
+
+            <div class="stars">
+
+              <i class="feather-star"></i>
+              <i class="feather-star"></i>
+              <i class="feather-star"></i>
+              <i class="feather-star"></i>
+              <i class="feather-star"></i>
+
+            </div>
+
+            <span>
+              ({{ course.reviews }} Reviews)
             </span>
 
-            <button class="wishlist-btn">
+          </div>
 
-              <i class="feather-bookmark"></i>
+          <!-- TITLE -->
+          <h5>
+            {{ course.title }}
+          </h5>
+
+          <!-- META -->
+          <div class="course-meta">
+
+            <span>
+
+              <i class="feather-book-open"></i>
+
+              {{ course.lessons }} Lessons
+
+            </span>
+
+            <span>
+
+              <i class="feather-users"></i>
+
+              {{ course.students }} Students
+
+            </span>
+
+          </div>
+
+          <!-- DESCRIPTION -->
+          <p class="course-description">
+
+            {{ course.description }}
+
+          </p>
+
+          <!-- INSTRUCTOR -->
+          <div class="course-instructor">
+
+            <div class="instructor-avatar">
+
+              {{ course.instructor[0] }}
+
+            </div>
+
+            <span>
+
+              By
+
+              <strong>
+                {{ course.instructor }}
+              </strong>
+
+              In
+
+              {{ course.category }}
+
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="course-card__footer">
+
+          <div class="course-price">
+
+            <strong>
+              ${{ course.price }}
+            </strong>
+
+            <span>
+              ${{ course.oldPrice }}
+            </span>
+
+          </div>
+
+          <div class="course-actions">
+
+            <button class="action-btn">
+
+              <i class="feather-edit-2"></i>
 
             </button>
 
-          </div>
+            <button class="action-btn action-btn--primary">
 
-          <!-- BODY -->
-          <div class="course-card__body">
+              <i class="feather-eye"></i>
 
-            <!-- RATING -->
-            <div class="course-rating">
-
-              <div class="stars">
-
-                <i class="feather-star"></i>
-                <i class="feather-star"></i>
-                <i class="feather-star"></i>
-                <i class="feather-star"></i>
-                <i class="feather-star"></i>
-
-              </div>
-
-              <span>
-                ({{ course.reviews }} Reviews)
-              </span>
-
-            </div>
-
-            <!-- TITLE -->
-            <h5>
-              {{ course.title }}
-            </h5>
-
-            <!-- META -->
-            <div class="course-meta">
-
-              <span>
-
-                <i class="feather-book-open"></i>
-
-                {{ course.lessons }} Lessons
-
-              </span>
-
-              <span>
-
-                <i class="feather-users"></i>
-
-                {{ course.students }} Students
-
-              </span>
-
-            </div>
-
-            <!-- DESCRIPTION -->
-            <p class="course-description">
-
-              {{ course.description }}
-
-            </p>
-
-            <!-- INSTRUCTOR -->
-            <div class="course-instructor">
-
-              <div class="instructor-avatar">
-
-                {{ course.instructor[0] }}
-
-              </div>
-
-              <span>
-
-                By
-
-                <strong>
-                  {{ course.instructor }}
-                </strong>
-
-                In
-
-                {{ course.category }}
-
-              </span>
-
-            </div>
-
-          </div>
-
-          <!-- FOOTER -->
-          <div class="course-card__footer">
-
-            <div class="course-price">
-
-              <strong>
-                ${{ course.price }}
-              </strong>
-
-              <span>
-                ${{ course.oldPrice }}
-              </span>
-
-            </div>
-
-            <div class="course-actions">
-
-              <button class="action-btn">
-
-                <i class="feather-edit-2"></i>
-
-              </button>
-
-              <button class="action-btn action-btn--primary">
-
-                <i class="feather-eye"></i>
-
-              </button>
-
-            </div>
+            </button>
 
           </div>
 
         </div>
 
       </div>
+
+    </div>
 
     }
 

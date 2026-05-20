@@ -42,9 +42,9 @@ export class AboutComponent {
   readonly contactEmail = 'contact@icetl.com';
 
   readonly aboutImages = [
-    'assets/images/about/about-01.png',
-    'assets/images/about/about-02.png',
-    'assets/images/about/about-03.png',
+    'assets/images/about/1.png',
+    'assets/images/about/2.png',
+    'assets/images/about/3.png',
   ];
 
   readonly heroBadges = [
@@ -56,7 +56,7 @@ export class AboutComponent {
   readonly whoStats: AboutStat[] = [
     { value: '10+', label: 'Categories', iconClass: 'fa-solid fa-layer-group' },
     { value: '50+', label: 'Courses', iconClass: 'fa-solid fa-graduation-cap' },
-    { value: '1000+', label: 'Students', iconClass: 'fa-solid fa-user-graduate' },
+    { value: '50000+', label: 'Students', iconClass: 'fa-solid fa-user-graduate' },
     { value: 'Industry', label: 'Projects', iconClass: 'fa-solid fa-diagram-project' },
   ];
 

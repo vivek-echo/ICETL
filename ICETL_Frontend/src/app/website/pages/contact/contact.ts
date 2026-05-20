@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 interface ContactCard {
@@ -11,11 +11,6 @@ interface ContactFeature {
   title: string;
   description: string;
   iconClass: string;
-}
-
-interface ContactFaq {
-  question: string;
-  answer: string;
 }
 
 @Component({
@@ -100,45 +95,6 @@ export class ContactComponent {
       iconClass: 'fa-solid fa-file-signature',
     },
   ];
-
-  readonly faqs: ContactFaq[] = [
-    {
-      question: 'How do I enroll in a course?',
-      answer:
-        'Share your details through the contact form or call the ICTEL team. We will guide you through course selection, batch availability, and enrollment steps.',
-    },
-    {
-      question: 'Do you provide certificates?',
-      answer:
-        'Yes. ICTEL provides certificates for eligible learners after successful course completion, based on the program requirements.',
-    },
-    {
-      question: 'Are internships included?',
-      answer:
-        'Internship support is available for selected programs. Our team can explain the options connected to your chosen training domain.',
-    },
-    {
-      question: 'Do you offer online classes?',
-      answer:
-        'ICTEL supports flexible learning formats for selected courses. Contact our team to confirm online or blended options for your preferred program.',
-    },
-    {
-      question: 'What are the course durations?',
-      answer:
-        'Course duration depends on the selected program, level, and batch schedule. Our counselors can share the latest duration details before enrollment.',
-    },
-    {
-      question: 'How can I contact support?',
-      answer:
-        'You can contact support by emailing support@ictel.in, calling the listed phone numbers, or sending your query through the contact form.',
-    },
-  ];
-
-  readonly activeFaqIndex = signal<number | null>(0);
-
-  toggleFaq(index: number): void {
-    this.activeFaqIndex.set(this.activeFaqIndex() === index ? null : index);
-  }
 
   handleContactSubmit(event: Event): void {
     event.preventDefault();

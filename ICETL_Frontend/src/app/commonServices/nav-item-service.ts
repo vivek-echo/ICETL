@@ -52,6 +52,12 @@ export class NavigationService {
         exact: true,
         icon: 'fa-solid fa-phone',
       },
+      {
+        label: 'FAQ',
+        route: '/faq',
+        exact: true,
+        icon: 'fa-solid fa-question-circle',
+      },
       // {
       //   label: 'Become Instructor',
       //   route: '/become-instructor',

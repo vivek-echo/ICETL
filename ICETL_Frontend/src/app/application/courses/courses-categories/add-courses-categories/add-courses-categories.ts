@@ -39,6 +39,7 @@ export class AddCoursesCategories implements OnDestroy {
         ],
       ],
       status: ['1', Validators.required],
+      categoryIcon: ['', [Validators.required, Validators.pattern(/^fa-[a-z]+ fa-[a-z-]+$/)]],
       icon: [null],
     });
   }
@@ -98,7 +99,8 @@ export class AddCoursesCategories implements OnDestroy {
     const map: Record<string, string> = {
       categoryName: 'Category Name',
       status: 'Status',
-      icon: 'Category Icon',
+      icon: 'Category Banner',
+      categoryIcon: 'Category Icon',
     };
 
     return map[field] || field;

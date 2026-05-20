@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -26,10 +27,11 @@ class CoursesController extends Controller
                 'min:3',
                 'max:50',
                 'regex:/^[a-zA-Z\s]+$/',
-                'unique:courseCategories,categoryName'
+                'unique:coursecategories,categoryName'
             ],
             'status' => 'required|in:0,1',
-            'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg|max:2048'
+            'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg|max:2048',
+            'categoryIcon' => 'nullable|string|regex:/^fa-[a-z]+ fa-[a-z-]+$/'
         ]);
 
         // Validation Failed
@@ -58,11 +60,12 @@ class CoursesController extends Controller
             }
 
             // Insert Data
-            $inserted = DB::table('courseCategories')->insert([
+            $inserted = DB::table('coursecategories')->insert([
                 'categoryName' => $request->categoryName,
                 'slug' => Str::slug($request->categoryName),
                 'status' => $request->status,
                 'icon' => $iconPath,
+                'categoryIcon' => $request->categoryIcon,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -89,7 +92,7 @@ class CoursesController extends Controller
     {
         try {
 
-            $query = DB::table('courseCategories');
+            $query = DB::table('coursecategories');
 
             // Search
             if ($request->search) {
@@ -140,17 +143,18 @@ class CoursesController extends Controller
         $categoryId = (int) $request->input('id');
 
         $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:courseCategories,id',
+            'id' => 'required|integer|exists:coursecategories,id',
             'categoryName' => [
                 'required',
                 'string',
                 'min:3',
                 'max:50',
                 'regex:/^[a-zA-Z\s]+$/',
-                Rule::unique('courseCategories', 'categoryName')->ignore($categoryId, 'id')
+                Rule::unique('coursecategories', 'categoryName')->ignore($categoryId, 'id')
             ],
             'status' => 'required|in:0,1',
-            'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg|max:2048'
+            'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg|max:2048',
+            'categoryIcon' => 'nullable|string|regex:/^fa-[a-z]+ fa-[a-z-]+$/'
         ]);
 
         if ($validator->fails()) {
@@ -165,7 +169,7 @@ class CoursesController extends Controller
         DB::beginTransaction();
 
         try {
-            $category = DB::table('courseCategories')
+            $category = DB::table('coursecategories')
                 ->where('id', $categoryId)
                 ->first();
 
@@ -192,17 +196,18 @@ class CoursesController extends Controller
                 );
             }
 
-            DB::table('courseCategories')
+            DB::table('coursecategories')
                 ->where('id', $categoryId)
                 ->update([
                     'categoryName' => $request->categoryName,
                     'slug' => Str::slug($request->categoryName),
                     'status' => $request->status,
                     'icon' => $iconPath,
+                    'categoryIcon' => $request->categoryIcon,
                     'updated_at' => now()
                 ]);
 
-            $updatedCategory = DB::table('courseCategories')
+            $updatedCategory = DB::table('coursecategories')
                 ->where('id', $categoryId)
                 ->first();
 
@@ -230,7 +235,7 @@ class CoursesController extends Controller
     public function deleteCourseCategory(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:courseCategories,id'
+            'id' => 'required|integer|exists:coursecategories,id'
         ]);
 
         if ($validator->fails()) {
@@ -245,7 +250,7 @@ class CoursesController extends Controller
         DB::beginTransaction();
 
         try {
-            $category = DB::table('courseCategories')
+            $category = DB::table('coursecategories')
                 ->where('id', (int) $request->id)
                 ->first();
 
@@ -260,7 +265,7 @@ class CoursesController extends Controller
                 Storage::disk('private')->delete($category->icon);
             }
 
-            DB::table('courseCategories')
+            DB::table('coursecategories')
                 ->where('id', (int) $request->id)
                 ->delete();
 
@@ -300,5 +305,123 @@ class CoursesController extends Controller
             : null;
 
         return $category;
+    }
+
+
+    public function createCourse(Request $request)
+    {
+
+        $ProfileData = json_decode(
+            $request->input('userProfile', '{}'),
+            true
+        );
+        $validator = Validator::make($request->all(), [
+
+            'title' => [
+                'required',
+                'string',
+                'min:5',
+                'max:100'
+            ],
+            'category' => 'required|numeric',
+            'instructor' => 'required',
+            'price' => 'required|numeric|min:0',
+            'oldPrice' => 'nullable|numeric|min:0',
+            'students' => 'nullable|integer|min:0',
+            'description' => [
+                'required',
+                'string',
+                'min:20',
+                'max:300'
+            ],
+            'thumbnail' =>
+            'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'status' => 'required|in:0,1'
+
+        ]);
+
+
+        // Validation Failed
+        if ($validator->fails()) {
+
+            return response()->json([
+
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+
+            ], 422);
+        }
+
+
+        DB::beginTransaction();
+
+        try {
+
+            $thumbnailPath = null;
+
+            // Upload Thumbnail
+            if ($request->hasFile('thumbnail')) {
+
+                $file = $request->file('thumbnail');
+
+                $fileName =
+                    time()
+                    . '_'
+                    . uniqid()
+                    . '.'
+                    . $file->getClientOriginalExtension();
+
+                $thumbnailPath =
+                    $file->storeAs(
+                        'course-thumbnails',
+                        $fileName,
+                        'private'
+                    );
+            }
+
+
+            // Convert instructor array to JSON
+            $instructorIds = json_decode(
+                $request->instructor,
+                true
+            );
+            // Insert Data
+            $courseId = DB::table('courses')->insertGetId([
+                'title' => $request->title,
+                'categoryId' => $request->category,
+                'instructorIds' => json_encode($instructorIds),
+                'price' => $request->price,
+                'oldPrice' => $request->oldPrice,
+                'description' => $request->description,
+                'thumbnail' => $thumbnailPath,
+                'status' => $request->status,
+                'createdBy' => $ProfileData ? Crypt::decryptString($ProfileData['id']) : null,
+                'createdByRoleId' => $ProfileData ? $ProfileData['role'] : null,
+                'deletedFlag' => 0,
+                'createdOn' => now()
+            ]);
+
+            foreach ($instructorIds as $instructorId) {
+                DB::table('courseinstructors')
+                    ->insert([
+                        'courseId' => $courseId,
+                        'instructorId' => $instructorId,
+                        'createdOn' => now()
+                    ]);
+            }
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'Course created successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

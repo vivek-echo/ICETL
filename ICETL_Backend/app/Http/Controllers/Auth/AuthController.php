@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -518,7 +519,7 @@ class AuthController extends Controller
 
         Validator::make($request->all(), [
             'email' => 'required|email',
-            'name' => 'required|min:3',
+            'name' => ['required', 'string', 'min:3', 'max:150', 'regex:/^[A-Za-z](?:[A-Za-z ]*[A-Za-z])?$/'],
             'phone' => 'required|digits:10',
             'dob' => 'required|date|before:today',
             'gender' => 'required|in:1,2,3',
@@ -539,7 +540,7 @@ class AuthController extends Controller
         }
 
         $user = User::create([
-            'name' => $request->name,
+            'name' => trim((string) $request->name),
             'email' => $email,
             'phone' => $request->phone,
             'dob' => $request->dob,
@@ -657,7 +658,7 @@ class AuthController extends Controller
                 'token' => $tokenPayload['token'],
                 'expires_at' => $tokenPayload['expires_at'],
                 'user' => [
-                    'id' => $user->id,
+                    'id' => Crypt::encryptString($user->id),
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone ?? $user->mobile ?? null,
@@ -666,6 +667,7 @@ class AuthController extends Controller
                     'profileImg' => $user->profileImg ?? null,
                     'thumbnailImg' => $user->thumbnailImg ?? null,
                     'coverImg' => $user->coverImg ?? null,
+                    'role' => $user->role ?? null,
                     'profileImgUrl' => $this->storedProfileFileUrl('profile', $user->profileImg ?? null),
                     'thumbnailImgUrl' => $this->storedProfileFileUrl('thumbnail', $user->thumbnailImg ?? null),
                     'coverImgUrl' => $this->storedProfileFileUrl('cover', $user->coverImg ?? null),

@@ -159,8 +159,10 @@ class InstructorRegistrationController extends Controller
         $passwordRequired = !filled($user->password) || filled($request->input('password'));
 
         $validator = Validator::make($request->all(), [
-            'fullName' => ['required', 'string', 'min:3', 'max:150'],
-            'mobileNumber' => ['required', 'regex:/^[0-9]{10,15}$/'],
+            'fullName' => ['required', 'string', 'min:3', 'max:150', 'regex:/^[A-Za-z ]+$/'],
+            'mobileNumber' => ['required', 'regex:/^[0-9]{10}$/'],
+            'gender' => ['required', 'in:1,2'],
+            'dob' => ['required', 'date', 'before:today'],
             'password' => $passwordRequired
                 ? ['required', 'string', 'min:8', 'max:255']
                 : ['nullable', 'string', 'min:8', 'max:255'],
@@ -187,6 +189,8 @@ class InstructorRegistrationController extends Controller
             DB::transaction(function () use ($user, $instructor, $payload): void {
                 $user->name = $this->sanitizeText($payload['fullName']);
                 $user->phone = preg_replace('/\D+/', '', (string) $payload['mobileNumber']) ?? '';
+                $user->gender = (string) $payload['gender'];
+                $user->dob = $payload['dob'];
                 $user->userType = 1;
                 $user->role = 3;
                 $user->email_verified_at = $user->email_verified_at ?? now();
@@ -805,6 +809,8 @@ class InstructorRegistrationController extends Controller
         return [
             'id' => $instructor->id,
             'userId' => $instructor->userId,
+            'dob' => optional($instructor->user?->dob)->format('Y-m-d'),
+            'gender' => filled($instructor->user?->gender) ? (string) $instructor->user?->gender : null,
             'headline' => $instructor->headline,
             'bio' => $instructor->bio,
             'experienceYears' => $instructor->experienceYears,
@@ -831,6 +837,8 @@ class InstructorRegistrationController extends Controller
                 'name' => $instructor->user?->name,
                 'email' => $instructor->user?->email,
                 'phone' => $instructor->user?->phone,
+                'dob' => optional($instructor->user?->dob)->format('Y-m-d'),
+                'gender' => filled($instructor->user?->gender) ? (string) $instructor->user?->gender : null,
                 'hasPassword' => filled($instructor->user?->password),
             ],
         ];
@@ -850,6 +858,8 @@ class InstructorRegistrationController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'dob' => optional($user->dob)->format('Y-m-d'),
+                'gender' => filled($user->gender) ? (string) $user->gender : null,
                 'hasPassword' => filled($user->password),
             ],
         ];
@@ -866,6 +876,14 @@ class InstructorRegistrationController extends Controller
 
         if (!filled($user->phone)) {
             $errors['mobileNumber'][] = 'Mobile number is required.';
+        }
+
+        if (!filled($user->gender)) {
+            $errors['gender'][] = 'Gender is required.';
+        }
+
+        if (!filled($user->dob)) {
+            $errors['dob'][] = 'Date of birth is required.';
         }
 
         if (!filled($user->password)) {

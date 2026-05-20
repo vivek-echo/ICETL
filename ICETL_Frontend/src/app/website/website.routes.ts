@@ -39,6 +39,11 @@ export const websiteRoutes: Routes = [
         title: 'Contact Us | ICETL',
       },
       {
+        path: 'faq',
+        loadComponent: () => import('./pages/faq/faq').then((m) => m.FaqComponent),
+        title: 'FAQ | ICTEL',
+      },
+      {
         path: 'courses',
         loadComponent: () => import('./pages/courses/courses').then((m) => m.CoursesComponent),
         title: 'Courses | ICETL',

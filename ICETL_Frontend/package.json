@@ -36,6 +36,7 @@
     "@angular/youtube-player": "^21.2.9",
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@ng-bootstrap/ng-bootstrap": "^20.0.0",
+    "@ng-select/ng-select": "^21.8.2",
     "bootstrap": "^5.3.8",
     "bootstrap-datepicker": "^1.10.1",
     "express": "^5.1.0",

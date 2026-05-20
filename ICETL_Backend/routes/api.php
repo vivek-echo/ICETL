@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\InstructorRegistrationController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\CoursesController;
+use App\Http\Controllers\CommonController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -35,13 +36,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);
-    
+
     Route::post('/updateCourseCategory', [CoursesController::class, 'updateCourseCategory']);
     Route::post('/deleteCourseCategory', [CoursesController::class, 'deleteCourseCategory']);
+    Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
+    Route::post('/createCourse', [CoursesController::class, 'createCourse']);
+
+    //master dataa
+    Route::post('/getInstructorListByInstructorId', [CommonController::class, 'getInstructorListByInstructorId']);
 });
-Route::post(
-    '/getCourseCategories',
-    [CoursesController::class, 'getCourseCategories']);
+
 Route::get('/user-profile/image/{type}/{filename}', [UserProfileController::class, 'image'])
     ->where('type', 'profile|thumbnail|cover')
     ->where('filename', '[A-Za-z0-9._-]+');
@@ -65,3 +69,8 @@ Route::get('/getAfile', [AuthController::class, 'getAfile']);
 Route::post('/instructors/send-otp', [InstructorRegistrationController::class, 'sendInstructorOtp']);
 Route::post('/instructors/resend-otp', [InstructorRegistrationController::class, 'resendInstructorOtp']);
 Route::post('/instructors/verify-otp', [InstructorRegistrationController::class, 'verifyInstructorOtp']);
+
+
+Route::group(['prefix' => '/preloginapi'], function () {
+    Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
+});

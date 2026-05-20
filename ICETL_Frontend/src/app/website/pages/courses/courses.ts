@@ -1,4 +1,5 @@
-import { Component, computed, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -35,6 +36,7 @@ interface CategoryCard extends CategoryMeta {
 interface BannerStat {
   value: string;
   label: string;
+  iconClass: string;
 }
 
 interface CourseFilterModel {
@@ -51,16 +53,18 @@ interface CourseFilterModel {
 })
 export class CoursesComponent {
   readonly homeRoute = '/';
+  readonly contactRoute = '/contact';
   readonly instructorRoute = '/become-instructor';
   readonly loginRoute = '/login';
+  private readonly document = inject(DOCUMENT);
 
   readonly allCategoryLabel = 'All Categories';
   readonly allDurationLabel = 'All Durations';
 
   readonly bannerStats: BannerStat[] = [
-    { value: '40+', label: 'Career-focused programs' },
-    { value: '12+', label: 'Industry domains' },
-    { value: '1000+', label: 'Learners trained' },
+    { value: '50000+', label: 'Learners', iconClass: 'fa-solid fa-users' },
+    { value: '40+', label: 'Courses', iconClass: 'fa-solid fa-graduation-cap' },
+    { value: '12+', label: 'Categories', iconClass: 'fa-solid fa-layer-group' },
   ];
 
   readonly categoryMeta: CategoryMeta[] = [
@@ -591,5 +595,10 @@ export class CoursesComponent {
 
   clearFilters(): void {
     this.filters.set({ ...this.defaultFilters });
+  }
+
+  scrollToCourses(): void {
+    const courseListSection = this.document.getElementById('course-list-section');
+    courseListSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

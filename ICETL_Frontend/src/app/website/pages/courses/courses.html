@@ -1,18 +1,12 @@
 <section class="courses-page">
-  <section class="courses-banner rbt-section-gap">
+  <section class="courses-banner" aria-labelledby="courses-hero-title">
     <div class="container">
       <div class="courses-banner__shell">
-        <div class="row align-items-center g-5">
-          <div class="col-lg-8">
-            <nav class="courses-banner__breadcrumb" aria-label="Breadcrumb">
-              <a [routerLink]="homeRoute">Home</a>
-              <span>/</span>
-              <span aria-current="page">Courses</span>
-            </nav>
-
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
             <div class="section-title text-start mb--0">
-              <span class="subtitle bg-primary-opacity">ICTEL Course Catalog</span>
-              <h1 class="title">Explore Professional IT Courses</h1>
+              <span class="subtitle bg-primary-opacity">ICTEL COURSE CATALOG</span>
+              <h1 id="courses-hero-title" class="title">Explore Professional IT Courses</h1>
               <p class="description courses-banner__description">
                 Learn industry-ready skills through practical training, live projects, and
                 certification programs.
@@ -20,28 +14,32 @@
             </div>
 
             <div class="courses-banner__actions">
-              <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="loginRoute">
+              <button
+                type="button"
+                class="rbt-btn btn-gradient hover-icon-reverse"
+                (click)="scrollToCourses()"
+              >
                 <span class="icon-reverse-wrapper">
                   <span class="btn-text">Explore Courses</span>
                   <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
                   <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
                 </span>
-              </a>
+              </button>
+              <a class="rbt-btn btn-border" [routerLink]="contactRoute">Contact Us</a>
             </div>
           </div>
 
-          <div class="col-lg-4">
-            <div class="courses-banner__panel">
-              <span class="courses-banner__panel-badge">Professional Learning</span>
-              <h4>Structured programs for modern IT careers.</h4>
-              <p>
-                Discover practical, mentor-led courses designed to help learners build skills with
-                clarity and confidence.
-              </p>
+          <div class="col-lg-5">
+            <div class="courses-banner__visual" aria-label="ICTEL course catalog statistics">
+              <div class="courses-banner__glow courses-banner__glow--one"></div>
+              <div class="courses-banner__glow courses-banner__glow--two"></div>
 
-              <div class="courses-banner__highlights">
+              <div class="courses-banner__mini-cards">
                 @for (stat of bannerStats; track stat.label) {
-                  <div class="courses-banner__highlight">
+                  <div class="courses-banner__mini-card">
+                    <span class="courses-banner__mini-icon">
+                      <i [class]="stat.iconClass"></i>
+                    </span>
                     <div>
                       <strong>{{ stat.value }}</strong>
                       <span>{{ stat.label }}</span>
@@ -165,7 +163,7 @@
     </div>
   </section>
 
-  <section class="courses-grid-section rbt-section-gap bg-color-extra2">
+  <section id="course-list-section" class="courses-grid-section rbt-section-gap bg-color-extra2">
     <div class="container">
       <div class="row align-items-end g-4 mb--40">
         <div class="col-lg-8">

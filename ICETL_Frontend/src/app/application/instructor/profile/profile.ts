@@ -48,7 +48,6 @@ export class Profile implements OnInit, OnDestroy {
   readonly genderOptions = [
     { label: 'Male', value: '1' },
     { label: 'Female', value: '2' },
-    { label: 'Others', value: '3' },
   ];
   readonly countries = [
     'India',
@@ -135,8 +134,8 @@ export class Profile implements OnInit, OnDestroy {
     name: ['', [Validators.required, Validators.minLength(3)]],
     email: [{ value: '', disabled: true }],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
-    dob: [''],
-    gender: [''],
+    dob: ['', [Validators.required]],
+    gender: ['', [Validators.required]],
     country: ['', [Validators.required, Validators.maxLength(100)]],
     preferredLanguage: ['', [Validators.required, Validators.maxLength(100)]],
     password: ['', [Validators.minLength(8)]],
@@ -523,6 +522,8 @@ export class Profile implements OnInit, OnDestroy {
     return {
       fullName: `${this.profileForm.get('name')?.value ?? ''}`.trim(),
       mobileNumber: `${this.profileForm.get('phone')?.value ?? ''}`.trim(),
+      gender: `${this.profileForm.get('gender')?.value ?? ''}`.trim(),
+      dob: `${this.profileForm.get('dob')?.value ?? ''}`.trim(),
       password: `${this.profileForm.get('password')?.value ?? ''}`.trim() || undefined,
       confirmPassword: `${this.profileForm.get('confirmPassword')?.value ?? ''}`.trim() || undefined,
       country: `${this.profileForm.get('country')?.value ?? ''}`.trim(),

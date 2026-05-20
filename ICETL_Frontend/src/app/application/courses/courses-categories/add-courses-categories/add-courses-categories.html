@@ -18,41 +18,53 @@
 
     <!-- Icon Upload -->
     <div class="col-12">
-  <div class="rbt-form-group">
-    <label>Category Icon</label>
-    <div class="upload-box">
-      <!-- FILE INPUT -->
-      <input
-        type="file"
-        class="upload-input"
-        accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-        (change)="onFileChange($event)"
-      >
+      <div class="rbt-form-group">
+        <label>Category banner</label>
+        <div class="upload-box">
+          <!-- FILE INPUT -->
+          <input type="file" class="upload-input" accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            (change)="onFileChange($event)">
 
-      <!-- UPLOAD CONTENT -->
-      @if (iconPreview === null) {
-        <div class="upload-content">
-          <i class="feather-upload-cloud upload-icon"></i>
-          <h6>Upload Category Icon</h6>
-          <p>PNG, JPG or SVG recommended</p>
-        </div>
-      }
-      <!-- PREVIEW -->
-      @if (iconPreview !== null) {
-        <div class="preview-wrapper">
-          <img
-            [src]="iconPreview"
-            alt="Preview"
-            class="preview-image"
-          >
-          <div class="preview-overlay">
-            Change Image
+          <!-- UPLOAD CONTENT -->
+          @if (iconPreview === null) {
+          <div class="upload-content">
+            <i class="feather-upload-cloud upload-icon"></i>
+            <h6>Upload Category Icon</h6>
+            <p>PNG, JPG or SVG recommended</p>
           </div>
+          }
+          <!-- PREVIEW -->
+          @if (iconPreview !== null) {
+          <div class="preview-wrapper">
+            <img [src]="iconPreview" alt="Preview" class="preview-image">
+            <div class="preview-overlay">
+              Change Image
+            </div>
+          </div>
+          }
         </div>
-      }
+      </div>
     </div>
-  </div>
-</div>
+
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label>
+          Category Icon
+          <span title="Enter a Font Awesome icon class (e.g. fa-solid fa-book)">
+            <i class="fa-solid fa-circle-info"></i>
+          </span>
+        </label>
+
+        <input type="text" formControlName="categoryIcon" placeholder="e.g. fa-solid fa-book" name="categoryIcon">
+
+        @if (categoryForm.get('categoryIcon')?.touched &&
+        categoryForm.get('categoryIcon')?.invalid) {
+        <small class="text-danger">
+          Category icon is required
+        </small>
+        }
+      </div>
+    </div>
 
     <!-- Status -->
     <div class="col-lg-6">

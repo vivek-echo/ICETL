@@ -124,11 +124,7 @@
                     </div>
                   </div>
 
-                  <img
-                    src="assets/images/about/about-01.png"
-                    alt="Instructor onboarding preview"
-                    class="hero-showcase__image"
-                  />
+                  
                 </div>
               </div>
             </div>
@@ -370,7 +366,7 @@
                         </div>
                       </div>
                       <div class="entry-list__item">
-                        <i class="fa-solid fa-floppy-disk-circle-arrow-right"></i>
+                        <i class="fa-solid fa-file-pen"></i>
                         <div>
                           <strong>Draft resume support</strong>
                           <span>Existing instructor drafts reopen at the exact saved step.</span>
@@ -563,6 +559,7 @@
                               placeholder=" "
                               aria-label="Full Name"
                               [class.is-invalid]="isInvalid('account.fullName')"
+                              (input)="sanitizeFullNameInput($event)"
                             />
                           </fieldset>
                         </div>
@@ -589,12 +586,148 @@
                               formControlName="mobileNumber"
                               placeholder=" "
                               aria-label="Mobile Number"
+                              inputmode="numeric"
+                              maxlength="10"
                               [class.is-invalid]="isInvalid('account.mobileNumber')"
+                              (input)="sanitizeMobileNumberInput($event)"
                             />
                           </fieldset>
                         </div>
                         <div class="invalid-feedback d-block" *ngIf="isInvalid('account.mobileNumber')">
                           {{ errorFor('account.mobileNumber') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-field--select"
+                          [class.is-invalid]="isInvalid('account.gender')"
+                          [class.is-filled]="hasControlValue('account.gender')"
+                          [class.is-success]="isControlSuccessful('account.gender')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Gender</span>
+                            </legend>
+                            <select
+                              id="gender"
+                              class="form-select"
+                              formControlName="gender"
+                              aria-label="Gender"
+                              [class.is-invalid]="isInvalid('account.gender')"
+                            >
+                              <option value="" disabled>Select gender</option>
+                              @for (option of genderOptions; track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.gender')">
+                          {{ errorFor('account.gender') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-date-field"
+                          [class.is-invalid]="isInvalid('account.dob')"
+                          [class.is-filled]="hasControlValue('account.dob')"
+                          [class.is-success]="isControlSuccessful('account.dob')"
+                          (click)="keepDobCalendarOpen($event)"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Date of Birth</span>
+                            </legend>
+                            <button
+                              id="dob"
+                              type="button"
+                              class="date-picker-trigger"
+                              aria-label="Date of Birth"
+                              [attr.aria-expanded]="isDobCalendarOpen"
+                              (click)="toggleDobCalendar($event)"
+                            >
+                              <span [class.is-placeholder]="!dobDisplayValue">
+                                {{ dobDisplayValue || 'dd-mm-yyyy' }}
+                              </span>
+                              <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+                            </button>
+                            <input type="hidden" formControlName="dob" />
+                          </fieldset>
+
+                          @if (isDobCalendarOpen) {
+                            <div class="premium-calendar" (click)="keepDobCalendarOpen($event)">
+                              <div class="premium-calendar__header">
+                                <button
+                                  type="button"
+                                  class="premium-calendar__nav"
+                                  aria-label="Previous month"
+                                  (click)="changeDobCalendarMonth(-1)"
+                                >
+                                  <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <div class="premium-calendar__selects">
+                                  <select
+                                    aria-label="Calendar month"
+                                    [value]="dobCalendarView.getMonth()"
+                                    (change)="setDobCalendarMonth($event)"
+                                  >
+                                    @for (month of calendarMonths; track month; let monthIndex = $index) {
+                                      <option [value]="monthIndex">{{ month }}</option>
+                                    }
+                                  </select>
+                                  <select
+                                    aria-label="Calendar year"
+                                    [value]="dobCalendarView.getFullYear()"
+                                    (change)="setDobCalendarYear($event)"
+                                  >
+                                    @for (year of dobYearOptions; track year) {
+                                      <option [value]="year">{{ year }}</option>
+                                    }
+                                  </select>
+                                </div>
+                                <button
+                                  type="button"
+                                  class="premium-calendar__nav"
+                                  aria-label="Next month"
+                                  (click)="changeDobCalendarMonth(1)"
+                                >
+                                  <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                              </div>
+
+                              <div class="premium-calendar__weekdays">
+                                @for (weekday of calendarWeekdays; track weekday) {
+                                  <span>{{ weekday }}</span>
+                                }
+                              </div>
+
+                              <div class="premium-calendar__grid">
+                                @for (day of dobCalendarDays; track day.iso) {
+                                  <button
+                                    type="button"
+                                    class="premium-calendar__day"
+                                    [class.is-muted]="!day.isCurrentMonth"
+                                    [class.is-selected]="day.isSelected"
+                                    [class.is-today]="day.isToday"
+                                    [disabled]="day.isDisabled"
+                                    (click)="selectDobDate(day)"
+                                  >
+                                    {{ day.day }}
+                                  </button>
+                                }
+                              </div>
+
+                              <div class="premium-calendar__footer">
+                                <button type="button" (click)="clearDobDate($event)">Clear</button>
+                                <span>Format: dd-mm-yyyy</span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('account.dob')">
+                          {{ errorFor('account.dob') }}
                         </div>
                       </div>
 
@@ -871,7 +1004,12 @@
                               formControlName="yearsOfExperience"
                               placeholder=" "
                               aria-label="Years Of Experience"
+                              min="0"
+                              max="60"
+                              step="1"
                               [class.is-invalid]="isInvalid('professional.yearsOfExperience')"
+                              (keydown)="preventNegativeNumberKeys($event)"
+                              (input)="sanitizeYearsOfExperienceInput($event)"
                             />
                           </fieldset>
                         </div>
@@ -1424,7 +1562,7 @@
                     (click)="previousStep()"
                     [disabled]="currentStep === 0 || isStepSaving || isSubmitting"
                   >
-                    <i class="fa-solid fa-arrow-left"></i>
+                    <i class="fa-solid fa-arrow-left me-1 ms-1"></i>
                     Previous
                   </button>
 

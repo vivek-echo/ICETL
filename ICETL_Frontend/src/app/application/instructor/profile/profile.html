@@ -95,20 +95,26 @@
 
             <div class="col-lg-6 col-md-6 col-12">
               <div class="rbt-form-group">
-                <label for="instructor-profile-dob">Date of Birth</label>
+                <label for="instructor-profile-dob">Date of Birth *</label>
                 <input id="instructor-profile-dob" type="date" formControlName="dob" autocomplete="bday">
+                @if (profileForm.get('dob')?.touched && profileForm.get('dob')?.errors) {
+                <small class="text-danger">Date of birth is required.</small>
+                }
               </div>
             </div>
 
             <div class="col-lg-6 col-md-6 col-12">
               <div class="rbt-form-group">
-                <label for="instructor-profile-gender">Gender</label>
+                <label for="instructor-profile-gender">Gender *</label>
                 <select id="instructor-profile-gender" class="profile-form-select" formControlName="gender">
                   <option value="">Select gender</option>
                   @for (option of genderOptions; track option.value) {
                   <option [value]="option.value">{{ option.label }}</option>
                   }
                 </select>
+                @if (profileForm.get('gender')?.touched && profileForm.get('gender')?.errors) {
+                <small class="text-danger">Gender is required.</small>
+                }
               </div>
             </div>
 
