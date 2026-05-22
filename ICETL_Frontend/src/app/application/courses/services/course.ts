@@ -33,4 +33,13 @@ export class Course {
   createCourse(payload: any): any {
     return this.http.post(`${this.API_URL}/createCourse`, payload, {});
   }
+  getCourses(payload: any): any {
+    return this.http.post(`${this.API_URL}/getCourses`, payload, {});
+  }
+  getAllCourses(payload: any): any {
+    return this.http.post(`${this.API_URL}/getAllCourses`, payload, {});
+  }
+  updateCourse(payload: any): any {
+    return this.http.post(`${this.API_URL}/updateCourse`, payload, {});
+  }
 }

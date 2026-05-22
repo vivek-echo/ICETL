@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../layout/header/header';
 import { FooterComponent } from '../layout/footer/footer';
 import { Subscription } from 'rxjs';
@@ -13,7 +13,16 @@ import { ProfileModalService } from '../commonServices/profile-modal.service';
 
 @Component({
   selector: 'app-application',
-  imports: [CommonModule, ReactiveFormsModule, RouterOutlet, HeaderComponent, FooterComponent, SideNav],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    HeaderComponent,
+    FooterComponent,
+    SideNav,
+  ],
   templateUrl: './application.html',
   styleUrl: './application.scss',
 })

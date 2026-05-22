@@ -809,6 +809,7 @@ class AuthController extends Controller
             || str_starts_with($normalizedPath, 'uploads/user/')
             || str_starts_with($normalizedPath, 'uploads/instructors/profile/')
             || str_starts_with($normalizedPath, 'course-category-icons/')
+            || str_starts_with($normalizedPath, 'course-thumbnails/')
         ) {
             return true;
         }
@@ -845,6 +846,7 @@ class AuthController extends Controller
             $normalizedPath === ''
             || str_starts_with($normalizedPath, 'app/')
             || str_starts_with($normalizedPath, 'course-category-icons/')
+            || str_starts_with($normalizedPath, 'course-thumbnails/')
             || str_starts_with($normalizedPath, 'uploads/user/')
             || str_starts_with($normalizedPath, 'uploads/instructors/')
         ) {

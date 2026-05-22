@@ -1,0 +1,210 @@
+<section class="learning-cart" aria-labelledby="learning-cart-title">
+  <div class="cart-topbar">
+    <div>
+      <h1 id="learning-cart-title">My Cart</h1>
+      <p>Review your selected courses before checkout</p>
+    </div>
+
+    <div class="cart-stat-grid" aria-label="Cart summary">
+      <article class="cart-stat-card">
+        <span class="cart-stat-card__icon"><i class="fa-solid fa-book-open"></i></span>
+        <div>
+          <small>Total Courses</small>
+          <strong>{{ items.length }}</strong>
+        </div>
+      </article>
+
+      <article class="cart-stat-card">
+        <span class="cart-stat-card__icon cart-stat-card__icon--amount">
+          <i class="fa-solid fa-indian-rupee-sign"></i>
+        </span>
+        <div>
+          <small >Total Amount</small>
+          <strong>{{ formatAmount(finalTotal) }}</strong>
+        </div>
+      </article>
+
+      <article class="cart-stat-card">
+        <span class="cart-stat-card__icon cart-stat-card__icon--success">
+          <i class="fa-solid fa-tags"></i>
+        </span>
+        <div>
+          <small>Discount</small>
+          <strong>{{ discountPercent }}%</strong>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="cart-skeleton-grid" aria-label="Loading cart">
+    <div class="cart-skeleton-list">
+      @for (loader of skeletonRows; track loader) {
+      <div class="cart-skeleton-card">
+        <div class="skeleton skeleton-thumb"></div>
+        <div class="skeleton-lines">
+          <span class="skeleton skeleton-badge"></span>
+          <span class="skeleton skeleton-line skeleton-line--wide"></span>
+          <span class="skeleton skeleton-line"></span>
+          <span class="skeleton skeleton-line skeleton-line--short"></span>
+        </div>
+        <div class="skeleton-actions">
+          <span class="skeleton skeleton-price"></span>
+          <span class="skeleton skeleton-button"></span>
+        </div>
+      </div>
+      }
+    </div>
+
+    <aside class="cart-summary cart-summary--skeleton">
+      <span class="skeleton skeleton-line skeleton-line--wide"></span>
+      <span class="skeleton skeleton-line"></span>
+      <span class="skeleton skeleton-line"></span>
+      <span class="skeleton skeleton-button"></span>
+    </aside>
+  </div>
+  }
+
+  @if (!loading && items.length === 0) {
+  <div class="empty-cart">
+    <div class="empty-cart__illustration" aria-hidden="true">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span></span>
+      <span></span>
+    </div>
+
+    <h2>Your cart is empty</h2>
+    <p>Explore courses and start learning today</p>
+
+    <a class="cart-btn cart-btn--primary" routerLink="/application/courses/manageCourses/browse">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      Browse Courses
+    </a>
+  </div>
+  }
+
+  @if (!loading && items.length > 0) {
+  <div class="cart-content-grid">
+    <div class="cart-course-list">
+      @for (item of items; track item.id) {
+      <article class="course-cart-card">
+        <div class="course-cart-card__media">
+          <img [src]="courseImage(item)" [alt]="item.title" (error)="onCourseImageError(item)">
+          <span class="course-badge">{{ item.categoryName || 'Course' }}</span>
+        </div>
+
+        <div class="course-cart-card__body">
+          <h2>{{ item.title }}</h2>
+
+          <div class="course-meta">
+            <span>
+              <i class="fa-solid fa-user-tie"></i>
+              {{ item.instructorName || 'Instructor' }}
+            </span>
+            <span>
+              <i class="fa-regular fa-clock"></i>
+              {{ getDurationLabel(item) }}
+            </span>
+          </div>
+
+          <div class="course-rating" aria-label="Rated 4.8 out of 5">
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star-half-stroke"></i>
+            <span>4.8</span>
+          </div>
+
+          <p>{{ item.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p>
+
+          <div class="course-progress" aria-label="Enrollment progress">
+            <div>
+              <span>Ready to enroll</span>
+              <strong>0%</strong>
+            </div>
+            <div class="course-progress__bar">
+              <span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="course-cart-card__aside">
+          <button
+            type="button"
+            class="icon-action icon-action--danger"
+            (click)="removeItem(item.id)"
+            aria-label="Remove course">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+
+          <div class="course-price">
+            <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}</strong>
+            @if (item.oldPrice) {
+            <span><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.oldPrice) }}</span>
+            }
+          </div>
+
+          <button
+            type="button"
+            class="cart-btn cart-btn--ghost"
+            (click)="saveForLater(item.id)">
+            <i class="fa-regular fa-bookmark"></i>
+            Save for later
+          </button>
+        </div>
+      </article>
+      }
+    </div>
+
+    <aside class="cart-summary" aria-labelledby="order-summary-title">
+      <div class="cart-summary__header">
+        <span><i class="fa-solid fa-receipt"></i></span>
+        <div>
+          <h2 id="order-summary-title">Order Summary</h2>
+          <p>{{ items.length }} course{{ items.length === 1 ? '' : 's' }} selected</p>
+        </div>
+      </div>
+
+      <div class="summary-lines">
+        <div>
+          <span>Total courses</span>
+          <strong>{{ items.length }}</strong>
+        </div>
+        <div>
+          <span>Subtotal</span>
+          <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(subtotal) }}</strong>
+        </div>
+        <div class="summary-lines__success">
+          <span>Discount</span>
+          <strong>- <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(discount) }}</strong>
+        </div>
+        <div>
+          <span>Tax</span>
+          <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(tax) }}</strong>
+        </div>
+      </div>
+
+      <div class="summary-total">
+        <span>Final total</span>
+        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(finalTotal) }}</strong>
+      </div>
+
+      <div class="summary-actions">
+        <button type="button" class="cart-btn cart-btn--primary">
+          <i class="fa-solid fa-lock"></i>
+          Checkout
+        </button>
+        <a class="cart-btn cart-btn--secondary" routerLink="/application/courses/manageCourses/browse">
+          <i class="fa-solid fa-arrow-left"></i>
+          Continue Browsing
+        </a>
+        <button type="button" class="cart-btn cart-btn--danger" (click)="clearCart()" [disabled]="clearing">
+          <i [class]="clearing ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-trash'"></i>
+          {{ clearing ? 'Clearing...' : 'Clear Cart' }}
+        </button>
+      </div>
+    </aside>
+  </div>
+  }
+</section>

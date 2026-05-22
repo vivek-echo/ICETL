@@ -30,7 +30,11 @@ interface MenuNode extends StoredMenu {
 })
 export class SideNav implements OnInit, OnDestroy {
   readonly defaultMenuIcon = 'feather-circle';
-  private readonly courseCategoriesRoute = '/application/courses/coursesCategories';
+  private readonly applicationRootSegments = new Set(['admin', 'courses', 'instructor', 'learner']);
+  private readonly parentActiveRoutes = new Set([
+    '/application/courses/coursesCategories',
+    '/application/courses/manageCourses',
+  ]);
   menuItems: MenuNode[] = [];
   dashboardSetting: DashboardSetting | null = null;
   private readonly isBrowser: boolean;
@@ -202,7 +206,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   protected shouldUseExactActiveMatch(route: string | null): boolean {
-    return route !== this.courseCategoriesRoute;
+    return route ? !this.parentActiveRoutes.has(route) : true;
   }
 
   private resolveMenuRoute(url?: string | null): string | null {
@@ -218,6 +222,12 @@ export class SideNav implements OnInit, OnDestroy {
 
     if (route.startsWith('application/')) {
       return `/${route}`;
+    }
+
+    const rootSegment = route.split('/')[0];
+
+    if (this.applicationRootSegments.has(rootSegment)) {
+      return `/application/${route}`;
     }
 
     const dashboardSegment = this.dashboardSetting?.dashboardUrl?.trim().replace(/^\/+|\/+$/g, '');

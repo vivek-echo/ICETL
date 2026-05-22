@@ -70,6 +70,9 @@
                           <ul class="dashboard-mainmenu rbt-default-sidebar-list">
                             <li><a (click)="openProfileSettings($event)" href="javascript:void(0);"><i
                                   class="feather-settings"></i><span>Settings</span></a></li>
+                            <li><a routerLink="/application/yourCart" routerLinkActive="active"
+                                [routerLinkActiveOptions]="{ exact: true }"><i
+                                  class="feather-shopping-cart"></i><span>Your Cart</span></a></li>
                             <li><a href="javascript:void(0);" (click)="logoutUser($event)"><i
                                   class="feather-log-out"></i><span>Logout</span></a></li>
                           </ul>

@@ -255,6 +255,18 @@
   gap: 10px;
 }
 
+.preview-duration {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.preview-duration i {
+  color: #2f57ef;
+}
+
 .preview-price strong {
   font-size: 32px;
   color: #192335;

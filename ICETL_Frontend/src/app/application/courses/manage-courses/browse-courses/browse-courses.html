@@ -1,0 +1,198 @@
+<section class="browse-courses" aria-labelledby="browse-courses-title">
+  <header class="browse-header">
+    <div>
+      <h1 id="browse-courses-title">Browse Courses</h1>
+      <p>Discover new skills and expand your knowledge</p>
+    </div>
+
+    <a class="cart-button" routerLink="/application/yourCart" aria-label="Open cart">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span>Cart</span>
+      <strong>{{ cartCount }}</strong>
+    </a>
+  </header>
+
+  <section class="course-toolbar" aria-label="Course filters">
+    <div class="rbt-form-group">
+      <label>Search Course</label>
+      <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Category</label>
+      <select class="course-filter-select" [(ngModel)]="categoryId" (change)="onFilterChange()">
+        <option value="">All Categories</option>
+        @for (category of categories; track category.id) {
+        <option [ngValue]="category.id">{{ category.categoryName }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
+        @for (option of sortOptions; track option.value) {
+        <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Per Page</label>
+      <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+        @for (option of perPageOptions; track option) {
+        <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+        }
+      </select>
+    </div>
+  </section>
+
+  @if (message) {
+  <div class="cart-message" role="status">
+    <i class="fa-solid fa-circle-check"></i>
+    {{ message }}
+  </div>
+  }
+
+  <main>
+      @if (loading) {
+      <div class="course-grid" aria-label="Loading courses">
+        @for (loader of skeletonRows; track loader) {
+        <article class="course-card course-card--skeleton">
+          <span class="skeleton skeleton-image"></span>
+          <div class="course-card__content">
+            <span class="skeleton skeleton-pill"></span>
+            <span class="skeleton skeleton-line skeleton-line--wide"></span>
+            <span class="skeleton skeleton-line"></span>
+            <span class="skeleton skeleton-line skeleton-line--short"></span>
+            <div class="skeleton-actions">
+              <span class="skeleton skeleton-button"></span>
+              <span class="skeleton skeleton-button"></span>
+            </div>
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      @if (!loading && courses.length === 0) {
+      <section class="empty-state">
+        <div class="empty-state__illustration" aria-hidden="true">
+          <i class="fa-solid fa-book-open-reader"></i>
+        </div>
+        <h2>No courses found</h2>
+        <p>Try adjusting your filters</p>
+        <button type="button" class="primary-action" (click)="clearFilters()">
+          <i class="fa-solid fa-compass"></i>
+          Browse All
+        </button>
+      </section>
+      }
+
+      @if (!loading && courses.length > 0) {
+      <div class="course-grid">
+        @for (course of sortedCourses; track trackByCourseId($index, course)) {
+        <article class="course-card">
+          <div class="course-card__media">
+            <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+            <span class="category-badge">{{ course.categoryName || 'Course' }}</span>
+            <button type="button" class="wishlist-btn" aria-label="Add course to wishlist">
+              <i class="fa-regular fa-heart"></i>
+            </button>
+          </div>
+
+          <div class="course-card__content">
+            <h2>{{ course.title }}</h2>
+
+            <div class="course-info">
+              <span>
+                <i class="fa-solid fa-user-tie"></i>
+                {{ course.instructorName || 'Instructor' }}
+              </span>
+              <span>
+                <i class="fa-regular fa-clock"></i>
+                {{ getDurationLabel(course) }}
+              </span>
+            </div>
+
+            <div class="course-rating" [attr.aria-label]="'Rated ' + getRating(course) + ' out of 5'">
+              <span class="stars">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star-half-stroke"></i>
+              </span>
+              <strong>{{ getRating(course) }}</strong>
+              <span>({{ getStudentCount(course) }} students)</span>
+            </div>
+
+            <p class="course-description">
+              {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+            </p>
+
+            <div class="course-price-row">
+              <div class="course-price">
+                <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(course.price) }}</strong>
+                @if (course.oldPrice) {
+                <span><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(course.oldPrice) }}</span>
+                }
+              </div>
+
+              @if (getDiscountPercent(course) > 0) {
+              <span class="discount-badge">{{ getDiscountPercent(course) }}% OFF</span>
+              }
+            </div>
+
+            <div class="course-actions">
+              <button
+                type="button"
+                class="outline-action"
+                [disabled]="isInCart(course.id) || isAdding(course.id)"
+                (click)="addToCart(course)">
+                <i [class]="isAdding(course.id) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cart-plus'"></i>
+                {{ isInCart(course.id) ? 'Added' : (isAdding(course.id) ? 'Adding...' : 'Add to Cart') }}
+              </button>
+
+              <button type="button" class="primary-action" (click)="buyNow(course)">
+                <i class="fa-solid fa-bolt"></i>
+                Buy Now
+              </button>
+            </div>
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+    @if (!loading && meta.total > 0) {
+    <footer class="course-pager">
+      <p>Showing {{ meta.from }}-{{ meta.to }} of {{ meta.total }} courses</p>
+
+      <div class="course-pager__controls" aria-label="Pagination">
+        <button type="button" class="pager-btn" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+          <i class="fa-solid fa-chevron-left"></i>
+          Previous
+        </button>
+
+        <label class="course-pager__jump">
+          <span>Page</span>
+          <input
+            type="number"
+            min="1"
+            [max]="meta.lastPage"
+            [(ngModel)]="pageInput"
+            (keyup.enter)="goToPageInput()"
+            (blur)="goToPageInput()">
+          <span>of {{ meta.lastPage }}</span>
+        </label>
+
+        <button type="button" class="pager-btn pager-btn--primary" [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+          Next
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </footer>
+    }
+  </main>
+</section>

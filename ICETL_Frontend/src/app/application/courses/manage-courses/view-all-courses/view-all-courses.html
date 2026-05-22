@@ -1,0 +1,211 @@
+<div class="course-browser">
+  
+
+  <div class="course-toolbar">
+    <div class="rbt-form-group">
+      <label>Search Course</label>
+      <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Category</label>
+      <div class="course-category-picker" (click)="keepCategoryDropdownOpen($event)">
+        <button
+          type="button"
+          class="course-category-picker__button"
+          [class.is-open]="isCategoryDropdownOpen"
+          (click)="toggleCategoryDropdown($event)">
+          <span>{{ selectedCategoryLabel }}</span>
+          <i class="feather-chevron-down"></i>
+        </button>
+
+        @if (isCategoryDropdownOpen) {
+        <div class="course-category-picker__menu">
+          <div class="course-category-picker__search">
+            <i class="feather-search"></i>
+            <input
+              type="text"
+              placeholder="Search categories..."
+              [(ngModel)]="categorySearch">
+          </div>
+
+          <div class="course-category-picker__actions">
+            <button type="button" (click)="selectAllCategories()">Select All</button>
+            <button type="button" (click)="clearCategories()">Clear</button>
+          </div>
+
+          <div class="course-category-picker__list">
+            @for (category of filteredCategories; track category.id) {
+            <label class="course-category-option">
+              <input
+                type="checkbox"
+                [checked]="isCategorySelected(category.id)"
+                (change)="toggleCategory(category)">
+              <span>{{ category.categoryName }}</span>
+            </label>
+            }
+
+            @if (filteredCategories.length === 0) {
+            <p class="course-category-picker__empty">No categories found</p>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Status</label>
+      <select class="course-filter-select" [(ngModel)]="status" (change)="onFilterChange()">
+        <option value="">All Status</option>
+        <option value="1">Active</option>
+        <option value="0">Inactive</option>
+      </select>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
+        @for (option of sortOptions; track option.value) {
+        <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Per Page</label>
+      <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+        @for (option of perPageOptions; track option) {
+        <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  }
+
+  @if (!loading && courses.length === 0) {
+  <div class="empty-state">
+    <i class="feather-book-open"></i>
+    <h5>No Courses Found</h5>
+    <p>No courses are available for the selected filters.</p>
+  </div>
+  }
+
+  @if (!loading && courses.length > 0) {
+  <div class="row g-4">
+    @for (course of courses; track trackByCourseId($index, course)) {
+    <div class="col-xl-4 col-md-6 col-12">
+      <div class="course-card">
+        <div class="course-card__image">
+          <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+
+          @if (getDiscount(course)) {
+          <span class="discount-badge">
+            {{ getDiscount(course) }}
+          </span>
+          }
+
+          <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+            {{ course.statusLabel }}
+          </span>
+        </div>
+
+        <div class="course-card__body">
+          <div class="course-rating">
+            <span>
+              <strong>Added On: </strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
+            </span>
+          </div>
+
+          <h5>{{ course.title }}</h5>
+
+          <div class="course-meta">
+            <span>
+              <i class="feather-grid"></i>
+              {{ course.categoryName }}
+            </span>
+
+            <span>
+              <i class="feather-users"></i>
+              {{ course.instructorName || 'Instructor' }}
+            </span>
+
+            <span>
+              <i class="feather-clock"></i>
+              {{ getDurationLabel(course) }}
+            </span>
+          </div>
+
+          <p class="course-description">
+            {{ course.description }}
+          </p>
+
+          <div class="course-instructor">
+            <div class="instructor-avatar">
+              {{ getCreatorInitial(course) }}
+            </div>
+
+            <span>
+              Added by
+              <strong>{{ course.createdByName }}</strong>
+              @if (course.createdByEmail) {
+              <small>{{ course.createdByEmail }}</small>
+              }
+            </span>
+          </div>
+        </div>
+
+        <div class="course-card__footer">
+          <div class="course-price">
+            <strong><i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.price }}</strong>
+
+            <span>
+              @if (course.oldPrice) {
+              <i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.oldPrice }}
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <div class="course-pager">
+    <p>
+      Showing {{ meta.from }}-{{ meta.to }} of {{ meta.total }} courses
+    </p>
+
+    <div class="course-pager__controls">
+      <button type="button" class="pager-btn" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="feather-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="course-pager__jump">
+        <span>Page</span>
+        <input
+          type="number"
+          min="1"
+          [max]="meta.lastPage"
+          [(ngModel)]="pageInput"
+          (keyup.enter)="goToPageInput()"
+          (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </div>
+
+      <button type="button" class="pager-btn pager-btn--primary" [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+        Next
+        <i class="feather-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  }
+</div>

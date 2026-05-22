@@ -6,6 +6,7 @@ use App\Http\Controllers\InstructorRegistrationController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\CoursesController;
 use App\Http\Controllers\CommonController;
+use App\Http\Controllers\CartController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -41,6 +42,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/deleteCourseCategory', [CoursesController::class, 'deleteCourseCategory']);
     Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
     Route::post('/createCourse', [CoursesController::class, 'createCourse']);
+    Route::post('/getCourses', [CoursesController::class, 'getCourses']);
+    Route::post('/getAllCourses', [CoursesController::class, 'getAllCourses']);
+    Route::post('/updateCourse', [CoursesController::class, 'updateCourse']);
+
+    // cart routes
+    Route::post('/getCartItems', [CartController::class, 'getCartItems']);
+    Route::post('/addToCart', [CartController::class, 'addToCart']);
+    Route::post('/removeFromCart', [CartController::class, 'removeFromCart']);
+    Route::post('/clearCart', [CartController::class, 'clearCart']);
 
     //master dataa
     Route::post('/getInstructorListByInstructorId', [CommonController::class, 'getInstructorListByInstructorId']);
@@ -56,7 +66,6 @@ Route::get('/files/profile-images/{type}/{filename}', [UserProfileController::cl
 
 Route::get('/files/instructor-documents/{path}', [InstructorRegistrationController::class, 'document'])
     ->where('path', '.*');
-
 
 Route::post('/login', [AuthController::class, 'login']);
 

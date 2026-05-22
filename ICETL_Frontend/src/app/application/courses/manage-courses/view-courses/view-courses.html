@@ -1,22 +1,20 @@
 <div class="course-browser">
 
   <!-- HEADER -->
-  <div class="course-browser__header">
+  <!-- <div class="course-browser__header">
 
     <div>
-
-
       <p class="description">
         Manage and monitor all platform courses.
       </p>
 
     </div>
 
-    <button class="rbt-btn btn-gradient">
+    <button class="rbt-btn btn-gradient" routerLink="../add">
       <i class="feather-plus"></i>
       Add Course
     </button>
-  </div>
+  </div> -->
 
   <!-- STATS -->
   <!-- <div class="row g-4 mb--40">
@@ -26,7 +24,7 @@
     <div class="col-xl-3 col-lg-6 col-md-6 col-12">
 
       <div class="course-metric-card">
-
+      
         <div class="metric-icon">
 
           <i [class]="metric.icon"></i>
@@ -49,25 +47,78 @@
 
   <!-- TOOLBAR -->
   <div class="course-toolbar">
-
     <div class="rbt-form-group">
-
       <label>Search Course</label>
-
-      <input type="text" placeholder="Search by course title...">
-
+      <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
     </div>
-
     <div class="rbt-form-group">
-
       <label>Category</label>
+      <div class="course-category-picker" (click)="keepCategoryDropdownOpen($event)">
+        <button
+          type="button"
+          class="course-category-picker__button"
+          [class.is-open]="isCategoryDropdownOpen"
+          (click)="toggleCategoryDropdown($event)">
+          <span>{{ selectedCategoryLabel }}</span>
+          <i class="feather-chevron-down"></i>
+        </button>
 
-      <select class="course-filter-select">
+        @if (isCategoryDropdownOpen) {
+        <div class="course-category-picker__menu">
+          <div class="course-category-picker__search">
+            <i class="feather-search"></i>
+            <input
+              type="text"
+              placeholder="Search categories..."
+              [(ngModel)]="categorySearch">
+          </div>
 
-        <option>All Categories</option>
-        <option>Web Development</option>
-        <option>UI/UX Design</option>
-        <option>Marketing</option>
+          <div class="course-category-picker__actions">
+            <button type="button" (click)="selectAllCategories()">Select All</button>
+            <button type="button" (click)="clearCategories()">Clear</button>
+          </div>
+
+          <div class="course-category-picker__list">
+            @for (category of filteredCategories; track category.id) {
+            <label class="course-category-option">
+              <input
+                type="checkbox"
+                [checked]="isCategorySelected(category.id)"
+                (change)="toggleCategory(category)">
+              <span>{{ category.categoryName }}</span>
+            </label>
+            }
+
+            @if (filteredCategories.length === 0) {
+            <p class="course-category-picker__empty">No categories found</p>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    <div class="rbt-form-group">
+      <label>Status</label>
+      <select class="course-filter-select" [(ngModel)]="status" (change)="onFilterChange()">
+        <option value="">All Status</option>
+        <option value="1">Active</option>
+        <option value="0">Inactive</option>
+      </select>
+    </div>
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
+        @for (option of sortOptions; track option.value) {
+        <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="rbt-form-group">
+      <label>Per Page</label>
+      <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+        @for (option of perPageOptions; track option) {
+        <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+        }
 
       </select>
 
@@ -75,29 +126,45 @@
 
   </div>
 
+  @if (loading) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  }
+
+  @if (!loading && courses.length === 0) {
+  <div class="empty-state">
+    <i class="feather-book-open"></i>
+    <h5>No Courses Found</h5>
+    <p>No courses are available for the selected filters.</p>
+  </div>
+  }
+
   <!-- COURSES -->
+  @if (!loading && courses.length > 0) {
   <div class="row g-4">
 
-    @for (course of courses; track course.id) {
+    @for (course of courses; track trackByCourseId($index, course)) {
 
-    <div class="col-xl-4 col-lg-6 col-md-6 col-12">
+    <div class="col-xl-4 col-md-6 col-12">
 
       <div class="course-card">
 
         <!-- IMAGE -->
         <div class="course-card__image">
 
-          <img [src]="course.thumbnail" alt="course">
+          <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
 
+          @if (getDiscount(course)) {
           <span class="discount-badge">
-            {{ course.discount }}
+            {{ getDiscount(course) }}
+          </span>
+          }
+
+          <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+            {{ course.statusLabel }}
           </span>
 
-          <button class="wishlist-btn">
-
-            <i class="feather-bookmark"></i>
-
-          </button>
 
         </div>
 
@@ -106,22 +173,11 @@
 
           <!-- RATING -->
           <div class="course-rating">
-
-            <div class="stars">
-
-              <i class="feather-star"></i>
-              <i class="feather-star"></i>
-              <i class="feather-star"></i>
-              <i class="feather-star"></i>
-              <i class="feather-star"></i>
-
-            </div>
-
             <span>
-              ({{ course.reviews }} Reviews)
+              <strong>Added On: </strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
             </span>
-
           </div>
+
 
           <!-- TITLE -->
           <h5>
@@ -131,19 +187,20 @@
           <!-- META -->
           <div class="course-meta">
 
+
             <span>
 
-              <i class="feather-book-open"></i>
+              <i class="feather-grid"></i>
 
-              {{ course.lessons }} Lessons
+              {{ course.categoryName }}
 
             </span>
 
             <span>
 
-              <i class="feather-users"></i>
+              <i class="feather-clock"></i>
 
-              {{ course.students }} Students
+              {{ getDurationLabel(course) }}
 
             </span>
 
@@ -161,7 +218,7 @@
 
             <div class="instructor-avatar">
 
-              {{ course.instructor[0] }}
+              {{ getInstructorInitial(course) }}
 
             </div>
 
@@ -170,12 +227,12 @@
               By
 
               <strong>
-                {{ course.instructor }}
+                {{ course.instructorName || 'Instructor' }}
               </strong>
 
-              In
+              <!-- In
 
-              {{ course.category }}
+              {{ course.categoryName }} -->
 
             </span>
 
@@ -189,28 +246,25 @@
           <div class="course-price">
 
             <strong>
-              ${{ course.price }}
+              <i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.price }}
             </strong>
 
             <span>
-              ${{ course.oldPrice }}
+              @if (course.oldPrice) {
+              <i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.oldPrice }}
+              }
             </span>
 
           </div>
 
           <div class="course-actions">
 
-            <button class="action-btn">
+            <button type="button" class="action-btn" (click)="openEditModal(course)">
 
               <i class="feather-edit-2"></i>
 
             </button>
 
-            <button class="action-btn action-btn--primary">
-
-              <i class="feather-eye"></i>
-
-            </button>
 
           </div>
 
@@ -223,5 +277,150 @@
     }
 
   </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <div class="course-pager">
+    <p>
+      Showing {{ meta.from }}-{{ meta.to }} of {{ meta.total }} courses
+    </p>
+
+    <div class="course-pager__controls">
+      <button type="button" class="pager-btn" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="feather-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="course-pager__jump">
+        <span>Page</span>
+        <input type="number" min="1" [max]="meta.lastPage" [(ngModel)]="pageInput" (keyup.enter)="goToPageInput()"
+          (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </div>
+
+      <button type="button" class="pager-btn pager-btn--primary" [disabled]="meta.currentPage === meta.lastPage"
+        (click)="goToNextPage()">
+        Next
+        <i class="feather-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  }
 
 </div>
+
+@if (isEditModalOpen) {
+<div class="course-modal-backdrop" (click)="closeEditModal()"></div>
+
+<section class="course-modal" role="dialog" aria-modal="true" aria-labelledby="edit-course-title">
+  <div class="course-modal__dialog">
+    <button type="button" class="course-modal__close" (click)="closeEditModal()" aria-label="Close">
+      <i class="feather-x"></i>
+    </button>
+
+    <div class="course-modal-card">
+      <div class="course-modal-card__preview">
+        <div class="course-edit-image">
+          <img [src]="editPreviewImage" alt="Course preview">
+
+          <label class="course-edit-image__change">
+            <i class="feather-camera"></i>
+            Change Image
+            <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
+              (change)="onEditThumbnailChange($event)">
+          </label>
+        </div>
+      </div>
+
+      <div class="course-modal-card__content">
+        <div class="course-modal__heading">
+          <h4 id="edit-course-title">Edit Course</h4>
+          <p>Update the course details and save your changes.</p>
+        </div>
+
+        <form class="course-edit-form" (ngSubmit)="submitEditCourse()">
+          <div class="rbt-form-group course-edit-form__full">
+            <label for="edit-course-title-input">Course Title</label>
+            <input id="edit-course-title-input" name="editCourseTitle" type="text" placeholder="Enter course title"
+              [(ngModel)]="editCourseForm.title">
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="edit-course-category">Category</label>
+            <select id="edit-course-category" name="editCourseCategory" class="course-filter-select"
+              [(ngModel)]="editCourseForm.category">
+              <option value="">Select Category</option>
+              @for (category of categories; track category.id) {
+              <option [value]="category.id">{{ category.categoryName }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="rbt-form-group">
+            <label>Status</label>
+            <select name="editCourseStatus" class="course-filter-select" [(ngModel)]="editCourseForm.status">
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+          </div>
+
+          <div class="rbt-form-group course-edit-form__full">
+            <label>Instructor</label>
+            <ng-multiselect-dropdown class="course-category-multiselect" name="editCourseInstructors"
+              [placeholder]="'Select Instructor'" [settings]="instructorDropdownSettings" [data]="instructorList"
+              [(ngModel)]="editCourseForm.instructors">
+            </ng-multiselect-dropdown>
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="edit-course-duration">Duration</label>
+            <input id="edit-course-duration" name="editCourseDuration" type="number" min="1" step="1"
+              [(ngModel)]="editCourseForm.duration">
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="edit-course-duration-unit">Duration Unit</label>
+            <select id="edit-course-duration-unit" name="editCourseDurationUnit" class="course-filter-select"
+              [(ngModel)]="editCourseForm.durationUnit">
+              <option value="weeks">Weeks</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="edit-course-price">Price</label>
+            <input id="edit-course-price" name="editCoursePrice" type="number" min="0" step="0.01"
+              [(ngModel)]="editCourseForm.price">
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="edit-course-old-price">Old Price</label>
+            <input id="edit-course-old-price" name="editCourseOldPrice" type="number" min="0" step="0.01"
+              [(ngModel)]="editCourseForm.oldPrice">
+          </div>
+
+          <div class="rbt-form-group course-edit-form__full">
+            <label for="edit-course-description">Description</label>
+            <textarea id="edit-course-description" name="editCourseDescription" rows="4"
+              placeholder="Enter course description" [(ngModel)]="editCourseForm.description"></textarea>
+          </div>
+
+          <div class="course-modal__actions course-edit-form__full">
+            <button type="button" class="rbt-btn btn-border" (click)="closeEditModal()" [disabled]="isSavingEdit">
+              Cancel
+            </button>
+
+            <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingEdit">
+              @if (isSavingEdit) {
+              Saving...
+              } @else {
+              Update Course
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+}

@@ -44,6 +44,11 @@ export const applicationRoutes: Routes = [
 
         title: 'Learner | ICETL',
       },
+      {
+        path: 'yourCart',
+        loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
+        title: 'Your Cart | ICETL',
+      },
     ],
   },
 ];

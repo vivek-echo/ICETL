@@ -33,6 +33,21 @@
                     </div>
                     <div class="col-md-6">
                         <div class="rbt-form-group">
+                            <label>Duration</label>
+                            <input type="number" min="1" formControlName="duration">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="rbt-form-group">
+                            <label>Duration Unit</label>
+                            <select formControlName="durationUnit">
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="rbt-form-group">
                             <label>Price</label>
                             <input type="number" formControlName="price">
                         </div>
@@ -113,6 +128,13 @@
                     </span>
                 </div>
                 <div class="preview-footer">
+                    <div class="preview-duration">
+                        <i class="feather-clock"></i>
+                        <span>
+                            {{f['duration'].value || 0}}
+                            {{f['durationUnit'].value === 'months' ? 'Month(s)' : 'Week(s)'}}
+                        </span>
+                    </div>
                     <div class="preview-price">
                         <strong>
                             ₹{{f['price'].value}}

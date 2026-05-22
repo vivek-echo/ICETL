@@ -1,5 +1,34 @@
 import { Routes } from '@angular/router';
 
+const getRedirectRoute = (route: string): string => {
+  const getMenus = localStorage.getItem('menus');
+
+  if (!getMenus) return '';
+
+  try {
+    const menus = JSON.parse(getMenus);
+
+    const matchedMenu = menus.find((menu: any) => {
+      const menuUrl = menu.url || '';
+      return menuUrl === route;
+    });
+
+    const getTab = (menuId: number | null) => {
+      if (!menuId) return null;
+      return menus.find((menu: any) => menu.parentId === menuId);
+    };
+
+    const tab = getTab(matchedMenu.id);
+    if (tab) {
+      return tab.url.split('/').pop() || '';
+    }
+    return '';
+  } catch (error) {
+    console.error('Error parsing menus:', error);
+    return '';
+  }
+};
+
 export const coursesRoutes: Routes = [
   {
     path: '',
@@ -7,8 +36,18 @@ export const coursesRoutes: Routes = [
 
     children: [
       {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'manageCourses/browse',
+      },
+      {
+        path: 'yourCart',
+        redirectTo: '/application/yourCart',
+      },
+      {
         path: 'coursesCategories',
-        loadComponent: () => import('./courses-categories/courses-categories').then((m) => m.CoursesCategories),
+        loadComponent: () =>
+          import('./courses-categories/courses-categories').then((m) => m.CoursesCategories),
         title: 'Courses | ICETL',
         children: [
           {
@@ -42,23 +81,33 @@ export const coursesRoutes: Routes = [
           {
             path: '',
             pathMatch: 'full',
-            redirectTo: 'add',
+            redirectTo: getRedirectRoute('/application/courses/manageCourses'),
           },
           {
             path: 'add',
             loadComponent: () =>
-              import('./manage-courses/add-courses/add-courses').then(
-                (m) => m.AddCourses,
-              ),
+              import('./manage-courses/add-courses/add-courses').then((m) => m.AddCourses),
             title: 'Add Course  | ICETL',
           },
           {
             path: 'view',
             loadComponent: () =>
-              import('./manage-courses/view-courses/view-courses').then(
-                (m) => m.ViewCourses,
-              ),
+              import('./manage-courses/view-courses/view-courses').then((m) => m.ViewCourses),
             title: 'View Course  | ICETL',
+          },
+          {
+            path: 'viewAll',
+            loadComponent: () =>
+              import('./manage-courses/view-all-courses/view-all-courses').then(
+                (m) => m.ViewAllCourses,
+              ),
+            title: 'All Courses | ICETL',
+          },
+          {
+            path: 'browse',
+            loadComponent: () =>
+              import('./manage-courses/browse-courses/browse-courses').then((m) => m.BrowseCourses),
+            title: 'Browse Courses | ICETL',
           },
         ],
       },
