@@ -343,8 +343,74 @@ class CoursesController extends Controller
             ->all();
     }
 
+    private function normalizeCourseHighlights(mixed $value): array
+    {
+        $decodedValue = $value;
+
+        if (is_string($decodedValue)) {
+            $decodedValue = json_decode($decodedValue, true);
+        }
+
+        if (!is_array($decodedValue)) {
+            return [];
+        }
+
+        return collect($decodedValue)
+            ->filter(fn($item) => is_string($item) || is_numeric($item))
+            ->map(fn($item) => trim((string) $item))
+            ->filter(fn($item) => $item !== '')
+            ->values()
+            ->all();
+    }
+
+    private function prepareCourseHighlightsForValidation(Request $request): void
+    {
+        if (!$request->has('courseHighlights')) {
+            return;
+        }
+
+        $request->merge([
+            'courseHighlights' => $this->normalizeCourseHighlights($request->input('courseHighlights'))
+        ]);
+    }
+
+    private function decodeCourseHighlights(?string $courseHighlights): array
+    {
+        if (!$courseHighlights) {
+            return [];
+        }
+
+        $decoded = json_decode($courseHighlights, true);
+
+        return is_array($decoded) ? $this->normalizeCourseHighlights($decoded) : [];
+    }
+
+    private function resolveCreatedById(Request $request, ?array $profileData): ?int
+    {
+        if ($request->user()) {
+            return (int) $request->user()->id;
+        }
+
+        $profileId = $profileData['id'] ?? null;
+
+        if (is_numeric($profileId)) {
+            return (int) $profileId;
+        }
+
+        if (is_string($profileId) && $profileId !== '') {
+            try {
+                return (int) Crypt::decryptString($profileId);
+            } catch (\Exception $e) {
+                Log::warning('Unable to decrypt course creator profile id: ' . $e->getMessage());
+            }
+        }
+
+        return null;
+    }
+
     public function createCourse(Request $request)
     {
+        $this->prepareCourseHighlightsForValidation($request);
 
         $ProfileData = json_decode(
             $request->input('userProfile', '{}'),
@@ -361,7 +427,7 @@ class CoursesController extends Controller
             'category' => 'required|numeric',
             'instructor' => 'required',
             'duration' => 'required|integer|min:1',
-            'durationUnit' => 'required|in:weeks,months',
+            'durationUnit' => 'required|integer|in:1,2',
             'price' => 'required|numeric|min:0',
             'oldPrice' => 'nullable|numeric|min:0',
             'students' => 'nullable|integer|min:0',
@@ -371,6 +437,8 @@ class CoursesController extends Controller
                 'min:20',
                 'max:300'
             ],
+            'courseHighlights' => 'nullable|array',
+            'courseHighlights.*' => 'string',
             'thumbnail' =>
             'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
             'status' => 'required|in:0,1'
@@ -433,19 +501,22 @@ class CoursesController extends Controller
                 ], 422);
             }
 
+            $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+
             // Insert Data
             $courseId = DB::table('courses')->insertGetId([
                 'title' => $request->title,
                 'categoryId' => $request->category,
                 'instructorIds' => json_encode($instructorIds),
                 'duration' => (int) $request->duration,
-                'durationUnit' => $request->durationUnit,
+                'durationUnit' => (int) $request->durationUnit,
                 'price' => $request->price,
                 'oldPrice' => $request->oldPrice,
                 'description' => $request->description,
+                'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
                 'thumbnail' => $thumbnailPath,
                 'status' => $request->status,
-                'createdBy' => $ProfileData ? Crypt::decryptString($ProfileData['id']) : null,
+                'createdBy' => $this->resolveCreatedById($request, $ProfileData),
                 'createdByRoleId' => $ProfileData ? $ProfileData['role'] : null,
                 'deletedFlag' => 0,
                 'createdOn' => now()
@@ -546,6 +617,7 @@ class CoursesController extends Controller
                     'c.price',
                     'c.oldPrice',
                     'c.description',
+                    'c.courseHighlights',
                     'c.thumbnail',
                     'c.status',
                     'c.createdOn',
@@ -668,6 +740,7 @@ class CoursesController extends Controller
 
                 $course->categoryName = $course->categoryName ?: 'Uncategorized';
                 $course->statusLabel = ((int) $course->status) === 1 ? 'Active' : 'Inactive';
+                $course->courseHighlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
 
                 return $course;
             });
@@ -766,6 +839,7 @@ class CoursesController extends Controller
                     'c.price',
                     'c.oldPrice',
                     'c.description',
+                    'c.courseHighlights',
                     'c.thumbnail',
                     'c.status',
                     'c.createdOn',
@@ -891,6 +965,7 @@ class CoursesController extends Controller
                 $course->categoryName = $course->categoryName ?: 'Uncategorized';
                 $course->statusLabel = ((int) $course->status) === 1 ? 'Active' : 'Inactive';
                 $course->createdByName = $course->createdByName ?: 'Unknown User';
+                $course->courseHighlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
 
                 return $course;
             });
@@ -920,8 +995,103 @@ class CoursesController extends Controller
         }
     }
 
+    public function getCourseById(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            if (!$request->user()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+
+            $course = DB::table('courses as c')
+                ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+                ->leftJoin('users as creator', 'creator.id', '=', 'c.createdBy')
+                ->where('c.id', (int) $request->input('id'))
+                ->where('c.deletedFlag', 0)
+                ->select(
+                    'c.id',
+                    'c.title',
+                    'c.categoryId',
+                    'cc.categoryName as categoryName',
+                    'c.instructorIds',
+                    'c.duration',
+                    'c.durationUnit',
+                    'c.price',
+                    'c.oldPrice',
+                    'c.description',
+                    'c.courseHighlights',
+                    'c.thumbnail',
+                    'c.status',
+                    'c.createdOn',
+                    'c.updatedOn',
+                    'c.createdBy',
+                    'creator.name as createdByName',
+                    'creator.email as createdByEmail'
+                )
+                ->first();
+
+            if (!$course) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Course not found'
+                ], 404);
+            }
+
+            $instructorIds = $this->normalizeInstructorIds($course->instructorIds ?? []);
+            $instructorNames = empty($instructorIds)
+                ? collect()
+                : DB::table('users')->whereIn('id', $instructorIds)->pluck('name', 'id');
+
+            $course->instructors = collect($instructorIds)
+                ->map(fn($id) => [
+                    'id' => (int) $id,
+                    'name' => (string) ($instructorNames[(int) $id] ?? 'Instructor')
+                ])
+                ->values()
+                ->all();
+            $course->instructorName = collect($course->instructors)->pluck('name')->filter()->join(', ');
+            $course->thumbnailUrl = $course->thumbnail
+                ? $this->privateFileUrl($request, $course->thumbnail)
+                : null;
+            $course->categoryName = $course->categoryName ?: 'Uncategorized';
+            $course->statusLabel = ((int) $course->status) === 1 ? 'Active' : 'Inactive';
+            $course->createdByName = $course->createdByName ?: 'Unknown User';
+            $course->courseHighlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Course fetched successfully',
+                'data' => $course
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching course by id: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function updateCourse(Request $request)
     {
+        $this->prepareCourseHighlightsForValidation($request);
+
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer',
             'title' => [
@@ -933,7 +1103,7 @@ class CoursesController extends Controller
             'category' => 'required|integer|exists:coursecategories,id',
             'instructor' => 'required|string',
             'duration' => 'required|integer|min:1',
-            'durationUnit' => 'required|in:weeks,months',
+            'durationUnit' => 'required|integer|in:1,2',
             'price' => 'required|numeric|min:0',
             'oldPrice' => 'nullable|numeric|min:0',
             'description' => [
@@ -942,6 +1112,8 @@ class CoursesController extends Controller
                 'min:20',
                 'max:300'
             ],
+            'courseHighlights' => 'nullable|array',
+            'courseHighlights.*' => 'string',
             'thumbnail' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
             'status' => 'required|in:0,1'
         ]);
@@ -1010,6 +1182,8 @@ class CoursesController extends Controller
                 );
             }
 
+            $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+
             DB::table('courses')
                 ->where('id', $courseId)
                 ->update([
@@ -1017,10 +1191,11 @@ class CoursesController extends Controller
                     'categoryId' => (int) $request->category,
                     'instructorIds' => json_encode($instructorIds),
                     'duration' => (int) $request->duration,
-                    'durationUnit' => $request->durationUnit,
+                    'durationUnit' => (int) $request->durationUnit,
                     'price' => $request->price,
                     'oldPrice' => $request->oldPrice,
                     'description' => $request->description,
+                    'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
                     'thumbnail' => $thumbnailPath,
                     'status' => $request->status,
                     'updatedOn' => now()

@@ -166,6 +166,7 @@ class CartController extends Controller
                 'c.price',
                 'c.oldPrice',
                 'c.description',
+                'c.courseHighlights',
                 'c.thumbnail',
                 'c.status'
             );
@@ -226,6 +227,7 @@ class CartController extends Controller
                 'price' => $course->price,
                 'oldPrice' => $course->oldPrice,
                 'description' => $course->description,
+                'courseHighlights' => $this->decodeCourseHighlights($course->courseHighlights ?? null),
                 'thumbnailUrl' => $course->thumbnail
                     ? $this->privateFileUrl($request, $course->thumbnail)
                     : null,
@@ -267,6 +269,26 @@ class CartController extends Controller
             ->map(fn($id) => (int) $id)
             ->filter(fn($id) => $id > 0)
             ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function decodeCourseHighlights(?string $courseHighlights): array
+    {
+        if (!$courseHighlights) {
+            return [];
+        }
+
+        $decoded = json_decode($courseHighlights, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return collect($decoded)
+            ->filter(fn($item) => is_string($item) || is_numeric($item))
+            ->map(fn($item) => trim((string) $item))
+            ->filter(fn($item) => $item !== '')
             ->values()
             ->all();
     }

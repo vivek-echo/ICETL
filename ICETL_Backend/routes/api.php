@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\InstructorRegistrationController;
@@ -7,6 +6,7 @@ use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\CoursesController;
 use App\Http\Controllers\CommonController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CurriculumController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -17,13 +17,16 @@ use App\Http\Controllers\CartController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
+// Route::post('/info', function () {
+//         phpinfo();
+//     });
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/check', function () {
         return response()->json([
             'check' => true
         ]);
     });
+    
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user-profile', [UserProfileController::class, 'show']);
@@ -44,7 +47,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/createCourse', [CoursesController::class, 'createCourse']);
     Route::post('/getCourses', [CoursesController::class, 'getCourses']);
     Route::post('/getAllCourses', [CoursesController::class, 'getAllCourses']);
+    Route::post('/getCourseById', [CoursesController::class, 'getCourseById']);
     Route::post('/updateCourse', [CoursesController::class, 'updateCourse']);
+
+    // curriculum section routes
+    Route::post('/curriculum/section/add', [CurriculumController::class, 'addSection']);
+    Route::post('/curriculum/section/list', [CurriculumController::class, 'listSections']);
+    Route::post('/curriculum/section/update', [CurriculumController::class, 'updateSection']);
+    Route::post('/curriculum/section/delete', [CurriculumController::class, 'deleteSection']);
+    Route::post('/curriculum/section/order', [CurriculumController::class, 'updateSectionOrder']);
+    Route::post('/curriculum/item/video/upload', [CurriculumController::class, 'uploadItemVideo']);
+    Route::post('/curriculum/item/add', [CurriculumController::class, 'addItem']);
+    Route::post('/curriculum/item/list', [CurriculumController::class, 'listItems']);
+    Route::post('/curriculum/item/update', [CurriculumController::class, 'updateItem']);
+    Route::post('/curriculum/item/delete', [CurriculumController::class, 'deleteItem']);
+    Route::post('/curriculum/item/order', [CurriculumController::class, 'updateItemOrder']);
 
     // cart routes
     Route::post('/getCartItems', [CartController::class, 'getCartItems']);

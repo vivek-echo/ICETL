@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('courses', function (Blueprint $table) {
             $table->unsignedInteger('duration')->default(1)->after('instructorIds');
-            $table->string('durationUnit', 20)->default('weeks')->after('duration');
+            $table->integer('durationUnit')->default(1)->comment('1-> weeks ,2->months')->after('duration');
         });
     }
 
