@@ -217,7 +217,7 @@ export class BrowseCourses implements OnInit {
       return 'N/A';
     }
 
-    const unit = course.durationUnit === 'months' ? 'Month(s)' : 'Week(s)';
+    const unit = Number(course.durationUnit) === 2 ? 'Month(s)' : 'Week(s)';
 
     return `${course.duration} ${unit}`;
   }
@@ -297,12 +297,38 @@ export class BrowseCourses implements OnInit {
     return Math.round(((oldPrice - currentPrice) / oldPrice) * 100);
   }
 
+  getCourseHighlights(course: CourseCartItem, limit?: number): string[] {
+    const highlights = this.normalizeHighlights(course.courseHighlights);
+
+    return typeof limit === 'number' ? highlights.slice(0, limit) : highlights;
+  }
+
   private coursePrice(course: CourseCartItem): number {
     return Number(course.price) || 0;
   }
 
   private ratingSeed(course: CourseCartItem): number {
     return ((course.id || 1) * 17) % 97;
+  }
+
+  private normalizeHighlights(value: string[] | string | null | undefined): string[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => `${item}`.trim()).filter((item) => item.length > 0);
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      return Array.isArray(parsed)
+        ? parsed.map((item) => `${item}`.trim()).filter((item) => item.length > 0)
+        : [];
+    } catch {
+      return [];
+    }
   }
 
   private get normalizedSearchTerm(): string {

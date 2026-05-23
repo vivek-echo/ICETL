@@ -48,17 +48,24 @@ export class AlertHelperService {
   }
 
   // Confirm Dialog
-  confirm(message: string, title: string = 'Are you sure?'): Promise<boolean> {
+  confirm(
+    message: string,
+    title: string = 'Are you sure?',
+    confirmButtonText: string = 'Yes',
+    cancelButtonText: string = 'Cancel',
+    icon: AlertIcon = 'question',
+  ): Promise<boolean> {
     return Swal.fire({
       ...this.getBaseOptions(),
-      icon: 'question',
+      icon,
       title: title,
       text: message,
       showCancelButton: true,
       confirmButtonColor: '#5E35B1',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes',
-      cancelButtonText: 'Cancel'
+      cancelButtonColor: cancelButtonText === 'Stay Here' ? '#6b7280' : '#d33',
+      confirmButtonText,
+      cancelButtonText,
+      reverseButtons: cancelButtonText === 'Stay Here',
     }).then(result => result.isConfirmed);
   }
 

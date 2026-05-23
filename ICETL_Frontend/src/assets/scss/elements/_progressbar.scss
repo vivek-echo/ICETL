@@ -49,7 +49,7 @@
         }
 
         &.bar-color-success {
-            background: #3EB75E;
+            background: var(--primary-gradient);
         }
 
         &.bar-color-danger {
@@ -61,7 +61,7 @@
         }
 
         &.bar-gradiand {
-            background: radial-gradient(circle farthest-corner at 0% 0%, var(--color-pink) 25%, var(--color-secondary) 45%, var(--color-primary) 65%, var(--color-light-green) 85%);
+            background: var(--primary-gradient);
         }
     }
 

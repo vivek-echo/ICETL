@@ -12,10 +12,11 @@ export interface CourseCartItem {
   categoryName: string;
   instructorName: string;
   duration: number | string | null;
-  durationUnit: string | null;
+  durationUnit: number | string | null;
   price: number | string;
   oldPrice: number | string | null;
   description: string | null;
+  courseHighlights?: string[] | string | null;
   thumbnailUrl: string | null;
 }
 

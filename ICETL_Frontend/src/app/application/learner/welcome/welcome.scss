@@ -116,7 +116,7 @@
   background:
     radial-gradient(
       circle,
-      rgba(250, 204, 21, 0.10),
+      rgba(192, 92, 255, 0.14),
       transparent 70%
     );
 }
@@ -273,14 +273,14 @@
   color: #2563eb;
 }
 
-.stat-icon.yellow {
-  background: rgba(250, 204, 21, 0.16);
-  color: #eab308;
+.stat-icon.purple {
+  background: rgba(123, 97, 255, 0.1);
+  color: var(--primary-purple);
 }
 
-.stat-icon.green {
-  background: rgba(34, 197, 94, 0.14);
-  color: #16a34a;
+.stat-icon.accent {
+  background: rgba(192, 92, 255, 0.1);
+  color: var(--accent-purple);
 }
 
 .stat-card h5 {
@@ -354,7 +354,7 @@
 }
 
 .floating-card i {
-  color: #22c55e;
+  color: var(--primary-purple);
 }
 
 .card-one {

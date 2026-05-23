@@ -3,14 +3,14 @@
 }
 
 .learning-cart {
-  --primary: #4f46e5;
-  --secondary: #a855f7;
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --success: #22c55e;
+  --primary: var(--primary-blue);
+  --secondary: var(--primary-purple);
+  --bg: var(--card-bg);
+  --card: var(--card-bg);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --border: var(--border);
+  --success: var(--primary-purple);
   --danger: #ef4444;
   animation: cartFadeIn 0.45s ease both;
   // background: var(--bg);

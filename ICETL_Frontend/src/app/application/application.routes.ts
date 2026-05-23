@@ -1,14 +1,19 @@
 import { Routes } from '@angular/router';
 import { Application } from './application';
+import { ROLE } from '../commonServices/constants.service';
+import { roleGuard } from '../commonServices/role.guard';
 
 export const applicationRoutes: Routes = [
   {
     path: '',
     component: Application,
+    canActivateChild: [roleGuard],
 
     children: [
       {
         path: 'instructor',
+        canActivate: [roleGuard],
+        data: { roles: [ROLE.INSTRUCTOR, 'instructor'] },
 
         loadChildren: () =>
           import('./instructor/instructor.routes').then(
@@ -19,6 +24,8 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'learner',
+        canActivate: [roleGuard],
+        data: { roles: [ROLE.STUDENT, 'learner'] },
         loadChildren: () =>
           import('./learner/learner.routes').then(
             (m) => m.learnerRoutes
@@ -28,6 +35,8 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'admin',
+        canActivate: [roleGuard],
+        data: { roles: [ROLE.ADMIN, 'admin'] },
         loadChildren: () =>
           import('./admin/admin.routes').then(
             (m) => m.adminRoutes
@@ -46,6 +55,13 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'yourCart',
+        data: { authOnly: true },
+        loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
+        title: 'Your Cart | ICETL',
+      },
+      {
+        path: 'cart',
+        data: { authOnly: true },
         loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },

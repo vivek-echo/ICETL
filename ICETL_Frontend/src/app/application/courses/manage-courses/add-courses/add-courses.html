@@ -26,9 +26,51 @@
                     <div class="col-md-6">
                         <div class="rbt-form-group">
                             <label>Instructor</label>
-                            <ng-multiselect-dropdown [data]="instructorList" [settings]="dropdownSettings"
-                                formControlName="instructor">
-                            </ng-multiselect-dropdown>
+                            <div class="instructor-select" [class.is-open]="isInstructorPickerOpen">
+                                <button class="instructor-select__trigger" type="button"
+                                    (click)="toggleInstructorPicker()" [attr.aria-expanded]="isInstructorPickerOpen">
+                                    <span>{{ instructorPickerLabel }}</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </button>
+
+                                @if (selectedInstructors.length) {
+                                <div class="instructor-selected">
+                                    @for (instructor of selectedInstructors; track instructor.id) {
+                                    <span class="instructor-chip">{{ instructor.name }}</span>
+                                    }
+                                </div>
+                                }
+
+                                @if (isInstructorPickerOpen) {
+                                <div class="instructor-picker">
+                                    <div class="instructor-search">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="search" placeholder="Search instructors..."
+                                            [value]="instructorSearchTerm" (input)="setInstructorSearch($event)">
+                                        @if (instructorSearchTerm) {
+                                        <button type="button" (click)="clearInstructorSearch()"
+                                            aria-label="Clear instructor search">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                        }
+                                    </div>
+
+                                    <div class="instructor-options">
+                                        @if (filteredInstructorList.length > 0) {
+                                        @for (instructor of filteredInstructorList; track instructor.id) {
+                                        <label class="instructor-option">
+                                            <input type="checkbox" [checked]="isInstructorSelected(instructor)"
+                                                (change)="toggleInstructor(instructor, $event)">
+                                            <span>{{ instructor.name }}</span>
+                                        </label>
+                                        }
+                                        } @else {
+                                        <p class="instructor-picker__empty">No instructors found</p>
+                                        }
+                                    </div>
+                                </div>
+                                }
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -41,8 +83,8 @@
                         <div class="rbt-form-group">
                             <label>Duration Unit</label>
                             <select formControlName="durationUnit">
-                                <option value="weeks">Weeks</option>
-                                <option value="months">Months</option>
+                                <option [ngValue]="1">Weeks</option>
+                                <option [ngValue]="2">Months</option>
                             </select>
                         </div>
                     </div>
@@ -80,18 +122,33 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-12">
-                        <div class="rbt-form-group">
-                            <label>Publish Status</label>
-                            <select formControlName="status">
-                                <option value="0">
-                                    Draft
-                                </option>
-                                <option value="1">
-                                    Published
-                                </option>
+                    <div class="col-12">
+                        <div class="card highlights-card">
+                            <div class="card-body">
+                                <div class="highlights-card__header">
+                                    <div>
+                                        <label class="mb-1">What You'll Learn</label>
+                                        <p>Add clear outcomes learners can expect from this course.</p>
+                                    </div>
+                                    <button type="button" class="highlight-icon-btn highlight-icon-btn--add"
+                                        (click)="addHighlight()" aria-label="Add learning outcome">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
 
-                            </select>
+                                <div formArrayName="courseHighlights" class="highlight-list">
+                                    @for (highlight of getHighlights().controls; track $index) {
+                                    <div class="highlight-row">
+                                        <input type="text" [formControlName]="$index"
+                                            placeholder="Enter learning outcome">
+                                        <button type="button" class="highlight-icon-btn highlight-icon-btn--remove"
+                                            (click)="removeHighlight($index)" aria-label="Remove learning outcome">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-12">
@@ -132,7 +189,7 @@
                         <i class="feather-clock"></i>
                         <span>
                             {{f['duration'].value || 0}}
-                            {{f['durationUnit'].value === 'months' ? 'Month(s)' : 'Week(s)'}}
+                            {{+f['durationUnit'].value === 2 ? 'Month(s)' : 'Week(s)'}}
                         </span>
                     </div>
                     <div class="preview-price">

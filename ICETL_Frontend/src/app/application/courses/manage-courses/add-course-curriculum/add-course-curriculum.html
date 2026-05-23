@@ -1,0 +1,531 @@
+<section class="curriculum-page">
+  <div class="curriculum-shell">
+    <header class="course-header-card">
+      <div class="course-header-main">
+        <img class="course-thumbnail" [src]="course.thumbnail" [alt]="course.title" />
+
+        <div class="course-info">
+          <div class="header-kicker">
+            <i class="fa-solid fa-graduation-cap"></i>
+            Curriculum Builder
+          </div>
+          <h1>{{ course.title }}</h1>
+          <p class="instructor-name">Instructor: {{ course.instructor }}</p>
+
+          <div class="course-stats">
+            <span><strong>{{ totalSections }}</strong> Sections</span>
+            <span><strong>{{ totalLectures }}</strong> Lectures</span>
+            <span><strong>{{ totalDuration }}</strong></span>
+          </div>
+
+          <div class="progress-wrap" aria-label="Course completion progress">
+            <div class="progress-label">
+              <span>Curriculum completion</span>
+              <strong>{{ course.progress }}%</strong>
+            </div>
+            <div class="progress">
+              <div
+                class="progress-bar"
+                role="progressbar"
+                [style.width.%]="course.progress"
+                [attr.aria-valuenow]="course.progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn save-btn" [disabled]="saving" (click)="saveCurriculum()">
+        @if (saving) {
+          <span class="button-spinner" aria-hidden="true"></span>
+          Saving...
+        } @else {
+          <i class="fa-solid fa-floppy-disk"></i>
+          Save Curriculum
+        }
+      </button>
+    </header>
+
+    <div class="toolbar-row">
+      <button type="button" class="btn add-section-btn" (click)="openSectionForm()">
+        <i class="fa-solid fa-plus"></i>
+        Add New Section
+      </button>
+    </div>
+
+    @if (showAddSectionForm) {
+      <div class="inline-card section-create-card">
+        <div class="inline-card-header">
+          <span class="card-icon"><i class="fa-solid fa-layer-group"></i></span>
+          <div>
+            <h2>{{ editingSectionId ? 'Edit Section' : 'Create Section' }}</h2>
+            <p>Group related lectures, quizzes, and practice work into one learning milestone.</p>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <label class="form-label" for="section-title">Section Title</label>
+            <input
+              id="section-title"
+              type="text"
+              class="form-control"
+              placeholder="Example: Introduction"
+              [(ngModel)]="sectionDraft.title"
+            />
+            @if (sectionValidationErrors.title) {
+              <div class="text-danger small mt-1">{{ sectionValidationErrors.title }}</div>
+            }
+          </div>
+          <div class="col-lg-7">
+            <label class="form-label" for="section-objective">Learning Objective</label>
+            <input
+              id="section-objective"
+              type="text"
+              class="form-control"
+              placeholder="Example: Learn Angular fundamentals"
+              [(ngModel)]="sectionDraft.objective"
+            />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-soft" (click)="cancelSection()">Cancel</button>
+          <button type="button" class="btn btn-primary-gradient" (click)="saveSection()">
+            <i class="fa-solid fa-check"></i>
+            {{ editingSectionId ? 'Update Section' : 'Add Section' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (loading) {
+      <div class="sections-list">
+        @for (_skeletonSection of skeletonSections; track $index) {
+          <article class="section-card skeleton-card">
+            <div class="section-top">
+              <div class="skeleton-block skeleton-icon"></div>
+              <div class="section-heading">
+                <div class="skeleton-block skeleton-title"></div>
+                <div class="skeleton-block skeleton-text"></div>
+              </div>
+              <div class="section-actions">
+                <div class="skeleton-block skeleton-action"></div>
+                <div class="skeleton-block skeleton-action"></div>
+                <div class="skeleton-block skeleton-action"></div>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="lecture-list">
+                @for (_skeletonItem of skeletonItems; track $index) {
+                  <div class="curriculum-item skeleton-item">
+                    <div class="skeleton-block skeleton-index"></div>
+                    <div class="skeleton-block skeleton-icon"></div>
+                    <div class="item-content">
+                      <div class="skeleton-block skeleton-title"></div>
+                      <div class="skeleton-block skeleton-text"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+
+      <div
+        class="sections-list"
+        cdkDropList
+        [cdkDropListData]="sections"
+        (cdkDropListDropped)="dropSection($event)"
+      >
+      @for (section of sections; track section.id; let sectionIndex = $index) {
+        <article class="section-card" [class.is-open]="section.expanded" cdkDrag>
+          <div class="section-top">
+            <button type="button" class="section-toggle" (click)="toggleSection(section)">
+              <i
+                class="fa-solid"
+                [class.fa-chevron-down]="section.expanded"
+                [class.fa-chevron-right]="!section.expanded"
+              ></i>
+            </button>
+
+            <div class="section-heading">
+              <h2>Section {{ sectionIndex + 1 }}: {{ section.title }}</h2>
+              <p>
+                <span>Learning Objective:</span>
+                {{ section.objective }}
+              </p>
+            </div>
+
+            <div class="section-actions" aria-label="Section actions">
+              <button type="button" class="icon-btn" title="Edit section" (click)="startEditSection(section)">
+                <i class="fa-regular fa-pen-to-square"></i>
+              </button>
+              <button type="button" class="icon-btn danger" title="Delete section" (click)="deleteSection(section.id)">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+              <button type="button" class="icon-btn" title="Sort section">
+                <i class="fa-solid fa-sort"></i>
+              </button>
+              <button type="button" class="icon-btn drag" title="Drag section" cdkDragHandle>
+                <i class="fa-solid fa-grip-vertical"></i>
+              </button>
+            </div>
+          </div>
+
+          @if (section.expanded) {
+            <div class="section-body">
+              <div
+                class="lecture-list"
+                cdkDropList
+                [cdkDropListData]="section.items"
+                (cdkDropListDropped)="dropCurriculumItem($event, section)"
+              >
+                @for (item of section.items; track item.id; let itemIndex = $index) {
+                  <div class="curriculum-item" cdkDrag>
+                    <div class="item-index">{{ itemIndex + 1 }}</div>
+                    <span class="item-icon"><i [class]="item.icon"></i></span>
+                    <div class="item-content">
+                      <h3>{{ item.type }}: {{ item.title }}</h3>
+                      <p>{{ item.meta }}</p>
+                    </div>
+                    @if (item.preview) {
+                      <span class="preview-badge">Preview</span>
+                    }
+                    <button
+                      type="button"
+                      class="item-action"
+                      title="Edit item"
+                      (click)="startEditItem(section, item)"
+                    >
+                      <i class="fa-regular fa-pen-to-square"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="item-action danger"
+                      title="Delete item"
+                      (click)="deleteCurriculumItem(section.id, item.id)"
+                    >
+                      <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                    <button type="button" class="item-action" title="Sort item" cdkDragHandle>
+                      <i class="fa-solid fa-grip-lines"></i>
+                    </button>
+                  </div>
+                } @empty {
+                  <div class="empty-state">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No curriculum items available</span>
+                  </div>
+                }
+              </div>
+
+              @if (selectedSectionId !== section.id) {
+                <button type="button" class="btn add-item-btn" (click)="startAddItem(section)">
+                  <i class="fa-solid fa-plus"></i>
+                  Add Curriculum Item
+                </button>
+              }
+
+              @if (selectedSectionId === section.id) {
+                <div class="inline-card item-create-card">
+                  <div class="selector-header">
+                    <div>
+                      <h3>{{ editingItemId ? 'Edit Curriculum Item' : 'Add Curriculum Item' }}</h3>
+                      <p>Choose the content type learners will complete in this section.</p>
+                    </div>
+                    <button type="button" class="icon-btn" title="Cancel" (click)="cancelAddItem(section)">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                  <div class="item-type-pills" role="group" aria-label="Curriculum item type">
+                    @for (type of itemTypes; track type) {
+                      <button
+                        type="button"
+                        class="type-pill"
+                        [class.active]="selectedItemType === type"
+                        (click)="selectItemType(section, type)"
+                      >
+                        <i [class]="getItemIcon(type)"></i>
+                        {{ type }}
+                      </button>
+                    }
+                  </div>
+
+                  @if (selectedItemType === 'Lecture') {
+                    <div class="lecture-create-card">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" [for]="'lecture-title-' + section.id">Lecture Title</label>
+                          <input
+                            [id]="'lecture-title-' + section.id"
+                            type="text"
+                            class="form-control"
+                            placeholder="Example: Welcome Video"
+                            [ngModel]="getLectureDraft(section.id).title"
+                            (ngModelChange)="updateLectureDraft(section.id, 'title', $event)"
+                          />
+                          @if (lectureValidationErrors[section.id]?.title) {
+                            <div class="text-danger small mt-1">{{ lectureValidationErrors[section.id]?.title }}</div>
+                          }
+                        </div>
+
+                        <div class="col-12">
+                          <label class="form-label">Content Source</label>
+                          <div class="source-options">
+                            <label
+                              class="source-option"
+                              [class.active]="getLectureDraft(section.id).source === 'youtube'"
+                            >
+                              <input
+                                type="radio"
+                                [name]="'source-' + section.id"
+                                value="youtube"
+                                [ngModel]="getLectureDraft(section.id).source"
+                                (ngModelChange)="setLectureSource(section.id, $event)"
+                              />
+                              <span><i class="fa-brands fa-youtube"></i> YouTube Unlisted</span>
+                            </label>
+                            <label
+                              class="source-option"
+                              [class.active]="getLectureDraft(section.id).source === 'upload'"
+                            >
+                              <input
+                                type="radio"
+                                [name]="'source-' + section.id"
+                                value="upload"
+                                [ngModel]="getLectureDraft(section.id).source"
+                                (ngModelChange)="setLectureSource(section.id, $event)"
+                              />
+                              <span><i class="fa-solid fa-cloud-arrow-up"></i> Upload Video</span>
+                            </label>
+                            <label
+                              class="source-option"
+                              [class.active]="getLectureDraft(section.id).source === 'article'"
+                            >
+                              <input
+                                type="radio"
+                                [name]="'source-' + section.id"
+                                value="article"
+                                [ngModel]="getLectureDraft(section.id).source"
+                                (ngModelChange)="setLectureSource(section.id, $event)"
+                              />
+                              <span><i class="fa-solid fa-file-lines"></i> Article</span>
+                            </label>
+                          </div>
+                          @if (lectureValidationErrors[section.id]?.type) {
+                            <div class="text-danger small mt-1">{{ lectureValidationErrors[section.id]?.type }}</div>
+                          }
+                        </div>
+
+                        @if (getLectureDraft(section.id).source === 'youtube') {
+                          <div class="col-12">
+                            <label class="form-label" [for]="'youtube-url-' + section.id">YouTube URL</label>
+                            <input
+                              [id]="'youtube-url-' + section.id"
+                              type="url"
+                              class="form-control"
+                              placeholder="https://youtube.com/watch?v=..."
+                              [ngModel]="getLectureDraft(section.id).youtubeUrl"
+                              (ngModelChange)="setYoutubeUrl(section.id, $event)"
+                            />
+                            @if (lectureValidationErrors[section.id]?.youtubeUrl) {
+                              <div class="text-danger small mt-1">
+                                {{ lectureValidationErrors[section.id]?.youtubeUrl }}
+                              </div>
+                            }
+                            @if (getYoutubeEmbedUrl(section.id); as youtubeEmbedUrl) {
+                              <div class="ratio ratio-16x9 mt-3">
+                                <iframe
+                                  [src]="youtubeEmbedUrl"
+                                  [title]="getLectureDraft(section.id).title || 'YouTube video preview'"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                  loading="lazy"
+                                  referrerpolicy="strict-origin-when-cross-origin"
+                                  allowfullscreen
+                                ></iframe>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        @if (getLectureDraft(section.id).source === 'upload') {
+                          <div class="col-12">
+                            <label class="upload-area" [for]="'upload-video-' + section.id">
+                              <i class="fa-solid fa-cloud-arrow-up"></i>
+                              <strong>
+                                {{
+                                  getLectureDraft(section.id).uploadFileName ||
+                                    'Click to choose your video'
+                                }}
+                              </strong>
+                              <span>MP4, MOV, or WebM up to 2GB</span>
+                              <input
+                                [id]="'upload-video-' + section.id"
+                                type="file"
+                                accept="video/mp4,video/quicktime,video/webm"
+                                [disabled]="isUploading"
+                                (change)="setUploadVideo(section.id, $event)"
+                              />
+                            </label>
+                            @if (selectedVideo || uploadedFileUrl || isUploading || uploadError) {
+                              <div
+                                class="upload-status"
+                                [class.is-complete]="uploadedFileUrl"
+                                [class.is-failed]="uploadError"
+                              >
+                                <div class="upload-status-header">
+                                  @if (isUploading) {
+                                    <span>Uploading...{{ uploadProgress }}%</span>
+                                  } @else if (uploadedFileUrl) {
+                                    <span><i class="fa-solid fa-check"></i> Upload completed</span>
+                                  } @else if (uploadError) {
+                                    <span><i class="fa-solid fa-triangle-exclamation"></i> Upload failed</span>
+                                  }
+                                </div>
+
+                                @if (isUploading || uploadProgress > 0) {
+                                  <div class="upload-progress" aria-label="Video upload progress">
+                                    <div
+                                      class="upload-progress-bar"
+                                      [style.width.%]="uploadProgress"
+                                      role="progressbar"
+                                      [attr.aria-valuenow]="uploadProgress"
+                                      aria-valuemin="0"
+                                      aria-valuemax="100"
+                                    ></div>
+                                  </div>
+                                }
+
+                                @if (selectedVideo || uploadedFileName) {
+                                  <div class="upload-file-meta">
+                                    <span>{{ uploadedFileName || selectedVideo?.name }}</span>
+                                    <span>{{ formatFileSize(uploadedFileSize || selectedVideo?.size || 0) }}</span>
+                                    <span>
+                                      {{
+                                        uploadedFileUrl
+                                          ? 'Uploaded'
+                                          : uploadError
+                                            ? 'Failed'
+                                            : 'Uploading'
+                                      }}
+                                    </span>
+                                  </div>
+                                }
+
+                                @if (uploadError) {
+                                  <div class="text-danger small mt-1">{{ uploadError }}</div>
+                                }
+                              </div>
+                            }
+                            @if (lectureValidationErrors[section.id]?.uploadFile) {
+                              <div class="text-danger small mt-1">
+                                {{ lectureValidationErrors[section.id]?.uploadFile }}
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        @if (getLectureDraft(section.id).source === 'article') {
+                          <div class="col-12">
+                            <label class="form-label" [for]="'article-' + section.id">Article Content</label>
+                            <textarea
+                              [id]="'article-' + section.id"
+                              class="form-control rich-textarea"
+                              rows="6"
+                              placeholder="Write the article lesson content..."
+                              [ngModel]="getLectureDraft(section.id).article"
+                              (ngModelChange)="updateLectureDraft(section.id, 'article', $event)"
+                            ></textarea>
+                          </div>
+                        }
+
+                        @if (getLectureDraft(section.id).source !== 'article') {
+                          <div class="col-md-4">
+                            <label class="form-label" [for]="'duration-' + section.id">Duration</label>
+                            <input
+                              [id]="'duration-' + section.id"
+                              type="text"
+                              class="form-control"
+                              placeholder="10 min"
+                              [ngModel]="getLectureDraft(section.id).duration"
+                              (ngModelChange)="updateLectureDraft(section.id, 'duration', $event)"
+                            />
+                            @if (lectureValidationErrors[section.id]?.duration) {
+                              <div class="text-danger small mt-1">
+                                {{ lectureValidationErrors[section.id]?.duration }}
+                              </div>
+                            }
+                          </div>
+                        }
+                        <div [class.col-md-8]="getLectureDraft(section.id).source !== 'article'" [class.col-12]="getLectureDraft(section.id).source === 'article'">
+                          <label class="form-label" [for]="'description-' + section.id">Description</label>
+                          <input
+                            [id]="'description-' + section.id"
+                            type="text"
+                            class="form-control"
+                            placeholder="Short learner-facing description"
+                            [ngModel]="getLectureDraft(section.id).description"
+                            (ngModelChange)="updateLectureDraft(section.id, 'description', $event)"
+                          />
+                        </div>
+
+                        <div class="col-12">
+                          <label class="preview-toggle">
+                            <input
+                              type="checkbox"
+                              [ngModel]="getLectureDraft(section.id).preview"
+                              (ngModelChange)="setLecturePreview(section.id, $event)"
+                            />
+                            <span>Make this a preview lecture</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="form-actions">
+                        <button type="button" class="btn btn-soft" (click)="cancelAddItem(section)">Cancel</button>
+                        <button
+                          type="button"
+                          class="btn btn-primary-gradient"
+                          [disabled]="saving || isUploading"
+                          (click)="saveLecture(section)"
+                        >
+                          <i class="fa-solid fa-check"></i>
+                          {{ editingItemId ? 'Update Lecture' : 'Save Lecture' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+
+                  @if (selectedItemType && selectedItemType !== 'Lecture') {
+                    <div class="quick-draft-card">
+                      <div>
+                        <h4>{{ selectedItemType }} Draft</h4>
+                        <p>Create the placeholder now and configure detailed settings later.</p>
+                      </div>
+                      <button type="button" class="btn btn-primary-gradient" (click)="savePlaceholderItem(section)">
+                        <i class="fa-solid fa-check"></i>
+                        {{ editingItemId ? 'Update' : 'Add' }} {{ selectedItemType }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </article>
+      } @empty {
+        <div class="empty-state empty-section-state">
+          <i class="fa-regular fa-folder-open"></i>
+          <span>No sections added yet</span>
+        </div>
+      }
+      </div>
+    }
+  </div>
+</section>

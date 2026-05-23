@@ -15,10 +15,11 @@ interface CourseItem {
   categoryName: string;
   instructorName: string;
   duration: number | string | null;
-  durationUnit: string | null;
+  durationUnit: number | string | null;
   price: number | string;
   oldPrice: number | string | null;
   description: string | null;
+  courseHighlights?: string[] | string | null;
   thumbnailUrl: string | null;
   status: number | string;
   statusLabel: string;
@@ -308,9 +309,19 @@ export class ViewAllCourses implements OnInit {
       return 'N/A';
     }
 
-    const unit = course.durationUnit === 'months' ? 'Month(s)' : 'Week(s)';
+    const unit = Number(course.durationUnit) === 2 ? 'Month(s)' : 'Week(s)';
 
     return `${course.duration} ${unit}`;
+  }
+
+  getCourseHighlights(course: CourseItem, limit?: number): string[] {
+    const highlights = this.normalizeHighlights(course.courseHighlights);
+
+    return typeof limit === 'number' ? highlights.slice(0, limit) : highlights;
+  }
+
+  getRemainingHighlightsCount(course: CourseItem, shownCount = 3): number {
+    return Math.max(this.getCourseHighlights(course).length - shownCount, 0);
   }
 
   isCategorySelected(categoryId: number): boolean {
@@ -384,5 +395,25 @@ export class ViewAllCourses implements OnInit {
 
   private markViewForRefresh(): void {
     this.cdr.markForCheck();
+  }
+
+  private normalizeHighlights(value: string[] | string | null | undefined): string[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => `${item}`.trim()).filter((item) => item.length > 0);
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      return Array.isArray(parsed)
+        ? parsed.map((item) => `${item}`.trim()).filter((item) => item.length > 0)
+        : [];
+    } catch {
+      return [];
+    }
   }
 }

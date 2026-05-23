@@ -83,7 +83,7 @@ nstructor-dashboard.component.scss scss:host {
 
     background:
         radial-gradient(circle,
-            rgba(250, 204, 21, 0.12),
+            rgba(192, 92, 255, 0.14),
             transparent 70%);
 }
 
@@ -239,14 +239,14 @@ nstructor-dashboard.component.scss scss:host {
     color: #2563eb;
 }
 
-.stats-icon.yellow {
-    background: rgba(250, 204, 21, 0.16);
-    color: #eab308;
+.stats-icon.purple {
+    background: rgba(123, 97, 255, 0.1);
+    color: var(--primary-purple);
 }
 
-.stats-icon.green {
-    background: rgba(34, 197, 94, 0.14);
-    color: #16a34a;
+.stats-icon.accent {
+    background: rgba(192, 92, 255, 0.1);
+    color: var(--accent-purple);
 }
 
 .stats-card h5 {
@@ -320,7 +320,7 @@ nstructor-dashboard.component.scss scss:host {
 }
 
 .floating-badge i {
-    color: #22c55e;
+    color: var(--primary-purple);
 }
 
 .badge-one {

@@ -22,15 +22,15 @@
 .side-nav-section + .side-nav-item,
 .side-nav-item + .side-nav-section,
 .side-nav-item + .side-nav-item {
-  margin-top: 18px;
+  margin-top: 8px;
 }
 
 .side-nav-section__title {
-  color: #7f8798;
-  font-size: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  margin-bottom: 10px;
+  margin: 18px 0 8px;
   text-transform: uppercase;
 }
 
@@ -41,44 +41,68 @@
 
 .side-nav-link {
   align-items: center;
-  border-bottom: 1px solid #ebeef5;
-  color: #5d6577;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
   display: flex;
   gap: 10px;
   justify-content: flex-start;
-  padding: 10px 0 12px;
+  min-height: 40px;
+  padding: 8px 10px;
   width: 100%;
-  transition: color 0.2s ease;
+  border-radius: var(--radius-button);
+  text-decoration: none;
+  transition: all .3s ease;
 }
 
 .side-nav-link i {
-  color: #7c8498;
-  font-size: 18px;
+  color: var(--text-secondary);
+  font-size: 15px;
   margin-right: 0;
   min-width: 20px;
   text-align: center;
-  transition: color 0.2s ease;
+  transition: all .3s ease;
 }
 
 .side-nav-link span {
-  font-size: 18px;
+  color: inherit;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
+  transition: all .3s ease;
 }
 
 .side-nav-link:hover,
 .side-nav-link.active {
-  color: var(--color-primary);
+  color: #ffffff !important;
+  background: var(--primary-gradient);
+  border-color: transparent;
+  box-shadow: var(--shadow);
+  transform: translateY(-3px);
 }
 
 .side-nav-link:hover i,
-.side-nav-link.active i {
-  color: var(--color-primary);
+.side-nav-link.active i,
+.side-nav-link:hover span,
+.side-nav-link.active span {
+  color: #ffffff !important;
 }
 
 .side-nav-link--static {
-  color: var(--color-heading);
+  color: var(--text-primary);
   cursor: default;
+}
+
+.side-nav-link--static:hover {
+  color: var(--text-primary) !important;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.side-nav-link--static:hover i,
+.side-nav-link--static:hover span {
+  color: inherit !important;
 }
 
 .side-nav-children {
@@ -100,10 +124,10 @@
 
 .side-nav-item--nested .side-nav-link span,
 .side-nav-item--nested .side-nav-link--static span {
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .side-nav-item:last-child > .side-nav-link,
 .side-nav-section:last-child .side-nav-item:last-child > .side-nav-link {
-  border-bottom: 0;
+  border-bottom-color: transparent;
 }

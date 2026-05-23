@@ -8,6 +8,7 @@ interface StoredMenu {
   url?: string | null;
   parentId?: number | null;
   deletedFlag?: number;
+  visiblity?: number;
 }
 
 interface CourseTab {
@@ -79,7 +80,7 @@ export class ManageCourses implements OnInit, OnDestroy {
     }
 
     const permittedTabs = menus
-      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId)
+      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && menu.visiblity ===1)
       .map((menu) => this.toCourseTab(menu))
       .filter((tab): tab is CourseTab => tab !== null);
 

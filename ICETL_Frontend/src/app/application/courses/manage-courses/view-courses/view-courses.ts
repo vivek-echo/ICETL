@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { lastValueFrom, timeout } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { ROLE } from '../../../../commonServices/constants.service';
 import { Course } from '../../services/course';
+import { Router } from '@angular/router';
 
 interface CourseCategory {
   id: number;
@@ -27,10 +27,11 @@ interface CourseItem {
   instructors?: InstructorOption[];
   instructorName: string;
   duration: number | string | null;
-  durationUnit: string | null;
+  durationUnit: number | string | null;
   price: number | string;
   oldPrice: number | string | null;
   description: string | null;
+  courseHighlights?: string[] | string | null;
   thumbnailUrl: string | null;
   status: number | string;
   statusLabel: string;
@@ -66,17 +67,18 @@ interface EditCourseForm {
   category: string;
   instructors: InstructorOption[];
   duration: number | string;
-  durationUnit: string;
+  durationUnit: number | string;
   price: number | string;
   oldPrice: number | string | null;
   description: string;
+  courseHighlights: string[];
   status: number | string;
 }
 
 @Component({
   selector: 'app-view-courses',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgMultiSelectDropDownModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './view-courses.html',
   styleUrl: './view-courses.scss',
 })
@@ -105,6 +107,8 @@ export class ViewCourses implements OnInit, OnDestroy {
   isEditModalOpen = false;
   isSavingEdit = false;
   isCategoryDropdownOpen = false;
+  isEditInstructorPickerOpen = false;
+  editInstructorSearch = '';
   search = '';
   categorySearch = '';
   status = '';
@@ -158,6 +162,7 @@ export class ViewCourses implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private spinner: NgxSpinnerService,
     private alertHelper: AlertHelperService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -171,8 +176,9 @@ export class ViewCourses implements OnInit, OnDestroy {
   }
 
   @HostListener('document:click')
-  closeCategoryDropdown(): void {
+  closeOpenDropdowns(): void {
     this.isCategoryDropdownOpen = false;
+    this.isEditInstructorPickerOpen = false;
   }
 
   async loadCategories(): Promise<void> {
@@ -294,6 +300,10 @@ export class ViewCourses implements OnInit, OnDestroy {
     event.stopPropagation();
   }
 
+  keepEditInstructorPickerOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
   toggleCategory(category: CourseCategory): void {
     if (this.isCategorySelected(category.id)) {
       this.selectedCategories = this.selectedCategories.filter((item) => item.id !== category.id);
@@ -379,12 +389,15 @@ export class ViewCourses implements OnInit, OnDestroy {
       category: course.categoryId ? `${course.categoryId}` : '',
       instructors: selectedInstructors,
       duration: course.duration ?? 1,
-      durationUnit: course.durationUnit || 'weeks',
+      durationUnit: Number(course.durationUnit) || 1,
       price: course.price ?? 0,
       oldPrice: course.oldPrice ?? '',
       description: course.description || '',
+      courseHighlights: this.normalizeHighlights(course.courseHighlights),
       status: `${course.status}`,
     };
+    this.editInstructorSearch = '';
+    this.isEditInstructorPickerOpen = false;
 
     setTimeout(() => {
       this.isEditModalOpen = true;
@@ -403,6 +416,8 @@ export class ViewCourses implements OnInit, OnDestroy {
     this.clearEditPreviewObjectUrl();
     this.editPreviewImage = this.placeholderImage;
     this.editCourseForm = this.getEmptyEditCourseForm();
+    this.editInstructorSearch = '';
+    this.isEditInstructorPickerOpen = false;
     this.markViewForRefresh();
   }
 
@@ -412,7 +427,9 @@ export class ViewCourses implements OnInit, OnDestroy {
     if (!input.files?.length) {
       this.selectedEditThumbnail = null;
       this.clearEditPreviewObjectUrl();
-      this.editPreviewImage = this.editingCourse ? this.courseImage(this.editingCourse) : this.placeholderImage;
+      this.editPreviewImage = this.editingCourse
+        ? this.courseImage(this.editingCourse)
+        : this.placeholderImage;
       this.markViewForRefresh();
       return;
     }
@@ -455,9 +472,10 @@ export class ViewCourses implements OnInit, OnDestroy {
       JSON.stringify(this.editCourseForm.instructors.map((instructor) => instructor.id)),
     );
     formData.append('duration', `${this.editCourseForm.duration}`);
-    formData.append('durationUnit', this.editCourseForm.durationUnit);
+    formData.append('durationUnit', `${this.editCourseForm.durationUnit}`);
     formData.append('price', `${this.editCourseForm.price}`);
     formData.append('description', this.editCourseForm.description.trim());
+    formData.append('courseHighlights', JSON.stringify(this.getCleanEditHighlights()));
     formData.append('status', `${this.editCourseForm.status}`);
 
     if (this.editCourseForm.oldPrice !== null && this.editCourseForm.oldPrice !== '') {
@@ -518,9 +536,84 @@ export class ViewCourses implements OnInit, OnDestroy {
       return 'N/A';
     }
 
-    const unit = course.durationUnit === 'months' ? 'Month(s)' : 'Week(s)';
+    const unit = Number(course.durationUnit) === 2 ? 'Month(s)' : 'Week(s)';
 
     return `${course.duration} ${unit}`;
+  }
+
+  getCourseHighlights(course: CourseItem, limit?: number): string[] {
+    const highlights = this.normalizeHighlights(course.courseHighlights);
+
+    return typeof limit === 'number' ? highlights.slice(0, limit) : highlights;
+  }
+
+  getRemainingHighlightsCount(course: CourseItem, shownCount = 3): number {
+    return Math.max(this.getCourseHighlights(course).length - shownCount, 0);
+  }
+
+  addEditHighlight(): void {
+    this.editCourseForm.courseHighlights = [...this.editCourseForm.courseHighlights, ''];
+  }
+
+  removeEditHighlight(index: number): void {
+    if (this.editCourseForm.courseHighlights.length <= 1) {
+      this.editCourseForm.courseHighlights = [''];
+      return;
+    }
+
+    this.editCourseForm.courseHighlights = this.editCourseForm.courseHighlights.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
+  }
+
+  isEditInstructorSelected(instructor: InstructorOption): boolean {
+    return this.editCourseForm.instructors.some((item) => item.id === instructor.id);
+  }
+
+  toggleEditInstructor(instructor: InstructorOption, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+
+    this.editCourseForm.instructors = checked
+      ? [...this.editCourseForm.instructors, instructor]
+      : this.editCourseForm.instructors.filter((item) => item.id !== instructor.id);
+  }
+
+  toggleEditInstructorPicker(): void {
+    this.isEditInstructorPickerOpen = !this.isEditInstructorPickerOpen;
+  }
+
+  setEditInstructorSearch(event: Event): void {
+    this.editInstructorSearch = (event.target as HTMLInputElement).value;
+  }
+
+  clearEditInstructorSearch(): void {
+    this.editInstructorSearch = '';
+  }
+
+  get editInstructorPickerLabel(): string {
+    const selected = this.editCourseForm.instructors;
+
+    if (!selected.length) {
+      return 'Select instructor';
+    }
+
+    if (selected.length === 1) {
+      return selected[0].name;
+    }
+
+    return `${selected.length} instructors selected`;
+  }
+
+  get filteredEditInstructorList(): InstructorOption[] {
+    const term = this.editInstructorSearch.trim().toLowerCase();
+
+    if (!term) {
+      return this.instructorList;
+    }
+
+    return this.instructorList.filter((instructor) =>
+      `${instructor.name || ''}`.toLowerCase().includes(term),
+    );
   }
 
   get filteredCategories(): CourseCategory[] {
@@ -595,10 +688,11 @@ export class ViewCourses implements OnInit, OnDestroy {
       category: '',
       instructors: [],
       duration: 1,
-      durationUnit: 'weeks',
+      durationUnit: 1,
       price: 0,
       oldPrice: '',
       description: '',
+      courseHighlights: [''],
       status: '1',
     };
   }
@@ -636,7 +730,7 @@ export class ViewCourses implements OnInit, OnDestroy {
       return 'Please enter a valid course duration.';
     }
 
-    if (!['weeks', 'months'].includes(this.editCourseForm.durationUnit)) {
+    if (![1, 2].includes(Number(this.editCourseForm.durationUnit))) {
       return 'Please select a valid duration unit.';
     }
 
@@ -652,7 +746,37 @@ export class ViewCourses implements OnInit, OnDestroy {
       return 'Course description must be between 20 and 300 characters.';
     }
 
+    if (this.getCleanEditHighlights().some((highlight) => highlight.length > 255)) {
+      return 'Each learning outcome must be 255 characters or fewer.';
+    }
+
     return '';
+  }
+
+  private getCleanEditHighlights(): string[] {
+    return this.editCourseForm.courseHighlights
+      .map((highlight) => `${highlight}`.trim())
+      .filter((highlight) => highlight.length > 0);
+  }
+
+  private normalizeHighlights(value: string[] | string | null | undefined): string[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => `${item}`.trim()).filter((item) => item.length > 0);
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      return Array.isArray(parsed)
+        ? parsed.map((item) => `${item}`.trim()).filter((item) => item.length > 0)
+        : [];
+    } catch {
+      return [];
+    }
   }
 
   private extractErrorMessage(error: any): string {
@@ -671,5 +795,13 @@ export class ViewCourses implements OnInit, OnDestroy {
 
   private markViewForRefresh(): void {
     this.cdr.markForCheck();
+  }
+
+  goToCurriculum(course: any) {
+    this.router.navigate(['/application/courses/manageCourses/curriculum'], {
+      state: {
+        course: course,
+      },
+    });
   }
 }

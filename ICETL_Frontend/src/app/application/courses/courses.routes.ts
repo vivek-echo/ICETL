@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { curriculumPendingChangesGuard } from './manage-courses/add-course-curriculum/curriculum-pending-changes.guard';
 
 const getRedirectRoute = (route: string): string => {
   const getMenus = localStorage.getItem('menus');
@@ -108,6 +109,13 @@ export const coursesRoutes: Routes = [
             loadComponent: () =>
               import('./manage-courses/browse-courses/browse-courses').then((m) => m.BrowseCourses),
             title: 'Browse Courses | ICETL',
+          },
+          {
+            path: 'curriculum',
+            loadComponent: () =>
+              import('./manage-courses/add-course-curriculum/add-course-curriculum').then((m) => m.AddCourseCurriculum),
+            canDeactivate: [curriculumPendingChangesGuard],
+            title: 'Curriculum | ICETL',
           },
         ],
       },

@@ -76,10 +76,10 @@
     <h2>Your cart is empty</h2>
     <p>Explore courses and start learning today</p>
 
-    <a class="cart-btn cart-btn--primary" routerLink="/application/courses/manageCourses/browse">
+    <!-- <a class="cart-btn cart-btn--primary" routerLink="/application/courses/manageCourses/browse">
       <i class="fa-solid fa-magnifying-glass"></i>
       Browse Courses
-    </a>
+    </a> -->
   </div>
   }
 
@@ -116,9 +116,9 @@
             <span>4.8</span>
           </div>
 
-          <p>{{ item.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p>
+          <!-- <p>{{ item.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p> -->
 
-          <div class="course-progress" aria-label="Enrollment progress">
+          <!-- <div class="course-progress" aria-label="Enrollment progress">
             <div>
               <span>Ready to enroll</span>
               <strong>0%</strong>
@@ -126,7 +126,7 @@
             <div class="course-progress__bar">
               <span></span>
             </div>
-          </div>
+          </div> -->
         </div>
 
         <div class="course-cart-card__aside">
@@ -195,10 +195,10 @@
           <i class="fa-solid fa-lock"></i>
           Checkout
         </button>
-        <a class="cart-btn cart-btn--secondary" routerLink="/application/courses/manageCourses/browse">
+        <!-- <a class="cart-btn cart-btn--secondary" routerLink="/application/courses/manageCourses/browse">
           <i class="fa-solid fa-arrow-left"></i>
           Continue Browsing
-        </a>
+        </a> -->
         <button type="button" class="cart-btn cart-btn--danger" (click)="clearCart()" [disabled]="clearing">
           <i [class]="clearing ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-trash'"></i>
           {{ clearing ? 'Clearing...' : 'Clear Cart' }}

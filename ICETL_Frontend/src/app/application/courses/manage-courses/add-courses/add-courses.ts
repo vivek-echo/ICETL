@@ -1,8 +1,7 @@
-import { Component, ElementRef, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { lastValueFrom } from 'rxjs';
 import { Course } from '../../services/course';
 import { ChangeDetectorRef } from '@angular/core';
@@ -14,7 +13,7 @@ import { NgxSpinnerService } from 'ngx-spinner';
 @Component({
   selector: 'app-add-courses',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgMultiSelectDropDownModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-courses.html',
   styleUrl: './add-courses.scss',
 })
@@ -23,6 +22,8 @@ export class AddCourses implements OnInit {
 
   categories: any[] = [];
   instructorList: any[] = [];
+  instructorSearchTerm = '';
+  isInstructorPickerOpen = false;
 
   previewImage = 'https://placehold.co/710x488';
 
@@ -53,10 +54,11 @@ export class AddCourses implements OnInit {
       category: ['', Validators.required],
       instructor: [[], Validators.required],
       duration: [1, [Validators.required, Validators.min(1)]],
-      durationUnit: ['weeks', Validators.required],
+      durationUnit: [1, Validators.required],
       price: [0, [Validators.required, Validators.min(0)]],
       oldPrice: [0, [Validators.min(0)]],
       description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(100)]],
+      courseHighlights: this.fb.array([this.fb.control('')]),
       thumbnail: [null],
       status: [0],
     });
@@ -88,6 +90,91 @@ export class AddCourses implements OnInit {
 
   get instructorNames() {
     return this.f['instructor'].value?.map((x: any) => x.name).join(', ') || 'Instructor';
+  }
+
+  get selectedInstructors(): any[] {
+    return this.f['instructor'].value || [];
+  }
+
+  get instructorPickerLabel(): string {
+    const selected = this.selectedInstructors;
+
+    if (!selected.length) {
+      return 'Select instructor';
+    }
+
+    if (selected.length === 1) {
+      return selected[0].name;
+    }
+
+    return `${selected.length} instructors selected`;
+  }
+
+  get filteredInstructorList(): any[] {
+    const term = this.instructorSearchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return this.instructorList;
+    }
+
+    return this.instructorList.filter((instructor: any) =>
+      `${instructor.name || ''}`.toLowerCase().includes(term),
+    );
+  }
+
+  @HostListener('document:click', ['$event'])
+  closeInstructorPickerOnOutsideClick(event: MouseEvent): void {
+    if (!this.el.nativeElement.contains(event.target)) {
+      this.isInstructorPickerOpen = false;
+    }
+  }
+
+  toggleInstructorPicker(): void {
+    this.isInstructorPickerOpen = !this.isInstructorPickerOpen;
+  }
+
+  setInstructorSearch(event: Event): void {
+    this.instructorSearchTerm = (event.target as HTMLInputElement).value;
+  }
+
+  clearInstructorSearch(): void {
+    this.instructorSearchTerm = '';
+  }
+
+  isInstructorSelected(instructor: any): boolean {
+    return (this.f['instructor'].value || []).some((item: any) => item.id === instructor.id);
+  }
+
+  toggleInstructor(instructor: any, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const selectedInstructors = [...(this.f['instructor'].value || [])];
+
+    this.courseForm.patchValue({
+      instructor: checked
+        ? [...selectedInstructors, instructor]
+        : selectedInstructors.filter((item: any) => item.id !== instructor.id),
+    });
+
+    this.f['instructor'].markAsTouched();
+  }
+
+  getHighlights(): FormArray<FormControl<string | null>> {
+    return this.courseForm.get('courseHighlights') as FormArray<FormControl<string | null>>;
+  }
+
+  addHighlight(): void {
+    this.getHighlights().push(this.fb.control(''));
+  }
+
+  removeHighlight(index: number): void {
+    const highlights = this.getHighlights();
+
+    if (highlights.length <= 1) {
+      highlights.at(0).setValue('');
+      return;
+    }
+
+    highlights.removeAt(index);
   }
 
   async getCourseCategories() {
@@ -178,6 +265,14 @@ export class AddCourses implements OnInit {
           value = JSON.stringify(value.map((item: any) => item.id));
         }
 
+        if (key === 'courseHighlights') {
+          value = JSON.stringify(
+            (value || [])
+              .map((item: string) => `${item}`.trim())
+              .filter((item: string) => item.length > 0),
+          );
+        }
+
         // Skip null/empty
         if (value !== null && value !== undefined && value !== '') {
           formData.append(key, value);
@@ -195,12 +290,15 @@ export class AddCourses implements OnInit {
           category: '',
           instructor: [],
           duration: 1,
-          durationUnit: 'weeks',
+          durationUnit: 1,
           price: 0,
           oldPrice: 0,
           description: '',
+          courseHighlights: [''],
           thumbnail: null,
         });
+        this.getHighlights().clear();
+        this.addHighlight();
 
         this.previewImage = 'https://placehold.co/710x488';
       }
@@ -221,6 +319,7 @@ export class AddCourses implements OnInit {
       price: 'Price',
       oldPrice: 'Old Price',
       description: 'Course Description',
+      courseHighlights: "What You'll Learn",
       thumbnail: 'Course Thumbnail',
       status: 'Status',
     };

@@ -6,7 +6,7 @@ import { CourseCart, CourseCartItem } from '../services/cart';
 @Component({
   selector: 'app-your-cart',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './your-cart.html',
   styleUrl: './your-cart.scss',
 })
@@ -84,7 +84,7 @@ export class YourCart implements OnInit {
       return 'N/A';
     }
 
-    const unit = item.durationUnit === 'months' ? 'Month(s)' : 'Week(s)';
+    const unit = Number(item.durationUnit) === 2 ? 'Month(s)' : 'Week(s)';
 
     return `${item.duration} ${unit}`;
   }

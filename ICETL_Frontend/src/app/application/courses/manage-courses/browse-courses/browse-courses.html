@@ -116,6 +116,7 @@
             </div>
 
             <div class="course-rating" [attr.aria-label]="'Rated ' + getRating(course) + ' out of 5'">
+              <strong>{{ getRating(course) }}</strong>
               <span class="stars">
                 <i class="fa-solid fa-star"></i>
                 <i class="fa-solid fa-star"></i>
@@ -123,13 +124,8 @@
                 <i class="fa-solid fa-star"></i>
                 <i class="fa-solid fa-star-half-stroke"></i>
               </span>
-              <strong>{{ getRating(course) }}</strong>
-              <span>({{ getStudentCount(course) }} students)</span>
+              <span>({{ getStudentCount(course) }})</span>
             </div>
-
-            <p class="course-description">
-              {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-            </p>
 
             <div class="course-price-row">
               <div class="course-price">
@@ -142,6 +138,11 @@
               @if (getDiscountPercent(course) > 0) {
               <span class="discount-badge">{{ getDiscountPercent(course) }}% OFF</span>
               }
+            </div>
+
+            <div class="course-badges">
+              <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+              <span class="bestseller-badge">Bestseller</span>
             </div>
 
             <div class="course-actions">
@@ -160,6 +161,50 @@
               </button>
             </div>
           </div>
+
+          <aside class="course-preview" aria-hidden="true">
+            <h3>{{ course.title }}</h3>
+
+            <div class="course-badges">
+              <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+              <span class="bestseller-badge">Bestseller</span>
+            </div>
+
+            <p class="course-preview__updated">Updated <strong>October 2025</strong></p>
+            <p class="course-preview__meta">
+              {{ getDurationLabel(course) }} · All Levels · Subtitles
+            </p>
+
+            <p class="course-description">
+              {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+            </p>
+
+            @if (getCourseHighlights(course, 3).length > 0) {
+            <div class="course-preview__learn">
+              <h4>What You'll Learn</h4>
+              <ul class="course-preview__points">
+                @for (highlight of getCourseHighlights(course, 3); track $index) {
+                <li>{{ highlight }}</li>
+                }
+              </ul>
+            </div>
+            }
+
+            <div class="course-preview__actions">
+              <button
+                type="button"
+                class="primary-action"
+                [disabled]="isInCart(course.id) || isAdding(course.id)"
+                (click)="addToCart(course)">
+                <i [class]="isAdding(course.id) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cart-plus'"></i>
+                {{ isInCart(course.id) ? 'Added' : (isAdding(course.id) ? 'Adding...' : 'Add to Cart') }}
+              </button>
+
+              <button type="button" class="preview-wishlist" aria-label="Add course to wishlist">
+                <i class="fa-regular fa-heart"></i>
+              </button>
+            </div>
+          </aside>
         </article>
         }
       </div>

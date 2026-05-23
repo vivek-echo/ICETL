@@ -99,7 +99,7 @@
   @if (!loading && courses.length > 0) {
   <div class="row g-4">
     @for (course of courses; track trackByCourseId($index, course)) {
-    <div class="col-xl-4 col-md-6 col-12">
+    <div class="col-xl-3 col-md-6 col-12">
       <div class="course-card">
         <div class="course-card__image">
           <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
@@ -141,9 +141,12 @@
             </span>
           </div>
 
-          <p class="course-description">
-            {{ course.description }}
-          </p>
+          <div class="course-badges">
+            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+            <span class="bestseller-badge">Bestseller</span>
+          </div>
+
+        
 
           <div class="course-instructor">
             <div class="instructor-avatar">
@@ -171,6 +174,37 @@
             </span>
           </div>
         </div>
+
+        <aside class="course-preview" aria-hidden="true">
+          <h4>{{ course.title }}</h4>
+
+          <div class="course-badges">
+            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+            <span class="bestseller-badge">Bestseller</span>
+          </div>
+
+          <p class="course-preview__updated">
+            Added <strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}</strong>
+          </p>
+          <p class="course-preview__meta">
+            {{ getDurationLabel(course) }} · {{ course.categoryName || 'Course' }} · {{ course.statusLabel }}
+          </p>
+
+          <p class="course-description">
+            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+          </p>
+
+          @if (getCourseHighlights(course, 3).length > 0) {
+          <div class="course-preview__learn">
+            <h5>What You'll Learn</h5>
+            <ul class="course-preview__points">
+              @for (highlight of getCourseHighlights(course, 3); track $index) {
+              <li>{{ highlight }}</li>
+              }
+            </ul>
+          </div>
+          }
+        </aside>
       </div>
     </div>
     }

@@ -1,8 +1,24 @@
 /*-- Variables --*/
 :root {
     //Themes colors
-    --color-primary: #2f57ef;
-    --color-secondary: #b966e7;
+    --primary-blue: #3B5BFF;
+    --primary-purple: #7B61FF;
+    --accent-purple: #C05CFF;
+    --primary-gradient: linear-gradient(
+        90deg,
+        #3B5BFF 0%,
+        #7B61FF 50%,
+        #C05CFF 100%
+    );
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --card-bg: #FFFFFF;
+    --border: #E5E7EB;
+    --shadow: 0 12px 30px rgba(123, 97, 255, 0.15);
+    --radius-card: 18px;
+    --radius-button: 14px;
+    --color-primary: var(--primary-blue);
+    --color-secondary: var(--primary-purple);
     --color-coral: #E9967A;
     --color-violet: #800080;
     --color-pink: #DB7093;
@@ -10,17 +26,17 @@
     //Themes colors DARK Mode
     --color-darker: #192335;
     --color-white-dark: #D9D9D9;
-    --gradient-dark: linear-gradient(90deg, #2f57efbf 0%, #c586eeab 100%);
-    --gradient-dark-2: linear-gradient(90deg, #2f57ef7d 0%, #c586ee52 100%);
-    --color-primary-100: #323F92;
+    --gradient-dark: var(--primary-gradient);
+    --gradient-dark-2: linear-gradient(90deg, rgba(59, 91, 255, 0.49) 0%, rgba(192, 92, 255, 0.32) 100%);
+    --color-primary-100: var(--primary-purple);
 
     //Then
-    --color-heading: #192335;
-    --color-body: #6b7385;
+    --color-heading: var(--text-primary);
+    --color-body: var(--text-secondary);
 
 
     //Then
-    --color-white: #ffffff;
+    --color-white: var(--card-bg);
     --color-white-off: #FFFFFFAB;
     --color-bodyest: #273041;
     --color-bodyest-2: #324059b3;
@@ -48,15 +64,15 @@
     --color-lighter: #F2F5F9;
 
     // Then Opacity 
-    --primary-opacity: #2f57ef21;
-    --secondary-opacity: #b966e721;
+    --primary-opacity: rgba(59, 91, 255, 0.13);
+    --secondary-opacity: rgba(123, 97, 255, 0.13);
     --coral-opacity: #E9967A21;
     --violet-opacity: #80008021;
     --pink-opacity: #DB709321;
     --white-opacity: #ffffff21;
     --danger-opacity: #FF000310;
     --warning-opacity: #FF8F3C10;
-    --success-opacity: #3EB75E10;
+    --success-opacity: rgba(123, 97, 255, 0.1);
     --black-opacity: rgba(0, 0, 0, 0.04);
     --heading-opacity: #19233550;
 
@@ -73,7 +89,7 @@
 
 
     // Then Notify Colors 
-    --color-success: #3EB75E;
+    --color-success: var(--primary-purple);
     --color-danger: #FF0003;
     --color-warning: #FF8F3C;
     --color-info: #1BA2DB;
@@ -95,9 +111,9 @@
     //Extra Colour 
     --color-extra: rgb(249, 249, 255);
     --color-extra2: #F9F9FF;
-    --color-border: #e6e3f1;
-    --color-border-2: #e6e3f14f;
-    --bs-border-color: #dee2e6;
+    --color-border: var(--border);
+    --color-border-2: rgba(229, 231, 235, 0.5);
+    --bs-border-color: var(--border);
 
 
 
@@ -106,7 +122,7 @@
 
     //Badge Card Background Color
     --color-badge-1: #303F5B;
-    --color-badge-2: #F2C94C;
+    --color-badge-2: var(--accent-purple);
 
 
 
@@ -155,7 +171,7 @@
     --shadow-slide-item: 0px 0 10px 0 rgba(215, 216, 222, 0.20);
 
     --shadow-2: 0 15px 34px 0 rgba(175, 181, 204, 0.32);
-    --shadow-3: 0 5px 15px 0 rgba(85, 74, 101, 0.37);
+    --shadow-3: var(--shadow);
     --shadow-5: 0px 20px 70px 0px rgba(0, 0, 0, 0.1);
     --shadow-7: 0px 15px 30px -2px rgba(0, 0, 0, 0.1);
     --shadow-8: -5px 18px 60px 0 rgba(210, 210, 234, 0.4);
@@ -164,7 +180,7 @@
     --shadow-11: 0 0 10px 0 rgba(0, 0, 0, 0.06);
 
     //transition easing
-    --transition: 0.3s;
+    --transition: all .3s ease;
     --transition-2: 256ms ease-in-out;
     --transition-3: transform .85s cubic-bezier(.23, 1, .32, 1), background .3s, border .3s, border-radius .3s, box-shadow .3s;
     --transition-4: all .25s cubic-bezier(.645, .045, .355, 1);
@@ -209,8 +225,8 @@
     --gradient-4: linear-gradient(180deg, #EFF1FF 0%, #FFFFFF 100%);
     --gradient-5: linear-gradient(rgb(239, 241, 255) 0%, rgb(239, 241, 255) 100%);
     --gradient-6: linear-gradient(to right, rgba(255, 255, 255, 0.15), rgba(251, 199, 226, 0.15), rgba(220, 217, 254, 0.15));
-    --gradient-7: linear-gradient(218.15deg, var(--color-secondary) 0%, var(--color-primary) 100%);
-    --gradient-8: linear-gradient(270deg, #9e77ff 0%, #4460ff 100%);
+    --gradient-7: var(--primary-gradient);
+    --gradient-8: var(--primary-gradient);
     --gradient-9: linear-gradient(180deg, #6827FF 0%, #E3F0FF 100%);
     --gradient-10: linear-gradient(180deg, #353e54d9 0%, #27304117 100%);
 

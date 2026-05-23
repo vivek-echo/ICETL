@@ -54,10 +54,7 @@
     <div class="rbt-form-group">
       <label>Category</label>
       <div class="course-category-picker" (click)="keepCategoryDropdownOpen($event)">
-        <button
-          type="button"
-          class="course-category-picker__button"
-          [class.is-open]="isCategoryDropdownOpen"
+        <button type="button" class="course-category-picker__button" [class.is-open]="isCategoryDropdownOpen"
           (click)="toggleCategoryDropdown($event)">
           <span>{{ selectedCategoryLabel }}</span>
           <i class="feather-chevron-down"></i>
@@ -67,10 +64,7 @@
         <div class="course-category-picker__menu">
           <div class="course-category-picker__search">
             <i class="feather-search"></i>
-            <input
-              type="text"
-              placeholder="Search categories..."
-              [(ngModel)]="categorySearch">
+            <input type="text" placeholder="Search categories..." [(ngModel)]="categorySearch">
           </div>
 
           <div class="course-category-picker__actions">
@@ -81,10 +75,7 @@
           <div class="course-category-picker__list">
             @for (category of filteredCategories; track category.id) {
             <label class="course-category-option">
-              <input
-                type="checkbox"
-                [checked]="isCategorySelected(category.id)"
-                (change)="toggleCategory(category)">
+              <input type="checkbox" [checked]="isCategorySelected(category.id)" (change)="toggleCategory(category)">
               <span>{{ category.categoryName }}</span>
             </label>
             }
@@ -146,7 +137,7 @@
 
     @for (course of courses; track trackByCourseId($index, course)) {
 
-    <div class="col-xl-4 col-md-6 col-12">
+    <div class="col-xl-3 col-md-6 col-12">
 
       <div class="course-card">
 
@@ -206,20 +197,14 @@
 
           </div>
 
-          <!-- DESCRIPTION -->
-          <p class="course-description">
-
-            {{ course.description }}
-
-          </p>
-
+          <div class="course-badges">
+            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+            <span class="bestseller-badge">Bestseller</span>
+          </div>
           <!-- INSTRUCTOR -->
           <div class="course-instructor">
-
             <div class="instructor-avatar">
-
               {{ getInstructorInitial(course) }}
-
             </div>
 
             <span>
@@ -259,16 +244,55 @@
 
           <div class="course-actions">
 
-            <button type="button" class="action-btn" (click)="openEditModal(course)">
+            <!-- Curriculum Button -->
+            <button type="button" class="action-btn action-btn--curriculum" (click)="goToCurriculum(course)"
+              title="Manage Curriculum">
+
+              <i class="feather-list"></i>
+
+            </button>
+
+            <!-- Existing Edit Button -->
+            <button type="button" class="action-btn" (click)="openEditModal(course)" title="Edit Course">
 
               <i class="feather-edit-2"></i>
 
             </button>
 
-
           </div>
 
         </div>
+
+        <aside class="course-preview" aria-hidden="true">
+          <h4>{{ course.title }}</h4>
+
+          <div class="course-badges">
+            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+            <span class="bestseller-badge">Bestseller</span>
+          </div>
+
+          <p class="course-preview__updated">
+            Added <strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}</strong>
+          </p>
+          <p class="course-preview__meta">
+            {{ getDurationLabel(course) }} · {{ course.categoryName || 'Course' }} · {{ course.statusLabel }}
+          </p>
+
+          <p class="course-description">
+            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+          </p>
+
+          @if (getCourseHighlights(course, 3).length > 0) {
+          <div class="course-preview__learn">
+            <h5>What You'll Learn</h5>
+            <ul class="course-preview__points">
+              @for (highlight of getCourseHighlights(course, 3); track $index) {
+              <li>{{ highlight }}</li>
+              }
+            </ul>
+          </div>
+          }
+        </aside>
 
       </div>
 
@@ -366,10 +390,51 @@
 
           <div class="rbt-form-group course-edit-form__full">
             <label>Instructor</label>
-            <ng-multiselect-dropdown class="course-category-multiselect" name="editCourseInstructors"
-              [placeholder]="'Select Instructor'" [settings]="instructorDropdownSettings" [data]="instructorList"
-              [(ngModel)]="editCourseForm.instructors">
-            </ng-multiselect-dropdown>
+            <div class="instructor-select" [class.is-open]="isEditInstructorPickerOpen"
+              (click)="keepEditInstructorPickerOpen($event)">
+              <button type="button" class="instructor-select__trigger" (click)="toggleEditInstructorPicker()"
+                [attr.aria-expanded]="isEditInstructorPickerOpen">
+                <span>{{ editInstructorPickerLabel }}</span>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+
+              @if (editCourseForm.instructors.length) {
+              <div class="instructor-selected">
+                @for (instructor of editCourseForm.instructors; track instructor.id) {
+                <span class="instructor-chip">{{ instructor.name }}</span>
+                }
+              </div>
+              }
+
+              @if (isEditInstructorPickerOpen) {
+              <div class="instructor-picker">
+                <div class="instructor-search">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="search" placeholder="Search instructors..." [value]="editInstructorSearch"
+                    (input)="setEditInstructorSearch($event)">
+                  @if (editInstructorSearch) {
+                  <button type="button" (click)="clearEditInstructorSearch()" aria-label="Clear instructor search">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                  }
+                </div>
+
+                <div class="instructor-options">
+                  @if (filteredEditInstructorList.length > 0) {
+                  @for (instructor of filteredEditInstructorList; track instructor.id) {
+                  <label class="instructor-option">
+                    <input type="checkbox" [checked]="isEditInstructorSelected(instructor)"
+                      (change)="toggleEditInstructor(instructor, $event)">
+                    <span>{{ instructor.name }}</span>
+                  </label>
+                  }
+                  } @else {
+                  <p class="instructor-picker__empty">No instructors found</p>
+                  }
+                </div>
+              </div>
+              }
+            </div>
           </div>
 
           <div class="rbt-form-group">
@@ -382,8 +447,8 @@
             <label for="edit-course-duration-unit">Duration Unit</label>
             <select id="edit-course-duration-unit" name="editCourseDurationUnit" class="course-filter-select"
               [(ngModel)]="editCourseForm.durationUnit">
-              <option value="weeks">Weeks</option>
-              <option value="months">Months</option>
+              <option [ngValue]="1">Weeks</option>
+              <option [ngValue]="2">Months</option>
             </select>
           </div>
 
@@ -403,6 +468,31 @@
             <label for="edit-course-description">Description</label>
             <textarea id="edit-course-description" name="editCourseDescription" rows="4"
               placeholder="Enter course description" [(ngModel)]="editCourseForm.description"></textarea>
+          </div>
+
+          <div class="rbt-form-group course-edit-form__full">
+            <div class="edit-highlights-card">
+              <div class="edit-highlights-card__header">
+                <label>What You'll Learn</label>
+                <button type="button" class="highlight-icon-btn highlight-icon-btn--add" (click)="addEditHighlight()"
+                  aria-label="Add learning outcome">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+
+              <div class="edit-highlight-list">
+                @for (highlight of editCourseForm.courseHighlights; track $index) {
+                <div class="edit-highlight-row">
+                  <input type="text" [name]="'editCourseHighlight' + $index" placeholder="Enter learning outcome"
+                    [(ngModel)]="editCourseForm.courseHighlights[$index]">
+                  <button type="button" class="highlight-icon-btn highlight-icon-btn--remove"
+                    (click)="removeEditHighlight($index)" aria-label="Remove learning outcome">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+                }
+              </div>
+            </div>
           </div>
 
           <div class="course-modal__actions course-edit-form__full">
