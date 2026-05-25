@@ -13,38 +13,55 @@
   </header>
 
   <section class="course-toolbar" aria-label="Course filters">
-    <div class="rbt-form-group">
-      <label>Search Course</label>
-      <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+    <div class="rbt-form-group course-field course-field--search">
+      <label for="browse-course-search">Search Course</label>
+      <div class="course-field__control">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="browse-course-search" type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+      </div>
     </div>
 
-    <div class="rbt-form-group">
-      <label>Category</label>
-      <select class="course-filter-select" [(ngModel)]="categoryId" (change)="onFilterChange()">
-        <option value="">All Categories</option>
-        @for (category of categories; track category.id) {
-        <option [ngValue]="category.id">{{ category.categoryName }}</option>
-        }
-      </select>
+    <div class="rbt-form-group course-field">
+      <label for="browse-course-category">Category</label>
+      <div class="course-field__control">
+        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        <select id="browse-course-category" class="course-filter-select" [(ngModel)]="categoryId" (change)="onFilterChange()">
+          <option value="">All Categories</option>
+          @for (category of categories; track category.id) {
+          <option [ngValue]="category.id">{{ category.categoryName }}</option>
+          }
+        </select>
+      </div>
     </div>
 
-    <div class="rbt-form-group">
-      <label>Sort</label>
-      <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
-        @for (option of sortOptions; track option.value) {
-        <option [ngValue]="option.value">{{ option.label }}</option>
-        }
-      </select>
+    <div class="rbt-form-group course-field">
+      <label for="browse-course-sort">Sort</label>
+      <div class="course-field__control">
+        <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+        <select id="browse-course-sort" class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
     </div>
 
-    <div class="rbt-form-group">
-      <label>Per Page</label>
-      <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
-        @for (option of perPageOptions; track option) {
-        <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
-        }
-      </select>
+    <div class="rbt-form-group course-field">
+      <label for="browse-course-per-page">Per Page</label>
+      <div class="course-field__control">
+        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+        <select id="browse-course-per-page" class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
     </div>
+
+    <button type="button" class="clear-filter-btn course-toolbar__reset" (click)="clearFilters()">
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      Reset
+    </button>
   </section>
 
   @if (message) {
@@ -172,7 +189,7 @@
 
             <p class="course-preview__updated">Updated <strong>October 2025</strong></p>
             <p class="course-preview__meta">
-              {{ getDurationLabel(course) }} · All Levels · Subtitles
+              {{ getDurationLabel(course) }} &middot; All Levels &middot; Subtitles
             </p>
 
             <p class="course-description">

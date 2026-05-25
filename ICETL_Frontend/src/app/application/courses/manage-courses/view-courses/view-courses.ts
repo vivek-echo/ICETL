@@ -513,14 +513,32 @@ export class ViewCourses implements OnInit, OnDestroy {
   }
 
   getDiscount(course: CourseItem): string | null {
-    const price = Number(course.price);
-    const oldPrice = Number(course.oldPrice);
+    const price = this.toNumericPrice(course.price);
+    const oldPrice = this.toNumericPrice(course.oldPrice);
 
     if (!oldPrice || !price || oldPrice <= price) {
       return null;
     }
 
     return `-${Math.round(((oldPrice - price) / oldPrice) * 100)}%`;
+  }
+
+  formatPrice(value: number | string | null): string {
+    const price = this.toNumericPrice(value);
+
+    if (price === null) {
+      return 'N/A';
+    }
+
+    if (price === 0) {
+      return 'Free';
+    }
+
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    }).format(price);
   }
 
   isActive(course: CourseItem): boolean {
@@ -795,6 +813,25 @@ export class ViewCourses implements OnInit, OnDestroy {
 
   private markViewForRefresh(): void {
     this.cdr.markForCheck();
+  }
+
+  private toNumericPrice(value: number | string | null): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const plainTextValue = value
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .trim();
+    const numericText = plainTextValue.match(/-?\d+(\.\d+)?/)?.[0] || '';
+    const price = Number(numericText);
+
+    return Number.isFinite(price) ? price : null;
   }
 
   goToCurriculum(course: any) {

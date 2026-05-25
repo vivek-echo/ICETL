@@ -62,6 +62,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/curriculum/item/update', [CurriculumController::class, 'updateItem']);
     Route::post('/curriculum/item/delete', [CurriculumController::class, 'deleteItem']);
     Route::post('/curriculum/item/order', [CurriculumController::class, 'updateItemOrder']);
+    Route::post('/curriculum/quiz/add', [CurriculumController::class, 'addQuiz']);
+    Route::post('/curriculum/quiz/update', [CurriculumController::class, 'updateQuiz']);
+    Route::post('/curriculum/quiz/delete', [CurriculumController::class, 'deleteQuiz']);
+    Route::post('/curriculum/quiz/list', [CurriculumController::class, 'listQuizzes']);
+    Route::post('/quiz/question/add', [CurriculumController::class, 'addQuizQuestion']);
+    Route::post('/quiz/question/update', [CurriculumController::class, 'updateQuizQuestion']);
+    Route::post('/quiz/question/delete', [CurriculumController::class, 'deleteQuizQuestion']);
+    Route::post('/quiz/question/list', [CurriculumController::class, 'listQuizQuestions']);
 
     // cart routes
     Route::post('/getCartItems', [CartController::class, 'getCartItems']);

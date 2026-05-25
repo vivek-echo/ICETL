@@ -2,7 +2,12 @@
   <div class="curriculum-shell">
     <header class="course-header-card">
       <div class="course-header-main">
-        <img class="course-thumbnail" [src]="course.thumbnail" [alt]="course.title" />
+        <img
+          class="course-thumbnail"
+          [src]="courseThumbnail"
+          [alt]="course.title"
+          (error)="onCourseThumbnailError()"
+        />
 
         <div class="course-info">
           <div class="header-kicker">
@@ -13,93 +18,43 @@
           <p class="instructor-name">Instructor: {{ course.instructor }}</p>
 
           <div class="course-stats">
-            <span><strong>{{ totalSections }}</strong> Sections</span>
-            <span><strong>{{ totalLectures }}</strong> Lectures</span>
-            <span><strong>{{ totalDuration }}</strong></span>
-          </div>
-
-          <div class="progress-wrap" aria-label="Course completion progress">
-            <div class="progress-label">
-              <span>Curriculum completion</span>
-              <strong>{{ course.progress }}%</strong>
-            </div>
-            <div class="progress">
-              <div
-                class="progress-bar"
-                role="progressbar"
-                [style.width.%]="course.progress"
-                [attr.aria-valuenow]="course.progress"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              ></div>
-            </div>
+            <span><i class="fa-solid fa-layer-group"></i><strong>{{ totalSections }}</strong> Sections</span>
+            <span><i class="fa-solid fa-video"></i><strong>{{ totalLectures }}</strong> Lectures</span>
+            <span><i class="fa-solid fa-circle-question"></i><strong>{{ totalQuizzes }}</strong> Quizzes</span>
+            <span><i class="fa-regular fa-clock"></i><strong>{{ totalDuration }}</strong> Duration</span>
           </div>
         </div>
       </div>
 
-      <button type="button" class="btn save-btn" [disabled]="saving" (click)="saveCurriculum()">
-        @if (saving) {
-          <span class="button-spinner" aria-hidden="true"></span>
-          Saving...
-        } @else {
-          <i class="fa-solid fa-floppy-disk"></i>
-          Save Curriculum
+      <div class="course-header-actions">
+        <button type="button" class="btn btn-soft back-btn" (click)="goBackToCourses()">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back
+        </button>
+        @if (!loading) {
+          <span class="course-status-badge" [class.is-published]="!isCourseDraft">
+            <i [class]="isCourseDraft ? 'fa-regular fa-pen-to-square' : 'fa-solid fa-check'"></i>
+            {{ courseStatusLabel }}
+          </span>
+          @if (isCourseDraft) {
+            <button
+              type="button"
+              class="btn publish-btn"
+              [disabled]="publishing || saving"
+              (click)="publishCourse()"
+            >
+              @if (publishing) {
+                <span class="button-spinner" aria-hidden="true"></span>
+                Publishing...
+              } @else {
+                <i class="fa-solid fa-paper-plane"></i>
+                Publish Course
+              }
+            </button>
+          }
         }
-      </button>
-    </header>
-
-    <div class="toolbar-row">
-      <button type="button" class="btn add-section-btn" (click)="openSectionForm()">
-        <i class="fa-solid fa-plus"></i>
-        Add New Section
-      </button>
-    </div>
-
-    @if (showAddSectionForm) {
-      <div class="inline-card section-create-card">
-        <div class="inline-card-header">
-          <span class="card-icon"><i class="fa-solid fa-layer-group"></i></span>
-          <div>
-            <h2>{{ editingSectionId ? 'Edit Section' : 'Create Section' }}</h2>
-            <p>Group related lectures, quizzes, and practice work into one learning milestone.</p>
-          </div>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-lg-5">
-            <label class="form-label" for="section-title">Section Title</label>
-            <input
-              id="section-title"
-              type="text"
-              class="form-control"
-              placeholder="Example: Introduction"
-              [(ngModel)]="sectionDraft.title"
-            />
-            @if (sectionValidationErrors.title) {
-              <div class="text-danger small mt-1">{{ sectionValidationErrors.title }}</div>
-            }
-          </div>
-          <div class="col-lg-7">
-            <label class="form-label" for="section-objective">Learning Objective</label>
-            <input
-              id="section-objective"
-              type="text"
-              class="form-control"
-              placeholder="Example: Learn Angular fundamentals"
-              [(ngModel)]="sectionDraft.objective"
-            />
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-soft" (click)="cancelSection()">Cancel</button>
-          <button type="button" class="btn btn-primary-gradient" (click)="saveSection()">
-            <i class="fa-solid fa-check"></i>
-            {{ editingSectionId ? 'Update Section' : 'Add Section' }}
-          </button>
-        </div>
       </div>
-    }
+    </header>
 
     @if (loading) {
       <div class="sections-list">
@@ -135,15 +90,91 @@
         }
       </div>
     } @else {
+      <div class="toolbar-row">
+        @if (canEditCurriculum) {
+          <button type="button" class="btn add-section-btn" (click)="openSectionForm()">
+            <i class="fa-solid fa-plus"></i>
+            Add New Section
+          </button>
+        } @else {
+          <span class="curriculum-lock-badge">
+            <i class="fa-solid fa-lock"></i>
+            {{ isCourseDraft ? 'Curriculum locked' : 'Published course cannot be edited' }}
+          </span>
+        }
+      </div>
+
+      @if (canEditCurriculum && showAddSectionForm) {
+        <div class="inline-card section-create-card">
+          <div class="inline-card-header">
+            <span class="card-icon"><i class="fa-solid fa-layer-group"></i></span>
+            <div>
+              <h2>{{ editingSectionId ? 'Edit Section' : 'Create Section' }}</h2>
+              <p>Group related lectures, quizzes, and practice work into one learning milestone.</p>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-lg-5">
+              <label class="form-label" for="section-title">Section Title</label>
+              <input
+                id="section-title"
+                type="text"
+                class="form-control"
+                placeholder="Example: Introduction"
+                [(ngModel)]="sectionDraft.title"
+              />
+              @if (sectionValidationErrors.title) {
+                <div class="text-danger small mt-1">{{ sectionValidationErrors.title }}</div>
+              }
+            </div>
+            <div class="col-lg-7">
+              <label class="form-label" for="section-objective">Learning Objective</label>
+              <input
+                id="section-objective"
+                type="text"
+                class="form-control"
+                placeholder="Example: Learn Angular fundamentals"
+                [(ngModel)]="sectionDraft.objective"
+              />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-soft" (click)="cancelSection()">Cancel</button>
+            <button
+              type="button"
+              class="btn btn-primary-gradient"
+              [disabled]="saving"
+              (click)="saveSection()"
+            >
+              @if (saving) {
+                <span class="button-spinner" aria-hidden="true"></span>
+                {{ editingSectionId ? 'Updating Section...' : 'Adding Section...' }}
+              } @else {
+                <i class="fa-solid fa-check"></i>
+                {{ editingSectionId ? 'Update Section' : 'Add Section' }}
+              }
+            </button>
+          </div>
+        </div>
+      }
 
       <div
         class="sections-list"
         cdkDropList
         [cdkDropListData]="sections"
+        [cdkDropListDisabled]="!canEditCurriculum"
         (cdkDropListDropped)="dropSection($event)"
       >
       @for (section of sections; track section.id; let sectionIndex = $index) {
-        <article class="section-card" [class.is-open]="section.expanded" cdkDrag>
+        <article
+          class="section-card"
+          [class.is-open]="section.expanded"
+          [class.is-locked]="!canEditCurriculum"
+          cdkDrag
+          [cdkDragDisabled]="!canEditCurriculum"
+        >
           <div class="section-top">
             <button type="button" class="section-toggle" (click)="toggleSection(section)">
               <i
@@ -161,20 +192,37 @@
               </p>
             </div>
 
-            <div class="section-actions" aria-label="Section actions">
-              <button type="button" class="icon-btn" title="Edit section" (click)="startEditSection(section)">
-                <i class="fa-regular fa-pen-to-square"></i>
-              </button>
-              <button type="button" class="icon-btn danger" title="Delete section" (click)="deleteSection(section.id)">
-                <i class="fa-regular fa-trash-can"></i>
-              </button>
-              <button type="button" class="icon-btn" title="Sort section">
-                <i class="fa-solid fa-sort"></i>
-              </button>
-              <button type="button" class="icon-btn drag" title="Drag section" cdkDragHandle>
-                <i class="fa-solid fa-grip-vertical"></i>
-              </button>
-            </div>
+            @if (canEditCurriculum) {
+              <div class="section-actions" aria-label="Section actions">
+                <button type="button" class="icon-btn" title="Edit section" (click)="startEditSection(section)">
+                  <i class="fa-regular fa-pen-to-square"></i>
+                </button>
+                <button type="button" class="icon-btn danger" title="Delete section" (click)="deleteSection(section.id)">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn"
+                  title="Move section up"
+                  [disabled]="sectionIndex === 0"
+                  (click)="moveSection(sectionIndex, -1)"
+                >
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn"
+                  title="Move section down"
+                  [disabled]="sectionIndex === sections.length - 1"
+                  (click)="moveSection(sectionIndex, 1)"
+                >
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <button type="button" class="icon-btn drag" title="Drag to reorder section" cdkDragHandle>
+                  <i class="fa-solid fa-grip-vertical"></i>
+                </button>
+              </div>
+            }
           </div>
 
           @if (section.expanded) {
@@ -183,38 +231,93 @@
                 class="lecture-list"
                 cdkDropList
                 [cdkDropListData]="section.items"
+                [cdkDropListDisabled]="!canEditCurriculum"
                 (cdkDropListDropped)="dropCurriculumItem($event, section)"
               >
                 @for (item of section.items; track item.id; let itemIndex = $index) {
-                  <div class="curriculum-item" cdkDrag>
+                  <div
+                    class="curriculum-item"
+                    [class.quiz-item]="item.type === 'Quiz'"
+                    cdkDrag
+                    [cdkDragDisabled]="!canEditCurriculum"
+                  >
                     <div class="item-index">{{ itemIndex + 1 }}</div>
                     <span class="item-icon"><i [class]="item.icon"></i></span>
                     <div class="item-content">
                       <h3>{{ item.type }}: {{ item.title }}</h3>
-                      <p>{{ item.meta }}</p>
+                      @if (item.type === 'Quiz') {
+                        <div class="quiz-details">
+                          <span>Passing: {{ getQuizPassingLabel(item) }}</span>
+                          <span>Time: {{ getQuizTimeLabel(item) }}</span>
+                          <span>{{ getQuizAttemptLabel(item) }}</span>
+                        </div>
+                      } @else {
+                        <p>{{ item.meta }}</p>
+                      }
                     </div>
                     @if (item.preview) {
                       <span class="preview-badge">Preview</span>
                     }
-                    <button
-                      type="button"
-                      class="item-action"
-                      title="Edit item"
-                      (click)="startEditItem(section, item)"
-                    >
-                      <i class="fa-regular fa-pen-to-square"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="item-action danger"
-                      title="Delete item"
-                      (click)="deleteCurriculumItem(section.id, item.id)"
-                    >
-                      <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                    <button type="button" class="item-action" title="Sort item" cdkDragHandle>
-                      <i class="fa-solid fa-grip-lines"></i>
-                    </button>
+                    @if (item.type === 'Lecture') {
+                      <button
+                        type="button"
+                        class="item-action"
+                        title="Preview lecture"
+                        (click)="openLecturePreview(item)"
+                      >
+                        <i class="fa-regular fa-eye"></i>
+                      </button>
+                    }
+                    @if (item.type === 'Quiz') {
+                      <button
+                        type="button"
+                        class="item-action"
+                        title="Preview questions"
+                        [disabled]="quizPreviewLoading && selectedQuizPreviewItem?.id === item.id"
+                        (click)="openQuizQuestionsPreview(item)"
+                      >
+                        <i class="fa-regular fa-eye"></i>
+                      </button>
+                    }
+                    @if (canEditCurriculum) {
+                      <button
+                        type="button"
+                        class="item-action"
+                        title="Edit item"
+                        (click)="startEditItem(section, item)"
+                      >
+                        <i class="fa-regular fa-pen-to-square"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="item-action danger"
+                        title="Delete item"
+                        (click)="deleteCurriculumItem(section.id, item.id)"
+                      >
+                        <i class="fa-regular fa-trash-can"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="item-action"
+                        title="Move item up"
+                        [disabled]="itemIndex === 0"
+                        (click)="moveCurriculumItem(section, itemIndex, -1)"
+                      >
+                        <i class="fa-solid fa-chevron-up"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="item-action"
+                        title="Move item down"
+                        [disabled]="itemIndex === section.items.length - 1"
+                        (click)="moveCurriculumItem(section, itemIndex, 1)"
+                      >
+                        <i class="fa-solid fa-chevron-down"></i>
+                      </button>
+                      <button type="button" class="item-action drag" title="Drag to reorder item" cdkDragHandle>
+                        <i class="fa-solid fa-grip-lines"></i>
+                      </button>
+                    }
                   </div>
                 } @empty {
                   <div class="empty-state">
@@ -224,14 +327,14 @@
                 }
               </div>
 
-              @if (selectedSectionId !== section.id) {
+              @if (canEditCurriculum && selectedSectionId !== section.id) {
                 <button type="button" class="btn add-item-btn" (click)="startAddItem(section)">
                   <i class="fa-solid fa-plus"></i>
                   Add Curriculum Item
                 </button>
               }
 
-              @if (selectedSectionId === section.id) {
+              @if (canEditCurriculum && selectedSectionId === section.id) {
                 <div class="inline-card item-create-card">
                   <div class="selector-header">
                     <div>
@@ -482,6 +585,7 @@
                               [ngModel]="getLectureDraft(section.id).preview"
                               (ngModelChange)="setLecturePreview(section.id, $event)"
                             />
+                            <span class="toggle-box" aria-hidden="true"></span>
                             <span>Make this a preview lecture</span>
                           </label>
                         </div>
@@ -495,22 +599,429 @@
                           [disabled]="saving || isUploading"
                           (click)="saveLecture(section)"
                         >
-                          <i class="fa-solid fa-check"></i>
-                          {{ editingItemId ? 'Update Lecture' : 'Save Lecture' }}
+                          @if (saving) {
+                            <span class="button-spinner" aria-hidden="true"></span>
+                            {{ editingItemId ? 'Updating Lecture...' : 'Saving Lecture...' }}
+                          } @else {
+                            <i class="fa-solid fa-check"></i>
+                            {{ editingItemId ? 'Update Lecture' : 'Save Lecture' }}
+                          }
                         </button>
                       </div>
                     </div>
                   }
 
-                  @if (selectedItemType && selectedItemType !== 'Lecture') {
+                  @if (selectedItemType === 'Quiz') {
+                    <div class="lecture-create-card quiz-create-card">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <label class="form-label" [for]="'quiz-title-' + section.id">Quiz Title</label>
+                          <input
+                            [id]="'quiz-title-' + section.id"
+                            type="text"
+                            class="form-control"
+                            placeholder="Example: Module Checkpoint"
+                            [ngModel]="getQuizDraft(section.id).title"
+                            (ngModelChange)="updateQuizDraft(section.id, 'title', $event)"
+                          />
+                          @if (quizValidationErrors[section.id]?.title) {
+                            <div class="text-danger small mt-1">{{ quizValidationErrors[section.id]?.title }}</div>
+                          }
+                        </div>
+
+                        <div class="col-md-4">
+                          <label class="form-label" [for]="'quiz-passing-' + section.id">Passing Percentage</label>
+                          <input
+                            [id]="'quiz-passing-' + section.id"
+                            type="number"
+                            class="form-control"
+                            min="0"
+                            max="100"
+                            placeholder="70"
+                            [ngModel]="getQuizDraft(section.id).passingPercentage"
+                            (ngModelChange)="updateQuizDraft(section.id, 'passingPercentage', $event)"
+                          />
+                          @if (quizValidationErrors[section.id]?.passingPercentage) {
+                            <div class="text-danger small mt-1">
+                              {{ quizValidationErrors[section.id]?.passingPercentage }}
+                            </div>
+                          }
+                        </div>
+
+                        <div class="col-md-4">
+                          <label class="form-label" [for]="'quiz-time-limit-' + section.id">Time Limit (minutes)</label>
+                          <input
+                            [id]="'quiz-time-limit-' + section.id"
+                            type="number"
+                            class="form-control"
+                            min="1"
+                            placeholder="30"
+                            [ngModel]="getQuizDraft(section.id).timeLimit"
+                            (ngModelChange)="updateQuizDraft(section.id, 'timeLimit', $event)"
+                          />
+                          @if (quizValidationErrors[section.id]?.timeLimit) {
+                            <div class="text-danger small mt-1">
+                              {{ quizValidationErrors[section.id]?.timeLimit }}
+                            </div>
+                          }
+                        </div>
+
+                        <div class="col-12">
+                          <label class="form-label" [for]="'quiz-description-' + section.id">Description</label>
+                          <textarea
+                            [id]="'quiz-description-' + section.id"
+                            class="form-control rich-textarea"
+                            rows="4"
+                            placeholder="Short learner-facing quiz description"
+                            [ngModel]="getQuizDraft(section.id).description"
+                            (ngModelChange)="updateQuizDraft(section.id, 'description', $event)"
+                          ></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                          <label class="preview-toggle">
+                            <input
+                              type="checkbox"
+                              [ngModel]="getQuizDraft(section.id).allowMultipleAttempts"
+                              (ngModelChange)="setQuizAllowMultipleAttempts(section.id, $event)"
+                            />
+                            <span class="toggle-box" aria-hidden="true"></span>
+                            <span>Allow Multiple Attempts</span>
+                          </label>
+                        </div>
+
+                        @if (getQuizDraft(section.id).allowMultipleAttempts) {
+                          <div class="col-md-6">
+                            <label class="form-label" [for]="'quiz-max-attempts-' + section.id">Max Attempts</label>
+                            <input
+                              [id]="'quiz-max-attempts-' + section.id"
+                              type="number"
+                              class="form-control"
+                              min="2"
+                              placeholder="3"
+                              [ngModel]="getQuizDraft(section.id).maxAttempts"
+                              (ngModelChange)="updateQuizDraft(section.id, 'maxAttempts', $event)"
+                            />
+                            @if (quizValidationErrors[section.id]?.maxAttempts) {
+                              <div class="text-danger small mt-1">
+                                {{ quizValidationErrors[section.id]?.maxAttempts }}
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <div class="col-12">
+                          <label class="preview-toggle">
+                            <input
+                              type="checkbox"
+                              [ngModel]="getQuizDraft(section.id).preview"
+                              (ngModelChange)="setQuizPreview(section.id, $event)"
+                            />
+                            <span class="toggle-box" aria-hidden="true"></span>
+                            <span>Preview Quiz</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="quiz-question-actions">
+                        <button
+                          type="button"
+                          class="btn btn-soft"
+                          [disabled]="!canManageQuizQuestions() || showQuizQuestionForm[section.id] || isLoadingQuizQuestions(section.id)"
+                          (click)="openQuizQuestionForm(section.id)"
+                        >
+                          <i class="fa-solid fa-plus"></i>
+                          Add Question
+                        </button>
+                      </div>
+
+                      @if (canManageQuizQuestions()) {
+                        @if (isLoadingQuizQuestions(section.id)) {
+                          <div class="question-list-state">Loading questions...</div>
+                        } @else if (getQuizQuestions(section.id).length) {
+                          <div class="saved-question-list">
+                            @for (question of getQuizQuestions(section.id); track question.id || $index; let questionIndex = $index) {
+                              <article class="saved-question-card">
+                                <div class="saved-question-index">{{ questionIndex + 1 }}</div>
+                                <div class="saved-question-content">
+                                  <h4>{{ question.question }}</h4>
+                                  <div class="saved-question-meta">
+                                    <span>{{ getQuizQuestionTypeLabel(question.questionType) }}</span>
+                                    <span>{{ question.marks }} marks</span>
+                                    <span>{{ question.options.length }} options</span>
+                                    <span>Correct: {{ getCorrectOptionSummary(question) }}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  class="item-action"
+                                  title="Preview question"
+                                  (click)="openQuestionPreview(question)"
+                                >
+                                  <i class="fa-regular fa-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="item-action"
+                                  title="Edit question"
+                                  (click)="editQuizQuestion(section.id, question)"
+                                >
+                                  <i class="fa-regular fa-pen-to-square"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="item-action danger"
+                                  title="Delete question"
+                                  (click)="deleteQuizQuestion(section.id, question.id!)"
+                                >
+                                  <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                              </article>
+                            }
+                          </div>
+                        }
+                      }
+
+                      @if (showQuizQuestionForm[section.id]) {
+                        <div class="question-create-card">
+                          <div class="row g-3">
+                            <div class="col-12">
+                              <label class="form-label" [for]="'quiz-question-' + section.id">Question</label>
+                              <textarea
+                                [id]="'quiz-question-' + section.id"
+                                class="form-control"
+                                rows="4"
+                                placeholder="Enter question"
+                                [ngModel]="getQuizQuestionDraft(section.id).question"
+                                (ngModelChange)="updateQuizQuestionDraft(section.id, 'question', $event)"
+                              ></textarea>
+                              @if (quizQuestionValidationErrors[section.id]?.question) {
+                                <div class="text-danger small mt-1">
+                                  {{ quizQuestionValidationErrors[section.id]?.question }}
+                                </div>
+                              }
+                            </div>
+
+                            <div class="col-12">
+                              <label class="form-label">Question Type</label>
+                              <div class="source-options question-type-options">
+                                <label
+                                  class="source-option"
+                                  [class.active]="getQuizQuestionDraft(section.id).questionType === 'single_choice'"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="questionType{{ section.id }}"
+                                    [ngModel]="getQuizQuestionDraft(section.id).questionType"
+                                    [value]="'single_choice'"
+                                    (ngModelChange)="setQuizQuestionType(section.id, $event)"
+                                  />
+                                  <span><i class="fa-regular fa-circle-dot"></i> Single Choice</span>
+                                </label>
+                                <label
+                                  class="source-option"
+                                  [class.active]="getQuizQuestionDraft(section.id).questionType === 'multiple_choice'"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="questionType{{ section.id }}"
+                                    [ngModel]="getQuizQuestionDraft(section.id).questionType"
+                                    [value]="'multiple_choice'"
+                                    (ngModelChange)="setQuizQuestionType(section.id, $event)"
+                                  />
+                                  <span><i class="fa-regular fa-square-check"></i> Multiple Choice</span>
+                                </label>
+                                <label
+                                  class="source-option"
+                                  [class.active]="getQuizQuestionDraft(section.id).questionType === 'true_false'"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="questionType{{ section.id }}"
+                                    [ngModel]="getQuizQuestionDraft(section.id).questionType"
+                                    [value]="'true_false'"
+                                    (ngModelChange)="setQuizQuestionType(section.id, $event)"
+                                  />
+                                  <span><i class="fa-solid fa-toggle-on"></i> True/False</span>
+                                </label>
+                              </div>
+                              @if (quizQuestionValidationErrors[section.id]?.questionType) {
+                                <div class="text-danger small mt-1">
+                                  {{ quizQuestionValidationErrors[section.id]?.questionType }}
+                                </div>
+                              }
+                            </div>
+
+                            <div class="col-12">
+                              <div class="question-options-header">
+                                <label class="form-label">Options</label>
+                                @if (!isTrueFalseQuestion(section.id)) {
+                                  <button
+                                    type="button"
+                                    class="btn btn-soft"
+                                    [disabled]="!canAddQuizQuestionOption(section.id)"
+                                    (click)="addQuizQuestionOption(section.id)"
+                                  >
+                                    <i class="fa-solid fa-plus"></i>
+                                    Add Option
+                                  </button>
+                                }
+                              </div>
+
+                              <div class="question-options-list">
+                                @for (option of getQuizQuestionDraft(section.id).options; track $index; let optionIndex = $index) {
+                                  <div class="question-option-row">
+                                    <label class="preview-toggle option-correct-toggle">
+                                      @if (isMultipleChoiceQuestion(section.id)) {
+                                        <input
+                                          type="checkbox"
+                                          [ngModel]="option.isCorrect"
+                                          (ngModelChange)="setQuizQuestionCorrectOption(section.id, optionIndex, $event)"
+                                        />
+                                      } @else {
+                                        <input
+                                          type="radio"
+                                          name="correctOption{{ section.id }}"
+                                          [checked]="option.isCorrect"
+                                          (change)="setQuizQuestionCorrectOption(section.id, optionIndex, true)"
+                                        />
+                                      }
+                                      <span class="toggle-box" aria-hidden="true"></span>
+                                      <span>Correct</span>
+                                    </label>
+
+                                    <div class="question-option-field">
+                                      <label class="form-label" [for]="'quiz-question-option-' + section.id + '-' + optionIndex">
+                                        {{ isTrueFalseQuestion(section.id) ? option.optionText : getQuizQuestionOptionLabel(optionIndex) }}
+                                      </label>
+                                      <input
+                                        [id]="'quiz-question-option-' + section.id + '-' + optionIndex"
+                                        type="text"
+                                        class="form-control"
+                                        [readonly]="isTrueFalseQuestion(section.id)"
+                                        [placeholder]="getQuizQuestionOptionLabel(optionIndex)"
+                                        [ngModel]="option.optionText"
+                                        (ngModelChange)="updateQuizQuestionOption(section.id, optionIndex, $event)"
+                                      />
+                                    </div>
+
+                                    @if (!isTrueFalseQuestion(section.id)) {
+                                      <button
+                                        type="button"
+                                        class="btn btn-soft option-remove-btn"
+                                        [disabled]="!canRemoveQuizQuestionOption(section.id)"
+                                        (click)="removeQuizQuestionOption(section.id, optionIndex)"
+                                      >
+                                        <i class="fa-regular fa-trash-can"></i>
+                                        Remove Option
+                                      </button>
+                                    }
+                                  </div>
+                                }
+                              </div>
+
+                              @if (quizQuestionValidationErrors[section.id]?.options) {
+                                <div class="text-danger small mt-1">
+                                  {{ quizQuestionValidationErrors[section.id]?.options }}
+                                </div>
+                              }
+                              @if (quizQuestionValidationErrors[section.id]?.correctAnswer) {
+                                <div class="text-danger small mt-1">
+                                  {{ quizQuestionValidationErrors[section.id]?.correctAnswer }}
+                                </div>
+                              }
+                            </div>
+
+                            <div class="col-md-4">
+                              <label class="form-label" [for]="'quiz-question-marks-' + section.id">Marks</label>
+                              <input
+                                [id]="'quiz-question-marks-' + section.id"
+                                type="number"
+                                class="form-control"
+                                min="1"
+                                placeholder="1"
+                                [ngModel]="getQuizQuestionDraft(section.id).marks"
+                                (ngModelChange)="updateQuizQuestionDraft(section.id, 'marks', $event)"
+                              />
+                              @if (quizQuestionValidationErrors[section.id]?.marks) {
+                                <div class="text-danger small mt-1">
+                                  {{ quizQuestionValidationErrors[section.id]?.marks }}
+                                </div>
+                              }
+                            </div>
+
+                            <div class="col-md-8">
+                              <label class="form-label" [for]="'quiz-question-explanation-' + section.id">Explanation</label>
+                              <input
+                                [id]="'quiz-question-explanation-' + section.id"
+                                type="text"
+                                class="form-control"
+                                placeholder="Optional explanation"
+                                [ngModel]="getQuizQuestionDraft(section.id).explanation"
+                                (ngModelChange)="updateQuizQuestionDraft(section.id, 'explanation', $event)"
+                              />
+                            </div>
+                          </div>
+
+                          <div class="form-actions question-form-actions">
+                            <button type="button" class="btn btn-soft" (click)="cancelQuizQuestion(section.id)">Cancel</button>
+                            <button
+                              type="button"
+                              class="btn btn-primary-gradient"
+                              [disabled]="saving"
+                              (click)="saveQuizQuestion(section.id)"
+                            >
+                              @if (saving) {
+                                <span class="button-spinner" aria-hidden="true"></span>
+                                {{ editingQuizQuestionIds[section.id] ? 'Updating Question...' : 'Saving Question...' }}
+                              } @else {
+                                <i class="fa-solid fa-check"></i>
+                                {{ editingQuizQuestionIds[section.id] ? 'Update Question' : 'Save Question' }}
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      }
+
+                      <div class="form-actions">
+                        <button type="button" class="btn btn-soft" (click)="cancelAddItem(section)">Cancel</button>
+                        <button
+                          type="button"
+                          class="btn btn-primary-gradient"
+                          [disabled]="saving"
+                          (click)="saveQuiz(section)"
+                        >
+                          @if (saving) {
+                            <span class="button-spinner" aria-hidden="true"></span>
+                            {{ editingItemId ? 'Updating Quiz...' : 'Saving Quiz...' }}
+                          } @else {
+                            <i class="fa-solid fa-check"></i>
+                            {{ editingItemId ? 'Update Quiz' : 'Save Quiz' }}
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  }
+
+                  @if (isPlaceholderItemType(selectedItemType)) {
                     <div class="quick-draft-card">
                       <div>
                         <h4>{{ selectedItemType }} Draft</h4>
                         <p>Create the placeholder now and configure detailed settings later.</p>
                       </div>
-                      <button type="button" class="btn btn-primary-gradient" (click)="savePlaceholderItem(section)">
-                        <i class="fa-solid fa-check"></i>
-                        {{ editingItemId ? 'Update' : 'Add' }} {{ selectedItemType }}
+                      <button
+                        type="button"
+                        class="btn btn-primary-gradient"
+                        [disabled]="saving"
+                        (click)="savePlaceholderItem(section)"
+                      >
+                        @if (saving) {
+                          <span class="button-spinner" aria-hidden="true"></span>
+                          {{ editingItemId ? 'Updating...' : 'Adding...' }}
+                        } @else {
+                          <i class="fa-solid fa-check"></i>
+                          {{ editingItemId ? 'Update' : 'Add' }} {{ selectedItemType }}
+                        }
                       </button>
                     </div>
                   }
@@ -528,4 +1039,202 @@
       </div>
     }
   </div>
+
+  @if (selectedQuestionPreview; as previewQuestion) {
+    <div class="question-preview-backdrop" role="presentation" (click)="closeQuestionPreview()">
+      <div
+        class="question-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="question-preview-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="question-preview-header">
+          <div>
+            <span class="question-preview-kicker">
+              {{ getQuizQuestionTypeLabel(previewQuestion.questionType) }} | {{ previewQuestion.marks }} marks
+            </span>
+            <h3 id="question-preview-title">Question Preview</h3>
+          </div>
+          <button type="button" class="icon-btn" title="Close preview" (click)="closeQuestionPreview()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="question-preview-body">
+          <p class="question-preview-text">{{ previewQuestion.question }}</p>
+
+          <div class="question-preview-options">
+            @for (option of previewQuestion.options; track option.id || $index; let optionIndex = $index) {
+              <div class="question-preview-option" [class.is-correct]="option.isCorrect">
+                <span class="question-preview-option-label">{{ getQuizQuestionOptionLabel(optionIndex) }}</span>
+                <span>{{ option.optionText }}</span>
+                @if (option.isCorrect) {
+                  <strong>Correct</strong>
+                }
+              </div>
+            }
+          </div>
+
+          @if (previewQuestion.explanation) {
+            <div class="question-preview-explanation">
+              <strong>Explanation</strong>
+              <p>{{ previewQuestion.explanation }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="form-actions question-preview-actions">
+          <button type="button" class="btn btn-soft" (click)="closeQuestionPreview()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedLecturePreviewItem; as previewLecture) {
+    <div class="question-preview-backdrop" role="presentation" (click)="closeLecturePreview()">
+      <div
+        class="question-preview-modal lecture-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lecture-preview-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="question-preview-header">
+          <div>
+            <span class="question-preview-kicker">
+              {{ getLecturePreviewSourceLabel(previewLecture) }} | {{ getLecturePreviewDurationLabel(previewLecture) }}
+            </span>
+            <h3 id="lecture-preview-title">{{ previewLecture.title }}</h3>
+          </div>
+          <button type="button" class="icon-btn" title="Close preview" (click)="closeLecturePreview()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="question-preview-body lecture-preview-body">
+          @if (previewLecture.contentType === 'youtube') {
+            @if (getLecturePreviewEmbedUrl(previewLecture); as lectureEmbedUrl) {
+              <div class="lecture-preview-frame">
+                <iframe
+                  [src]="lectureEmbedUrl"
+                  [title]="previewLecture.title || 'Lecture preview'"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  loading="lazy"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen
+                ></iframe>
+              </div>
+            } @else {
+              <div class="question-list-state">No YouTube preview is available for this lecture.</div>
+            }
+          } @else if (previewLecture.contentType === 'upload') {
+            @if (getLecturePreviewFileUrl(previewLecture); as lectureFileUrl) {
+              <video class="lecture-preview-video" controls [src]="lectureFileUrl">
+                Your browser does not support video playback.
+              </video>
+            } @else {
+              <div class="question-list-state">No uploaded video is available for this lecture.</div>
+            }
+          } @else if (previewLecture.contentType === 'article') {
+            @if (previewLecture.description) {
+              <article class="lecture-preview-article">
+                <p>{{ previewLecture.description }}</p>
+              </article>
+            } @else {
+              <div class="question-list-state">No article content is available for this lecture.</div>
+            }
+          } @else {
+            <div class="question-list-state">No preview is available for this lecture.</div>
+          }
+
+          @if (previewLecture.contentType !== 'article' && previewLecture.description) {
+            <div class="lecture-preview-description">
+              <strong>Description</strong>
+              <p>{{ previewLecture.description }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="form-actions question-preview-actions">
+          <button type="button" class="btn btn-soft" (click)="closeLecturePreview()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedQuizPreviewItem; as previewQuiz) {
+    <div class="question-preview-backdrop" role="presentation" (click)="closeQuizQuestionsPreview()">
+      <div
+        class="question-preview-modal quiz-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quiz-preview-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="question-preview-header">
+          <div>
+            <span class="question-preview-kicker">
+              {{ getQuizPassingLabel(previewQuiz) }} | {{ getQuizTimeLabel(previewQuiz) }}
+            </span>
+            <h3 id="quiz-preview-title">{{ previewQuiz.title }}</h3>
+          </div>
+          <button type="button" class="icon-btn" title="Close preview" (click)="closeQuizQuestionsPreview()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="question-preview-body">
+          @if (quizPreviewLoading) {
+            <div class="question-list-state">Loading questions...</div>
+          } @else if (quizPreviewError) {
+            <div class="question-list-state">{{ quizPreviewError }}</div>
+          } @else if (quizPreviewQuestions.length) {
+            <div class="quiz-preview-question-list">
+              @for (question of quizPreviewQuestions; track question.id || $index; let questionIndex = $index) {
+                <article class="quiz-preview-question-card">
+                  <div class="quiz-preview-question-head">
+                    <span class="saved-question-index">{{ questionIndex + 1 }}</span>
+                    <div>
+                      <p class="question-preview-text">{{ question.question }}</p>
+                      <div class="saved-question-meta">
+                        <span>{{ getQuizQuestionTypeLabel(question.questionType) }}</span>
+                        <span>{{ question.marks }} marks</span>
+                        <span>Correct: {{ getCorrectOptionSummary(question) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="question-preview-options">
+                    @for (option of question.options; track option.id || $index; let optionIndex = $index) {
+                      <div class="question-preview-option" [class.is-correct]="option.isCorrect">
+                        <span class="question-preview-option-label">{{ getQuizQuestionOptionLabel(optionIndex) }}</span>
+                        <span>{{ option.optionText }}</span>
+                        @if (option.isCorrect) {
+                          <strong>Correct</strong>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  @if (question.explanation) {
+                    <div class="question-preview-explanation">
+                      <strong>Explanation</strong>
+                      <p>{{ question.explanation }}</p>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          } @else {
+            <div class="question-list-state">No questions added yet.</div>
+          }
+        </div>
+
+        <div class="form-actions question-preview-actions">
+          <button type="button" class="btn btn-soft" (click)="closeQuizQuestionsPreview()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
 </section>

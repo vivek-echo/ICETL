@@ -165,17 +165,24 @@
 
         <div class="course-card__footer">
           <div class="course-price">
-            <strong><i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.price }}</strong>
+            <strong>{{ formatPrice(course.price) }}</strong>
 
-            <span>
-              @if (course.oldPrice) {
-              <i class="fa-solid fa-indian-rupee-sign me-1"></i>{{ course.oldPrice }}
-              }
-            </span>
+            @if (course.oldPrice) {
+            <span>{{ formatPrice(course.oldPrice) }}</span>
+            }
           </div>
         </div>
 
         <aside class="course-preview" aria-hidden="true">
+          <div class="course-preview__top">
+            <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+              {{ course.statusLabel }}
+            </span>
+            <span class="course-preview__date">
+              {{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
+            </span>
+          </div>
+
           <h4>{{ course.title }}</h4>
 
           <div class="course-badges">
@@ -183,16 +190,23 @@
             <span class="bestseller-badge">Bestseller</span>
           </div>
 
-          <p class="course-preview__updated">
-            Added <strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}</strong>
-          </p>
-          <p class="course-preview__meta">
-            {{ getDurationLabel(course) }} · {{ course.categoryName || 'Course' }} · {{ course.statusLabel }}
-          </p>
+          <div class="course-preview__meta-grid">
+            <span><i class="feather-clock"></i>{{ getDurationLabel(course) }}</span>
+            <span><i class="feather-grid"></i>{{ course.categoryName || 'Course' }}</span>
+            <span><i class="feather-users"></i>{{ course.instructorName || 'Instructor' }}</span>
+          </div>
 
           <p class="course-description">
             {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
           </p>
+
+          <div class="course-preview__creator">
+            <div class="instructor-avatar">{{ getCreatorInitial(course) }}</div>
+            <span>
+              Added by
+              <strong>{{ course.createdByName || 'User' }}</strong>
+            </span>
+          </div>
 
           @if (getCourseHighlights(course, 3).length > 0) {
           <div class="course-preview__learn">

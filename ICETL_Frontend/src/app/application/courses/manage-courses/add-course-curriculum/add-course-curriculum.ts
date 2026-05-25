@@ -4,20 +4,28 @@ import { HttpEventType } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+import { finalize, firstValueFrom, Subscription, timeout } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
-import { CurriculumItemPayload, CurriculumService, SectionPayload } from '../../services/curriculum';
+import { Course } from '../../services/course';
+import {
+  CurriculumItemPayload,
+  CurriculumQuizPayload,
+  CurriculumQuizQuestion,
+  CurriculumQuizQuestionPayload,
+  CurriculumService,
+  SectionPayload,
+} from '../../services/curriculum';
 
-type CurriculumItemType =
-  | 'Lecture'
-  | 'Quiz'
-  | 'Coding Exercise'
-  | 'Practice Test'
-  | 'Assignment'
-  | 'Role Play';
+const CURRICULUM_ITEM_TYPES = ['Lecture', 'Quiz', 'Practice Test', 'Assignment'] as const;
+
+type CurriculumItemType = (typeof CURRICULUM_ITEM_TYPES)[number];
+type PlaceholderItemType = Exclude<CurriculumItemType, 'Lecture' | 'Quiz'>;
 
 type LectureSource = 'youtube' | 'upload' | 'article';
+type QuizQuestionType = 'single_choice' | 'multiple_choice' | 'true_false';
 
 interface CourseSummary {
   title: string;
@@ -40,6 +48,10 @@ interface CurriculumItem {
   fileUrl?: string;
   duration?: string;
   description?: string;
+  passingPercentage?: number | string;
+  timeLimit?: number | string;
+  allowMultipleAttempts?: boolean;
+  maxAttempts?: number | string;
 }
 
 interface CurriculumSection {
@@ -70,6 +82,33 @@ interface LectureDraft {
   description: string;
 }
 
+interface QuizDraft {
+  title: string;
+  description: string;
+  passingPercentage: number | string;
+  timeLimit: number | string;
+  allowMultipleAttempts: boolean;
+  maxAttempts: number | string;
+  preview: boolean;
+}
+
+interface QuizQuestionOptionDraft {
+  id?: number;
+  optionText: string;
+  isCorrect: boolean;
+}
+
+interface QuizQuestionDraft {
+  id?: number;
+  curriculumItemId?: number;
+  question: string;
+  questionType: QuizQuestionType;
+  marks: number | string;
+  explanation: string;
+  options: QuizQuestionOptionDraft[];
+  sortOrder?: number;
+}
+
 interface SectionValidationErrors {
   title?: string;
 }
@@ -82,7 +121,22 @@ interface LectureValidationErrors {
   youtubeUrl?: string;
 }
 
-const PENDING_LECTURE_WARNING = 'Video upload or lecture changes are not saved.';
+interface QuizValidationErrors {
+  title?: string;
+  passingPercentage?: string;
+  timeLimit?: string;
+  maxAttempts?: string;
+}
+
+interface QuizQuestionValidationErrors {
+  question?: string;
+  questionType?: string;
+  marks?: string;
+  options?: string;
+  correctAnswer?: string;
+}
+
+const PENDING_LECTURE_WARNING = 'Curriculum item changes are not saved.';
 
 @Component({
   selector: 'app-add-course-curriculum',
@@ -92,10 +146,14 @@ const PENDING_LECTURE_WARNING = 'Video upload or lecture changes are not saved.'
   styleUrl: './add-course-curriculum.scss',
 })
 export class AddCourseCurriculum implements OnDestroy {
+  readonly placeholderImage = 'assets/images/course/course-01.png';
   courseData: any;
   sections: CurriculumSection[] = [];
   loading = true;
   saving = false;
+  publishing = false;
+  isCourseDraft = true;
+  courseStatusLabel = 'Draft';
   sectionsLoaded = false;
   loadError = '';
   saveError = '';
@@ -108,11 +166,26 @@ export class AddCourseCurriculum implements OnDestroy {
   skeletonItems = Array.from({ length: 3 });
   private youtubeEmbedUrlCache = new Map<string, SafeResourceUrl>();
   private uploadSubscription?: Subscription;
+  private quizPreviewSubscription?: Subscription;
 
   sectionDraft: SectionDraft = this.createSectionDraft();
   lectureDrafts: Record<number, LectureDraft> = {};
+  quizDrafts: Record<number, QuizDraft> = {};
+  quizQuestionDrafts: Record<number, QuizQuestionDraft> = {};
+  showQuizQuestionForm: Record<number, boolean> = {};
+  quizQuestions: Record<number, QuizQuestionDraft[]> = {};
+  editingQuizQuestionIds: Record<number, number | null> = {};
+  loadingQuizQuestions: Record<number, boolean> = {};
+  selectedQuestionPreview: QuizQuestionDraft | null = null;
+  selectedLecturePreviewItem: CurriculumItem | null = null;
+  selectedQuizPreviewItem: CurriculumItem | null = null;
+  quizPreviewQuestions: QuizQuestionDraft[] = [];
+  quizPreviewLoading = false;
+  quizPreviewError = '';
   sectionValidationErrors: SectionValidationErrors = {};
   lectureValidationErrors: Record<number, LectureValidationErrors> = {};
+  quizValidationErrors: Record<number, QuizValidationErrors> = {};
+  quizQuestionValidationErrors: Record<number, QuizQuestionValidationErrors> = {};
   selectedVideo: File | null = null;
   uploadProgress = 0;
   isUploading = false;
@@ -121,19 +194,12 @@ export class AddCourseCurriculum implements OnDestroy {
   uploadedFileSize = 0;
   hasUnsavedChanges = false;
   uploadError = '';
-  itemTypes: CurriculumItemType[] = [
-    'Lecture',
-    'Quiz',
-    'Coding Exercise',
-    'Practice Test',
-    'Assignment',
-    'Role Play',
-  ];
+  itemTypes: CurriculumItemType[] = [...CURRICULUM_ITEM_TYPES];
 
   course: CourseSummary = {
     title: '',
     instructor: '',
-    thumbnail: '',
+    thumbnail: this.placeholderImage,
     progress: 0,
   };
 
@@ -142,9 +208,11 @@ export class AddCourseCurriculum implements OnDestroy {
     private formBuilder: FormBuilder,
     private formValidationService: FormValidationService,
     private el: ElementRef,
+    private courseService: Course,
     private curriculumService: CurriculumService,
     private changeDetector: ChangeDetectorRef,
     private alertHelper: AlertHelperService,
+    private router: Router,
   ) {}
 
   ngOnInit() {
@@ -157,24 +225,16 @@ export class AddCourseCurriculum implements OnDestroy {
       return;
     }
 
-    this.course = {
-      title: this.courseData.title || this.courseData.courseTitle || '',
-      instructor: this.courseData.instructor || this.courseData.instructorName || '',
-      thumbnail:
-        this.courseData.thumbnail ||
-        this.courseData.courseThumbnail ||
-        this.courseData.image ||
-        '',
-      progress: this.courseData.progress ?? 0,
-    };
+    this.syncCourseSummary();
 
     setTimeout(() => {
-      void this.loadSections();
+      void this.initializeCourseCurriculum();
     });
   }
 
   ngOnDestroy(): void {
     this.uploadSubscription?.unsubscribe();
+    this.quizPreviewSubscription?.unsubscribe();
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -185,6 +245,23 @@ export class AddCourseCurriculum implements OnDestroy {
 
     event.preventDefault();
     event.returnValue = PENDING_LECTURE_WARNING;
+  }
+
+  @HostListener('document:keydown.escape')
+  closeQuestionPreviewWithEscape(): void {
+    if (this.selectedQuestionPreview) {
+      this.closeQuestionPreview();
+      return;
+    }
+
+    if (this.selectedLecturePreviewItem) {
+      this.closeLecturePreview();
+      return;
+    }
+
+    if (this.selectedQuizPreviewItem) {
+      this.closeQuizQuestionsPreview();
+    }
   }
 
   canDeactivate(): boolean | Promise<boolean> {
@@ -212,20 +289,183 @@ export class AddCourseCurriculum implements OnDestroy {
     );
   }
 
-  get totalDuration(): string {
-    return this.courseData?.duration || this.courseData?.totalDuration || '0 Hours';
+  get totalQuizzes(): number {
+    return this.sections.reduce(
+      (total, section) => total + section.items.filter((item) => item.type === 'Quiz').length,
+      0,
+    );
   }
 
-  saveCurriculum(): void {
-    if (this.saving) {
+  get canEditCurriculum(): boolean {
+    return this.isCourseDraft && !this.publishing;
+  }
+
+  get totalDuration(): string {
+    const duration = this.courseData?.duration ?? this.courseData?.totalDuration;
+
+    if (duration === null || duration === undefined || duration === '') {
+      return '0 Hours';
+    }
+
+    if (typeof duration === 'number') {
+      return `${duration} ${duration === 1 ? 'Hour' : 'Hours'}`;
+    }
+
+    const durationText = String(duration).trim();
+
+    if (/^\d+(\.\d+)?$/.test(durationText)) {
+      return `${durationText} ${durationText === '1' ? 'Hour' : 'Hours'}`;
+    }
+
+    return durationText;
+  }
+
+  get courseThumbnail(): string {
+    return this.course.thumbnail || this.placeholderImage;
+  }
+
+  onCourseThumbnailError(): void {
+    this.course = {
+      ...this.course,
+      thumbnail: this.placeholderImage,
+    };
+  }
+
+  goBackToCourses(): void {
+    void this.router.navigate(['/application/courses/manageCourses/view']);
+  }
+
+  private async initializeCourseCurriculum(): Promise<void> {
+    await this.loadCourseDetails();
+    await this.loadSections();
+  }
+
+  private async loadCourseDetails(): Promise<void> {
+    if (!this.courseData?.id) {
       return;
     }
 
-    this.saving = true;
+    try {
+      const response: any = await firstValueFrom(
+        this.courseService.getCourseById({ id: this.courseData.id }).pipe(timeout(15000)),
+      );
 
-    setTimeout(() => {
-      this.saving = false;
-    }, 800);
+      if (!response.status || !response.data) {
+        return;
+      }
+
+      this.courseData = {
+        ...this.courseData,
+        ...response.data,
+      };
+      this.syncCourseSummary();
+    } catch (error) {
+      console.error('Error loading course details:', error);
+    }
+  }
+
+  private syncCourseSummary(): void {
+    this.syncCourseStatus();
+
+    this.course = {
+      title: this.courseData?.title || this.courseData?.courseTitle || '',
+      instructor: this.courseData?.instructor || this.courseData?.instructorName || '',
+      thumbnail: this.resolveCourseThumbnail(this.courseData),
+      progress: this.courseData?.progress ?? 0,
+    };
+  }
+
+  private syncCourseStatus(): void {
+    const status = this.getCourseStatusValue(this.courseData);
+    const isPublished = this.isPublishedStatus(status, this.courseData?.statusLabel);
+
+    this.isCourseDraft = !isPublished;
+    this.courseStatusLabel = isPublished ? 'Published' : 'Draft';
+  }
+
+  private getCourseStatusValue(courseData: any): unknown {
+    if (!courseData) {
+      return undefined;
+    }
+
+    return courseData.status
+      ?? courseData.publishStatus
+      ?? courseData.courseStatus;
+  }
+
+  private isPublishedStatus(status: unknown, statusLabel?: unknown): boolean {
+    if (status === 1 || status === true) {
+      return true;
+    }
+
+    if (typeof status === 'string') {
+      const normalizedStatus = status.trim().toLowerCase();
+
+      if (['1', 'published', 'active'].includes(normalizedStatus)) {
+        return true;
+      }
+    }
+
+    return `${statusLabel || ''}`.trim().toLowerCase() === 'published';
+  }
+
+  async publishCourse(): Promise<void> {
+    if (!this.courseData?.id || !this.isCourseDraft || this.publishing) {
+      return;
+    }
+
+    const confirmed = await this.alertHelper.confirm(
+      'Publish this course?',
+      'Publish Course',
+      'Publish',
+      'Cancel',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.publishing = true;
+    this.saveError = '';
+
+    try {
+      const courseResponse: any = await firstValueFrom(
+        this.courseService.getCourseById({ id: this.courseData.id }).pipe(timeout(15000)),
+      );
+
+      if (!courseResponse.status || !courseResponse.data) {
+        this.saveError = courseResponse.message || 'Unable to load course details.';
+        await this.alertHelper.error(this.saveError);
+        return;
+      }
+
+      const publishPayload = this.createCoursePublishPayload(courseResponse.data);
+      const response: any = await firstValueFrom(
+        this.courseService.updateCourse(publishPayload).pipe(timeout(20000)),
+      );
+
+      if (!response.status) {
+        this.saveError = response.message || 'Unable to publish course.';
+        await this.alertHelper.error(this.saveError);
+        return;
+      }
+
+      this.courseData = {
+        ...courseResponse.data,
+        status: 1,
+        statusLabel: 'Published',
+      };
+      this.syncCourseStatus();
+      this.closeCurriculumEditor();
+      await this.alertHelper.success(response.message || 'Course published successfully');
+    } catch (error) {
+      console.error('Error publishing course:', error);
+      this.saveError = 'Unable to publish course.';
+      await this.alertHelper.error(this.saveError);
+    } finally {
+      this.publishing = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadSections(): Promise<void> {
@@ -273,8 +513,32 @@ export class AddCourseCurriculum implements OnDestroy {
   private finishLoading(): void {
     setTimeout(() => {
       this.loading = false;
-      this.changeDetector.detectChanges();
+      this.changeDetector.markForCheck();
     });
+  }
+
+  private ensureCurriculumEditable(): boolean {
+    if (this.canEditCurriculum) {
+      return true;
+    }
+
+    this.saveError = 'Published courses cannot be edited.';
+    return false;
+  }
+
+  private closeCurriculumEditor(): void {
+    this.showAddSectionForm = false;
+    this.editingSectionId = null;
+    this.selectedSectionId = null;
+    this.selectedItemType = null;
+    this.editingItemId = null;
+    this.sectionDraft = this.createSectionDraft();
+    this.sectionValidationErrors = {};
+    this.lectureValidationErrors = {};
+    this.quizValidationErrors = {};
+    this.quizQuestionValidationErrors = {};
+    this.resetUploadState();
+    this.hasUnsavedChanges = false;
   }
 
   toggleSection(section: CurriculumSection): void {
@@ -286,6 +550,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async dropSection(event: CdkDragDrop<CurriculumSection[]>): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     if (event.previousIndex === event.currentIndex) {
       return;
     }
@@ -304,10 +572,40 @@ export class AddCourseCurriculum implements OnDestroy {
     }
   }
 
+  async moveSection(sectionIndex: number, direction: -1 | 1): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    const nextIndex = sectionIndex + direction;
+
+    if (nextIndex < 0 || nextIndex >= this.sections.length) {
+      return;
+    }
+
+    const reorderedSections = [...this.sections];
+    moveItemInArray(reorderedSections, sectionIndex, nextIndex);
+    const sortedSections = this.updateSectionSortOrders(reorderedSections);
+    this.sections = sortedSections;
+    this.saveError = '';
+
+    try {
+      await this.updateSectionOrder(sortedSections);
+    } catch (error) {
+      console.error('Error updating section order:', error);
+      this.saveError = 'Unable to update section order.';
+      await this.loadSections();
+    }
+  }
+
   async dropCurriculumItem(
     event: CdkDragDrop<CurriculumItem[]>,
     section: CurriculumSection,
   ): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     if (event.previousIndex === event.currentIndex) {
       return;
     }
@@ -321,6 +619,37 @@ export class AddCourseCurriculum implements OnDestroy {
         ? { ...currentSection, items: sortedItems }
         : currentSection,
     );
+
+    try {
+      await this.updateItemOrder(sortedItems);
+    } catch (error) {
+      console.error('Error updating curriculum item order:', error);
+      this.saveError = 'Unable to update curriculum item order.';
+    } finally {
+      await this.refreshSectionItems(section.id);
+    }
+  }
+
+  async moveCurriculumItem(
+    section: CurriculumSection,
+    itemIndex: number,
+    direction: -1 | 1,
+  ): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    const nextIndex = itemIndex + direction;
+
+    if (nextIndex < 0 || nextIndex >= section.items.length) {
+      return;
+    }
+
+    const reorderedItems = [...section.items];
+    moveItemInArray(reorderedItems, itemIndex, nextIndex);
+    const sortedItems = this.updateItemSortOrders(reorderedItems);
+    this.updateSectionItems(section.id, sortedItems);
+    this.saveError = '';
 
     try {
       await this.updateItemOrder(sortedItems);
@@ -359,6 +688,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   openSectionForm(): void {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.showAddSectionForm = true;
     this.editingSectionId = null;
     this.sectionDraft = this.createSectionDraft();
@@ -372,6 +705,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   startEditSection(section: CurriculumSection): void {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.showAddSectionForm = true;
     this.editingSectionId = section.id;
     this.sectionDraft = {
@@ -381,6 +718,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async saveSection(): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     const sectionForm = this.buildSectionValidationForm();
 
     this.sectionValidationErrors = this.getSectionValidationErrors(sectionForm);
@@ -434,6 +775,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async updateSection(sectionId: number, data: SectionPayload): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.saving = true;
     this.saveError = '';
 
@@ -460,6 +805,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async deleteSection(sectionId: number): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     const confirmed = await this.alertHelper.confirm(
       'Delete this section and its curriculum items?',
       'Delete Section',
@@ -505,6 +854,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   startAddItem(section: CurriculumSection): void {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.sections = this.sections.map((currentSection) =>
       currentSection.id === section.id ? { ...currentSection, expanded: true } : currentSection,
     );
@@ -519,30 +872,59 @@ export class AddCourseCurriculum implements OnDestroy {
     this.selectedItemType = null;
     this.editingItemId = null;
     this.lectureDrafts[section.id] = this.createLectureDraft();
+    this.quizDrafts[section.id] = this.createQuizDraft();
+    this.quizQuestionDrafts[section.id] = this.createQuizQuestionDraft();
+    this.showQuizQuestionForm[section.id] = false;
+    this.editingQuizQuestionIds[section.id] = null;
+    this.loadingQuizQuestions[section.id] = false;
     this.resetUploadState();
     this.hasUnsavedChanges = false;
     this.clearLectureValidationErrors(section.id);
+    this.clearQuizValidationErrors(section.id);
+    this.clearQuizQuestionValidationErrors(section.id);
   }
 
-  startEditItem(section: CurriculumSection, item: CurriculumItem): void {
+  async startEditItem(section: CurriculumSection, item: CurriculumItem): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.sections = this.sections.map((currentSection) =>
       currentSection.id === section.id ? { ...currentSection, expanded: true } : currentSection,
     );
     this.selectedSectionId = section.id;
     this.selectedItemType = item.type;
     this.editingItemId = item.id;
-    const draft = this.createLectureDraftFromItem(item);
-    this.lectureDrafts = {
-      ...this.lectureDrafts,
-      [section.id]: draft,
-    };
     this.resetUploadState();
-    this.syncUploadStateFromDraft(draft);
+
+    if (item.type === 'Quiz') {
+      this.quizDrafts = {
+        ...this.quizDrafts,
+        [section.id]: this.createQuizDraftFromItem(item),
+      };
+      await this.loadQuizQuestions(section.id, item.id);
+    } else {
+      const draft = this.createLectureDraftFromItem(item);
+      this.lectureDrafts = {
+        ...this.lectureDrafts,
+        [section.id]: draft,
+      };
+      this.syncUploadStateFromDraft(draft);
+    }
+
     this.hasUnsavedChanges = false;
     this.clearLectureValidationErrors(section.id);
+    this.clearQuizValidationErrors(section.id);
+    this.clearQuizQuestionValidationErrors(section.id);
+    this.showQuizQuestionForm[section.id] = false;
+    this.editingQuizQuestionIds[section.id] = null;
   }
 
   selectItemType(section: CurriculumSection, type: CurriculumItemType): void {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.selectedSectionId = section.id;
     this.selectedItemType = type;
     this.editingItemId = null;
@@ -551,13 +933,33 @@ export class AddCourseCurriculum implements OnDestroy {
       this.lectureDrafts[section.id] = this.createLectureDraft();
     }
 
+    if (!this.quizDrafts[section.id]) {
+      this.quizDrafts[section.id] = this.createQuizDraft();
+    }
+
+    if (!this.quizQuestionDrafts[section.id]) {
+      this.quizQuestionDrafts[section.id] = this.createQuizQuestionDraft();
+    }
+
     if (type !== 'Lecture') {
       this.resetUploadState();
-      this.hasUnsavedChanges = false;
+      this.hasUnsavedChanges = type === 'Quiz';
+      this.showQuizQuestionForm[section.id] = false;
+      this.editingQuizQuestionIds[section.id] = null;
+      this.quizQuestions[section.id] = [];
+      this.loadingQuizQuestions[section.id] = false;
       return;
     }
 
+    this.showQuizQuestionForm[section.id] = false;
+    this.editingQuizQuestionIds[section.id] = null;
+    this.loadingQuizQuestions[section.id] = false;
+
     this.markLectureUnsaved();
+  }
+
+  isPlaceholderItemType(type: CurriculumItemType | null): type is PlaceholderItemType {
+    return type !== null && type !== 'Lecture' && type !== 'Quiz' && this.isAllowedItemType(type);
   }
 
   getLectureDraft(sectionId: number): LectureDraft {
@@ -687,6 +1089,548 @@ export class AddCourseCurriculum implements OnDestroy {
     this.markLectureUnsaved();
   }
 
+  getQuizDraft(sectionId: number): QuizDraft {
+    if (!this.quizDrafts[sectionId]) {
+      this.quizDrafts[sectionId] = this.createQuizDraft();
+    }
+
+    return this.quizDrafts[sectionId];
+  }
+
+  updateQuizDraft<K extends keyof QuizDraft>(
+    sectionId: number,
+    field: K,
+    value: QuizDraft[K],
+  ): void {
+    this.quizDrafts = {
+      ...this.quizDrafts,
+      [sectionId]: {
+        ...this.getQuizDraft(sectionId),
+        [field]: value,
+      },
+    };
+
+    this.markLectureUnsaved();
+
+    if (
+      field === 'title'
+      || field === 'passingPercentage'
+      || field === 'timeLimit'
+      || field === 'maxAttempts'
+    ) {
+      this.clearQuizValidationError(sectionId, field);
+    }
+  }
+
+  setQuizAllowMultipleAttempts(sectionId: number, allowMultipleAttempts: boolean): void {
+    this.quizDrafts = {
+      ...this.quizDrafts,
+      [sectionId]: {
+        ...this.getQuizDraft(sectionId),
+        allowMultipleAttempts,
+        maxAttempts: allowMultipleAttempts ? this.getQuizDraft(sectionId).maxAttempts : '',
+      },
+    };
+
+    this.markLectureUnsaved();
+    this.clearQuizValidationError(sectionId, 'maxAttempts');
+  }
+
+  setQuizPreview(sectionId: number, preview: boolean): void {
+    this.updateQuizDraft(sectionId, 'preview', preview);
+  }
+
+  getQuizQuestionDraft(sectionId: number): QuizQuestionDraft {
+    if (!this.quizQuestionDrafts[sectionId]) {
+      this.quizQuestionDrafts[sectionId] = this.createQuizQuestionDraft();
+    }
+
+    return this.quizQuestionDrafts[sectionId];
+  }
+
+  getQuizQuestions(sectionId: number): QuizQuestionDraft[] {
+    return this.quizQuestions[sectionId] || [];
+  }
+
+  canManageQuizQuestions(): boolean {
+    return this.selectedItemType === 'Quiz' && this.editingItemId !== null;
+  }
+
+  isLoadingQuizQuestions(sectionId: number): boolean {
+    return this.loadingQuizQuestions[sectionId] === true;
+  }
+
+  getQuizQuestionOptionLabel(index: number): string {
+    return `Option ${String.fromCharCode(65 + index)}`;
+  }
+
+  getQuizQuestionTypeLabel(questionType: QuizQuestionType): string {
+    const labels: Record<QuizQuestionType, string> = {
+      single_choice: 'Single Choice',
+      multiple_choice: 'Multiple Choice',
+      true_false: 'True/False',
+    };
+
+    return labels[questionType];
+  }
+
+  getCorrectOptionSummary(question: QuizQuestionDraft): string {
+    const correctOptions = question.options
+      .filter((option) => option.isCorrect)
+      .map((option) => option.optionText);
+
+    return correctOptions.length ? correctOptions.join(', ') : 'Not selected';
+  }
+
+  isTrueFalseQuestion(sectionId: number): boolean {
+    return this.getQuizQuestionDraft(sectionId).questionType === 'true_false';
+  }
+
+  isMultipleChoiceQuestion(sectionId: number): boolean {
+    return this.getQuizQuestionDraft(sectionId).questionType === 'multiple_choice';
+  }
+
+  canAddQuizQuestionOption(sectionId: number): boolean {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    return draft.questionType !== 'true_false' && draft.options.length < 10;
+  }
+
+  canRemoveQuizQuestionOption(sectionId: number): boolean {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    return draft.questionType !== 'true_false' && draft.options.length > 2;
+  }
+
+  async openQuizQuestionForm(sectionId: number): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    if (!this.canManageQuizQuestions()) {
+      await this.alertHelper.error('Please save the quiz before adding questions.');
+      return;
+    }
+
+    this.showQuizQuestionForm = {
+      ...this.showQuizQuestionForm,
+      [sectionId]: true,
+    };
+
+    this.quizQuestionDrafts[sectionId] = this.createQuizQuestionDraft();
+    this.editingQuizQuestionIds[sectionId] = null;
+
+    this.clearQuizQuestionValidationErrors(sectionId);
+    this.markLectureUnsaved();
+  }
+
+  cancelQuizQuestion(sectionId: number): void {
+    this.showQuizQuestionForm = {
+      ...this.showQuizQuestionForm,
+      [sectionId]: false,
+    };
+    this.quizQuestionDrafts[sectionId] = this.createQuizQuestionDraft();
+    this.editingQuizQuestionIds[sectionId] = null;
+    this.clearQuizQuestionValidationErrors(sectionId);
+  }
+
+  editQuizQuestion(sectionId: number, question: QuizQuestionDraft): void {
+    if (!question.id) {
+      return;
+    }
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: this.createQuizQuestionDraftFromQuestion(question),
+    };
+    this.editingQuizQuestionIds = {
+      ...this.editingQuizQuestionIds,
+      [sectionId]: question.id,
+    };
+    this.showQuizQuestionForm = {
+      ...this.showQuizQuestionForm,
+      [sectionId]: true,
+    };
+    this.clearQuizQuestionValidationErrors(sectionId);
+  }
+
+  updateQuizQuestionDraft<K extends keyof QuizQuestionDraft>(
+    sectionId: number,
+    field: K,
+    value: QuizQuestionDraft[K],
+  ): void {
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...this.getQuizQuestionDraft(sectionId),
+        [field]: value,
+      },
+    };
+
+    this.markLectureUnsaved();
+
+    if (field === 'question' || field === 'questionType' || field === 'marks') {
+      this.clearQuizQuestionValidationError(sectionId, field);
+    }
+  }
+
+  setQuizQuestionType(sectionId: number, questionType: QuizQuestionType): void {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...draft,
+        questionType,
+        options: this.createQuestionOptionsForType(questionType, draft.options),
+      },
+    };
+
+    this.clearQuizQuestionValidationError(sectionId, 'questionType');
+    this.clearQuizQuestionValidationError(sectionId, 'options');
+    this.clearQuizQuestionValidationError(sectionId, 'correctAnswer');
+    this.markLectureUnsaved();
+  }
+
+  addQuizQuestionOption(sectionId: number): void {
+    if (!this.canAddQuizQuestionOption(sectionId)) {
+      return;
+    }
+
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...draft,
+        options: [
+          ...draft.options,
+          {
+            optionText: '',
+            isCorrect: false,
+          },
+        ],
+      },
+    };
+
+    this.clearQuizQuestionValidationError(sectionId, 'options');
+    this.markLectureUnsaved();
+  }
+
+  removeQuizQuestionOption(sectionId: number, optionIndex: number): void {
+    if (!this.canRemoveQuizQuestionOption(sectionId)) {
+      return;
+    }
+
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...draft,
+        options: draft.options.filter((_, index) => index !== optionIndex),
+      },
+    };
+
+    this.clearQuizQuestionValidationError(sectionId, 'options');
+    this.clearQuizQuestionValidationError(sectionId, 'correctAnswer');
+    this.markLectureUnsaved();
+  }
+
+  updateQuizQuestionOption(sectionId: number, optionIndex: number, optionText: string): void {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    if (!draft.options[optionIndex] || draft.questionType === 'true_false') {
+      return;
+    }
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...draft,
+        options: draft.options.map((option, index) =>
+          index === optionIndex ? { ...option, optionText } : option,
+        ),
+      },
+    };
+
+    this.clearQuizQuestionValidationError(sectionId, 'options');
+    this.markLectureUnsaved();
+  }
+
+  setQuizQuestionCorrectOption(
+    sectionId: number,
+    optionIndex: number,
+    isCorrect: boolean,
+  ): void {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    if (!draft.options[optionIndex]) {
+      return;
+    }
+
+    const options = draft.questionType === 'multiple_choice'
+      ? draft.options.map((option, index) =>
+          index === optionIndex ? { ...option, isCorrect } : option,
+        )
+      : draft.options.map((option, index) => ({
+          ...option,
+          isCorrect: index === optionIndex,
+        }));
+
+    this.quizQuestionDrafts = {
+      ...this.quizQuestionDrafts,
+      [sectionId]: {
+        ...draft,
+        options,
+      },
+    };
+
+    this.clearQuizQuestionValidationError(sectionId, 'correctAnswer');
+    this.markLectureUnsaved();
+  }
+
+  openQuestionPreview(question: QuizQuestionDraft): void {
+    this.selectedQuestionPreview = this.createQuizQuestionDraftFromQuestion(question);
+  }
+
+  closeQuestionPreview(): void {
+    this.selectedQuestionPreview = null;
+  }
+
+  openLecturePreview(item: CurriculumItem): void {
+    if (item.type !== 'Lecture') {
+      return;
+    }
+
+    this.selectedLecturePreviewItem = item;
+  }
+
+  closeLecturePreview(): void {
+    this.selectedLecturePreviewItem = null;
+  }
+
+  getLecturePreviewSourceLabel(item: CurriculumItem): string {
+    return this.getContentTypeLabel(item.contentType || 'article');
+  }
+
+  getLecturePreviewDurationLabel(item: CurriculumItem): string {
+    return item.duration ? `${item.duration}` : 'No duration';
+  }
+
+  getLecturePreviewEmbedUrl(item: CurriculumItem): SafeResourceUrl | null {
+    const youtubeVideoId = item.youtubeVideoId || this.extractYoutubeId(item.youtubeUrl || '');
+
+    if (!youtubeVideoId) {
+      return null;
+    }
+
+    if (!this.youtubeEmbedUrlCache.has(youtubeVideoId)) {
+      this.youtubeEmbedUrlCache.set(
+        youtubeVideoId,
+        this.sanitizer.bypassSecurityTrustResourceUrl(
+          `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`,
+        ),
+      );
+    }
+
+    return this.youtubeEmbedUrlCache.get(youtubeVideoId) || null;
+  }
+
+  getLecturePreviewFileUrl(item: CurriculumItem): string {
+    const fileUrl = `${item.fileUrl || ''}`.trim();
+
+    if (!fileUrl) {
+      return '';
+    }
+
+    if (/^(https?:)?\/\//i.test(fileUrl) || fileUrl.startsWith('data:') || fileUrl.startsWith('blob:')) {
+      return fileUrl;
+    }
+
+    return this.curriculumService.buildPrivateFileUrl(fileUrl);
+  }
+
+  openQuizQuestionsPreview(item: CurriculumItem): void {
+    if (item.type !== 'Quiz') {
+      return;
+    }
+
+    this.quizPreviewSubscription?.unsubscribe();
+    this.selectedQuizPreviewItem = item;
+    this.quizPreviewQuestions = [];
+    this.quizPreviewError = '';
+    this.quizPreviewLoading = true;
+    this.changeDetector.detectChanges();
+
+    const previewItemId = item.id;
+
+    this.quizPreviewSubscription = this.curriculumService
+      .getQuizQuestions(previewItemId)
+      .pipe(
+        timeout(10000),
+        finalize(() => {
+          if (this.selectedQuizPreviewItem?.id === previewItemId) {
+            this.quizPreviewLoading = false;
+            this.changeDetector.detectChanges();
+          }
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.selectedQuizPreviewItem?.id !== previewItemId) {
+            return;
+          }
+
+          if (!response.status) {
+            this.quizPreviewError = response.message || 'Unable to load quiz questions.';
+            return;
+          }
+
+          this.quizPreviewQuestions = this.normalizeQuizQuestionResponse(response.data)
+            .map((question) => this.mapApiQuizQuestionToDraft(question));
+        },
+        error: (error) => {
+          if (this.selectedQuizPreviewItem?.id !== previewItemId) {
+            return;
+          }
+
+          console.error('Error loading quiz preview questions:', error);
+          this.quizPreviewError = 'Unable to load quiz questions.';
+        },
+      });
+  }
+
+  closeQuizQuestionsPreview(): void {
+    this.quizPreviewSubscription?.unsubscribe();
+    this.selectedQuizPreviewItem = null;
+    this.quizPreviewQuestions = [];
+    this.quizPreviewLoading = false;
+    this.quizPreviewError = '';
+  }
+
+  async saveQuizQuestion(sectionId: number): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    if (!this.editingItemId) {
+      await this.alertHelper.error('Please save the quiz before adding questions.');
+      return;
+    }
+
+    const questionForm = this.buildQuizQuestionValidationForm(sectionId);
+
+    this.quizQuestionValidationErrors = {
+      ...this.quizQuestionValidationErrors,
+      [sectionId]: this.getQuizQuestionValidationErrors(questionForm),
+    };
+
+    const optionErrors = this.getQuizQuestionOptionValidationErrors(
+      this.getQuizQuestionDraft(sectionId),
+    );
+
+    this.quizQuestionValidationErrors = {
+      ...this.quizQuestionValidationErrors,
+      [sectionId]: {
+        ...this.quizQuestionValidationErrors[sectionId],
+        ...optionErrors,
+      },
+    };
+
+    if (
+      !this.formValidationService.validateForm(
+        questionForm,
+        this.getQuizQuestionFieldName,
+        this.el,
+      )
+      || optionErrors.options
+      || optionErrors.correctAnswer
+    ) {
+      return;
+    }
+
+    const draft = this.getQuizQuestionDraft(sectionId);
+    const questionPayload = this.createQuizQuestionPayload(this.editingItemId, draft);
+    const editingQuestionId = this.editingQuizQuestionIds[sectionId];
+
+    this.saving = true;
+    this.saveError = '';
+
+    try {
+      const response = await firstValueFrom(
+        editingQuestionId
+          ? this.curriculumService.updateQuizQuestion(editingQuestionId, questionPayload)
+          : this.curriculumService.addQuizQuestion(questionPayload),
+      );
+
+      if (!response.status) {
+        this.saveError = response.message || 'Unable to save question.';
+        await this.alertHelper.error(this.saveError);
+        return;
+      }
+
+      this.cancelQuizQuestion(sectionId);
+      await this.loadQuizQuestions(sectionId, this.editingItemId);
+      await this.alertHelper.success(response.message || 'Question saved successfully');
+    } catch (error) {
+      console.error('Error saving quiz question:', error);
+      this.saveError = 'Unable to save question.';
+      await this.alertHelper.error(this.saveError);
+    } finally {
+      this.saving = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
+  async deleteQuizQuestion(sectionId: number, questionId: number): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    if (!this.editingItemId) {
+      return;
+    }
+
+    const confirmed = await this.alertHelper.confirm(
+      'Delete this quiz question?',
+      'Delete Quiz Question',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.saving = true;
+    this.saveError = '';
+
+    try {
+      const response = await firstValueFrom(
+        this.curriculumService.deleteQuizQuestion(questionId),
+      );
+
+      if (!response.status) {
+        this.saveError = response.message || 'Unable to delete question.';
+        await this.alertHelper.error(this.saveError);
+        return;
+      }
+
+      if (this.editingQuizQuestionIds[sectionId] === questionId) {
+        this.cancelQuizQuestion(sectionId);
+      }
+
+      await this.loadQuizQuestions(sectionId, this.editingItemId);
+      await this.alertHelper.success(response.message || 'Question deleted successfully');
+    } catch (error) {
+      console.error('Error deleting quiz question:', error);
+      this.saveError = 'Unable to delete question.';
+      await this.alertHelper.error(this.saveError);
+    } finally {
+      this.saving = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
   setUploadVideo(sectionId: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -770,6 +1714,10 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async saveLecture(section: CurriculumSection): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     const draft = this.getLectureDraft(section.id);
     const lectureForm = this.buildLectureValidationForm(section.id);
 
@@ -840,7 +1788,11 @@ export class AddCourseCurriculum implements OnDestroy {
       }
 
       if (response.data && !this.editingItemId) {
-        this.appendSectionItem(section.id, this.mapApiItemToState(response.data, section.items.length));
+        const createdItem = this.mapApiItemToState(response.data, section.items.length);
+
+        if (createdItem) {
+          this.appendSectionItem(section.id, createdItem);
+        }
       }
 
       this.cancelAddItem(section);
@@ -857,8 +1809,76 @@ export class AddCourseCurriculum implements OnDestroy {
     }
   }
 
+  async saveQuiz(section: CurriculumSection): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    const draft = this.getQuizDraft(section.id);
+    const quizForm = this.buildQuizValidationForm(section.id);
+
+    this.quizValidationErrors = {
+      ...this.quizValidationErrors,
+      [section.id]: this.getQuizValidationErrors(quizForm),
+    };
+
+    if (
+      !this.formValidationService.validateForm(
+        quizForm,
+        this.getQuizFieldName,
+        this.el,
+      )
+    ) {
+      return;
+    }
+
+    const title = draft.title.trim();
+    const confirmed = await this.alertHelper.confirm(
+      `${this.editingItemId ? 'Update' : 'Save'} "${title}" in this section?`,
+      this.editingItemId ? 'Update Quiz' : 'Save Quiz',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.saving = true;
+    this.saveError = '';
+
+    try {
+      const quizPayload = this.createQuizPayloadFromDraft(section.id, draft);
+      const response = await firstValueFrom(
+        this.editingItemId
+          ? this.curriculumService.updateQuiz(this.editingItemId, quizPayload)
+          : this.curriculumService.addQuiz(quizPayload),
+      );
+
+      if (!response.status) {
+        this.saveError = response.message || 'Unable to save quiz.';
+        await this.alertHelper.error(this.saveError);
+        return;
+      }
+
+      this.cancelAddItem(section);
+      this.hasUnsavedChanges = false;
+      await this.refreshSectionItems(section.id);
+      await this.alertHelper.success(response.message || 'Quiz saved successfully');
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      this.saveError = 'Unable to save quiz.';
+      await this.alertHelper.error(this.saveError);
+    } finally {
+      this.saving = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
   async savePlaceholderItem(section: CurriculumSection): Promise<void> {
-    if (!this.selectedItemType || this.selectedItemType === 'Lecture') {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    if (!this.isPlaceholderItemType(this.selectedItemType)) {
       return;
     }
 
@@ -906,7 +1926,11 @@ export class AddCourseCurriculum implements OnDestroy {
       }
 
       if (response.data && !this.editingItemId) {
-        this.appendSectionItem(section.id, this.mapApiItemToState(response.data, section.items.length));
+        const createdItem = this.mapApiItemToState(response.data, section.items.length);
+
+        if (createdItem) {
+          this.appendSectionItem(section.id, createdItem);
+        }
       }
 
       this.cancelAddItem(section);
@@ -927,6 +1951,10 @@ export class AddCourseCurriculum implements OnDestroy {
     itemId: number,
     data: CurriculumItemPayload,
   ): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
     this.saving = true;
     this.saveError = '';
 
@@ -951,6 +1979,13 @@ export class AddCourseCurriculum implements OnDestroy {
   }
 
   async deleteCurriculumItem(sectionId: number, itemId: number): Promise<void> {
+    if (!this.ensureCurriculumEditable()) {
+      return;
+    }
+
+    const item = this.sections
+      .find((section) => section.id === sectionId)
+      ?.items.find((currentItem) => currentItem.id === itemId);
     const confirmed = await this.alertHelper.confirm(
       'Delete this curriculum item?',
       'Delete Curriculum Item',
@@ -964,7 +1999,11 @@ export class AddCourseCurriculum implements OnDestroy {
     this.saveError = '';
 
     try {
-      const response = await firstValueFrom(this.curriculumService.deleteItem(itemId));
+      const response = await firstValueFrom(
+        item?.type === 'Quiz'
+          ? this.curriculumService.deleteQuiz(itemId)
+          : this.curriculumService.deleteItem(itemId),
+      );
 
       if (!response.status) {
         this.saveError = response.message || 'Unable to delete curriculum item.';
@@ -988,6 +2027,28 @@ export class AddCourseCurriculum implements OnDestroy {
     } finally {
       this.saving = false;
     }
+  }
+
+  getQuizPassingLabel(item: CurriculumItem): string {
+    const passingPercentage = this.toOptionalNumber(item.passingPercentage);
+
+    return `${passingPercentage ?? 0}%`;
+  }
+
+  getQuizTimeLabel(item: CurriculumItem): string {
+    const timeLimit = this.toOptionalNumber(item.timeLimit);
+
+    return `${timeLimit ?? 0} min`;
+  }
+
+  getQuizAttemptLabel(item: CurriculumItem): string {
+    if (!this.toBoolean(item.allowMultipleAttempts)) {
+      return 'Single attempt';
+    }
+
+    const maxAttempts = this.toOptionalNumber(item.maxAttempts);
+
+    return `${maxAttempts ?? 0} attempts`;
   }
 
   formatFileSize(size: number): string {
@@ -1049,6 +2110,45 @@ export class AddCourseCurriculum implements OnDestroy {
     this.changeDetector.detectChanges();
   }
 
+  private resolveCourseThumbnail(courseData: any): string {
+    const thumbnail = [
+      courseData.thumbnailUrl,
+      courseData.courseThumbnailUrl,
+      courseData.imageUrl,
+      courseData.thumbnail,
+      courseData.courseThumbnail,
+      courseData.image,
+    ].find((value) => typeof value === 'string' && value.trim().length > 0);
+
+    return this.toDisplayImageUrl(thumbnail) || this.placeholderImage;
+  }
+
+  private toDisplayImageUrl(value: unknown): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const imageUrl = value.trim();
+
+    if (!imageUrl) {
+      return '';
+    }
+
+    if (/^(https?:)?\/\//i.test(imageUrl) || /^(data|blob):/i.test(imageUrl)) {
+      return imageUrl;
+    }
+
+    if (imageUrl.startsWith('assets/') || imageUrl.startsWith('/assets/')) {
+      return imageUrl;
+    }
+
+    if (imageUrl.startsWith('course-thumbnails/')) {
+      return `${environment.apiUrl}/getAfile?path=${encodeURIComponent(imageUrl)}`;
+    }
+
+    return imageUrl;
+  }
+
   private createSectionDraft(): SectionDraft {
     return {
       title: '',
@@ -1090,6 +2190,210 @@ export class AddCourseCurriculum implements OnDestroy {
     };
   }
 
+  private createQuizDraft(): QuizDraft {
+    return {
+      title: '',
+      description: '',
+      passingPercentage: 70,
+      timeLimit: 30,
+      allowMultipleAttempts: false,
+      maxAttempts: '',
+      preview: false,
+    };
+  }
+
+  private createQuizQuestionDraft(): QuizQuestionDraft {
+    return {
+      question: '',
+      questionType: 'single_choice',
+      marks: 1,
+      explanation: '',
+      options: this.createQuestionOptionsForType('single_choice'),
+    };
+  }
+
+  private createQuizQuestionDraftFromQuestion(question: QuizQuestionDraft): QuizQuestionDraft {
+    return {
+      id: question.id,
+      curriculumItemId: question.curriculumItemId,
+      question: question.question,
+      questionType: question.questionType,
+      marks: question.marks,
+      explanation: question.explanation,
+      sortOrder: question.sortOrder,
+      options: question.options.map((option) => ({ ...option })),
+    };
+  }
+
+  private createQuizQuestionPayload(
+    curriculumItemId: number,
+    draft: QuizQuestionDraft,
+  ): CurriculumQuizQuestionPayload {
+    return {
+      curriculumItemId,
+      question: draft.question.trim(),
+      questionType: draft.questionType,
+      marks: Number(draft.marks),
+      explanation: draft.explanation.trim(),
+      options: draft.options.map((option) => ({
+        optionText: option.optionText.trim(),
+        isCorrect: option.isCorrect,
+      })),
+    };
+  }
+
+  private mapApiQuizQuestionToDraft(question: CurriculumQuizQuestion): QuizQuestionDraft {
+    return {
+      id: question.id,
+      curriculumItemId: question.curriculumItemId,
+      question: question.question || '',
+      questionType: question.questionType,
+      marks: question.marks ?? 1,
+      explanation: question.explanation || '',
+      sortOrder: question.sortOrder,
+      options: (question.options || []).map((option) => ({
+        id: option.id,
+        optionText: option.optionText || '',
+        isCorrect: this.toBoolean(option.isCorrect),
+      })),
+    };
+  }
+
+  private createQuestionOptionsForType(
+    questionType: QuizQuestionType,
+    currentOptions: QuizQuestionOptionDraft[] = [],
+  ): QuizQuestionOptionDraft[] {
+    if (questionType === 'true_false') {
+      return [
+        {
+          optionText: 'True',
+          isCorrect: currentOptions.some((option) =>
+            option.optionText.toLowerCase() === 'true' && option.isCorrect,
+          ),
+        },
+        {
+          optionText: 'False',
+          isCorrect: currentOptions.some((option) =>
+            option.optionText.toLowerCase() === 'false' && option.isCorrect,
+          ),
+        },
+      ];
+    }
+
+    const options = currentOptions.length >= 2
+      ? currentOptions.map((option) => ({ ...option }))
+      : Array.from({ length: 4 }, () => ({
+          optionText: '',
+          isCorrect: false,
+        }));
+
+    const normalizedOptions = options.slice(0, 10);
+
+    while (normalizedOptions.length < 4) {
+      normalizedOptions.push({
+        optionText: '',
+        isCorrect: false,
+      });
+    }
+
+    if (questionType === 'single_choice') {
+      let hasCorrectOption = false;
+
+      return normalizedOptions.map((option) => {
+        if (!option.isCorrect || hasCorrectOption) {
+          return {
+            ...option,
+            isCorrect: false,
+          };
+        }
+
+        hasCorrectOption = true;
+
+        return option;
+      });
+    }
+
+    return normalizedOptions;
+  }
+
+  private createQuizDraftFromItem(item: CurriculumItem): QuizDraft {
+    return {
+      title: item.title || '',
+      description: item.description || '',
+      passingPercentage: item.passingPercentage ?? 70,
+      timeLimit: item.timeLimit ?? item.duration ?? 30,
+      allowMultipleAttempts: this.toBoolean(item.allowMultipleAttempts),
+      maxAttempts: item.maxAttempts ?? '',
+      preview: Boolean(item.preview),
+    };
+  }
+
+  private createQuizPayloadFromDraft(
+    sectionId: number,
+    draft: QuizDraft,
+  ): CurriculumQuizPayload {
+    return {
+      sectionId,
+      title: draft.title.trim(),
+      description: draft.description.trim(),
+      passingPercentage: Number(draft.passingPercentage),
+      timeLimit: Number(draft.timeLimit),
+      allowMultipleAttempts: draft.allowMultipleAttempts,
+      maxAttempts: draft.allowMultipleAttempts ? Number(draft.maxAttempts) : null,
+      isPreview: draft.preview,
+    };
+  }
+
+  private getQuizMeta(draft: QuizDraft): string {
+    const attempts = draft.allowMultipleAttempts
+      ? `${draft.maxAttempts || 0} attempts`
+      : 'Single attempt';
+
+    return `Pass ${draft.passingPercentage}% \u2022 ${draft.timeLimit} min \u2022 ${attempts}`;
+  }
+
+  private async loadQuizQuestions(sectionId: number, curriculumItemId: number): Promise<void> {
+    this.loadingQuizQuestions = {
+      ...this.loadingQuizQuestions,
+      [sectionId]: true,
+    };
+    this.quizQuestions = {
+      ...this.quizQuestions,
+      [sectionId]: [],
+    };
+    this.changeDetector.detectChanges();
+
+    try {
+      const response = await firstValueFrom(
+        this.curriculumService.getQuizQuestions(curriculumItemId).pipe(timeout(10000)),
+      );
+
+      if (!response.status) {
+        this.saveError = response.message || 'Unable to load quiz questions.';
+        return;
+      }
+
+      this.quizQuestions = {
+        ...this.quizQuestions,
+        [sectionId]: this.normalizeQuizQuestionResponse(response.data)
+          .map((question) => this.mapApiQuizQuestionToDraft(question)),
+      };
+    } catch (error) {
+      console.error('Error loading quiz questions:', error);
+      this.saveError = 'Unable to load quiz questions.';
+      this.quizQuestions = {
+        ...this.quizQuestions,
+        [sectionId]: [],
+      };
+    } finally {
+      this.loadingQuizQuestions = {
+        ...this.loadingQuizQuestions,
+        [sectionId]: false,
+      };
+      this.changeDetector.detectChanges();
+    }
+  }
+
   private async refreshSectionItems(sectionId: number): Promise<void> {
     try {
       const response = await firstValueFrom(this.curriculumService.getItems(sectionId));
@@ -1102,7 +2406,9 @@ export class AddCourseCurriculum implements OnDestroy {
       this.updateSectionItems(
         sectionId,
         this.updateItemSortOrders(
-          (response.data || []).map((item, index) => this.mapApiItemToState(item, index)),
+          (response.data || [])
+            .map((item, index) => this.mapApiItemToState(item, index))
+            .filter((item: CurriculumItem | null): item is CurriculumItem => item !== null),
         ),
       );
     } catch (error) {
@@ -1138,6 +2444,123 @@ export class AddCourseCurriculum implements OnDestroy {
     );
   }
 
+  private toBoolean(value: unknown): boolean {
+    return value === true || value === 1 || value === '1' || value === 'true';
+  }
+
+  private toOptionalNumber(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') {
+      return undefined;
+    }
+
+    const numericValue = Number(value);
+
+    return Number.isNaN(numericValue) ? undefined : numericValue;
+  }
+
+  private createCoursePublishPayload(course: any): FormData {
+    const formData = new FormData();
+    const title = String(course.title || this.course.title || '').trim();
+    const description = String(course.description || this.courseData?.description || '').trim();
+    const categoryId = course.categoryId ?? course.category ?? this.courseData?.categoryId ?? '';
+    const duration = this.toOptionalNumber(course.duration ?? this.courseData?.duration) ?? 1;
+    const durationUnit = this.toOptionalNumber(
+      course.durationUnit ?? this.courseData?.durationUnit,
+    ) ?? 1;
+    const price = this.toOptionalNumber(course.price ?? this.courseData?.price) ?? 0;
+    const oldPrice = course.oldPrice ?? this.courseData?.oldPrice;
+    const highlights = this.normalizeCourseHighlightsForPublish(
+      course.courseHighlights ?? this.courseData?.courseHighlights,
+    );
+
+    formData.append('id', `${course.id || this.courseData?.id}`);
+    formData.append('title', title);
+    formData.append('category', `${categoryId}`);
+    formData.append('instructor', JSON.stringify(this.getCourseInstructorIds(course)));
+    formData.append('duration', `${duration}`);
+    formData.append('durationUnit', `${durationUnit}`);
+    formData.append('price', `${price}`);
+    formData.append('description', description);
+    formData.append('courseHighlights', JSON.stringify(highlights));
+    formData.append('status', '1');
+
+    if (oldPrice !== null && oldPrice !== undefined && oldPrice !== '') {
+      formData.append('oldPrice', `${oldPrice}`);
+    }
+
+    return formData;
+  }
+
+  private getCourseInstructorIds(course: any): number[] {
+    const instructors = course.instructors ?? this.courseData?.instructors;
+
+    if (Array.isArray(instructors)) {
+      return instructors
+        .map((instructor) =>
+          typeof instructor === 'object' ? Number(instructor.id) : Number(instructor),
+        )
+        .filter((id) => Number.isFinite(id) && id > 0);
+    }
+
+    const instructorIds = course.instructorIds ?? this.courseData?.instructorIds;
+
+    if (Array.isArray(instructorIds)) {
+      return instructorIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    }
+
+    if (typeof instructorIds === 'string') {
+      try {
+        const parsed = JSON.parse(instructorIds);
+        return Array.isArray(parsed)
+          ? parsed.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+          : [];
+      } catch {
+        return instructorIds
+          .split(',')
+          .map((id) => Number(id.trim()))
+          .filter((id) => Number.isFinite(id) && id > 0);
+      }
+    }
+
+    return [];
+  }
+
+  private normalizeCourseHighlightsForPublish(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed)
+          ? parsed.map((item) => String(item).trim()).filter((item) => item.length > 0)
+          : [];
+      } catch {
+        return value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+      }
+    }
+
+    return [];
+  }
+
+  private normalizeQuizQuestionResponse(data: unknown): CurriculumQuizQuestion[] {
+    if (Array.isArray(data)) {
+      return data as CurriculumQuizQuestion[];
+    }
+
+    if (data && typeof data === 'object') {
+      return Object.values(data as Record<string, CurriculumQuizQuestion>);
+    }
+
+    return [];
+  }
+
   private mapApiSectionToState(
     section: any,
     index: number,
@@ -1151,46 +2574,82 @@ export class AddCourseCurriculum implements OnDestroy {
       objective: section.objective || '',
       sortOrder: Number(section.sortOrder ?? section.sort_order ?? index + 1),
       expanded: expandedStates?.get(sectionId) ?? Boolean(section.expanded),
-      items: (section.items || []).map((item: any, itemIndex: number) =>
-        this.mapApiItemToState(item, itemIndex),
+      items: this.updateItemSortOrders(
+        (section.items || [])
+          .map((item: any, itemIndex: number) => this.mapApiItemToState(item, itemIndex))
+          .filter((item: CurriculumItem | null): item is CurriculumItem => item !== null),
       ),
     };
   }
 
-  private mapApiItemToState(item: any, index: number): CurriculumItem {
+  private mapApiItemToState(item: any, index: number): CurriculumItem | null {
     const itemType = this.normalizeApiItemType(item.type);
+
+    if (!itemType) {
+      return null;
+    }
+
     const contentType = this.normalizeApiContentType(item.contentType || item.content_type);
     const duration = item.duration ? ` \u2022 ${item.duration}` : '';
+    const passingPercentage = this.toOptionalNumber(
+      item.passingPercentage ?? item.passing_percentage,
+    );
+    const timeLimit = this.toOptionalNumber(item.timeLimit ?? item.time_limit);
+    const allowMultipleAttempts = this.toBoolean(
+      item.allowMultipleAttempts ?? item.allow_multiple_attempts,
+    );
+    const maxAttempts = this.toOptionalNumber(item.maxAttempts ?? item.max_attempts);
+    const preview = this.toBoolean(item.isPreview ?? item.is_preview);
+    const quizDraft: QuizDraft = {
+      title: item.title || '',
+      description: item.description || '',
+      passingPercentage: passingPercentage ?? 70,
+      timeLimit: timeLimit ?? 30,
+      allowMultipleAttempts,
+      maxAttempts: maxAttempts ?? '',
+      preview,
+    };
 
     return {
       id: Number(item.id),
       type: itemType,
       title: item.title || '',
-      meta: `${this.getContentTypeLabel(contentType)}${duration}`,
+      meta: itemType === 'Quiz'
+        ? this.getQuizMeta(quizDraft)
+        : `${this.getContentTypeLabel(contentType)}${duration}`,
       icon: this.getItemIcon(itemType),
       sortOrder: Number(item.sortOrder ?? item.sort_order ?? index + 1),
-      preview: Boolean(item.isPreview ?? item.is_preview),
-      contentType,
+      preview,
+      contentType: itemType === 'Quiz' ? undefined : contentType,
       youtubeUrl: item.youtubeUrl || item.youtube_url || '',
       youtubeVideoId: item.youtubeVideoId || item.youtube_video_id || '',
       fileUrl: item.fileUrl || item.file_url || '',
       duration: item.duration || '',
       description: item.description || '',
+      passingPercentage,
+      timeLimit,
+      allowMultipleAttempts,
+      maxAttempts,
     };
   }
 
-  private normalizeApiItemType(type: string): CurriculumItemType {
+  private normalizeApiItemType(type: string): CurriculumItemType | null {
     const normalizedType = String(type || 'lecture').toLowerCase().replace(/_/g, ' ');
     const itemTypes: Record<string, CurriculumItemType> = {
       lecture: 'Lecture',
       quiz: 'Quiz',
-      'coding exercise': 'Coding Exercise',
       'practice test': 'Practice Test',
       assignment: 'Assignment',
-      'role play': 'Role Play',
     };
 
-    return itemTypes[normalizedType] || 'Lecture';
+    return itemTypes[normalizedType] || null;
+  }
+
+  private isAllowedItemType(type: unknown): type is CurriculumItemType {
+    return (
+      typeof type === 'string'
+      && (CURRICULUM_ITEM_TYPES as readonly string[]).includes(type)
+    );
   }
 
   private normalizeApiContentType(contentType: string): LectureSource {
@@ -1226,6 +2685,35 @@ export class AddCourseCurriculum implements OnDestroy {
     });
   }
 
+  private buildQuizValidationForm(sectionId: number): FormGroup {
+    const draft = this.getQuizDraft(sectionId);
+
+    return this.formBuilder.group({
+      quizTitle: [draft.title, Validators.required],
+      quizPassingPercentage: [
+        draft.passingPercentage,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
+      quizTimeLimit: [draft.timeLimit, [Validators.required, Validators.min(1)]],
+      quizMaxAttempts: [
+        draft.maxAttempts,
+        draft.allowMultipleAttempts
+          ? [Validators.required, Validators.min(2)]
+          : [],
+      ],
+    });
+  }
+
+  private buildQuizQuestionValidationForm(sectionId: number): FormGroup {
+    const draft = this.getQuizQuestionDraft(sectionId);
+
+    return this.formBuilder.group({
+      question: [draft.question, Validators.required],
+      questionType: [draft.questionType, Validators.required],
+      marks: [draft.marks, [Validators.required, Validators.min(1)]],
+    });
+  }
+
   private getSectionValidationErrors(form: FormGroup): SectionValidationErrors {
     return {
       title: this.getControlErrorMessage(form, 'sectionTitle', this.getSectionFieldName),
@@ -1240,6 +2728,71 @@ export class AddCourseCurriculum implements OnDestroy {
       uploadFile: this.getControlErrorMessage(form, 'uploadFile', this.getLectureFieldName),
       youtubeUrl: this.getControlErrorMessage(form, 'youtubeUrl', this.getLectureFieldName),
     };
+  }
+
+  private getQuizValidationErrors(form: FormGroup): QuizValidationErrors {
+    return {
+      title: this.getControlErrorMessage(form, 'quizTitle', this.getQuizFieldName),
+      passingPercentage: this.getControlErrorMessage(
+        form,
+        'quizPassingPercentage',
+        this.getQuizFieldName,
+      ),
+      timeLimit: this.getControlErrorMessage(form, 'quizTimeLimit', this.getQuizFieldName),
+      maxAttempts: this.getControlErrorMessage(form, 'quizMaxAttempts', this.getQuizFieldName),
+    };
+  }
+
+  private getQuizQuestionValidationErrors(form: FormGroup): QuizQuestionValidationErrors {
+    return {
+      question: this.getControlErrorMessage(form, 'question', this.getQuizQuestionFieldName),
+      questionType: this.getControlErrorMessage(
+        form,
+        'questionType',
+        this.getQuizQuestionFieldName,
+      ),
+      marks: this.getControlErrorMessage(form, 'marks', this.getQuizQuestionFieldName),
+    };
+  }
+
+  private getQuizQuestionOptionValidationErrors(
+    draft: QuizQuestionDraft,
+  ): QuizQuestionValidationErrors {
+    const optionCount = draft.options.length;
+
+    if (optionCount < 2) {
+      return {
+        options: 'Minimum 2 options are required',
+      };
+    }
+
+    if (optionCount > 10) {
+      return {
+        options: 'Maximum 10 options are allowed',
+      };
+    }
+
+    if (draft.options.some((option) => !option.optionText.trim())) {
+      return {
+        options: 'All options are required',
+      };
+    }
+
+    const correctAnswerCount = draft.options.filter((option) => option.isCorrect).length;
+
+    if (correctAnswerCount === 0) {
+      return {
+        correctAnswer: 'Select the correct answer',
+      };
+    }
+
+    if (draft.questionType !== 'multiple_choice' && correctAnswerCount !== 1) {
+      return {
+        correctAnswer: 'Select one correct answer',
+      };
+    }
+
+    return {};
   }
 
   private getControlErrorMessage(
@@ -1263,6 +2816,10 @@ export class AddCourseCurriculum implements OnDestroy {
       return `${fieldName} format is invalid`;
     }
 
+    if (control.errors['min'] || control.errors['max']) {
+      return `${fieldName} is out of range`;
+    }
+
     return `${fieldName} is invalid`;
   }
 
@@ -1284,6 +2841,39 @@ export class AddCourseCurriculum implements OnDestroy {
     this.lectureValidationErrors = remainingErrors;
   }
 
+  private clearQuizValidationError(sectionId: number, field: keyof QuizValidationErrors): void {
+    this.quizValidationErrors = {
+      ...this.quizValidationErrors,
+      [sectionId]: {
+        ...this.quizValidationErrors[sectionId],
+        [field]: '',
+      },
+    };
+  }
+
+  private clearQuizValidationErrors(sectionId: number): void {
+    const { [sectionId]: _removedErrors, ...remainingErrors } = this.quizValidationErrors;
+    this.quizValidationErrors = remainingErrors;
+  }
+
+  private clearQuizQuestionValidationError(
+    sectionId: number,
+    field: keyof QuizQuestionValidationErrors,
+  ): void {
+    this.quizQuestionValidationErrors = {
+      ...this.quizQuestionValidationErrors,
+      [sectionId]: {
+        ...this.quizQuestionValidationErrors[sectionId],
+        [field]: '',
+      },
+    };
+  }
+
+  private clearQuizQuestionValidationErrors(sectionId: number): void {
+    const { [sectionId]: _removedErrors, ...remainingErrors } = this.quizQuestionValidationErrors;
+    this.quizQuestionValidationErrors = remainingErrors;
+  }
+
   getSectionFieldName = (fieldName: string): string => {
     const fieldNames: Record<string, string> = {
       sectionTitle: 'Section title',
@@ -1299,6 +2889,27 @@ export class AddCourseCurriculum implements OnDestroy {
       lectureDuration: 'Duration',
       uploadFile: 'Video file',
       youtubeUrl: 'YouTube URL',
+    };
+
+    return fieldNames[fieldName] || fieldName;
+  };
+
+  getQuizFieldName = (fieldName: string): string => {
+    const fieldNames: Record<string, string> = {
+      quizTitle: 'Quiz title',
+      quizPassingPercentage: 'Passing percentage',
+      quizTimeLimit: 'Time limit',
+      quizMaxAttempts: 'Max attempts',
+    };
+
+    return fieldNames[fieldName] || fieldName;
+  };
+
+  getQuizQuestionFieldName = (fieldName: string): string => {
+    const fieldNames: Record<string, string> = {
+      question: 'Question',
+      questionType: 'Question type',
+      marks: 'Marks',
     };
 
     return fieldNames[fieldName] || fieldName;
@@ -1336,10 +2947,8 @@ export class AddCourseCurriculum implements OnDestroy {
     const icons: Record<CurriculumItemType, string> = {
       Lecture: 'fa-solid fa-video',
       Quiz: 'fa-solid fa-circle-question',
-      'Coding Exercise': 'fa-solid fa-code',
       'Practice Test': 'fa-solid fa-list-check',
       Assignment: 'fa-solid fa-clipboard-check',
-      'Role Play': 'fa-solid fa-comments',
     };
 
     return icons[type] || 'fa-solid fa-file-lines';

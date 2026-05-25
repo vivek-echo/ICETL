@@ -19,6 +19,10 @@ export interface CurriculumItem {
   fileUrl: string;
   duration: string;
   description: string;
+  passingPercentage?: number | null;
+  timeLimit?: number | null;
+  allowMultipleAttempts?: number | boolean | null;
+  maxAttempts?: number | null;
   isPreview: boolean;
   sortOrder: number;
 }
