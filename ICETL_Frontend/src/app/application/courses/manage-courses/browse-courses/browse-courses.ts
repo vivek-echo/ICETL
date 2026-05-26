@@ -222,6 +222,12 @@ export class BrowseCourses implements OnInit {
     return `${course.duration} ${unit}`;
   }
 
+  getInstructorInitial(course: CourseCartItem): string {
+    const name = course.instructorName || course.title || 'Instructor';
+
+    return name.trim().charAt(0).toUpperCase() || 'I';
+  }
+
   goToPreviousPage(): void {
     if (this.meta.currentPage > 1) {
       void this.loadCourses(this.meta.currentPage - 1);

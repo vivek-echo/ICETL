@@ -180,25 +180,36 @@
           </div>
 
           <aside class="course-preview" aria-hidden="true">
-            <h3>{{ course.title }}</h3>
+          
+
+            <h4>{{ course.title }}</h4>
 
             <div class="course-badges">
               <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
               <span class="bestseller-badge">Bestseller</span>
             </div>
 
-            <p class="course-preview__updated">Updated <strong>October 2025</strong></p>
-            <p class="course-preview__meta">
-              {{ getDurationLabel(course) }} &middot; All Levels &middot; Subtitles
-            </p>
+            <div class="course-preview__meta-grid">
+              <span><i class="feather-clock"></i>{{ getDurationLabel(course) }}</span>
+              <span><i class="feather-grid"></i>{{ course.categoryName || 'Course' }}</span>
+              <span><i class="feather-users"></i>{{ course.instructorName || 'Instructor' }}</span>
+            </div>
 
             <p class="course-description">
               {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
             </p>
 
+            <div class="course-preview__creator">
+              <div class="instructor-avatar">{{ getInstructorInitial(course) }}</div>
+              <span>
+                Instructor
+                <strong>{{ course.instructorName || 'Instructor' }}</strong>
+              </span>
+            </div>
+
             @if (getCourseHighlights(course, 3).length > 0) {
             <div class="course-preview__learn">
-              <h4>What You'll Learn</h4>
+              <h5>What You'll Learn</h5>
               <ul class="course-preview__points">
                 @for (highlight of getCourseHighlights(course, 3); track $index) {
                 <li>{{ highlight }}</li>

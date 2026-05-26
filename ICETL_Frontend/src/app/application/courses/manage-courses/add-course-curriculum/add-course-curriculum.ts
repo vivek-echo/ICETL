@@ -19,10 +19,9 @@ import {
   SectionPayload,
 } from '../../services/curriculum';
 
-const CURRICULUM_ITEM_TYPES = ['Lecture', 'Quiz', 'Practice Test', 'Assignment'] as const;
+const CURRICULUM_ITEM_TYPES = ['Lecture', 'Quiz'] as const;
 
 type CurriculumItemType = (typeof CURRICULUM_ITEM_TYPES)[number];
-type PlaceholderItemType = Exclude<CurriculumItemType, 'Lecture' | 'Quiz'>;
 
 type LectureSource = 'youtube' | 'upload' | 'article';
 type QuizQuestionType = 'single_choice' | 'multiple_choice' | 'true_false';
@@ -958,10 +957,6 @@ export class AddCourseCurriculum implements OnDestroy {
     this.markLectureUnsaved();
   }
 
-  isPlaceholderItemType(type: CurriculumItemType | null): type is PlaceholderItemType {
-    return type !== null && type !== 'Lecture' && type !== 'Quiz' && this.isAllowedItemType(type);
-  }
-
   getLectureDraft(sectionId: number): LectureDraft {
     if (!this.lectureDrafts[sectionId]) {
       this.lectureDrafts[sectionId] = this.createLectureDraft();
@@ -1873,79 +1868,6 @@ export class AddCourseCurriculum implements OnDestroy {
     }
   }
 
-  async savePlaceholderItem(section: CurriculumSection): Promise<void> {
-    if (!this.ensureCurriculumEditable()) {
-      return;
-    }
-
-    if (!this.isPlaceholderItemType(this.selectedItemType)) {
-      return;
-    }
-
-    const selectedItemType = this.selectedItemType;
-    const editingItem = this.editingItemId
-      ? section.items.find((item) => item.id === this.editingItemId)
-      : null;
-    const itemPayload: CurriculumItemPayload = {
-      sectionId: section.id,
-      title: editingItem?.title || `New ${selectedItemType}`,
-      type: selectedItemType,
-      contentType: selectedItemType,
-      youtubeUrl: '',
-      youtubeVideoId: '',
-      fileUrl: '',
-      duration: '',
-      description: '',
-      isPreview: false,
-      sortOrder: section.items.length + 1,
-    };
-
-    const confirmed = await this.alertHelper.confirm(
-      `${this.editingItemId ? 'Update' : 'Save'} "${itemPayload.title}" in this section?`,
-      this.editingItemId ? `Update ${selectedItemType}` : `Save ${selectedItemType}`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    this.saving = true;
-    this.saveError = '';
-
-    try {
-      const response = await firstValueFrom(
-        this.editingItemId
-          ? this.curriculumService.updateItem(this.editingItemId, itemPayload)
-          : this.curriculumService.addItem(itemPayload),
-      );
-
-      if (!response.status) {
-        this.saveError = response.message || 'Unable to add curriculum item.';
-        await this.alertHelper.error(this.saveError);
-        return;
-      }
-
-      if (response.data && !this.editingItemId) {
-        const createdItem = this.mapApiItemToState(response.data, section.items.length);
-
-        if (createdItem) {
-          this.appendSectionItem(section.id, createdItem);
-        }
-      }
-
-      this.cancelAddItem(section);
-      await this.refreshSectionItems(section.id);
-      await this.alertHelper.success(response.message || 'Curriculum item saved successfully');
-    } catch (error) {
-      console.error('Error adding curriculum item:', error);
-      this.saveError = 'Unable to add curriculum item.';
-      await this.alertHelper.error(this.saveError);
-    } finally {
-      this.saving = false;
-      this.changeDetector.detectChanges();
-    }
-  }
-
   async updateCurriculumItem(
     sectionId: number,
     itemId: number,
@@ -2638,18 +2560,9 @@ export class AddCourseCurriculum implements OnDestroy {
     const itemTypes: Record<string, CurriculumItemType> = {
       lecture: 'Lecture',
       quiz: 'Quiz',
-      'practice test': 'Practice Test',
-      assignment: 'Assignment',
     };
 
     return itemTypes[normalizedType] || null;
-  }
-
-  private isAllowedItemType(type: unknown): type is CurriculumItemType {
-    return (
-      typeof type === 'string'
-      && (CURRICULUM_ITEM_TYPES as readonly string[]).includes(type)
-    );
   }
 
   private normalizeApiContentType(contentType: string): LectureSource {
@@ -2947,8 +2860,6 @@ export class AddCourseCurriculum implements OnDestroy {
     const icons: Record<CurriculumItemType, string> = {
       Lecture: 'fa-solid fa-video',
       Quiz: 'fa-solid fa-circle-question',
-      'Practice Test': 'fa-solid fa-list-check',
-      Assignment: 'fa-solid fa-clipboard-check',
     };
 
     return icons[type] || 'fa-solid fa-file-lines';

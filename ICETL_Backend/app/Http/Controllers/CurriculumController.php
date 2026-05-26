@@ -1529,8 +1529,6 @@ class CurriculumController extends Controller
             'lecture',
             'quiz',
             'coding_exercise',
-            'practice_test',
-            'assignment',
             'role_play',
         ], true) ? $normalized : 'lecture';
     }

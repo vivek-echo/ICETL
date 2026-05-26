@@ -110,7 +110,7 @@
             <span class="card-icon"><i class="fa-solid fa-layer-group"></i></span>
             <div>
               <h2>{{ editingSectionId ? 'Edit Section' : 'Create Section' }}</h2>
-              <p>Group related lectures, quizzes, and practice work into one learning milestone.</p>
+              <p>Group related lectures and quizzes into one learning milestone.</p>
             </div>
           </div>
 
@@ -1003,28 +1003,6 @@
                     </div>
                   }
 
-                  @if (isPlaceholderItemType(selectedItemType)) {
-                    <div class="quick-draft-card">
-                      <div>
-                        <h4>{{ selectedItemType }} Draft</h4>
-                        <p>Create the placeholder now and configure detailed settings later.</p>
-                      </div>
-                      <button
-                        type="button"
-                        class="btn btn-primary-gradient"
-                        [disabled]="saving"
-                        (click)="savePlaceholderItem(section)"
-                      >
-                        @if (saving) {
-                          <span class="button-spinner" aria-hidden="true"></span>
-                          {{ editingItemId ? 'Updating...' : 'Adding...' }}
-                        } @else {
-                          <i class="fa-solid fa-check"></i>
-                          {{ editingItemId ? 'Update' : 'Add' }} {{ selectedItemType }}
-                        }
-                      </button>
-                    </div>
-                  }
                 </div>
               }
             </div>
