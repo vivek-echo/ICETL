@@ -1,1 +1,193 @@
-<p>dashboard works!</p>
+<section class="admin-dashboard">
+  <div class="dashboard-heading">
+    <div class="heading-main">
+      <span class="dashboard-kicker">Admin Dashboard</span>
+      <h4>Platform overview</h4>
+      <p>Track revenue, course health, learner growth, and recent operational activity.</p>
+    </div>
+    <div class="heading-meta">
+      <div class="heading-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action" routerLink="/application/admin/payments">
+          <i class="feather-credit-card"></i>
+          <span>Payments</span>
+        </a>
+        <button type="button" class="rbt-btn btn-sm btn-border dashboard-action" (click)="loadDashboard()" [disabled]="loading">
+          <i class="feather-refresh-cw"></i>
+          <span>{{ loading ? 'Loading' : 'Refresh' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="dashboard-alert">{{ errorMessage }}</div>
+  }
+
+  @if (data) {
+    <div class="metric-grid">
+      <article class="metric-card metric-card--revenue">
+        <i class="feather-dollar-sign"></i>
+        <span>Total Revenue</span>
+        <strong>Rs. {{ formatAmount(data.summary.revenue) }}</strong>
+        <small>Successful paid orders</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-users"></i>
+        <span>Learners</span>
+        <strong>{{ data.summary.learners }}</strong>
+        <small>Registered learner accounts</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-user-check"></i>
+        <span>Instructors</span>
+        <strong>{{ data.summary.instructors }}</strong>
+        <small>Teaching accounts</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-book-open"></i>
+        <span>Courses</span>
+        <strong>{{ data.summary.courses }}</strong>
+        <small>Total course catalog</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-check-circle"></i>
+        <span>Active Courses</span>
+        <strong>{{ data.summary.activeCourses }}</strong>
+        <small>Visible to learners</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-layers"></i>
+        <span>Enrollments</span>
+        <strong>{{ data.summary.enrollments }}</strong>
+        <small>Purchased course access</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-credit-card"></i>
+        <span>Successful Payments</span>
+        <strong>{{ data.summary.successfulPayments }}</strong>
+        <small>Completed transactions</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-alert-circle"></i>
+        <span>Failed Payments</span>
+        <strong>{{ data.summary.failedPayments }}</strong>
+        <small>Needs payment review</small>
+      </article>
+    </div>
+
+    <div class="dashboard-grid dashboard-grid--charts">
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Revenue Trend</h5>
+          <span>Last 6 months</span>
+        </div>
+        <div class="column-chart">
+          @for (point of data.monthlyRevenue; track point.label) {
+            <div class="column-chart__item">
+              <div class="column-chart__bar">
+                <span [style.height.%]="chartHeight(point)"></span>
+              </div>
+              <small>{{ point.label }}</small>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>User Roles</h5>
+          <span>Account mix</span>
+        </div>
+        <div class="bar-list">
+          @for (point of data.userRoles; track point.label) {
+            <div class="bar-row">
+              <div class="bar-row__label">
+                <span>{{ point.label }}</span>
+                <strong>{{ point.value }}</strong>
+              </div>
+              <div class="bar-track">
+                <span [style.width.%]="chartWidth(data.userRoles, point)"></span>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Course Categories</h5>
+          <span>Top categories</span>
+        </div>
+        <div class="bar-list">
+          @for (point of data.courseCategories; track point.label) {
+            <div class="bar-row">
+              <div class="bar-row__label">
+                <span>{{ point.label }}</span>
+                <strong>{{ point.value }}</strong>
+              </div>
+              <div class="bar-track bar-track--accent">
+                <span [style.width.%]="chartWidth(data.courseCategories, point)"></span>
+              </div>
+            </div>
+          } @empty {
+            <p class="empty-state">No categories yet.</p>
+          }
+        </div>
+      </article>
+    </div>
+
+    <div class="dashboard-grid">
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Recent Transactions</h5>
+          <span>Latest orders</span>
+        </div>
+        <div class="dashboard-table">
+          <div class="dashboard-row dashboard-row--four dashboard-row--head">
+            <span>Order</span>
+            <span>Learner</span>
+            <span>Amount</span>
+            <span>Status</span>
+          </div>
+          @for (transaction of data.recentTransactions; track transaction.id) {
+            <div class="dashboard-row dashboard-row--four">
+              <span>{{ transaction.orderReference || ('Order #' + transaction.id) }}</span>
+              <span>{{ transaction.userName }}</span>
+              <span>Rs. {{ formatAmount(transaction.totalAmount) }}</span>
+              <span class="status-pill">{{ transaction.status }}</span>
+            </div>
+          } @empty {
+            <p class="empty-state">No transactions found.</p>
+          }
+        </div>
+      </article>
+
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Recent Courses</h5>
+          <span>Newest content</span>
+        </div>
+        <div class="dashboard-table">
+          <div class="dashboard-row dashboard-row--four dashboard-row--head">
+            <span>Course</span>
+            <span>Category</span>
+            <span>Instructor</span>
+            <span>Created</span>
+          </div>
+          @for (course of data.recentCourses; track course.id) {
+            <div class="dashboard-row dashboard-row--four">
+              <span>{{ course.title }}</span>
+              <span>{{ course.categoryName }}</span>
+              <span>{{ course.instructorName }}</span>
+              <span>{{ formatDate(course.createdAt) }}</span>
+            </div>
+          } @empty {
+            <p class="empty-state">No courses found.</p>
+          }
+        </div>
+      </article>
+    </div>
+  } @else if (loading) {
+    <div class="dashboard-panel empty-state">Loading dashboard...</div>
+  }
+</section>

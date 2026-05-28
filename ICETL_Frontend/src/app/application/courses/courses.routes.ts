@@ -46,6 +46,11 @@ export const coursesRoutes: Routes = [
         redirectTo: '/application/yourCart',
       },
       {
+        path: 'myLearning',
+        pathMatch: 'full',
+        redirectTo: '/application/courses/manageCourses/myLearning',
+      },
+      {
         path: 'coursesCategories',
         loadComponent: () =>
           import('./courses-categories/courses-categories').then((m) => m.CoursesCategories),
@@ -116,6 +121,12 @@ export const coursesRoutes: Routes = [
               import('./manage-courses/add-course-curriculum/add-course-curriculum').then((m) => m.AddCourseCurriculum),
             canDeactivate: [curriculumPendingChangesGuard],
             title: 'Curriculum | ICETL',
+          },
+          {
+            path: 'myLearning',
+            loadComponent: () =>
+              import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),
+            title: 'My Learning | ICETL',
           },
         ],
       },

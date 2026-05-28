@@ -1,0 +1,215 @@
+<section class="payment-log" aria-labelledby="payment-log-title">
+  <div class="payment-log__header">
+    <div>
+      <span class="payment-log__eyebrow">Billing Center</span>
+      <h1 id="payment-log-title">Transaction History</h1>
+      <p>View purchases, payment status, invoices, and refund state.</p>
+    </div>
+
+    <button
+      type="button"
+      class="payment-log__refresh"
+      (click)="loadPaymentLogs()"
+      [disabled]="loading"
+      title="Refresh payment log">
+      <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+      Refresh
+    </button>
+  </div>
+
+  <div class="payment-filters">
+    <label>
+      <span>Search</span>
+      <input
+        type="search"
+        [(ngModel)]="search"
+        (keyup.enter)="applyFilters()"
+        placeholder="Invoice, order, or payment ID">
+    </label>
+
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="status" (change)="applyFilters()">
+        @for (option of statusOptions; track option) {
+        <option [value]="option">{{ option === 'all' ? 'All statuses' : option }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="payment-filter-btn" (click)="applyFilters()">
+      <i class="fa-solid fa-filter"></i>
+      Filter
+    </button>
+    <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
+      <i class="fa-solid fa-rotate-left"></i>
+      Reset
+    </button>
+  </div>
+
+  @if (loading) {
+  <div class="payment-log__state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    Loading payment logs...
+  </div>
+  }
+
+  @if (!loading && logs.length === 0) {
+  <div class="payment-log__empty">
+    <i class="fa-solid fa-receipt"></i>
+    <h2>No payments yet</h2>
+    <p>Your completed course purchases will appear here.</p>
+  </div>
+  }
+
+  @if (!loading && logs.length > 0) {
+  <div class="payment-table-wrap">
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th>Invoice</th>
+          <th>Date</th>
+          <th>Courses</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Payment ID</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (log of logs; track log.id) {
+        <tr>
+          <td>
+            <strong>{{ log.invoiceNo }}</strong>
+            <span>{{ log.orderReference || ('Order #' + log.id) }}</span>
+          </td>
+          <td>{{ formatDate(log.created_at) }}</td>
+          <td>{{ log.courseCount }}</td>
+          <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(log.totalAmount) }}</td>
+          <td>
+            <span
+              class="payment-status"
+              [class.payment-status--paid]="log.status === 'paid'"
+              [class.payment-status--failed]="log.status === 'failed'"
+              [class.payment-status--cancelled]="log.status === 'cancelled'">
+              {{ log.status }}
+            </span>
+            @if (log.failureReason) {
+            <small class="payment-failure-reason">{{ log.failureReason }}</small>
+            }
+          </td>
+          <td>{{ log.razorpayPaymentId || 'Pending' }}</td>
+          <td>
+            @if (log.status === 'paid') {
+            <button type="button" class="payment-table__action" (click)="viewInvoice(log.id)">
+              <i class="fa-solid fa-file-invoice"></i>
+              View Invoice
+            </button>
+            } @else {
+            <button type="button" class="payment-table__action payment-table__action--disabled" disabled>
+              <i class="fa-solid fa-file-circle-xmark"></i>
+              No Invoice
+            </button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="payment-pagination">
+    <span>{{ total }} transaction{{ total === 1 ? '' : 's' }}</span>
+    <div>
+      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <strong>{{ currentPage }} / {{ lastPage }}</strong>
+      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </footer>
+  }
+</section>
+
+@if (selectedInvoice) {
+<div class="invoice-backdrop" (click)="closeInvoice()"></div>
+<section class="invoice-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-title">
+  <div class="invoice-card">
+    <div class="invoice-card__toolbar">
+      <button type="button" class="invoice-action invoice-action--primary" (click)="downloadInvoicePdf()">
+        <i class="fa-solid fa-file-arrow-down"></i>
+        Download PDF
+      </button>
+      <button type="button" class="invoice-action" (click)="printInvoice()" aria-label="Print invoice" title="Print">
+        <i class="fa-solid fa-print"></i>
+      </button>
+      <button type="button" class="invoice-action" (click)="closeInvoice()" aria-label="Close invoice" title="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="invoice-brand">
+      <div class="invoice-brand__mark">IC</div>
+      <div>
+        <strong>ICETL</strong>
+        <span>Ice Technology Lab</span>
+      </div>
+    </div>
+
+    <div class="invoice-card__header">
+      <div>
+        <h2 id="invoice-title">Invoice</h2>
+        <strong>{{ selectedInvoice.invoiceNo }}</strong>
+      </div>
+      <span class="payment-status payment-status--paid">{{ selectedInvoice.status }}</span>
+    </div>
+
+    <div class="invoice-meta">
+      <div>
+        <span>Billed To</span>
+        <strong>{{ selectedInvoice.customer.name || 'Customer' }}</strong>
+        <p>{{ selectedInvoice.customer.email || 'Email not available' }}</p>
+        <p>{{ selectedInvoice.customer.phone || '' }}</p>
+      </div>
+      <div>
+        <span>Order Date</span>
+        <strong>{{ formatDate(selectedInvoice.orderDate) }}</strong>
+        <p>Order ID: {{ selectedInvoice.razorpayOrderId }}</p>
+        <p>Payment ID: {{ selectedInvoice.razorpayPaymentId || 'Pending' }}</p>
+      </div>
+    </div>
+
+    <div class="invoice-items-wrap">
+      <table class="invoice-items">
+        <thead>
+          <tr>
+            <th>Course</th>
+            <th>Category</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of selectedInvoice.items; track item.courseId) {
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.categoryName }}</td>
+            <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="invoice-total">
+      <span>Total Paid</span>
+      <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.totalAmount) }}</strong>
+    </div>
+
+    <div class="invoice-note">
+      <i class="fa-solid fa-circle-check"></i>
+      This invoice is generated for a verified Razorpay payment.
+    </div>
+  </div>
+</section>
+}

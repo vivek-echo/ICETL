@@ -9,7 +9,7 @@
   --card: var(--card-bg);
   --text: var(--text-primary);
   --muted: var(--text-secondary);
-  --border: var(--border);
+  --cart-border: var(--border, #e5e7eb);
   --success: var(--primary-purple);
   --danger: #ef4444;
   animation: cartFadeIn 0.45s ease both;
@@ -56,7 +56,7 @@
 .cart-stat-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cart-stat-card,
@@ -142,19 +142,121 @@
   gap: 18px;
 }
 
+.cart-selection-bar {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.cart-selection-bar strong {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.cart-check {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 10px;
+  position: relative;
+  user-select: none;
+}
+
+.cart-check input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.cart-check span {
+  align-items: center;
+  background: #fff;
+  border: 2px solid #c7d2fe;
+  border-radius: 6px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 22px;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 22px;
+}
+
+.cart-check span::after {
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  content: "";
+  display: none;
+  height: 10px;
+  transform: rotate(45deg) translate(-1px, -1px);
+  width: 5px;
+}
+
+.cart-check input:checked + span,
+.cart-check input:indeterminate + span {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+}
+
+.cart-check input:checked + span::after {
+  display: block;
+}
+
+.cart-check input:indeterminate + span::after {
+  background: #fff;
+  border: 0;
+  display: block;
+  height: 2px;
+  transform: none;
+  width: 10px;
+}
+
+.cart-check input:focus-visible + span {
+  outline: 3px solid rgba(79, 70, 229, 0.22);
+  outline-offset: 2px;
+}
+
 .course-cart-card {
   display: grid;
   gap: 20px;
-  grid-template-columns: 178px minmax(0, 1fr) 172px;
+  grid-template-columns: 30px 178px minmax(0, 1fr) 172px;
   padding: 18px;
   position: relative;
   transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.course-cart-card--selected {
+  border-color: rgba(79, 70, 229, 0.38);
+  box-shadow: 0 18px 45px rgba(79, 70, 229, 0.12);
 }
 
 .course-cart-card:hover {
   border-color: rgba(79, 70, 229, 0.28);
   box-shadow: 0 24px 60px rgba(79, 70, 229, 0.14);
   transform: translateY(-4px);
+}
+
+.course-cart-card__check {
+  align-self: start;
+  margin-top: 4px;
+  z-index: 4;
+}
+
+.course-cart-card__check span {
+  background: #fff;
+  border-color: #a5b4fc;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  height: 26px;
+  width: 26px;
 }
 
 .course-cart-card__media {
@@ -446,6 +548,20 @@
   transform: translateY(-2px) scale(1.01);
 }
 
+.cart-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+  opacity: 0.58;
+}
+
+.cart-btn:disabled:hover {
+  transform: none;
+}
+
+.cart-btn:disabled::after {
+  display: none;
+}
+
 .cart-btn i,
 .cart-btn span {
   position: relative;
@@ -654,6 +770,23 @@
   .course-cart-card,
   .cart-skeleton-card {
     grid-template-columns: 1fr;
+  }
+
+  .cart-selection-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .course-cart-card {
+    padding-top: 58px;
+  }
+
+  .course-cart-card__check {
+    left: 18px;
+    margin-top: 0;
+    position: absolute;
+    top: 18px;
   }
 
   .course-cart-card__media,

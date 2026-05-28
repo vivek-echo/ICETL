@@ -245,6 +245,17 @@ export class ViewAllCourses implements OnInit {
     void this.getAllCourses(1);
   }
 
+  clearFilters(): void {
+    this.search = '';
+    this.categorySearch = '';
+    this.selectedCategories = [];
+    this.status = '';
+    this.sortBy = 'newest';
+    this.activeSearchTerm = '';
+    this.meta.perPage = 10;
+    void this.getAllCourses(1);
+  }
+
   goToPreviousPage(): void {
     if (this.meta.currentPage <= 1) {
       return;

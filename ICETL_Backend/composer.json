@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.8",
         "opcodesio/log-viewer": "^3.24",
         "predis/predis": "^3.4",
+        "razorpay/razorpay": "^2.9",
         "vlucas/phpdotenv": "^5.5"
     },
     "require-dev": {

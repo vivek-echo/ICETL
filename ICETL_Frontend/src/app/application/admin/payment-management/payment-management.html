@@ -1,0 +1,80 @@
+<section class="admin-payments" aria-labelledby="admin-payments-title">
+  <header class="admin-payments__header">
+    <div>
+      <span>Revenue Operations</span>
+      <h1 id="admin-payments-title">Payment Management</h1>
+      <p>Monitor revenue, failed transactions, refunds, and recent invoices.</p>
+    </div>
+
+    <div class="admin-payments__actions">
+      <button type="button" (click)="loadDashboard()" [disabled]="loading">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+        Refresh
+      </button>
+      <button type="button" (click)="exportCsv()" [disabled]="!dashboard?.recentTransactions?.length">
+        <i class="fa-solid fa-file-csv"></i>
+        Export CSV
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+  <div class="admin-payments__loading">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    Loading payment analytics...
+  </div>
+  }
+
+  @if (!loading && dashboard) {
+  <section class="admin-payment-stats" aria-label="Payment summary">
+    <article>
+      <span>Total Revenue</span>
+      <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(dashboard.summary.revenue) }}</strong>
+    </article>
+    <article>
+      <span>Successful</span>
+      <strong>{{ dashboard.summary.successfulPayments }}</strong>
+    </article>
+    <article>
+      <span>Failed</span>
+      <strong>{{ dashboard.summary.failedPayments }}</strong>
+    </article>
+    <article>
+      <span>Refunds</span>
+      <strong>{{ dashboard.summary.refundRequests }}</strong>
+    </article>
+  </section>
+
+  <div class="admin-payment-table-wrap">
+    <table class="admin-payment-table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Student</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Payment ID</th>
+          <th>Invoice</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of dashboard.recentTransactions; track row.id) {
+        <tr>
+          <td><strong>{{ row.orderReference }}</strong></td>
+          <td>
+            <strong>{{ row.userName || 'Student' }}</strong>
+            <span>{{ row.userEmail || 'No email' }}</span>
+          </td>
+          <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(row.totalAmount) }}</td>
+          <td><span class="admin-payment-chip" [class.admin-payment-chip--failed]="row.status !== 'paid'">{{ row.status }}</span></td>
+          <td>{{ row.razorpayPaymentId || 'Pending' }}</td>
+          <td>{{ row.invoiceNumber || 'Not generated' }}</td>
+          <td>{{ formatDate(row.created_at) }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+</section>

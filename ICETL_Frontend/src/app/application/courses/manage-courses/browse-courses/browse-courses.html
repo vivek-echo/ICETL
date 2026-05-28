@@ -1,18 +1,59 @@
 <section class="browse-courses" aria-labelledby="browse-courses-title">
-  <header class="browse-header">
-    <div>
+  <header class="browse-hero">
+    <div class="browse-hero__content">
+      <span class="browse-hero__eyebrow">Course Marketplace</span>
       <h1 id="browse-courses-title">Browse Courses</h1>
-      <p>Discover new skills and expand your knowledge</p>
+      <p>Find practical, instructor-led courses and add the right learning path to your cart.</p>
+
+      <div class="browse-hero__actions">
+        <a class="hero-action hero-action--primary" routerLink="/application/yourCart">
+          <i class="fa-solid fa-cart-shopping"></i>
+          View Cart
+        </a>
+        <button type="button" class="hero-action" (click)="clearFilters()">
+          <i class="fa-solid fa-compass"></i>
+          Explore All
+        </button>
+      </div>
     </div>
 
-    <a class="cart-button" routerLink="/application/yourCart" aria-label="Open cart">
-      <i class="fa-solid fa-cart-shopping"></i>
-      <span>Cart</span>
+    <aside class="browse-hero__cart" aria-label="Cart summary">
+      <span>Cart Summary</span>
       <strong>{{ cartCount }}</strong>
-    </a>
+      <p>{{ cartCount === 1 ? 'course' : 'courses' }} selected</p>
+      <small><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(cartTotal) }}</small>
+    </aside>
   </header>
 
+  <!-- <section class="browse-summary" aria-label="Course browser summary">
+    <div>
+      <i class="fa-solid fa-book-open"></i>
+      <span>Available Courses</span>
+      <strong>{{ meta.total || courses.length }}</strong>
+    </div>
+    <div>
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Categories</span>
+      <strong>{{ categories.length }}</strong>
+    </div>
+    <div>
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span>In Cart</span>
+      <strong>{{ cartCount }}</strong>
+    </div>
+    <div>
+      <i class="fa-solid fa-filter"></i>
+      <span>Current Category</span>
+      <strong>{{ selectedCategoryLabel }}</strong>
+    </div>
+  </section> -->
+
   <section class="course-toolbar" aria-label="Course filters">
+    <div class="course-toolbar__heading">
+      <h2>Find Your Next Course</h2>
+      <p>Search, filter, and sort active courses.</p>
+    </div>
+
     <div class="rbt-form-group course-field course-field--search">
       <label for="browse-course-search">Search Course</label>
       <div class="course-field__control">
@@ -62,6 +103,23 @@
       <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
       Reset
     </button>
+
+    <div class="category-strip" aria-label="Popular categories">
+      <button
+        type="button"
+        [class.is-active]="categoryId === ''"
+        (click)="selectCategory('')">
+        All
+      </button>
+      @for (category of categories.slice(0, 8); track category.id) {
+      <button
+        type="button"
+        [class.is-active]="categoryId === category.id"
+        (click)="selectCategory(category.id)">
+        {{ category.categoryName }}
+      </button>
+      }
+    </div>
   </section>
 
   @if (message) {
@@ -113,9 +171,6 @@
           <div class="course-card__media">
             <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
             <span class="category-badge">{{ course.categoryName || 'Course' }}</span>
-            <button type="button" class="wishlist-btn" aria-label="Add course to wishlist">
-              <i class="fa-regular fa-heart"></i>
-            </button>
           </div>
 
           <div class="course-card__content">
@@ -143,6 +198,10 @@
               </span>
               <span>({{ getStudentCount(course) }})</span>
             </div>
+
+            <p class="course-card__description">
+              {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+            </p>
 
             <div class="course-price-row">
               <div class="course-price">
@@ -226,10 +285,6 @@
                 (click)="addToCart(course)">
                 <i [class]="isAdding(course.id) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cart-plus'"></i>
                 {{ isInCart(course.id) ? 'Added' : (isAdding(course.id) ? 'Adding...' : 'Add to Cart') }}
-              </button>
-
-              <button type="button" class="preview-wishlist" aria-label="Add course to wishlist">
-                <i class="fa-regular fa-heart"></i>
               </button>
             </div>
           </aside>

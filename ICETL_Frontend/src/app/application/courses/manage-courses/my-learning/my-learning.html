@@ -1,0 +1,197 @@
+<section class="my-learning" aria-labelledby="my-learning-title">
+  <header class="learning-hero">
+    <div class="learning-hero__content">
+      <span class="my-learning__eyebrow">Learner Workspace</span>
+      <h1 id="my-learning-title">My Learning</h1>
+      <p>Resume your enrolled courses, review invoices, and keep your learning library organised in one place.</p>
+
+      <div class="learning-hero__actions">
+        <a class="learning-hero__browse" routerLink="/application/courses/manageCourses/browse">
+          <i class="fa-solid fa-compass"></i>
+          Browse Courses
+        </a>
+
+        <button
+          type="button"
+          class="my-learning__refresh"
+          (click)="loadMyLearning()"
+          [disabled]="loading"
+          title="Refresh my learning">
+          <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <aside class="learning-hero__panel" aria-label="Learning progress overview">
+      <span class="learning-hero__label">Overall Progress</span>
+      <strong>{{ averageProgress }}%</strong>
+      <div class="learning-hero__meter" aria-hidden="true">
+        <span [style.width.%]="averageProgress"></span>
+      </div>
+      <p>{{ activeCoursesCount }} active course{{ activeCoursesCount === 1 ? '' : 's' }} available</p>
+    </aside>
+  </header>
+
+  <!-- <section class="learning-summary" aria-label="Learning summary">
+    <div>
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Total Courses</span>
+      <strong>{{ courses.length }}</strong>
+    </div>
+    <div>
+      <i class="fa-solid fa-circle-play"></i>
+      <span>Active Courses</span>
+      <strong>{{ activeCoursesCount }}</strong>
+    </div>
+    <div>
+      <i class="fa-solid fa-chart-simple"></i>
+      <span>Average Progress</span>
+      <strong>{{ averageProgress }}%</strong>
+    </div>
+    <div>
+      <i class="fa-regular fa-calendar-check"></i>
+      <span>Latest Enrollment</span>
+      <strong>{{ courses.length ? formatDate(courses[0].enrolledAt) : 'N/A' }}</strong>
+    </div>
+  </section> -->
+
+  <div class="learning-toolbar">
+    <label>
+      <span>Search Library</span>
+      <div class="learning-toolbar__field">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" [(ngModel)]="search" placeholder="Course, category, or instructor">
+      </div>
+    </label>
+    <label>
+      <span>Status</span>
+      <div class="learning-toolbar__field learning-toolbar__field--select">
+        <i class="fa-solid fa-filter"></i>
+        <select [(ngModel)]="statusFilter">
+          <option value="all">All courses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+    </label>
+  </div>
+
+  @if (loading) {
+  <div class="learning-grid" aria-label="Loading purchased courses">
+    @for (loader of skeletonRows; track loader) {
+    <article class="learning-card learning-card--skeleton">
+      <span class="skeleton skeleton-image"></span>
+      <div class="learning-card__body">
+        <span class="skeleton skeleton-pill"></span>
+        <span class="skeleton skeleton-line skeleton-line--wide"></span>
+        <span class="skeleton skeleton-line"></span>
+        <span class="skeleton skeleton-button"></span>
+      </div>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && courses.length === 0) {
+  <section class="learning-empty">
+    <div class="learning-empty__icon">
+      <i class="fa-solid fa-book-open-reader"></i>
+    </div>
+    <h2>No purchased courses yet</h2>
+    <p>Courses you buy will appear here after payment verification.</p>
+    <a class="learning-empty__action" routerLink="/application/courses/manageCourses/browse">
+      <i class="fa-solid fa-compass"></i>
+      Browse Courses
+    </a>
+  </section>
+  }
+
+  @if (!loading && courses.length > 0 && filteredCourses.length === 0) {
+  <section class="learning-empty">
+    <div class="learning-empty__icon">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </div>
+    <h2>No matching courses</h2>
+    <p>Try a different search term or status filter.</p>
+  </section>
+  }
+
+  @if (!loading && filteredCourses.length > 0) {
+  <div class="learning-grid">
+    @for (course of filteredCourses; track trackByCourseId($index, course)) {
+    <article class="learning-card">
+      <div class="learning-card__media">
+        <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+        <span class="learning-card__status" [class.learning-card__status--inactive]="course.status !== 1">
+          {{ course.statusLabel || (course.status === 1 ? 'Active' : 'Inactive') }}
+        </span>
+      </div>
+
+      <div class="learning-card__body">
+        <span class="learning-card__category">{{ course.categoryName || 'Course' }}</span>
+
+        <h2>{{ course.title }}</h2>
+
+        <div class="learning-card__meta">
+          <span>
+            <i class="fa-solid fa-user-tie"></i>
+            {{ course.instructorName || 'Instructor' }}
+          </span>
+          <span>
+            <i class="fa-regular fa-clock"></i>
+            {{ getDurationLabel(course) }}
+          </span>
+        </div>
+
+        <p>{{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p>
+
+        @if (getHighlights(course).length > 0) {
+        <ul class="learning-card__points">
+          @for (highlight of getHighlights(course); track $index) {
+          <li>{{ highlight }}</li>
+          }
+        </ul>
+        }
+
+        <footer class="learning-card__footer">
+          <div class="learning-card__progress" aria-label="Course progress">
+            <span><strong>{{ course.progressPercent || 0 }}%</strong> complete</span>
+            <i [style.width.%]="course.progressPercent || 0"></i>
+          </div>
+        </footer>
+
+        <div class="learning-card__details">
+          <span>
+            <i class="fa-regular fa-calendar-check"></i>
+            Enrolled {{ formatDate(course.enrolledAt) }}
+          </span>
+          @if (course.invoiceNo) {
+          <span>
+            <i class="fa-solid fa-receipt"></i>
+            {{ course.invoiceNo }}
+          </span>
+          }
+        </div>
+
+        <div class="learning-card__actions">
+          <a
+            class="learning-card__action learning-card__action--primary"
+            [routerLink]="['/application/courses/manageCourses/curriculum']"
+            [queryParams]="{ courseId: course.id, mode: 'learn' }">
+            <i class="fa-solid fa-play"></i>
+            Continue Learning
+          </a>
+          @if (invoiceUrl(course); as url) {
+          <a class="learning-card__action" [href]="url" target="_blank" rel="noopener">
+            <i class="fa-solid fa-file-invoice"></i>
+            Invoice
+          </a>
+          }
+        </div>
+      </div>
+    </article>
+    }
+  </div>
+  }
+</section>

@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('carts', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('course_id');
-            $table->timestamps();
+        if (!Schema::hasTable('carts')) {
+            Schema::create('carts', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->unsignedBigInteger('course_id');
+                $table->timestamps();
 
-            $table->unique(['user_id', 'course_id'], 'carts_user_course_unique');
-            $table->index('user_id', 'carts_user_id_index');
-            $table->index('course_id', 'carts_course_id_index');
-        });
+                $table->unique(['user_id', 'course_id'], 'carts_user_course_unique');
+                $table->index('user_id', 'carts_user_id_index');
+                $table->index('course_id', 'carts_course_id_index');
+            });
+        }
     }
 
     public function down(): void

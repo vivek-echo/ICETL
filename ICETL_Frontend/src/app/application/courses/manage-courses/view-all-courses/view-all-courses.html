@@ -1,10 +1,55 @@
 <div class="course-browser">
-  
+  <header class="all-courses-hero">
+    <div class="all-courses-hero__content">
+      <span class="all-courses-hero__eyebrow">Global Catalog</span>
+      <h1>All Courses</h1>
+      <p>Review every course across creators, categories, status, and pricing from one clean catalog view.</p>
+
+      <div class="all-courses-hero__actions">
+        <button type="button" class="hero-action hero-action--primary" (click)="clearFilters()">
+          <i class="feather-refresh-cw"></i>
+          Reset Filters
+        </button>
+      </div>
+    </div>
+
+    <aside class="all-courses-hero__panel" aria-label="All courses summary">
+      <span>Total Catalog</span>
+      <strong>{{ metrics[0].value || meta.total || courses.length }}</strong>
+      <p>{{ metrics[1].value || 0 }} active / {{ metrics[2].value || 0 }} inactive</p>
+    </aside>
+  </header>
+
+  <section class="course-summary" aria-label="All courses summary">
+    @for (metric of metrics; track metric.label) {
+    <div>
+      <i [class]="metric.icon"></i>
+      <span>{{ metric.label }}</span>
+      <strong>{{ metric.value }}</strong>
+      <p>{{ metric.note }}</p>
+    </div>
+    }
+
+    <div>
+      <i class="feather-grid"></i>
+      <span>Categories</span>
+      <strong>{{ categories.length }}</strong>
+      <p>{{ selectedCategoryLabel }}</p>
+    </div>
+  </section>
 
   <div class="course-toolbar">
+    <div class="course-toolbar__heading">
+      <h2>Search Catalog</h2>
+      <p>Filter all platform courses by keyword, category, status, sort order, and page size.</p>
+    </div>
+
     <div class="rbt-form-group">
       <label>Search Course</label>
-      <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+      <div class="course-field">
+        <i class="feather-search"></i>
+        <input type="text" placeholder="Type 4+ letters..." [(ngModel)]="search" (keyup)="onSearch()">
+      </div>
     </div>
 
     <div class="rbt-form-group">
@@ -56,30 +101,44 @@
 
     <div class="rbt-form-group">
       <label>Status</label>
-      <select class="course-filter-select" [(ngModel)]="status" (change)="onFilterChange()">
-        <option value="">All Status</option>
-        <option value="1">Active</option>
-        <option value="0">Inactive</option>
-      </select>
+      <div class="course-field">
+        <i class="feather-activity"></i>
+        <select class="course-filter-select" [(ngModel)]="status" (change)="onFilterChange()">
+          <option value="">All Status</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
     </div>
 
     <div class="rbt-form-group">
       <label>Sort</label>
-      <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
-        @for (option of sortOptions; track option.value) {
-        <option [ngValue]="option.value">{{ option.label }}</option>
-        }
-      </select>
+      <div class="course-field">
+        <i class="feather-sliders"></i>
+        <select class="course-filter-select" [(ngModel)]="sortBy" (change)="onSortChange()">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
     </div>
 
     <div class="rbt-form-group">
       <label>Per Page</label>
-      <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
-        @for (option of perPageOptions; track option) {
-        <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
-        }
-      </select>
+      <div class="course-field">
+        <i class="feather-list"></i>
+        <select class="course-filter-select" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
     </div>
+
+    <button type="button" class="course-toolbar__reset" (click)="clearFilters()">
+      <i class="feather-refresh-cw"></i>
+      Reset
+    </button>
   </div>
 
   @if (loading) {
@@ -140,6 +199,10 @@
               {{ getDurationLabel(course) }}
             </span>
           </div>
+
+          <p class="course-card__description">
+            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+          </p>
 
           <div class="course-badges">
             <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>

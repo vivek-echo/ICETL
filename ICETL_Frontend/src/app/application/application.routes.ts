@@ -65,6 +65,20 @@ export const applicationRoutes: Routes = [
         loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },
+      {
+        path: 'paymentLog',
+        data: { authOnly: true },
+        loadComponent: () =>
+          import('./courses/payment-log/payment-log').then((m) => m.PaymentLogComponent),
+        title: 'Payment Log | ICETL',
+      },
+      {
+        path: 'myLearning',
+        data: { authOnly: true },
+        pathMatch: 'full',
+        redirectTo: '/application/courses/manageCourses/myLearning',
+        title: 'My Learning | ICETL',
+      },
     ],
   },
 ];

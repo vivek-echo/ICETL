@@ -175,6 +175,15 @@ export class BrowseCourses implements OnInit {
     void this.loadCourses(1);
   }
 
+  selectCategory(categoryId: number | ''): void {
+    if (this.categoryId === categoryId) {
+      return;
+    }
+
+    this.categoryId = categoryId;
+    void this.loadCourses(1);
+  }
+
   async addToCart(course: CourseCartItem): Promise<void> {
     if (this.isInCart(course.id) || this.addingCourseIds.has(course.id)) {
       return;
@@ -276,6 +285,14 @@ export class BrowseCourses implements OnInit {
 
   get recommendedCourses(): CourseCartItem[] {
     return this.sortedCourses.filter((course) => !this.isInCart(course.id)).slice(0, 3);
+  }
+
+  get selectedCategoryLabel(): string {
+    if (!this.categoryId) {
+      return 'All';
+    }
+
+    return this.categories.find((category) => category.id === Number(this.categoryId))?.categoryName || 'Selected';
   }
 
   formatAmount(amount: number | string | null): string {

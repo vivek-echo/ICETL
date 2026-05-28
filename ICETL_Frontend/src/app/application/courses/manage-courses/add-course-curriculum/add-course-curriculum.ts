@@ -459,8 +459,6 @@ export class AddCourseCurriculum implements OnDestroy {
       await this.alertHelper.success(response.message || 'Course published successfully');
     } catch (error) {
       console.error('Error publishing course:', error);
-      this.saveError = 'Unable to publish course.';
-      await this.alertHelper.error(this.saveError);
     } finally {
       this.publishing = false;
       this.changeDetector.detectChanges();

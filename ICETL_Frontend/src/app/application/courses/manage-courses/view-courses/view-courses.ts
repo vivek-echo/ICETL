@@ -333,6 +333,21 @@ export class ViewCourses implements OnInit, OnDestroy {
     void this.getCourses(1);
   }
 
+  clearFilters(): void {
+    this.search = '';
+    this.categorySearch = '';
+    this.selectedCategories = [];
+    this.status = '';
+    this.sortBy = 'newest';
+    this.activeSearchTerm = '';
+    this.meta.perPage = 10;
+    void this.getCourses(1);
+  }
+
+  goToAddCourse(): void {
+    void this.router.navigate(['/application/courses/manageCourses/add']);
+  }
+
   goToPreviousPage(): void {
     if (this.meta.currentPage <= 1) {
       return;

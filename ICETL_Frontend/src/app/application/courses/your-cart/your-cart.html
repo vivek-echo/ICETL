@@ -10,7 +10,7 @@
         <span class="cart-stat-card__icon"><i class="fa-solid fa-book-open"></i></span>
         <div>
           <small>Total Courses</small>
-          <strong>{{ items.length }}</strong>
+          <strong>{{ selectedCount }}/{{ items.length }}</strong>
         </div>
       </article>
 
@@ -24,7 +24,7 @@
         </div>
       </article>
 
-      <article class="cart-stat-card">
+      <!-- <article class="cart-stat-card">
         <span class="cart-stat-card__icon cart-stat-card__icon--success">
           <i class="fa-solid fa-tags"></i>
         </span>
@@ -32,7 +32,7 @@
           <small>Discount</small>
           <strong>{{ discountPercent }}%</strong>
         </div>
-      </article>
+      </article> -->
     </div>
   </div>
 
@@ -86,8 +86,31 @@
   @if (!loading && items.length > 0) {
   <div class="cart-content-grid">
     <div class="cart-course-list">
+      <div class="cart-selection-bar">
+        <label class="cart-check cart-check--all">
+          <input
+            type="checkbox"
+            [checked]="allSelected"
+            [indeterminate]="partiallySelected"
+            (change)="toggleAllSelection($any($event.target).checked)">
+          <span aria-hidden="true"></span>
+          Select all courses
+        </label>
+
+        <strong>{{ selectedCount }} selected</strong>
+      </div>
+
       @for (item of items; track item.id) {
-      <article class="course-cart-card">
+      <article class="course-cart-card" [class.course-cart-card--selected]="isSelected(item.id)">
+        <label class="cart-check course-cart-card__check">
+          <input
+            type="checkbox"
+            [checked]="isSelected(item.id)"
+            (change)="toggleItemSelection(item.id, $any($event.target).checked)"
+            [attr.aria-label]="'Select ' + item.title">
+          <span aria-hidden="true"></span>
+        </label>
+
         <div class="course-cart-card__media">
           <img [src]="courseImage(item)" [alt]="item.title" (error)="onCourseImageError(item)">
           <span class="course-badge">{{ item.categoryName || 'Course' }}</span>
@@ -145,13 +168,6 @@
             }
           </div>
 
-          <button
-            type="button"
-            class="cart-btn cart-btn--ghost"
-            (click)="saveForLater(item.id)">
-            <i class="fa-regular fa-bookmark"></i>
-            Save for later
-          </button>
         </div>
       </article>
       }
@@ -162,14 +178,14 @@
         <span><i class="fa-solid fa-receipt"></i></span>
         <div>
           <h2 id="order-summary-title">Order Summary</h2>
-          <p>{{ items.length }} course{{ items.length === 1 ? '' : 's' }} selected</p>
+          <p>{{ selectedCount }} of {{ items.length }} course{{ items.length === 1 ? '' : 's' }} selected</p>
         </div>
       </div>
 
       <div class="summary-lines">
         <div>
-          <span>Total courses</span>
-          <strong>{{ items.length }}</strong>
+          <span>Selected courses</span>
+          <strong>{{ selectedCount }}</strong>
         </div>
         <div>
           <span>Subtotal</span>
@@ -191,9 +207,9 @@
       </div>
 
       <div class="summary-actions">
-        <button type="button" class="cart-btn cart-btn--primary">
+        <button type="button" class="cart-btn cart-btn--primary" (click)="checkout()" [disabled]="selectedCount === 0" >
           <i class="fa-solid fa-lock"></i>
-          Checkout
+          Purchase Selected
         </button>
         <!-- <a class="cart-btn cart-btn--secondary" routerLink="/application/courses/manageCourses/browse">
           <i class="fa-solid fa-arrow-left"></i>

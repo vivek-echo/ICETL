@@ -1,1 +1,123 @@
-<p>dashboard works!</p>
+<section class="dashboard-page">
+  <div class="dashboard-heading">
+    <div class="heading-main">
+      <span class="dashboard-kicker">Instructor Dashboard</span>
+      <h4>Course performance</h4>
+      <p>Review learner traction, content status, and revenue across your courses.</p>
+    </div>
+    <div class="heading-meta">
+      <div class="heading-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action" routerLink="/application/courses/manageCourses/view">
+          <i class="feather-list"></i>
+          <span>My Courses</span>
+        </a>
+        <button type="button" class="rbt-btn btn-sm btn-border dashboard-action" (click)="loadDashboard()" [disabled]="loading">
+          <i class="feather-refresh-cw"></i>
+          <span>{{ loading ? 'Loading' : 'Refresh' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="dashboard-alert">{{ errorMessage }}</div>
+  }
+
+  @if (data) {
+    <div class="metric-grid">
+      <article class="metric-card">
+        <i class="feather-book"></i>
+        <span>Total Courses</span>
+        <strong>{{ data.summary.totalCourses }}</strong>
+        <small>Courses assigned to you</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-check-circle"></i>
+        <span>Active Courses</span>
+        <strong>{{ data.summary.activeCourses }}</strong>
+        <small>Published and available</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-users"></i>
+        <span>Enrolled Learners</span>
+        <strong>{{ data.summary.enrolledLearners }}</strong>
+        <small>Unique learners</small>
+      </article>
+      <article class="metric-card">
+        <i class="feather-trending-up"></i>
+        <span>Revenue</span>
+        <strong>Rs. {{ formatAmount(data.summary.totalRevenue) }}</strong>
+        <small>Course sales total</small>
+      </article>
+    </div>
+
+    <div class="dashboard-grid">
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Course Status</h5>
+          <span>{{ data.summary.averageProgress }}% avg progress</span>
+        </div>
+        <div class="bar-list">
+          @for (point of data.courseStatus; track point.label) {
+            <div class="bar-row">
+              <div class="bar-row__label">
+                <span>{{ point.label }}</span>
+                <strong>{{ point.value }}</strong>
+              </div>
+              <div class="bar-track">
+                <span [style.width.%]="chartWidth(point)"></span>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="dashboard-panel">
+        <div class="panel-title">
+          <h5>Top Courses</h5>
+          <span>{{ data.summary.pendingCourses }} inactive</span>
+        </div>
+        <div class="activity-list">
+          @for (course of data.topCourses; track course.id) {
+            <div class="activity-item">
+              <div>
+                <strong>{{ course.title }}</strong>
+                <span>{{ course.categoryName }} &middot; {{ course.status }}</span>
+              </div>
+              <b>{{ course.students || 0 }} learners</b>
+            </div>
+          } @empty {
+            <p class="empty-state">No courses available yet.</p>
+          }
+        </div>
+      </article>
+    </div>
+
+    <article class="dashboard-panel">
+      <div class="panel-title">
+        <h5>Recent Learners</h5>
+        <span>Newest enrollments</span>
+      </div>
+      <div class="dashboard-table">
+        <div class="dashboard-row dashboard-row--four dashboard-row--head">
+          <span>Learner</span>
+          <span>Course</span>
+          <span>Progress</span>
+          <span>Email</span>
+        </div>
+        @for (learner of data.recentLearners; track learner.id) {
+          <div class="dashboard-row dashboard-row--four">
+            <span>{{ learner.learnerName }}</span>
+            <span>{{ learner.title }}</span>
+            <span>{{ learner.progressPercent || 0 }}% progress</span>
+            <span>{{ learner.learnerEmail || 'N/A' }}</span>
+          </div>
+        } @empty {
+          <p class="empty-state">No learner enrollments yet.</p>
+        }
+      </div>
+    </article>
+  } @else if (loading) {
+    <div class="dashboard-panel empty-state">Loading dashboard...</div>
+  }
+</section>

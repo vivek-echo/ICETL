@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\InstructorRegistrationController;
@@ -7,6 +8,8 @@ use App\Http\Controllers\CoursesController;
 use App\Http\Controllers\CommonController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CurriculumController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\DashboardController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -26,7 +29,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'check' => true
         ]);
     });
-    
+
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user-profile', [UserProfileController::class, 'show']);
@@ -79,7 +82,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //master dataa
     Route::post('/getInstructorListByInstructorId', [CommonController::class, 'getInstructorListByInstructorId']);
+
+    //payment routes
+    Route::post('/cartCheckoutInit', [PaymentController::class, 'cartCheckoutInit']);
+    Route::post('/verifyPayment', [PaymentController::class, 'verifyPayment']);
+    Route::post('/paymentFailure', [PaymentController::class, 'paymentFailure']);
+    Route::get('/paymentLogs', [PaymentController::class, 'paymentLogs']);
+    Route::get('/myLearning', [PaymentController::class, 'myLearning']);
+    Route::get('/invoice/{orderId}', [PaymentController::class, 'invoice']);
+    Route::get('/invoice/{orderId}/download', [PaymentController::class, 'downloadInvoice']);
+    Route::get('/course-access/{courseId}', [PaymentController::class, 'checkCourseAccess']);
+    Route::get('/admin/payments', [PaymentController::class, 'adminPayments']);
+
+    // dashboard routes
+    Route::get('/dashboard/learner', [DashboardController::class, 'learner']);
+    Route::get('/dashboard/instructor', [DashboardController::class, 'instructor']);
+    Route::get('/dashboard/admin', [DashboardController::class, 'admin']);
 });
+
+Route::post('/razorpay/webhook', [PaymentController::class, 'webhook']);
 
 Route::get('/user-profile/image/{type}/{filename}', [UserProfileController::class, 'image'])
     ->where('type', 'profile|thumbnail|cover')
