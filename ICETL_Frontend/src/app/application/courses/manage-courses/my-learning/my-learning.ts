@@ -130,7 +130,4 @@ export class MyLearning implements OnInit {
     return Math.round(totalProgress / this.courses.length);
   }
 
-  invoiceUrl(course: MyLearningCourse): string | null {
-    return course.orderId ? this.paymentService.getInvoiceDownloadUrl(course.orderId) : null;
-  }
 }

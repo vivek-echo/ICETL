@@ -404,6 +404,7 @@
 .learning-card__progress {
   display: grid;
   gap: 8px;
+  position: relative;
 }
 
 .learning-card__progress span {
@@ -416,7 +417,7 @@
   color: #172033;
 }
 
-.learning-card__progress::after,
+.learning-card__progress::before,
 .learning-card__progress i {
   border-radius: 999px;
   content: "";
@@ -425,13 +426,16 @@
   height: 8px;
 }
 
-.learning-card__progress::after {
+.learning-card__progress::before {
   background: #eef2f7;
+  z-index: 0;
 }
 
 .learning-card__progress i {
   background: linear-gradient(135deg, #2f57ef, #14b8a6);
-  min-width: 8px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .learning-card__details {
@@ -454,7 +458,7 @@
 .learning-card__actions {
   display: grid;
   gap: 10px;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr;
   margin-top: 16px;
 }
 

@@ -10,6 +10,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CurriculumController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LearningController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -93,6 +94,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/invoice/{orderId}/download', [PaymentController::class, 'downloadInvoice']);
     Route::get('/course-access/{courseId}', [PaymentController::class, 'checkCourseAccess']);
     Route::get('/admin/payments', [PaymentController::class, 'adminPayments']);
+
+    // learner course player routes
+    Route::get('/learning/course/{courseId}', [LearningController::class, 'course']);
+    Route::post('/learning/progress', [LearningController::class, 'saveProgress']);
+    Route::post('/learning/notes', [LearningController::class, 'saveNote']);
+    Route::post('/learning/quiz/{quizId}/submit', [LearningController::class, 'submitQuiz']);
 
     // dashboard routes
     Route::get('/dashboard/learner', [DashboardController::class, 'learner']);

@@ -123,6 +123,12 @@ export const coursesRoutes: Routes = [
             title: 'Curriculum | ICETL',
           },
           {
+            path: 'learn',
+            loadComponent: () =>
+              import('./manage-courses/course-player/course-player').then((m) => m.CoursePlayer),
+            title: 'Course Player | ICETL',
+          },
+          {
             path: 'myLearning',
             loadComponent: () =>
               import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),

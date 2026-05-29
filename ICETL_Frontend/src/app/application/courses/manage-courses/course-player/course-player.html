@@ -1,0 +1,378 @@
+<section class="course-player" aria-labelledby="course-player-title">
+  @if (loading) {
+    <div class="player-loading">
+      <span class="skeleton hero"></span>
+      <div class="player-loading__grid">
+        <span class="skeleton rail"></span>
+        <span class="skeleton stage"></span>
+      </div>
+    </div>
+  } @else if (errorMessage) {
+    <section class="player-empty">
+      <div class="player-empty__icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h1>{{ errorMessage }}</h1>
+      <a routerLink="/application/courses/manageCourses/myLearning">
+        <i class="fa-solid fa-arrow-left"></i>
+        My Learning
+      </a>
+    </section>
+  } @else if (data; as vm) {
+    <header class="player-header">
+      <div class="player-header__media">
+        <img [src]="courseImage()" [alt]="vm.course.title" (error)="onCourseImageError()">
+      </div>
+
+      <div class="player-header__body">
+        <span class="player-kicker">{{ vm.course.categoryName || 'Course' }}</span>
+        <h1 id="course-player-title">{{ vm.course.title }}</h1>
+        <div class="player-header__meta">
+          <span><i class="fa-solid fa-user-tie"></i>{{ vm.course.instructorName || 'Instructor' }}</span>
+          <span><i class="fa-solid fa-layer-group"></i>{{ vm.summary.totalItems }} items</span>
+          <span><i class="fa-solid fa-circle-question"></i>{{ vm.summary.quizCount }} quizzes</span>
+        </div>
+
+        <div class="course-progress" aria-label="Course progress">
+          <div>
+            <strong>{{ progressPercent }}%</strong>
+            <span>{{ vm.summary.completedItems }}/{{ vm.summary.totalItems }} complete</span>
+          </div>
+          <i [style.width.%]="progressPercent"></i>
+        </div>
+      </div>
+
+      <div class="player-header__actions">
+        <a routerLink="/application/courses/manageCourses/myLearning" class="ghost-action">
+          <i class="fa-solid fa-arrow-left"></i>
+          My Learning
+        </a>
+        <button type="button" class="ghost-action" (click)="loadCourse(true)">
+          <i class="fa-solid fa-rotate-right"></i>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    @if (activeItem; as item) {
+      <div class="player-layout">
+        <aside class="curriculum-panel" aria-label="Course curriculum">
+          <div class="panel-heading">
+            <h2>Curriculum</h2>
+            <span>{{ vm.summary.lectureCount }} lectures</span>
+          </div>
+
+          <div class="section-list">
+            @for (section of vm.sections; track trackBySectionId($index, section); let sectionIndex = $index) {
+              <section class="curriculum-section">
+                <h3>Section {{ sectionIndex + 1 }}: {{ section.title }}</h3>
+                @if (section.objective) {
+                  <p>{{ section.objective }}</p>
+                }
+
+                <div class="item-list">
+                  @for (sectionItem of section.items; track trackByItemId($index, sectionItem); let itemIndex = $index) {
+                    <button
+                      type="button"
+                      class="curriculum-row"
+                      [class.active]="selectedItemId === sectionItem.id"
+                      [class.completed]="isCompleted(sectionItem)"
+                      (click)="selectItem(sectionItem)">
+                      <span class="curriculum-row__index">
+                        @if (isCompleted(sectionItem)) {
+                          <i class="fa-solid fa-check"></i>
+                        } @else {
+                          {{ itemIndex + 1 }}
+                        }
+                      </span>
+                      <span class="curriculum-row__icon"><i [class]="getItemIcon(sectionItem)"></i></span>
+                      <span class="curriculum-row__copy">
+                        <strong>{{ sectionItem.title }}</strong>
+                        <small>
+                          {{ getContentTypeLabel(sectionItem) }}
+                          <span aria-hidden="true">|</span>
+                          {{ getDurationLabel(sectionItem) }}
+                        </small>
+                      </span>
+                    </button>
+                  } @empty {
+                    <div class="panel-state">No items in this section.</div>
+                  }
+                </div>
+              </section>
+            } @empty {
+              <div class="panel-state">No curriculum available.</div>
+            }
+          </div>
+        </aside>
+
+        <main class="learning-stage">
+          <div class="stage-heading">
+            <div>
+              <span class="stage-type">{{ getContentTypeLabel(item) }}</span>
+              <h2>{{ item.title }}</h2>
+            </div>
+            <div class="stage-heading__actions">
+              <button type="button" class="ghost-action stage-note-button" (click)="openNotes()">
+                <i class="fa-regular fa-note-sticky"></i>
+                Notes
+              </button>
+              <span class="stage-status" [class.completed]="isCompleted(item)">
+                <i [class]="isCompleted(item) ? 'fa-solid fa-check' : 'fa-regular fa-clock'"></i>
+                {{ isCompleted(item) ? 'Completed' : 'In Progress' }}
+              </span>
+            </div>
+          </div>
+
+          @if (!isQuiz(item)) {
+            <section class="lecture-view">
+              @if (item.contentType === 'youtube') {
+                @if (getYoutubeEmbedUrl(item); as embedUrl) {
+                  <div class="lecture-frame">
+                    <iframe
+                      [src]="embedUrl"
+                      [title]="item.title"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      loading="lazy"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen>
+                    </iframe>
+                  </div>
+                } @else {
+                  <div class="stage-state">
+                    <i class="fa-brands fa-youtube"></i>
+                    <span>Video unavailable</span>
+                  </div>
+                }
+              } @else if (item.contentType === 'upload') {
+                @if (item.fileUrl) {
+                  <video class="lecture-video" controls [src]="item.fileUrl">
+                    Your browser does not support video playback.
+                  </video>
+                } @else {
+                  <div class="stage-state">
+                    <i class="fa-solid fa-video-slash"></i>
+                    <span>Video unavailable</span>
+                  </div>
+                }
+              } @else {
+                <article class="lecture-article">
+                  <p>{{ item.description || 'Article content is not available yet.' }}</p>
+                </article>
+              }
+
+              @if (item.contentType !== 'article' && item.description) {
+                <article class="lecture-description">
+                  <h3>Overview</h3>
+                  <p>{{ item.description }}</p>
+                </article>
+              }
+
+              <div class="stage-actions">
+                <button
+                  type="button"
+                  class="ghost-action"
+                  [disabled]="!previousItem"
+                  (click)="previousItem && selectItem(previousItem)">
+                  <i class="fa-solid fa-arrow-left"></i>
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  class="primary-action"
+                  [disabled]="isSavingProgress(item) || isCompleted(item)"
+                  (click)="completeActiveLecture(false)">
+                  @if (isSavingProgress(item)) {
+                    <span class="button-spinner" aria-hidden="true"></span>
+                    Saving...
+                  } @else {
+                    <i class="fa-solid fa-check"></i>
+                    Mark Complete
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="primary-action"
+                  [disabled]="isSavingProgress(item) || !nextItem"
+                  (click)="completeActiveLecture(true)">
+                  <i class="fa-solid fa-arrow-right"></i>
+                  Complete & Continue
+                </button>
+              </div>
+            </section>
+          } @else if (item.quiz; as quiz) {
+            <section class="quiz-view">
+              <div class="quiz-summary">
+                <span><i class="fa-regular fa-circle-question"></i>{{ quiz.questionCount }} questions</span>
+                <span><i class="fa-regular fa-clock"></i>{{ item.timeLimit || 0 }} min</span>
+                <span><i class="fa-solid fa-bullseye"></i>{{ item.passingPercentage || 70 }}% pass</span>
+                <span><i class="fa-solid fa-rotate"></i>{{ getAttemptLabel(item) }}</span>
+              </div>
+
+              @if (quiz.latestAttempt) {
+                <div class="attempt-result" [class.passed]="quiz.latestAttempt.passed">
+                  <strong>{{ quiz.latestAttempt.passed ? 'Passed' : 'Latest Score' }}</strong>
+                  <span>{{ quiz.latestAttempt.percentage }}%</span>
+                </div>
+              }
+
+              @if (!quiz.questionCount) {
+                <div class="stage-state">
+                  <i class="fa-regular fa-circle-question"></i>
+                  <span>No quiz questions mapped yet.</span>
+                </div>
+              } @else {
+                <div class="question-list">
+                  @for (question of quiz.questions; track trackByQuestionId($index, question); let questionIndex = $index) {
+                    <article class="question-block" [ngClass]="getQuestionStatusClass(item, question.id)">
+                      <div class="question-head">
+                        <span>{{ questionIndex + 1 }}</span>
+                        <div>
+                          <h3>{{ question.question }}</h3>
+                          <small>{{ question.marks }} mark{{ question.marks === 1 ? '' : 's' }}</small>
+                        </div>
+                      </div>
+
+                      <div class="option-list">
+                        @for (option of question.options; track trackByOptionId($index, option)) {
+                          <label class="option-row" [class.selected]="isOptionSelected(item, question, option.id)">
+                            @if (question.questionType === 'multiple_choice') {
+                              <input
+                                type="checkbox"
+                                [checked]="isOptionSelected(item, question, option.id)"
+                                [disabled]="hasQuizResult(item) || !quiz.canAttempt"
+                                (change)="setQuizAnswer(item, question, option.id, $any($event.target).checked)">
+                            } @else {
+                              <input
+                                type="radio"
+                                [name]="'question-' + question.id"
+                                [checked]="isOptionSelected(item, question, option.id)"
+                                [disabled]="hasQuizResult(item) || !quiz.canAttempt"
+                                (change)="setQuizAnswer(item, question, option.id, true)">
+                            }
+                            <span>{{ option.optionText }}</span>
+                          </label>
+                        }
+                      </div>
+
+                      @if (getReviewForQuestion(item, question.id); as review) {
+                        <div class="question-feedback">
+                          <strong>{{ review.isCorrect ? 'Correct' : 'Needs review' }}</strong>
+                          @if (!review.isCorrect) {
+                            <span>Answer: {{ getCorrectOptionsText(item, question) }}</span>
+                          }
+                          @if (review.explanation) {
+                            <p>{{ review.explanation }}</p>
+                          }
+                        </div>
+                      }
+                    </article>
+                  }
+                </div>
+
+                @if (getQuizResult(item); as result) {
+                  <div class="quiz-final" [class.passed]="result.attempt.passed">
+                    <strong>{{ result.attempt.passed ? 'Quiz Passed' : 'Quiz Submitted' }}</strong>
+                    <span>{{ result.attempt.score }}/{{ result.attempt.totalMarks }} marks | {{ result.attempt.percentage }}%</span>
+                  </div>
+                }
+
+                <div class="stage-actions">
+                  <button
+                    type="button"
+                    class="ghost-action"
+                    [disabled]="!previousItem"
+                    (click)="previousItem && selectItem(previousItem)">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    class="primary-action"
+                    [disabled]="!canSubmitQuiz(item)"
+                    (click)="submitQuiz(item)">
+                    @if (isSubmittingQuiz(item)) {
+                      <span class="button-spinner" aria-hidden="true"></span>
+                      Submitting...
+                    } @else {
+                      <i class="fa-solid fa-paper-plane"></i>
+                      Submit Quiz
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="ghost-action"
+                    [disabled]="!nextItem"
+                    (click)="nextItem && selectItem(nextItem)">
+                    Next
+                    <i class="fa-solid fa-arrow-right"></i>
+                  </button>
+                </div>
+              }
+            </section>
+          } @else {
+            <section class="quiz-view">
+              <div class="stage-state">
+                <i class="fa-regular fa-circle-question"></i>
+                <span>Quiz content unavailable.</span>
+              </div>
+            </section>
+          }
+        </main>
+
+        @if (notesPanelOpen) {
+          <button type="button" class="notes-backdrop" aria-label="Close notes" (click)="closeNotes()"></button>
+        }
+
+        <aside
+          class="notes-drawer"
+          [class.open]="notesPanelOpen"
+          [attr.aria-hidden]="!notesPanelOpen"
+          aria-label="Notes">
+          <div class="panel-heading">
+            <div>
+              <h2>Notes</h2>
+              @if (item.note?.updatedAt) {
+                <span>{{ formatDate(item.note?.updatedAt) }}</span>
+              }
+            </div>
+            <button type="button" class="icon-action" title="Close notes" (click)="closeNotes()">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <textarea
+            [(ngModel)]="noteDrafts[item.id]"
+            rows="14"
+            maxlength="20000"
+            placeholder="Write notes for this item"></textarea>
+          <div class="notes-actions">
+            <button type="button" class="ghost-action" [disabled]="isSavingNote(item)" (click)="clearNote(item)">
+              <i class="fa-regular fa-trash-can"></i>
+              Clear
+            </button>
+            <button type="button" class="primary-action" [disabled]="isSavingNote(item)" (click)="saveNote(item)">
+              @if (isSavingNote(item)) {
+                <span class="button-spinner" aria-hidden="true"></span>
+                Saving...
+              } @else {
+                <i class="fa-solid fa-floppy-disk"></i>
+                Save Note
+              }
+            </button>
+          </div>
+        </aside>
+      </div>
+    } @else {
+      <section class="player-empty">
+        <div class="player-empty__icon">
+          <i class="fa-regular fa-folder-open"></i>
+        </div>
+        <h1>No lectures available</h1>
+        <a routerLink="/application/courses/manageCourses/myLearning">
+          <i class="fa-solid fa-arrow-left"></i>
+          My Learning
+        </a>
+      </section>
+    }
+  }
+</section>
