@@ -57,7 +57,7 @@ export class AddCourses implements OnInit {
       durationUnit: [1, Validators.required],
       price: [0, [Validators.required, Validators.min(0)]],
       oldPrice: [0, [Validators.min(0)]],
-      description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(100)]],
+      description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(300)]],
       courseHighlights: this.fb.array([this.fb.control('')]),
       thumbnail: [null],
       status: [0],

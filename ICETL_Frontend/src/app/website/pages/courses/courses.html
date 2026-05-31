@@ -35,7 +35,7 @@
               <div class="courses-banner__glow courses-banner__glow--two"></div>
 
               <div class="courses-banner__mini-cards">
-                @for (stat of bannerStats; track stat.label) {
+                @for (stat of bannerStats(); track stat.label) {
                   <div class="courses-banner__mini-card">
                     <span class="courses-banner__mini-icon">
                       <i [class]="stat.iconClass"></i>
@@ -78,11 +78,11 @@
             <select
               id="courseCategory"
               class="form-select"
-              [ngModel]="filters().category"
+              [ngModel]="filters().categoryKey"
               (ngModelChange)="updateCategory($event)"
             >
-              @for (category of categories(); track category) {
-                <option [ngValue]="category">{{ category }}</option>
+              @for (category of categoryOptions(); track category.key) {
+                <option [ngValue]="category.key">{{ category.title }}</option>
               }
             </select>
           </div>
@@ -133,16 +133,20 @@
       </div>
 
       <div class="row g-4 courses-categories__grid justify-content-center">
-        @for (category of categoryCards(); track category.title) {
+        @for (category of categoryCards(); track category.key) {
           <div class="col-lg-4 col-md-6 col-12 d-flex">
             <button
               type="button"
               class="courses-category-card"
-              [class.is-active]="filters().category === category.title"
-              (click)="updateCategory(category.title)"
+              [class.is-active]="filters().categoryKey === category.key"
+              (click)="updateCategory(category.key)"
             >
               <span class="courses-category-card__icon">
-                <i [class]="category.iconClass"></i>
+                @if (category.iconUrl) {
+                  <img [src]="category.iconUrl" [alt]="category.title" loading="lazy" decoding="async" />
+                } @else {
+                  <i [class]="category.iconClass"></i>
+                }
               </span>
               <div class="courses-category-card__content">
                 <span class="courses-category-card__label">{{ category.accentLabel }}</span>
@@ -181,7 +185,15 @@
         </div>
       </div>
 
-      @if (filteredCourses().length) {
+      @if (loadingCourses()) {
+        <div class="courses-empty-state">
+          <div class="courses-empty-state__icon">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          </div>
+          <h4>Loading courses...</h4>
+          <p>Fetching the latest active courses from ICTEL.</p>
+        </div>
+      } @else if (filteredCourses().length) {
         <div class="row g-5">
           @for (course of filteredCourses(); track course.id) {
             <div class="col-lg-4 col-md-6 col-12">
@@ -194,6 +206,7 @@
                       [alt]="course.title"
                       loading="lazy"
                       decoding="async"
+                      (error)="onCourseImageError(course)"
                     />
                     <div class="rbt-badge-3 bg-white">
                       <span>{{ course.badge }}</span>
@@ -230,8 +243,6 @@
                     <li><i class="feather-users"></i>{{ course.students }} Students</li>
                   </ul>
 
-                  <p class="rbt-card-text courses-grid-card__description">{{ course.description }}</p>
-
                   <div class="courses-grid-card__info">
                     <span class="courses-grid-card__info-item">
                       <i class="fa-regular fa-clock"></i>
@@ -257,8 +268,10 @@
 
                   <div class="rbt-card-bottom courses-grid-card__footer">
                     <div class="rbt-price">
-                      <span class="current-price">${{ course.price }}</span>
-                      <span class="off-price">${{ course.originalPrice }}</span>
+                      <span class="current-price">Rs. {{ formatAmount(course.price) }}</span>
+                      @if (course.originalPrice) {
+                        <span class="off-price">Rs. {{ formatAmount(course.originalPrice) }}</span>
+                      }
                     </div>
                     <a class="rbt-btn-link courses-grid-card__button" [routerLink]="course.route">
                       Enroll Now<i class="feather-arrow-right"></i>

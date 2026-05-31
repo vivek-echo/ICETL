@@ -30,6 +30,8 @@ import {
 import { NavigationService } from '../../../commonServices/nav-item-service';
 import { SpinnerService } from '../../../commonServices/spinner/spinner.service';
 import { UserProfileService } from '../../../commonServices/user-profile.service';
+import { FormValidationService } from '../../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../../commonServices/form-validation-rules';
 
 type LoginStep = 'identify' | 'otp' | 'role' | 'profile';
 
@@ -98,6 +100,8 @@ export class Login implements OnDestroy {
     private NavigationService: NavigationService,
     private spinner: SpinnerService,
     private userProfileService: UserProfileService,
+    private formValidationService: FormValidationService,
+    private el: ElementRef,
   ) {
     if (environment.production === false) {
       this.loginForm = this.fb.group({
@@ -110,16 +114,8 @@ export class Login implements OnDestroy {
     }
 
     this.profileForm = this.fb.group({
-      name: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(150),
-          Validators.pattern(/^[A-Za-z](?:[A-Za-z ]*[A-Za-z])?$/),
-        ],
-      ],
-      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+      name: ['', FormValidationRules.requiredName()],
+      phone: ['', FormValidationRules.requiredMobile()],
       dob: ['', [Validators.required, this.dobBeforeTodayValidator()]],
       gender: ['', [Validators.required, Validators.pattern(/^[123]$/)]],
     });
@@ -256,7 +252,7 @@ export class Login implements OnDestroy {
 
   sanitizeNameInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '');
+    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '').slice(0, 50);
 
     if (input.value !== sanitized) {
       input.value = sanitized;
@@ -290,7 +286,7 @@ export class Login implements OnDestroy {
   async sendOtp(): Promise<void> {
     this.submitted = true;
 
-    if (this.loginForm.invalid) {
+    if (!this.formValidationService.validateForm(this.loginForm, this.getFieldName, this.el)) {
       return;
     }
 
@@ -512,8 +508,7 @@ export class Login implements OnDestroy {
   completeProfile(): void {
     this.prepareProfileFormForSubmit();
 
-    if (this.profileForm.invalid) {
-      this.profileForm.markAllAsTouched();
+    if (!this.formValidationService.validateForm(this.profileForm, this.getFieldName, this.el)) {
       return;
     }
 
@@ -713,6 +708,18 @@ export class Login implements OnDestroy {
     this.NavigationService.loadNavigation();
     this.userProfileService.loadProfileFromStorage();
     void this.router.navigate(['/application', data.user.dashboard?.dashboardUrl]);
+  }
+
+  private getFieldName(field: string): string {
+    const map: Record<string, string> = {
+      emailId: 'Email',
+      name: 'Name',
+      phone: 'Phone',
+      dob: 'Date of Birth',
+      gender: 'Gender',
+    };
+
+    return map[field] || field;
   }
 
   roleProfileImageUrl(role: RoleSelectionOption): string | null {

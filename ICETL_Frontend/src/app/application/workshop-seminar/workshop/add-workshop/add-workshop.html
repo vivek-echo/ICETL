@@ -1,0 +1,365 @@
+<header class="program-builder__hero">
+  <div>
+    <span>Workshop</span>
+    <h1>{{ pageTitle }}</h1>
+    <p>Hands-on training details for facilitator, venue, schedule, outcomes, and fee.</p>
+  </div>
+
+  <a class="program-builder__view-link" [routerLink]="viewRoute">
+    <i class="feather-list"></i>
+    View My Workshop
+  </a>
+</header>
+
+@if (formMessage) {
+<div class="program-alert">
+  <i class="feather-alert-circle"></i>
+  <span>{{ formMessage }}</span>
+</div>
+}
+
+@if (loading) {
+<div class="text-center py-5">
+  <div class="spinner-border text-primary"></div>
+</div>
+}
+
+@if (!loading) {
+<div class="program-builder__grid">
+  <form [formGroup]="itemForm" (ngSubmit)="saveWorkshop()" class="program-form">
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>01</span>
+        <div>
+          <h2>Workshop Details</h2>
+          <p>Core listing information.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group program-form__full">
+        <label for="workshopTitle">Workshop Title</label>
+        <input id="workshopTitle" type="text" formControlName="title" placeholder="Advanced Data Analytics Workshop"
+          [class.is-invalid]="isInvalid('title')">
+        @if (getFieldError('title')) {
+        <small class="program-field-error">{{ getFieldError('title') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopTopic">Topic</label>
+        <input id="workshopTopic" type="text" formControlName="topic" placeholder="Data Analytics"
+          [class.is-invalid]="isInvalid('topic')">
+        @if (getFieldError('topic')) {
+        <small class="program-field-error">{{ getFieldError('topic') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopStatus">Status</label>
+        <select id="workshopStatus" formControlName="status" [class.is-invalid]="isInvalid('status')">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+        @if (getFieldError('status')) {
+        <small class="program-field-error">{{ getFieldError('status') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group program-form__full">
+        <label for="workshopDescription">Description</label>
+        <textarea id="workshopDescription" rows="4" formControlName="description"
+          placeholder="Describe what participants will build or practice."
+          [class.is-invalid]="isInvalid('description')"></textarea>
+        <div class="program-form__helper">
+          @if (getFieldError('description')) {
+          <small class="program-field-error">{{ getFieldError('description') }}</small>
+          }
+          <span>{{ f['description'].value?.length || 0 }}/300</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>02</span>
+        <div>
+          <h2>Venue & Schedule</h2>
+          <p>Location and date range.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopVenue">Venue</label>
+        <input id="workshopVenue" type="text" formControlName="venue" placeholder="ICETL Training Hall"
+          [class.is-invalid]="isInvalid('venue')">
+        @if (getFieldError('venue')) {
+        <small class="program-field-error">{{ getFieldError('venue') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopCity">City</label>
+        <input id="workshopCity" type="text" formControlName="city" placeholder="Bhubaneswar"
+          [class.is-invalid]="isInvalid('city')">
+        @if (getFieldError('city')) {
+        <small class="program-field-error">{{ getFieldError('city') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopStartDate">Start Date</label>
+        <div class="program-date-field" [class.is-invalid]="isInvalid('startDate')" (click)="keepCalendarOpen($event)">
+          <button id="workshopStartDate" type="button" class="program-date-trigger"
+            [attr.aria-expanded]="openCalendar === 'startDate'" (click)="toggleCalendar('startDate', $event)">
+            <span [class.is-placeholder]="!startDateDisplayValue">
+              {{ startDateDisplayValue || 'dd-mm-yyyy' }}
+            </span>
+            <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+          </button>
+
+          @if (openCalendar === 'startDate') {
+          <div class="premium-calendar" (click)="keepCalendarOpen($event)">
+            <div class="premium-calendar__header">
+              <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                (click)="changeCalendarMonth('startDate', -1)">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="premium-calendar__selects">
+                <select aria-label="Start date month" [value]="calendarViews.startDate.getMonth()"
+                  (change)="setCalendarMonth('startDate', $event)">
+                  @for (month of calendarMonths; track month; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month }}</option>
+                  }
+                </select>
+                <select aria-label="Start date year" [value]="calendarViews.startDate.getFullYear()"
+                  (change)="setCalendarYear('startDate', $event)">
+                  @for (year of calendarYearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                (click)="changeCalendarMonth('startDate', 1)">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="premium-calendar__weekdays">
+              @for (weekday of calendarWeekdays; track weekday) {
+              <span>{{ weekday }}</span>
+              }
+            </div>
+
+            <div class="premium-calendar__grid">
+              @for (day of startDateCalendarDays; track day.iso) {
+              <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                (click)="selectCalendarDate('startDate', day)">
+                {{ day.day }}
+              </button>
+              }
+            </div>
+
+            <div class="premium-calendar__footer">
+              <button type="button" (click)="clearCalendarDate('startDate', $event)">Clear</button>
+              <span>Format: dd-mm-yyyy</span>
+            </div>
+          </div>
+          }
+
+          <input type="hidden" formControlName="startDate">
+        </div>
+        @if (getFieldError('startDate')) {
+        <small class="program-field-error">{{ getFieldError('startDate') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopEndDate">End Date</label>
+        <div class="program-date-field program-date-field--end"
+          [class.is-invalid]="isInvalid('endDate') || hasDateRangeError()" (click)="keepCalendarOpen($event)">
+          <button id="workshopEndDate" type="button" class="program-date-trigger"
+            [attr.aria-expanded]="openCalendar === 'endDate'" (click)="toggleCalendar('endDate', $event)">
+            <span [class.is-placeholder]="!endDateDisplayValue">
+              {{ endDateDisplayValue || 'dd-mm-yyyy' }}
+            </span>
+            <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+          </button>
+
+          @if (openCalendar === 'endDate') {
+          <div class="premium-calendar" (click)="keepCalendarOpen($event)">
+            <div class="premium-calendar__header">
+              <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                (click)="changeCalendarMonth('endDate', -1)">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="premium-calendar__selects">
+                <select aria-label="End date month" [value]="calendarViews.endDate.getMonth()"
+                  (change)="setCalendarMonth('endDate', $event)">
+                  @for (month of calendarMonths; track month; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month }}</option>
+                  }
+                </select>
+                <select aria-label="End date year" [value]="calendarViews.endDate.getFullYear()"
+                  (change)="setCalendarYear('endDate', $event)">
+                  @for (year of calendarYearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                (click)="changeCalendarMonth('endDate', 1)">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="premium-calendar__weekdays">
+              @for (weekday of calendarWeekdays; track weekday) {
+              <span>{{ weekday }}</span>
+              }
+            </div>
+
+            <div class="premium-calendar__grid">
+              @for (day of endDateCalendarDays; track day.iso) {
+              <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                (click)="selectCalendarDate('endDate', day)">
+                {{ day.day }}
+              </button>
+              }
+            </div>
+
+            <div class="premium-calendar__footer">
+              <button type="button" (click)="clearCalendarDate('endDate', $event)">Clear</button>
+              <span>Format: dd-mm-yyyy</span>
+            </div>
+          </div>
+          }
+
+          <input type="hidden" formControlName="endDate">
+        </div>
+        @if (hasDateRangeError()) {
+        <small class="program-field-error">End date cannot be earlier than start date.</small>
+        } @else if (getFieldError('endDate')) {
+        <small class="program-field-error">{{ getFieldError('endDate') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopStartTime">Start Time</label>
+        <input id="workshopStartTime" type="time" formControlName="startTime"
+          [class.is-invalid]="isInvalid('startTime')">
+        @if (getFieldError('startTime')) {
+        <small class="program-field-error">{{ getFieldError('startTime') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopEndTime">End Time</label>
+        <input id="workshopEndTime" type="time" formControlName="endTime" [class.is-invalid]="hasTimeRangeError()">
+        @if (hasTimeRangeError()) {
+        <small class="program-field-error">End time must be later than start time for a same-day workshop.</small>
+        }
+      </div>
+    </section>
+
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>03</span>
+        <div>
+          <h2>Facilitator & Outcomes</h2>
+          <p>Speaker, fee, and takeaways.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopSpeaker">Speaker</label>
+        <input id="workshopSpeaker" type="text" formControlName="speakerName" placeholder="Lead facilitator"
+          [class.is-invalid]="isInvalid('speakerName')">
+        @if (getFieldError('speakerName')) {
+        <small class="program-field-error">{{ getFieldError('speakerName') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="workshopFee">Fee</label>
+        <input id="workshopFee" type="number" min="0" formControlName="price" [class.is-invalid]="isInvalid('price')">
+        @if (getFieldError('price')) {
+        <small class="program-field-error">{{ getFieldError('price') }}</small>
+        }
+      </div>
+
+      <div class="program-takeaways program-form__full">
+        <div class="program-takeaways__header">
+          <label>Key Takeaways</label>
+          <button type="button" class="program-icon-btn program-icon-btn--add" (click)="addTakeaway()"
+            aria-label="Add key takeaway">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <div formArrayName="takeaways" class="program-takeaways__list">
+          @for (takeaway of takeaways.controls; track $index) {
+          <div class="program-takeaways__row">
+            <input type="text" [formControlName]="$index" placeholder="Enter key takeaway">
+            <button type="button" class="program-icon-btn program-icon-btn--remove" (click)="removeTakeaway($index)"
+              aria-label="Remove key takeaway">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="program-form__actions">
+      <button type="button" class="rbt-btn btn-border" (click)="resetForm()" [disabled]="saving">
+        Reset
+      </button>
+      <button type="submit" class="rbt-btn btn-gradient" [disabled]="saving">
+        {{ saving ? 'Saving...' : submitLabel }}
+      </button>
+    </div>
+  </form>
+
+  <aside class="program-preview" aria-label="Workshop preview">
+    <div class="program-preview__top">
+      <span [class.program-preview__status--inactive]="f['status'].value === '0'">
+        {{ f['status'].value === '0' ? 'Inactive' : 'Active' }}
+      </span>
+      <strong>{{ f['topic'].value || 'Topic' }}</strong>
+    </div>
+
+    <h2>{{ f['title'].value || 'Workshop Title' }}</h2>
+    <p>{{ f['description'].value || 'Workshop preview will appear here as details are entered.' }}</p>
+
+    <div class="program-preview__meta">
+      <span>
+        <i class="feather-user"></i>
+        {{ f['speakerName'].value || 'Speaker' }}
+      </span>
+      <span>
+        <i class="feather-map-pin"></i>
+        {{ f['venue'].value || 'Venue' }}
+      </span>
+      <span>
+        <i class="feather-navigation"></i>
+        {{ f['city'].value || 'City' }}
+      </span>
+      <span>
+        <i class="feather-calendar"></i>
+        {{ dateRangeLabel }}
+      </span>
+      <span>
+        <i class="feather-clock"></i>
+        {{ timeRangeLabel }}
+      </span>
+    </div>
+
+    <div class="program-preview__footer">
+      <span>Workshop Fee</span>
+      <strong>{{ priceLabel }}</strong>
+    </div>
+  </aside>
+</div>
+}

@@ -11,6 +11,8 @@ use App\Http\Controllers\CurriculumController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LearningController;
+use App\Http\Controllers\WorkshopController;
+use App\Http\Controllers\SeminarController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -49,10 +51,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/deleteCourseCategory', [CoursesController::class, 'deleteCourseCategory']);
     Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
     Route::post('/createCourse', [CoursesController::class, 'createCourse']);
+    Route::post('/createOfflineCourse', [CoursesController::class, 'createOfflineCourse']);
+    Route::post('/getOfflineCourses', [CoursesController::class, 'getOfflineCourses']);
+    Route::post('/updateOfflineCourseStatus', [CoursesController::class, 'updateOfflineCourseStatus']);
+    Route::post('/deleteOfflineCourse', [CoursesController::class, 'deleteOfflineCourse']);
     Route::post('/getCourses', [CoursesController::class, 'getCourses']);
     Route::post('/getAllCourses', [CoursesController::class, 'getAllCourses']);
     Route::post('/getCourseById', [CoursesController::class, 'getCourseById']);
     Route::post('/updateCourse', [CoursesController::class, 'updateCourse']);
+
+    // workshop routes
+    Route::post('/createWorkshop', [WorkshopController::class, 'createWorkshop']);
+    Route::post('/getMyWorkshops', [WorkshopController::class, 'getMyWorkshops']);
+    Route::post('/getAllWorkshops', [WorkshopController::class, 'getAllWorkshops']);
+    Route::post('/getWorkshopById', [WorkshopController::class, 'getWorkshopById']);
+    Route::post('/updateWorkshop', [WorkshopController::class, 'updateWorkshop']);
+    Route::post('/updateWorkshopStatus', [WorkshopController::class, 'updateWorkshopStatus']);
+    Route::post('/deleteWorkshop', [WorkshopController::class, 'deleteWorkshop']);
+
+    // seminar routes
+    Route::post('/createSeminar', [SeminarController::class, 'createSeminar']);
+    Route::post('/getMySeminars', [SeminarController::class, 'getMySeminars']);
+    Route::post('/getAllSeminars', [SeminarController::class, 'getAllSeminars']);
+    Route::post('/getSeminarById', [SeminarController::class, 'getSeminarById']);
+    Route::post('/updateSeminar', [SeminarController::class, 'updateSeminar']);
+    Route::post('/updateSeminarStatus', [SeminarController::class, 'updateSeminarStatus']);
+    Route::post('/deleteSeminar', [SeminarController::class, 'deleteSeminar']);
 
     // curriculum section routes
     Route::post('/curriculum/section/add', [CurriculumController::class, 'addSection']);
@@ -135,4 +159,5 @@ Route::post('/instructors/verify-otp', [InstructorRegistrationController::class,
 
 Route::group(['prefix' => '/preloginapi'], function () {
     Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
+    Route::post('/getPublicCourses', [CoursesController::class, 'getPublicCourses']);
 });

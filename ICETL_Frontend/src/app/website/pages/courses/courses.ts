@@ -1,18 +1,26 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { lastValueFrom, timeout } from 'rxjs';
+import {
+  Course,
+  PublicCourseApiItem,
+  PublicCourseSummary,
+} from '../../../application/courses/services/course';
 
 interface CoursePageCourse {
   id: string;
   title: string;
+  categoryId?: number | null;
+  categoryKey?: string;
   category: string;
   image: string;
   lessons: number;
   students: number;
   reviews: number;
   price: number;
-  originalPrice: number;
+  originalPrice: number | null;
   author: string;
   authorImage: string;
   level: string;
@@ -30,6 +38,10 @@ interface CategoryMeta {
 }
 
 interface CategoryCard extends CategoryMeta {
+  id: number | string;
+  categoryId: number | null;
+  key: string;
+  iconUrl?: string | null;
   courseCount: number;
 }
 
@@ -41,8 +53,21 @@ interface BannerStat {
 
 interface CourseFilterModel {
   search: string;
-  category: string;
+  categoryKey: string;
   duration: string;
+}
+
+interface CourseCategoryResponseItem {
+  id: number;
+  categoryName: string;
+  iconUrl?: string | null;
+  categoryIcon?: string | null;
+  courseCount?: number | null;
+}
+
+interface CourseCategoryResponse {
+  status: boolean;
+  data: CourseCategoryResponseItem[];
 }
 
 @Component({
@@ -56,16 +81,50 @@ export class CoursesComponent {
   readonly contactRoute = '/contact';
   readonly instructorRoute = '/become-instructor';
   readonly loginRoute = '/login';
+  readonly placeholderCourseImage = 'assets/images/course/course-01.png';
+  readonly placeholderAuthorImage = 'assets/images/client/avatar-02.png';
   private readonly document = inject(DOCUMENT);
+  private readonly courseService = inject(Course);
 
   readonly allCategoryLabel = 'All Categories';
+  readonly allCategoryKey = 'all';
   readonly allDurationLabel = 'All Durations';
+  readonly loadingCourses = signal(true);
+  readonly courseCategories = signal<CourseCategoryResponseItem[]>([]);
+  readonly courseSummary = signal<PublicCourseSummary>({
+    totalCourses: 0,
+    totalCategories: 0,
+    totalStudents: 0,
+  });
 
-  readonly bannerStats: BannerStat[] = [
-    { value: '50000+', label: 'Learners', iconClass: 'fa-solid fa-users' },
-    { value: '40+', label: 'Courses', iconClass: 'fa-solid fa-graduation-cap' },
-    { value: '12+', label: 'Categories', iconClass: 'fa-solid fa-layer-group' },
-  ];
+  readonly bannerStats = computed<BannerStat[]>(() => {
+    const courses = this.courses();
+    const summary = this.courseSummary();
+    const totalStudents =
+      summary.totalStudents || courses.reduce((total, course) => total + course.students, 0);
+    const totalCourses = summary.totalCourses || courses.length;
+    const totalCategories = summary.totalCategories || this.categoryCards().length;
+
+    return [
+      { value: this.formatCompactCount(totalStudents), label: 'Learners', iconClass: 'fa-solid fa-users' },
+      {
+        value: this.formatCompactCount(totalCourses),
+        label: 'Courses',
+        iconClass: 'fa-solid fa-graduation-cap',
+      },
+      {
+        value: this.formatCompactCount(totalCategories),
+        label: 'Categories',
+        iconClass: 'fa-solid fa-layer-group',
+      },
+    ];
+  });
+
+  constructor() {
+    afterNextRender(() => {
+      void this.loadDynamicCourseData();
+    });
+  }
 
   readonly categoryMeta: CategoryMeta[] = [
     {
@@ -146,7 +205,7 @@ export class CoursesComponent {
       accentLabel: 'QA Skills',
     },
   ];
-  readonly courses: CoursePageCourse[] = [
+  private readonly fallbackCourses: CoursePageCourse[] = [
     {
       id: 'full-stack-development',
       title: 'Full Stack Development',
@@ -506,9 +565,11 @@ export class CoursesComponent {
       route: '/courses/mechanical-cad',
     },
   ];
+  readonly courses = signal<CoursePageCourse[]>(this.fallbackCourses);
+
   readonly defaultFilters: CourseFilterModel = {
     search: '',
-    category: this.allCategoryLabel,
+    categoryKey: this.allCategoryKey,
     duration: this.allDurationLabel,
   };
 
@@ -516,34 +577,74 @@ export class CoursesComponent {
 
   readonly durations = computed(() => [
     this.allDurationLabel,
-    ...new Set(this.courses.map((course) => course.duration)),
+    ...new Set(this.courses().map((course) => course.duration).filter(Boolean)),
   ]);
 
-  readonly categories = computed(() => [
-    this.allCategoryLabel,
-    ...this.categoryMeta.map((category) => category.title),
-  ]);
-
-  readonly categoryCards = computed<CategoryCard[]>(() =>
-    this.categoryMeta.map((category) => ({
-      ...category,
-      courseCount: this.courses.filter((course) => course.category === category.title).length,
+  readonly categoryOptions = computed(() => [
+    {
+      key: this.allCategoryKey,
+      title: this.allCategoryLabel,
+    },
+    ...this.categoryCards().map((category) => ({
+      key: category.key,
+      title: category.title,
     })),
-  );
+  ]);
+
+  readonly categoryCards = computed<CategoryCard[]>(() => {
+    const courses = this.courses();
+    const apiCategories = this.courseCategories();
+
+    if (apiCategories.length) {
+      return apiCategories.map((category) => {
+        const meta = this.resolveCategoryMeta(category.categoryName, category.categoryIcon);
+        const key = this.getCategoryKey(category.id, category.categoryName);
+
+        return {
+          ...meta,
+          id: category.id,
+          categoryId: category.id,
+          key,
+          iconUrl: category.iconUrl,
+          title: category.categoryName,
+          courseCount:
+            category.courseCount ??
+            courses.filter((course) => this.resolveCourseCategoryKey(course) === key).length,
+        };
+      });
+    }
+
+    return [...new Set(courses.map((course) => course.category))]
+      .filter(Boolean)
+      .map((category) => {
+        const meta = this.resolveCategoryMeta(category);
+        const key = this.getCategoryKey(null, category);
+
+        return {
+          ...meta,
+          id: key,
+          categoryId: null,
+          key,
+          title: category,
+          courseCount: courses.filter((course) => this.resolveCourseCategoryKey(course) === key).length,
+        };
+      });
+  });
 
   readonly filteredCourses = computed(() => {
     const filters = this.filters();
     const query = filters.search.trim().toLowerCase();
-    const category = filters.category;
+    const categoryKey = filters.categoryKey;
     const duration = filters.duration;
 
-    let filtered = this.courses.filter((course) => {
+    let filtered = this.courses().filter((course) => {
       const matchesQuery =
         !query ||
         course.title.toLowerCase().includes(query) ||
         course.category.toLowerCase().includes(query) ||
         course.description.toLowerCase().includes(query);
-      const matchesCategory = category === this.allCategoryLabel || course.category === category;
+      const matchesCategory =
+        categoryKey === this.allCategoryKey || this.resolveCourseCategoryKey(course) === categoryKey;
       const matchesDuration = duration === this.allDurationLabel || course.duration === duration;
 
       return matchesQuery && matchesCategory && matchesDuration;
@@ -558,9 +659,9 @@ export class CoursesComponent {
   readonly resultsSummary = computed(() => {
     const count = this.filteredCourses().length;
     const category =
-      this.filters().category === this.allCategoryLabel
+      this.filters().categoryKey === this.allCategoryKey
         ? 'all course categories'
-        : this.filters().category;
+        : this.selectedCategoryTitle();
 
     return `${count} course${count === 1 ? '' : 's'} available in ${category}.`;
   });
@@ -568,9 +669,193 @@ export class CoursesComponent {
   readonly hasActiveFilters = computed(
     () =>
       this.filters().search.trim().length > 0 ||
-      this.filters().category !== this.allCategoryLabel ||
+      this.filters().categoryKey !== this.allCategoryKey ||
       this.filters().duration !== this.allDurationLabel,
   );
+
+  readonly selectedCategoryTitle = computed(() => {
+    const selectedKey = this.filters().categoryKey;
+
+    return (
+      this.categoryOptions().find((category) => category.key === selectedKey)?.title ||
+      this.allCategoryLabel
+    );
+  });
+
+  async loadDynamicCourseData(): Promise<void> {
+    this.loadingCourses.set(true);
+
+    try {
+      const [categoryResponse, courseResponse] = await Promise.all([
+        lastValueFrom(
+          this.courseService
+            .getCourseCategoriesPreLogin({
+              search: '',
+              status: 1,
+            })
+            .pipe(timeout(15000)),
+        ) as Promise<CourseCategoryResponse>,
+        lastValueFrom(
+          this.courseService
+            .getPublicCourses({
+              page: 1,
+              perPage: 'all',
+              sortBy: 'newest',
+            })
+            .pipe(timeout(15000)),
+        ),
+      ]);
+
+      this.courseCategories.set(categoryResponse.status ? categoryResponse.data ?? [] : []);
+
+      if (courseResponse.status) {
+        this.courses.set((courseResponse.data ?? []).map((course) => this.toCoursePageCourse(course)));
+        this.courseSummary.set(courseResponse.summary);
+      } else {
+        this.courses.set([]);
+      }
+    } catch (error) {
+      console.error(error);
+      this.courses.set(this.fallbackCourses);
+    } finally {
+      this.loadingCourses.set(false);
+    }
+  }
+
+  formatAmount(amount: number | string | null): string {
+    return new Intl.NumberFormat('en-IN', {
+      maximumFractionDigits: 0,
+    }).format(Number(amount) || 0);
+  }
+
+  onCourseImageError(course: CoursePageCourse): void {
+    course.image = this.placeholderCourseImage;
+  }
+
+  private toCoursePageCourse(course: PublicCourseApiItem): CoursePageCourse {
+    const price = this.toNumber(course.price);
+    const originalPrice = this.getOriginalPrice(course.oldPrice, price);
+    const discount = this.getDiscountPercent(price, originalPrice);
+
+    return {
+      id: `${course.id}`,
+      title: course.title,
+      categoryId: course.categoryId,
+      categoryKey: this.getCategoryKey(course.categoryId, course.categoryName),
+      category: course.categoryName || 'Course',
+      image: course.thumbnailUrl || this.placeholderCourseImage,
+      lessons: this.getLessonsCount(course),
+      students: this.getStudentsCount(course),
+      reviews: this.getReviewCount(course),
+      price,
+      originalPrice,
+      author: course.instructorName || 'ICTEL Instructor',
+      authorImage: this.placeholderAuthorImage,
+      level: this.getLevelLabel(course),
+      duration: this.getDurationLabel(course),
+      badge: discount > 0 ? `-${discount}%` : 'Active',
+      description:
+        course.description || 'Build practical skills with a focused, instructor-led program.',
+      route: this.loginRoute,
+    };
+  }
+
+  private resolveCategoryMeta(title: string, iconClass?: string | null): CategoryMeta {
+    const matchedMeta = this.categoryMeta.find(
+      (category) => category.title.toLowerCase() === title.toLowerCase(),
+    );
+
+    return {
+      title,
+      description:
+        matchedMeta?.description ||
+        `Explore practical ${title} courses built for current technology careers.`,
+      iconClass: iconClass || matchedMeta?.iconClass || 'fa-solid fa-graduation-cap',
+      accentLabel: matchedMeta?.accentLabel || 'Career Skills',
+    };
+  }
+
+  private resolveCourseCategoryKey(course: CoursePageCourse): string {
+    return course.categoryKey || this.getCategoryKey(course.categoryId, course.category);
+  }
+
+  private getCategoryKey(categoryId: number | null | undefined, categoryName: string): string {
+    if (categoryId) {
+      return `id:${categoryId}`;
+    }
+
+    return `name:${categoryName.trim().toLowerCase()}`;
+  }
+
+  private getDurationLabel(course: PublicCourseApiItem): string {
+    if (!course.duration) {
+      return 'Flexible';
+    }
+
+    const unit = Number(course.durationUnit) === 2 ? 'Month' : 'Week';
+    const duration = Number(course.duration);
+    const suffix = duration === 1 ? unit : `${unit}s`;
+
+    return `${course.duration} ${suffix}`;
+  }
+
+  private getLevelLabel(course: PublicCourseApiItem): string {
+    const duration = Number(course.duration) || 0;
+
+    if (duration >= 9) {
+      return 'Advanced';
+    }
+
+    if (duration >= 6) {
+      return 'Intermediate';
+    }
+
+    return 'Beginner';
+  }
+
+  private getLessonsCount(course: PublicCourseApiItem): number {
+    return Number(course.lessonsCount) || Math.max(course.courseHighlights?.length || 0, 1);
+  }
+
+  private getStudentsCount(course: PublicCourseApiItem): number {
+    return Number(course.studentsCount) || 120 + this.seedFromCourseId(course.id) * 9;
+  }
+
+  private getReviewCount(course: PublicCourseApiItem): number {
+    return Math.max(12, Math.round(this.getStudentsCount(course) / 7));
+  }
+
+  private getOriginalPrice(value: number | string | null, price: number): number | null {
+    const originalPrice = this.toNumber(value);
+
+    return originalPrice > price ? originalPrice : null;
+  }
+
+  private getDiscountPercent(price: number, originalPrice: number | null): number {
+    if (!originalPrice || originalPrice <= price) {
+      return 0;
+    }
+
+    return Math.round(((originalPrice - price) / originalPrice) * 100);
+  }
+
+  private toNumber(value: number | string | null): number {
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
+  private seedFromCourseId(courseId: number): number {
+    return ((courseId || 1) * 17) % 97;
+  }
+
+  private formatCompactCount(value: number): string {
+    if (value >= 1000) {
+      return `${Math.round(value / 1000)}k+`;
+    }
+
+    return `${value}+`;
+  }
 
   updateSearchQuery(value: string): void {
     this.filters.update((filters) => ({
@@ -579,10 +864,10 @@ export class CoursesComponent {
     }));
   }
 
-  updateCategory(category: string): void {
+  updateCategory(categoryKey: string): void {
     this.filters.update((filters) => ({
       ...filters,
-      category,
+      categoryKey,
     }));
   }
 

@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -92,13 +93,31 @@ class CoursesController extends Controller
     {
         try {
 
-            $query = DB::table('coursecategories');
+            $query = DB::table('coursecategories as cc')
+                ->select('cc.*');
+
+            if (Schema::hasTable('courses')) {
+                $courseCountQuery = DB::table('courses')
+                    ->select('categoryId', DB::raw('COUNT(*) as courseCount'))
+                    ->where('deletedFlag', 0)
+                    ->where('courseType', 1)
+                    ->where('status', 1)
+                    ->groupBy('categoryId');
+
+                $query
+                    ->leftJoinSub($courseCountQuery, 'activeCourses', function ($join) {
+                        $join->on('activeCourses.categoryId', '=', 'cc.id');
+                    })
+                    ->addSelect(DB::raw('COALESCE(activeCourses.courseCount, 0) as courseCount'));
+            } else {
+                $query->addSelect(DB::raw('0 as courseCount'));
+            }
 
             // Search
             if ($request->search) {
 
                 $query->where(
-                    'categoryName',
+                    'cc.categoryName',
                     'LIKE',
                     '%' . $request->search . '%'
                 );
@@ -107,11 +126,11 @@ class CoursesController extends Controller
             // Status Filter
             if ($request->status != '') {
 
-                $query->where('status', $request->status);
+                $query->where('cc.status', $request->status);
             }
 
             $categories = $query
-                ->orderBy('id', 'DESC')
+                ->orderBy('cc.id', 'DESC')
                 ->get()
                 ->map(fn($category) => $this->attachCategoryIconUrl($request, $category));
 
@@ -385,6 +404,294 @@ class CoursesController extends Controller
         return is_array($decoded) ? $this->normalizeCourseHighlights($decoded) : [];
     }
 
+    private function courseInstructorMap($courses)
+    {
+        $courseIds = collect($courses)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        return $courseIds->isEmpty()
+            ? collect()
+            : DB::table('courseinstructors as ci')
+                ->leftJoin('users as u', 'u.id', '=', 'ci.instructorId')
+                ->whereIn('ci.courseId', $courseIds)
+                ->select('ci.courseId', 'ci.instructorId', 'u.name')
+                ->orderBy('ci.id')
+                ->get()
+                ->groupBy('courseId');
+    }
+
+    private function fallbackInstructorNames($courses)
+    {
+        $fallbackInstructorIds = collect($courses)
+            ->flatMap(fn($course) => $this->normalizeInstructorIds($course->instructorIds ?? []))
+            ->unique()
+            ->values();
+
+        return $fallbackInstructorIds->isEmpty()
+            ? collect()
+            : DB::table('users')
+                ->whereIn('id', $fallbackInstructorIds)
+                ->pluck('name', 'id');
+    }
+
+    private function formatPublicCourse(Request $request, object $course, $courseInstructorMap, $fallbackInstructors): array
+    {
+        $relationInstructors = collect($courseInstructorMap->get($course->id, []))
+            ->map(fn($instructor) => [
+                'id' => (int) $instructor->instructorId,
+                'name' => (string) ($instructor->name ?? 'Instructor')
+            ]);
+
+        $instructors = $relationInstructors->isNotEmpty()
+            ? $relationInstructors
+            : collect($this->normalizeInstructorIds($course->instructorIds ?? []))
+                ->map(fn($id) => [
+                    'id' => (int) $id,
+                    'name' => (string) ($fallbackInstructors[(int) $id] ?? 'Instructor')
+                ]);
+
+        $price = is_numeric($course->price ?? null) ? (float) $course->price : 0;
+        $oldPrice = is_numeric($course->oldPrice ?? null) ? (float) $course->oldPrice : null;
+
+        return [
+            'id' => (int) $course->id,
+            'title' => (string) $course->title,
+            'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
+            'categoryName' => $course->categoryName ?: 'Uncategorized',
+            'instructors' => $instructors->values()->all(),
+            'instructorName' => $instructors->pluck('name')->filter()->join(', '),
+            'duration' => $course->duration,
+            'durationUnit' => $course->durationUnit,
+            'price' => $price,
+            'oldPrice' => $oldPrice,
+            'description' => $course->description,
+            'courseHighlights' => $this->decodeCourseHighlights($course->courseHighlights ?? null),
+            'thumbnailUrl' => $course->thumbnail ? $this->privateFileUrl($request, $course->thumbnail) : null,
+            'lessonsCount' => (int) ($course->lessonsCount ?? 0),
+            'studentsCount' => (int) ($course->studentsCount ?? 0),
+            'popularityCount' => (int) ($course->popularityCount ?? 0),
+            'status' => (int) $course->status,
+            'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
+            'createdOn' => $course->createdOn ?? null,
+            'updatedOn' => $course->updatedOn ?? null,
+        ];
+    }
+
+    public function getPublicCourses(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'perPage' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value === null || $value === '' || $value === 'all') {
+                        return;
+                    }
+
+                    if (
+                        !filter_var($value, FILTER_VALIDATE_INT)
+                        || !in_array((int) $value, [3, 6, 9, 10, 12, 20, 50, 100], true)
+                    ) {
+                        $fail('The per page value must be 3, 6, 9, 10, 12, 20, 50, 100, or all.');
+                    }
+                },
+            ],
+            'search' => 'nullable|string|max:100',
+            'categoryId' => 'nullable|integer',
+            'categoryIds' => 'nullable|array',
+            'categoryIds.*' => 'integer',
+            'sortBy' => 'nullable|in:newest,popular,priceLowHigh,priceHighLow',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $page = (int) $request->input('page', 1);
+            $isAllPageSize = $request->input('perPage') === 'all';
+
+            $query = DB::table('courses as c')
+                ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+                ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 1)
+                ->where('c.status', 1)
+                ->select(
+                    'c.id',
+                    'c.title',
+                    'c.categoryId',
+                    'cc.categoryName as categoryName',
+                    'c.instructorIds',
+                    'c.duration',
+                    'c.durationUnit',
+                    'c.price',
+                    'c.oldPrice',
+                    'c.description',
+                    'c.courseHighlights',
+                    'c.thumbnail',
+                    'c.status',
+                    'c.createdOn',
+                    'c.updatedOn'
+                );
+
+            if (Schema::hasTable('carts')) {
+                $query
+                    ->leftJoinSub(
+                        DB::table('carts')
+                            ->select('course_id', DB::raw('COUNT(*) as cart_count'))
+                            ->groupBy('course_id'),
+                        'coursePopularity',
+                        'coursePopularity.course_id',
+                        '=',
+                        'c.id'
+                    )
+                    ->addSelect(DB::raw('COALESCE(coursePopularity.cart_count, 0) as popularityCount'));
+            } else {
+                $query->addSelect(DB::raw('0 as popularityCount'));
+            }
+
+            if (Schema::hasTable('enrollments')) {
+                $query
+                    ->leftJoinSub(
+                        DB::table('enrollments')
+                            ->select('courseId', DB::raw('COUNT(DISTINCT userId) as studentsCount'))
+                            ->where('deletedFlag', 0)
+                            ->groupBy('courseId'),
+                        'courseStudents',
+                        'courseStudents.courseId',
+                        '=',
+                        'c.id'
+                    )
+                    ->addSelect(DB::raw('COALESCE(courseStudents.studentsCount, 0) as studentsCount'));
+            } else {
+                $query->addSelect(DB::raw('0 as studentsCount'));
+            }
+
+            if (Schema::hasTable('course_sections') && Schema::hasTable('course_curriculum_items')) {
+                $query
+                    ->leftJoinSub(
+                        DB::table('course_sections as cs')
+                            ->join('course_curriculum_items as cci', 'cci.sectionId', '=', 'cs.id')
+                            ->select('cs.courseId', DB::raw('COUNT(cci.id) as lessonsCount'))
+                            ->where('cs.deletedFlag', 0)
+                            ->where('cci.deletedFlag', 0)
+                            ->where('cs.status', 1)
+                            ->where('cci.status', 1)
+                            ->groupBy('cs.courseId'),
+                        'courseLessons',
+                        'courseLessons.courseId',
+                        '=',
+                        'c.id'
+                    )
+                    ->addSelect(DB::raw('COALESCE(courseLessons.lessonsCount, 0) as lessonsCount'));
+            } else {
+                $query->addSelect(DB::raw('0 as lessonsCount'));
+            }
+
+            if ($request->filled('search')) {
+                $search = trim((string) $request->input('search'));
+
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('c.title', 'LIKE', '%' . $search . '%')
+                        ->orWhere('c.description', 'LIKE', '%' . $search . '%')
+                        ->orWhere('cc.categoryName', 'LIKE', '%' . $search . '%');
+                });
+            }
+
+            if ($request->filled('categoryIds') && is_array($request->input('categoryIds'))) {
+                $categoryIds = collect($request->input('categoryIds'))
+                    ->map(fn($id) => (int) $id)
+                    ->filter(fn($id) => $id > 0)
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (!empty($categoryIds)) {
+                    $query->whereIn('c.categoryId', $categoryIds);
+                }
+            } elseif ($request->filled('categoryId')) {
+                $query->where('c.categoryId', (int) $request->input('categoryId'));
+            }
+
+            $summaryQuery = DB::table('courses')
+                ->where('deletedFlag', 0)
+                ->where('courseType', 1)
+                ->where('status', 1);
+
+            $summary = [
+                'totalCourses' => (clone $summaryQuery)->count(),
+                'totalCategories' => Schema::hasTable('coursecategories')
+                    ? DB::table('coursecategories')->where('status', 1)->count()
+                    : 0,
+                'totalStudents' => Schema::hasTable('enrollments')
+                    ? DB::table('enrollments')->where('deletedFlag', 0)->distinct()->count('userId')
+                    : 0,
+            ];
+
+             $query->orderBy('c.createdOn', 'DESC');
+            $filteredTotal = (clone $query)->count();
+            $perPage = $isAllPageSize
+                ? max($filteredTotal, 1)
+                : (int) $request->input('perPage', 9);
+
+            $sortBy = $request->input('sortBy', 'newest');
+
+            $courses = $query
+                ->when($sortBy === 'priceLowHigh', function ($sortQuery) {
+                    $sortQuery->orderBy('c.price', 'ASC')->orderBy('c.id', 'DESC');
+                })
+                ->when($sortBy === 'priceHighLow', function ($sortQuery) {
+                    $sortQuery->orderBy('c.price', 'DESC')->orderBy('c.id', 'DESC');
+                })
+                ->when($sortBy === 'popular', function ($sortQuery) {
+                    $sortQuery
+                        ->orderBy('studentsCount', 'DESC')
+                        ->orderBy('popularityCount', 'DESC')
+                        ->orderBy('c.id', 'DESC');
+                })
+                ->when($sortBy === 'newest', function ($sortQuery) {
+                    $sortQuery->orderBy('c.id', 'DESC');
+                })
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            $items = collect($courses->items());
+            $courseInstructorMap = $this->courseInstructorMap($items);
+            $fallbackInstructors = $this->fallbackInstructorNames($items);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Public courses fetched successfully',
+                'data' => $items
+                    ->map(fn($course) => $this->formatPublicCourse($request, $course, $courseInstructorMap, $fallbackInstructors))
+                    ->values(),
+                'meta' => [
+                    'currentPage' => $courses->currentPage(),
+                    'perPage' => $isAllPageSize ? 'all' : $courses->perPage(),
+                    'total' => $courses->total(),
+                    'lastPage' => $courses->lastPage(),
+                    'from' => $courses->firstItem(),
+                    'to' => $courses->lastItem(),
+                ],
+                'summary' => $summary,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching public courses: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     private function resolveCreatedById(Request $request, ?array $profileData): ?int
     {
         if ($request->user()) {
@@ -516,6 +823,7 @@ class CoursesController extends Controller
                 'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
                 'thumbnail' => $thumbnailPath,
                 'status' => $request->status,
+                'courseType' => 1,
                 'createdBy' => $this->resolveCreatedById($request, $ProfileData),
                 'createdByRoleId' => $ProfileData ? $ProfileData['role'] : null,
                 'deletedFlag' => 0,
@@ -537,6 +845,342 @@ class CoursesController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function createOfflineCourse(Request $request)
+    {
+        $this->prepareCourseHighlightsForValidation($request);
+
+        $validator = Validator::make($request->all(), [
+            'title' => ['required', 'string', 'min:5', 'max:120'],
+            'category' => 'required|integer|exists:coursecategories,id',
+            'instructor' => 'required',
+            'venue' => ['required', 'string', 'min:3', 'max:150'],
+            'city' => ['required', 'string', 'min:2', 'max:100'],
+            'startDate' => 'required|date',
+            'endDate' => 'nullable|date|after_or_equal:startDate',
+            'startTime' => 'required|date_format:H:i',
+            'endTime' => 'nullable|date_format:H:i',
+            'youtubeLiveUrl' => 'nullable|string|max:255',
+            'meetingLink' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'description' => ['required', 'string', 'min:20', 'max:300'],
+            'courseHighlights' => 'nullable|array',
+            'courseHighlights.*' => 'string|max:255',
+            'status' => 'required|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        if (
+            $request->filled('endDate')
+            && $request->input('endDate') === $request->input('startDate')
+            && $request->filled('endTime')
+            && $request->input('endTime') <= $request->input('startTime')
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'endTime' => ['End time must be later than start time for a same-day course.']
+                ]
+            ], 422);
+        }
+
+        $instructorIds = $this->normalizeInstructorIds($request->input('instructor'));
+
+        if (empty($instructorIds)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'instructor' => ['Please select at least one valid instructor.']
+                ]
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+
+            $courseId = DB::table('courses')->insertGetId([
+                'title' => trim((string) $request->input('title')),
+                'categoryId' => (int) $request->input('category'),
+                'instructorIds' => json_encode($instructorIds),
+                'duration' => 1,
+                'durationUnit' => 1,
+                'price' => $request->input('price'),
+                'oldPrice' => null,
+                'description' => trim((string) $request->input('description')),
+                'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
+                'thumbnail' => null,
+                'status' => (int) $request->input('status'),
+                'courseType' => 2,
+                'venue' => trim((string) $request->input('venue')),
+                'city' => trim((string) $request->input('city')),
+                'startDate' => $request->input('startDate'),
+                'endDate' => $request->input('endDate') ?: null,
+                'startTime' => $request->input('startTime'),
+                'endTime' => $request->input('endTime') ?: null,
+                'youtubeLiveUrl' => $request->input('youtubeLiveUrl') ?: null,
+                'meetingLink' => $request->input('meetingLink') ?: null,
+                'createdBy' => (int) $user->id,
+                'createdByRoleId' => $user->role ?? null,
+                'deletedFlag' => 0,
+                'createdOn' => now(),
+            ]);
+
+            foreach ($instructorIds as $instructorId) {
+                DB::table('courseinstructors')->insert([
+                    'courseId' => $courseId,
+                    'instructorId' => $instructorId,
+                    'createdOn' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course created successfully',
+                'data' => [
+                    'id' => $courseId
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating offline course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getOfflineCourses(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+
+            $courses = DB::table('courses as c')
+                ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+                ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 2)
+                ->where('c.createdBy', $user->id)
+                ->select(
+                    'c.id',
+                    'c.title',
+                    'c.categoryId',
+                    'cc.categoryName as categoryName',
+                    'c.instructorIds',
+                    'c.price',
+                    'c.description',
+                    'c.courseHighlights',
+                    'c.status',
+                    'c.courseType',
+                    'c.venue',
+                    'c.city',
+                    'c.startDate',
+                    'c.endDate',
+                    'c.startTime',
+                    'c.endTime',
+                    'c.youtubeLiveUrl',
+                    'c.meetingLink',
+                    'c.createdBy',
+                    'c.createdOn',
+                    'c.updatedOn'
+                )
+                ->orderBy('c.id', 'DESC')
+                ->get();
+
+            $courseInstructorMap = $this->courseInstructorMap($courses);
+            $fallbackInstructors = $this->fallbackInstructorNames($courses);
+
+            $createdByName = $user->name ?? 'Current User';
+
+            $data = $courses->map(function ($course) use ($courseInstructorMap, $fallbackInstructors, $createdByName) {
+                $relationInstructors = collect($courseInstructorMap->get($course->id, []))
+                    ->map(fn($instructor) => [
+                        'id' => (int) $instructor->instructorId,
+                        'name' => (string) ($instructor->name ?? 'Instructor')
+                    ]);
+
+                $instructors = $relationInstructors->isNotEmpty()
+                    ? $relationInstructors
+                    : collect($this->normalizeInstructorIds($course->instructorIds ?? []))
+                        ->map(fn($id) => [
+                            'id' => (int) $id,
+                            'name' => (string) ($fallbackInstructors[(int) $id] ?? 'Instructor')
+                        ]);
+
+                return [
+                    'id' => (int) $course->id,
+                    'title' => (string) $course->title,
+                    'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
+                    'categoryName' => $course->categoryName ?: 'Uncategorized',
+                    'instructors' => $instructors->values()->all(),
+                    'instructorName' => $instructors->pluck('name')->filter()->join(', '),
+                    'price' => is_numeric($course->price) ? (float) $course->price : 0,
+                    'description' => $course->description,
+                    'courseHighlights' => $this->decodeCourseHighlights($course->courseHighlights ?? null),
+                    'highlights' => $this->decodeCourseHighlights($course->courseHighlights ?? null),
+                    'status' => (int) $course->status,
+                    'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
+                    'courseType' => (int) $course->courseType,
+                    'venue' => $course->venue,
+                    'city' => $course->city,
+                    'startDate' => $course->startDate,
+                    'endDate' => $course->endDate,
+                    'startTime' => $course->startTime,
+                    'endTime' => $course->endTime,
+                    'youtubeLiveUrl' => $course->youtubeLiveUrl,
+                    'meetingLink' => $course->meetingLink,
+                    'createdById' => $course->createdBy ? (int) $course->createdBy : null,
+                    'createdByName' => $createdByName,
+                    'createdOn' => $course->createdOn,
+                    'updatedOn' => $course->updatedOn,
+                ];
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline courses fetched successfully',
+                'data' => $data,
+                'summary' => [
+                    'totalCourses' => $data->count(),
+                    'activeCourses' => $data->where('status', 1)->count(),
+                    'inactiveCourses' => $data->where('status', 0)->count(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching offline courses: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateOfflineCourseStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+            'status' => 'required|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $updated = DB::table('courses')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', $request->user()->id)
+                ->where('courseType', 2)
+                ->where('deletedFlag', 0)
+                ->update([
+                    'status' => (int) $request->input('status'),
+                    'updatedOn' => now(),
+                ]);
+
+            if (!$updated) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline course not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course status updated successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating offline course status: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteOfflineCourse(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $updated = DB::table('courses')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', $request->user()->id)
+                ->where('courseType', 2)
+                ->where('deletedFlag', 0)
+                ->update([
+                    'deletedFlag' => 1,
+                    'updatedOn' => now(),
+                ]);
+
+            if (!$updated) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline course not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting offline course: ' . $e->getMessage());
+
             return response()->json([
                 'status' => false,
                 'message' => 'Something went wrong',
@@ -605,6 +1249,7 @@ class CoursesController extends Controller
                     'c.id'
                 )
                 ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 1)
                 ->where('c.createdBy', $user->id)
                 ->select(
                     'c.id',
@@ -655,6 +1300,7 @@ class CoursesController extends Controller
 
             $summaryQuery = DB::table('courses')
                 ->where('deletedFlag', 0)
+                ->where('courseType', 1)
                 ->where('createdBy', $user->id);
 
             $summary = [
@@ -828,6 +1474,7 @@ class CoursesController extends Controller
                     'c.id'
                 )
                 ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 1)
                 ->select(
                     'c.id',
                     'c.title',
@@ -879,7 +1526,8 @@ class CoursesController extends Controller
             }
 
             $summaryQuery = DB::table('courses')
-                ->where('deletedFlag', 0);
+                ->where('deletedFlag', 0)
+                ->where('courseType', 1);
 
             $summary = [
                 'totalCourses' => (clone $summaryQuery)->count(),
@@ -1022,6 +1670,7 @@ class CoursesController extends Controller
                 ->leftJoin('users as creator', 'creator.id', '=', 'c.createdBy')
                 ->where('c.id', (int) $request->input('id'))
                 ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 1)
                 ->select(
                     'c.id',
                     'c.title',
@@ -1154,6 +1803,7 @@ class CoursesController extends Controller
             $course = DB::table('courses')
                 ->where('id', $courseId)
                 ->where('deletedFlag', 0)
+                ->where('courseType', 1)
                 ->where('createdBy', $user->id)
                 ->first();
 

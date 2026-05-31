@@ -1,0 +1,18 @@
+:host {
+  display: block;
+}
+
+.offline-course-page {
+  border-radius: 8px;
+}
+
+.offline-course-tabs {
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.offline-course-tabs .tab-button {
+  border-radius: 8px;
+  white-space: nowrap;
+}

@@ -396,6 +396,73 @@
   box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
 }
 
+.profile-date-field {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  min-height: 58px;
+  overflow: hidden;
+  padding: 0 14px;
+  transition: all 0.25s ease;
+}
+
+.profile-date-field:focus-within {
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+}
+
+.profile-date-field i {
+  align-items: center;
+  background: #eff6ff;
+  border-radius: 999px;
+  color: #2563eb;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  pointer-events: none;
+  width: 34px;
+}
+
+.profile-date-field input[type="date"] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #0f172a;
+  font-weight: 700;
+  height: 56px;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.profile-date-field input[type="date"]:focus {
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.profile-date-field input[type="date"]::-webkit-calendar-picker-indicator {
+  background-color: #eff6ff;
+  border-radius: 10px;
+  cursor: pointer;
+  height: 28px;
+  margin-left: 8px;
+  opacity: 0.9;
+  padding: 6px;
+  width: 28px;
+}
+
+.profile-date-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: #dbeafe;
+  opacity: 1;
+}
+
 /* PLACEHOLDER */
 .rbt-form-group input::placeholder,
 .rbt-form-group textarea::placeholder {
@@ -557,5 +624,15 @@ input[type='file'] {
 
   .profile-submit .rbt-btn {
     width: 100%;
+  }
+
+  .profile-date-field {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 0 12px;
+  }
+
+  .profile-date-field i {
+    height: 30px;
+    width: 30px;
   }
 }

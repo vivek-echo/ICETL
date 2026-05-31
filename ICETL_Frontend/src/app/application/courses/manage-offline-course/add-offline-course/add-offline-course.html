@@ -1,0 +1,312 @@
+<header class="offline-builder__hero">
+  <div>
+    <span>Offline Course</span>
+    <h1>Add Offline Course</h1>
+    <p>Create classroom, workshop, and campus training entries with venue, schedule, and pricing.</p>
+  </div>
+
+  <a class="offline-builder__view-link" routerLink="/application/courses/manageOfflineCourse/view">
+    <i class="feather-list"></i>
+    View My Offline Courses
+  </a>
+</header>
+
+<div class="offline-builder__grid">
+  <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="offline-form">
+    <section class="offline-form__section">
+      <div class="offline-form__heading">
+        <span>01</span>
+        <div>
+          <h2>Course Details</h2>
+          <p>Core information shown on the offline course listing.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group offline-form__full">
+        <label for="offlineTitle">Course Title</label>
+        <input id="offlineTitle" type="text" formControlName="title" placeholder="Advanced Data Analytics Workshop"
+          [class.is-invalid]="isInvalid('title')">
+        @if (getFieldError('title')) {
+        <small class="offline-field-error">{{ getFieldError('title') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineCategory">Category</label>
+        <select id="offlineCategory" formControlName="categoryId" [class.is-invalid]="isInvalid('categoryId')">
+          <option value="">Select Category</option>
+          @for (category of categories; track category.id) {
+          <option [value]="category.id">{{ category.categoryName }}</option>
+          }
+        </select>
+        @if (getFieldError('categoryId')) {
+        <small class="offline-field-error">{{ getFieldError('categoryId') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineStatus">Status</label>
+        <select id="offlineStatus" formControlName="status" [class.is-invalid]="isInvalid('status')">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+        @if (getFieldError('status')) {
+        <small class="offline-field-error">{{ getFieldError('status') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group offline-form__full">
+        <label for="offlineDescription">Description</label>
+        <textarea id="offlineDescription" rows="4" formControlName="description"
+          placeholder="Describe the classroom learning experience."
+          [class.is-invalid]="isInvalid('description')"></textarea>
+        <div class="offline-form__helper">
+          @if (getFieldError('description')) {
+          <small class="offline-field-error">{{ getFieldError('description') }}</small>
+          }
+          <span>{{ f['description'].value?.length || 0 }}/300</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="offline-form__section">
+      <div class="offline-form__heading">
+        <span>02</span>
+        <div>
+          <h2>Venue & Schedule</h2>
+          <p>Where and when learners should attend.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineVenue">Venue</label>
+        <input id="offlineVenue" type="text" formControlName="venue" placeholder="ICETL Training Hall"
+          [class.is-invalid]="isInvalid('venue')">
+        @if (getFieldError('venue')) {
+        <small class="offline-field-error">{{ getFieldError('venue') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineCity">City</label>
+        <input id="offlineCity" type="text" formControlName="city" placeholder="Bhubaneswar"
+          [class.is-invalid]="isInvalid('city')">
+        @if (getFieldError('city')) {
+        <small class="offline-field-error">{{ getFieldError('city') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineStartDate">Start Date</label>
+        <div class="offline-date-field" [class.is-invalid]="isInvalid('startDate')">
+          <i class="feather-calendar"></i>
+          <input id="offlineStartDate" type="date" formControlName="startDate">
+        </div>
+        @if (getFieldError('startDate')) {
+        <small class="offline-field-error">{{ getFieldError('startDate') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineEndDate">End Date</label>
+        <div class="offline-date-field" [class.is-invalid]="isInvalid('endDate') || hasDateRangeError()">
+          <i class="feather-calendar"></i>
+          <input id="offlineEndDate" type="date" formControlName="endDate" [attr.min]="f['startDate'].value || null">
+        </div>
+        @if (hasDateRangeError()) {
+        <small class="offline-field-error">End date cannot be earlier than start date.</small>
+        } @else if (getFieldError('endDate')) {
+        <small class="offline-field-error">{{ getFieldError('endDate') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineStartTime">Start Time</label>
+        <input id="offlineStartTime" type="time" formControlName="startTime"
+          [class.is-invalid]="isInvalid('startTime')">
+        @if (getFieldError('startTime')) {
+        <small class="offline-field-error">{{ getFieldError('startTime') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineEndTime">End Time</label>
+        <input id="offlineEndTime" type="time" formControlName="endTime" [class.is-invalid]="hasTimeRangeError()">
+        @if (hasTimeRangeError()) {
+        <small class="offline-field-error">End time must be later than start time for a same-day course.</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineYoutubeUrl">YouTube Live URL</label>
+        <input id="offlineYoutubeUrl" type="url" formControlName="youtubeLiveUrl"
+          placeholder="https://youtube.com/live/..." [class.is-invalid]="isInvalid('youtubeLiveUrl')">
+        @if (getFieldError('youtubeLiveUrl')) {
+        <small class="offline-field-error">{{ getFieldError('youtubeLiveUrl') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlineMeetingLink">Meeting Link</label>
+        <input id="offlineMeetingLink" type="url" formControlName="meetingLink"
+          placeholder="https://meet.google.com/..." [class.is-invalid]="isInvalid('meetingLink')">
+        @if (getFieldError('meetingLink')) {
+        <small class="offline-field-error">{{ getFieldError('meetingLink') }}</small>
+        }
+      </div>
+    </section>
+
+    <section class="offline-form__section">
+      <div class="offline-form__heading">
+        <span>03</span>
+        <div>
+          <h2>Capacity & Outcomes</h2>
+          <p>Instructor, fee, and learning outcomes.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group offline-form__full">
+        <label>Instructor</label>
+        <div class="instructor-select" [class.is-open]="isInstructorPickerOpen"
+          [class.is-invalid]="isInvalid('instructors')">
+          <button class="instructor-select__trigger" type="button" data-validation-control="instructors"
+            (click)="toggleInstructorPicker()" [attr.aria-expanded]="isInstructorPickerOpen">
+            <span>{{ instructorPickerLabel }}</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+
+          @if (selectedInstructors.length) {
+          <div class="instructor-selected">
+            @for (instructor of selectedInstructors; track instructor.id) {
+            <span class="instructor-chip">{{ instructor.name }}</span>
+            }
+          </div>
+          }
+
+          @if (isInstructorPickerOpen) {
+          <div class="instructor-picker">
+            <div class="instructor-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" placeholder="Search instructors..." [value]="instructorSearchTerm"
+                (input)="setInstructorSearch($event)">
+              @if (instructorSearchTerm) {
+              <button type="button" (click)="clearInstructorSearch()" aria-label="Clear instructor search">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+              }
+            </div>
+
+            <div class="instructor-options">
+              @if (filteredInstructorList.length > 0) {
+              @for (instructor of filteredInstructorList; track instructor.id) {
+              <label class="instructor-option">
+                <input type="checkbox" [checked]="isInstructorSelected(instructor)"
+                  (change)="toggleInstructor(instructor, $event)">
+                <span>{{ instructor.name }}</span>
+              </label>
+              }
+              } @else {
+              <p class="instructor-picker__empty">No instructors found</p>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        @if (getFieldError('instructors')) {
+        <small class="offline-field-error">{{ getFieldError('instructors') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="offlinePrice">Price</label>
+        <input id="offlinePrice" type="number" min="0" formControlName="price" [class.is-invalid]="isInvalid('price')">
+        @if (getFieldError('price')) {
+        <small class="offline-field-error">{{ getFieldError('price') }}</small>
+        }
+      </div>
+
+      <div class="offline-highlights offline-form__full">
+        <div class="offline-highlights__header">
+          <label>Key Outcomes</label>
+          <button type="button" class="offline-icon-btn offline-icon-btn--add" (click)="addHighlight()"
+            aria-label="Add key outcome">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <div formArrayName="highlights" class="offline-highlights__list">
+          @for (highlight of highlights.controls; track $index) {
+          <div class="offline-highlights__row">
+            <input type="text" [formControlName]="$index" placeholder="Enter key outcome">
+            <button type="button" class="offline-icon-btn offline-icon-btn--remove" (click)="removeHighlight($index)"
+              aria-label="Remove key outcome">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="offline-form__actions">
+      <button type="button" class="rbt-btn btn-border" (click)="resetForm()">
+        Reset
+      </button>
+      <button type="submit" class="rbt-btn btn-gradient">
+        Save Offline Course
+      </button>
+    </div>
+  </form>
+
+  <aside class="offline-preview" aria-label="Offline course preview">
+    <div class="offline-preview__top">
+      <span [class.offline-preview__status--inactive]="f['status'].value === '0'">
+        {{ f['status'].value === '0' ? 'Inactive' : 'Active' }}
+      </span>
+      <strong>{{ selectedCategory }}</strong>
+    </div>
+
+    <h2>{{ f['title'].value || 'Offline Course Title' }}</h2>
+    <p>{{ f['description'].value || 'A focused classroom course preview will appear here as details are entered.' }}</p>
+
+    <div class="offline-preview__meta">
+      <span>
+        <i class="feather-map-pin"></i>
+        {{ f['venue'].value || 'Venue' }}
+      </span>
+      <span>
+        <i class="feather-navigation"></i>
+        {{ f['city'].value || 'City' }}
+      </span>
+      <span>
+        <i class="feather-calendar"></i>
+        {{ dateRangeLabel }}
+      </span>
+      <span>
+        <i class="feather-clock"></i>
+        {{ timeRangeLabel }}
+      </span>
+      <span>
+        <i class="feather-user"></i>
+        {{ instructorNames }}
+      </span>
+      @if (f['youtubeLiveUrl'].value) {
+      <span>
+        <i class="feather-youtube"></i>
+        YouTube Live
+      </span>
+      }
+      @if (f['meetingLink'].value) {
+      <span>
+        <i class="feather-video"></i>
+        Meeting Link
+      </span>
+      }
+    </div>
+
+    <div class="offline-preview__footer">
+      <span>Course Fee</span>
+      <strong>{{ priceLabel }}</strong>
+    </div>
+  </aside>
+</div>

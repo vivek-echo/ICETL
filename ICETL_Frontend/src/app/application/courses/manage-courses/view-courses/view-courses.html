@@ -427,7 +427,7 @@
             <label>Instructor</label>
             <div class="instructor-select" [class.is-open]="isEditInstructorPickerOpen"
               (click)="keepEditInstructorPickerOpen($event)">
-              <button type="button" class="instructor-select__trigger" (click)="toggleEditInstructorPicker()"
+              <button type="button" class="instructor-select__trigger" data-validation-control="editCourseInstructor" (click)="toggleEditInstructorPicker()"
                 [attr.aria-expanded]="isEditInstructorPickerOpen">
                 <span>{{ editInstructorPickerLabel }}</span>
                 <i class="fa-solid fa-chevron-down"></i>

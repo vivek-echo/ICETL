@@ -122,6 +122,45 @@
   padding-top: 22px;
 }
 
+.rbt-course-area .row.g-5 > [class*='col-'] {
+  display: flex;
+}
+
+.rbt-course-area .rbt-card {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+}
+
+.rbt-course-area .rbt-card-img {
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.rbt-course-area .rbt-card-img a {
+  display: block;
+  width: 100%;
+  height: 194px;
+}
+
+.rbt-course-area .rbt-card-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rbt-course-area .rbt-card .rbt-card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.rbt-course-area .rbt-card .rbt-card-bottom {
+  margin-top: auto;
+}
+
 .rbt-card .rbt-card-title {
   line-height: 1.35;
   letter-spacing: -0.01em;

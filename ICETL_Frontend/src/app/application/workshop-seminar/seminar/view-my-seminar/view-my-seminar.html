@@ -1,0 +1,196 @@
+<div class="program-catalog program-catalog--seminar">
+  <header class="program-catalog__hero">
+    <div>
+      <span>Seminar Management</span>
+      <h1>My Seminars</h1>
+      <p>Review seminar schedules, speaker details, capacity, pricing, and publish status.</p>
+    </div>
+
+    <div class="program-catalog__hero-actions">
+      <button type="button" class="program-action program-action--primary" (click)="goToAddSeminar()">
+        <i class="feather-plus"></i>
+        Add Seminar
+      </button>
+      <button type="button" class="program-action" (click)="clearFilters()">
+        <i class="feather-refresh-cw"></i>
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <section class="program-summary" aria-label="Seminar summary">
+    <div>
+      <i class="feather-grid"></i>
+      <span>Total Seminars</span>
+      <strong>{{ seminars.length }}</strong>
+      <p>Seminars added by you</p>
+    </div>
+    <div>
+      <i class="feather-check-circle"></i>
+      <span>Active</span>
+      <strong>{{ activeSeminars }}</strong>
+      <p>Visible seminars</p>
+    </div>
+    <div>
+      <i class="feather-calendar"></i>
+      <span>Upcoming</span>
+      <strong>{{ upcomingSeminars }}</strong>
+      <p>Seminars scheduled ahead</p>
+    </div>
+    <div>
+      <i class="feather-check-square"></i>
+      <span>Completed</span>
+      <strong>{{ completedSeminars }}</strong>
+      <p>Finished seminars</p>
+    </div>
+  </section>
+
+  <div class="program-toolbar">
+    <div class="program-toolbar__heading">
+      <h2>Filter Seminars</h2>
+      <p>Search by title, topic, venue, city, speaker, and status.</p>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Search</label>
+      <div class="program-field">
+        <i class="feather-search"></i>
+        <input type="text" placeholder="Seminar, topic, speaker..." [(ngModel)]="search">
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>City</label>
+      <div class="program-field">
+        <i class="feather-map-pin"></i>
+        <select [(ngModel)]="city">
+          <option value="">All Cities</option>
+          @for (item of cityOptions; track item) {
+          <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Status</label>
+      <div class="program-field">
+        <i class="feather-activity"></i>
+        <select [(ngModel)]="status">
+          <option value="">All Status</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Timeline</label>
+      <div class="program-field">
+        <i class="feather-calendar"></i>
+        <select [(ngModel)]="scheduleStatus">
+          @for (option of scheduleFilters; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <div class="program-field">
+        <i class="feather-sliders"></i>
+        <select [(ngModel)]="sortBy">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  }
+
+  @if (!loading && filteredSeminars.length === 0) {
+  <div class="program-empty">
+    <i class="feather-calendar"></i>
+    <h5>No Seminars Found</h5>
+    <p>No seminars match the selected filters.</p>
+    <a [routerLink]="addRoute">Add Seminar</a>
+  </div>
+  }
+
+  @if (!loading && filteredSeminars.length > 0) {
+  <div class="program-grid">
+    @for (seminar of filteredSeminars; track trackByProgramId($index, seminar)) {
+    <article class="program-card">
+      <div class="program-card__top">
+        <span class="program-card__status" [class.program-card__status--inactive]="!isActive(seminar)">
+          {{ isActive(seminar) ? 'Active' : 'Inactive' }}
+        </span>
+        <span class="program-card__topic">{{ seminar.topic }}</span>
+        <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+      </div>
+
+      <h3>{{ seminar.title }}</h3>
+      <p class="program-card__description">{{ seminar.description }}</p>
+
+      <div class="program-card__meta">
+        <span>
+          <i class="feather-user"></i>
+          {{ seminar.speakerName }}
+        </span>
+        <span>
+          <i class="feather-map-pin"></i>
+          {{ seminar.venue }}
+        </span>
+        <span>
+          <i class="feather-navigation"></i>
+          {{ seminar.city }}
+        </span>
+        <span>
+          <i class="feather-calendar"></i>
+          {{ formatDate(seminar.eventDate) }}
+        </span>
+        <span>
+          <i class="feather-clock"></i>
+          {{ formatTimeRange(seminar) }}
+        </span>
+        <span>
+          <i class="feather-users"></i>
+          {{ seminar.capacity }} seats
+        </span>
+      </div>
+
+      @if (getTakeaways(seminar).length > 0) {
+      <ul class="program-card__takeaways">
+        @for (takeaway of getTakeaways(seminar); track $index) {
+        <li>{{ takeaway }}</li>
+        }
+      </ul>
+      }
+
+      <footer class="program-card__footer">
+        <strong>{{ formatPrice(seminar.price) }}</strong>
+
+        <div class="program-card__actions">
+          <button type="button" class="program-icon-action" (click)="goToEditSeminar(seminar)" title="Edit seminar">
+            <i class="feather-edit-2"></i>
+          </button>
+          <button type="button" class="program-icon-action" (click)="toggleStatus(seminar)" title="Toggle status">
+            <i class="feather-power"></i>
+          </button>
+          <button type="button" class="program-icon-action program-icon-action--danger" (click)="deleteSeminar(seminar)" title="Delete seminar">
+            <i class="feather-trash-2"></i>
+          </button>
+        </div>
+      </footer>
+    </article>
+    }
+  </div>
+  }
+</div>

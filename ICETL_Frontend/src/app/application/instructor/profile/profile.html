@@ -96,7 +96,10 @@
             <div class="col-lg-6 col-md-6 col-12">
               <div class="rbt-form-group">
                 <label for="instructor-profile-dob">Date of Birth *</label>
-                <input id="instructor-profile-dob" type="date" formControlName="dob" autocomplete="bday">
+                <div class="profile-date-field">
+                  <i class="feather-calendar"></i>
+                  <input id="instructor-profile-dob" type="date" formControlName="dob" autocomplete="bday">
+                </div>
                 @if (profileForm.get('dob')?.touched && profileForm.get('dob')?.errors) {
                 <small class="text-danger">Date of birth is required.</small>
                 }
@@ -428,7 +431,7 @@
       </div>
 
       <div class="profile-submit profile-submit--sticky">
-        <button type="submit" class="rbt-btn btn-gradient" [disabled]="profileForm.invalid || isSaving">
+        <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSaving">
           {{ isSaving ? 'Saving...' : 'Save Instructor Profile' }}
         </button>
       </div>

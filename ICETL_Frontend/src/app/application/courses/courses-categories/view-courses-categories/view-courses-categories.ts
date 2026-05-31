@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom, timeout } from 'rxjs';
 
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../../../commonServices/form-validation-rules';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Course } from '../../services/course';
@@ -67,15 +68,7 @@ export class ViewCoursesCategories implements OnDestroy {
   editIconPreview: string | null = null;
 
   editCategoryForm = this.fb.group({
-    categoryName: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.maxLength(50),
-        Validators.pattern(/^[a-zA-Z\s]+$/),
-      ],
-    ],
+    categoryName: ['', FormValidationRules.requiredName()],
     status: ['1', Validators.required],
     icon: [null as File | null],
   });

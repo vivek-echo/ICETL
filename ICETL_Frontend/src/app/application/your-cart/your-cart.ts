@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { CourseCart, CourseCartItem } from '../services/cart';
-import { AlertHelperService } from '../../../commonServices/alert-helper-service';
+import { CourseCart, CourseCartItem } from '../courses/services/cart';
+import { AlertHelperService } from '../../commonServices/alert-helper-service';
 import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
-import { PaymentService } from '../services/payment';
+import { PaymentService } from '../courses/services/payment';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
 declare var Razorpay: any;

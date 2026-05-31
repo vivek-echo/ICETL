@@ -152,7 +152,15 @@ function resolveMenuRoute(url: string | null | undefined, dashboardSegment: stri
     return normalizeRoute(`/${route}`);
   }
 
-  const applicationRootSegments = new Set(['admin', 'courses', 'instructor', 'learner']);
+  const applicationRootSegments = new Set([
+    'admin',
+    'courses',
+    'icetl-team',
+    'instructor',
+    'learner',
+    'workshopSeminar',
+    'workshop-seminar',
+  ]);
   const rootSegment = route.split('/')[0];
 
   if (applicationRootSegments.has(rootSegment)) {
@@ -206,7 +214,9 @@ function getDashboardRouteSegment(value: unknown): string {
 
 function normalizeRoute(value: string): string {
   const [path] = value.split(/[?#]/);
-  const normalizedPath = path.trim().replace(/\/+$/g, '');
+  const normalizedPath = path
+    .trim()
+    .replace(/\/+$/g, '');
 
   return normalizedPath || '/';
 }

@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormsModule, Validators } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { lastValueFrom, timeout } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { ROLE } from '../../../../commonServices/constants.service';
+import { FormValidationService } from '../../../../commonServices/form-validation-service';
 import { Course } from '../../services/course';
 import { Router } from '@angular/router';
 
@@ -159,10 +160,13 @@ export class ViewCourses implements OnInit, OnDestroy {
 
   constructor(
     private courseService: Course,
+    private fb: FormBuilder,
     private cdr: ChangeDetectorRef,
     private spinner: NgxSpinnerService,
     private alertHelper: AlertHelperService,
     private router: Router,
+    private formValidationService: FormValidationService,
+    private el: ElementRef,
   ) {}
 
   ngOnInit(): void {
@@ -462,17 +466,20 @@ export class ViewCourses implements OnInit, OnDestroy {
       return;
     }
 
-    const validationMessage = this.getEditValidationMessage();
+    const validationForm = this.buildEditValidationForm();
 
-    if (validationMessage) {
-      await this.alertHelper.error(validationMessage, 'Validation');
+    if (!this.formValidationService.validateForm(validationForm, this.getEditFieldName, this.el)) {
       return;
     }
 
-    const confirmed = await this.alertHelper.confirm(
-      'Do you want to update this course?',
-      'Update Course',
-    );
+    const highlightValidationMessage = this.getEditHighlightsValidationMessage();
+
+    if (highlightValidationMessage) {
+      await this.alertHelper.error(highlightValidationMessage, 'Validation');
+      return;
+    }
+
+    const confirmed = await this.alertHelper.confirm('Do you want to update this course?', 'Update Course');
 
     if (!confirmed) {
       return;
@@ -737,53 +744,48 @@ export class ViewCourses implements OnInit, OnDestroy {
     }
   }
 
-  private getEditValidationMessage(): string {
-    const title = this.editCourseForm.title.trim();
-    const description = this.editCourseForm.description.trim();
-    const duration = Number(this.editCourseForm.duration);
-    const price = Number(this.editCourseForm.price);
-    const oldPrice =
-      this.editCourseForm.oldPrice === null || this.editCourseForm.oldPrice === ''
-        ? null
-        : Number(this.editCourseForm.oldPrice);
+  private buildEditValidationForm() {
+    return this.fb.group({
+      editCourseTitle: [
+        this.editCourseForm.title,
+        [Validators.required, Validators.minLength(5), Validators.maxLength(100)],
+      ],
+      editCourseCategory: [this.editCourseForm.category, Validators.required],
+      editCourseInstructor: [this.editCourseForm.instructors, Validators.required],
+      editCourseDuration: [this.editCourseForm.duration, [Validators.required, Validators.min(1)]],
+      editCourseDurationUnit: [this.editCourseForm.durationUnit, Validators.required],
+      editCoursePrice: [this.editCourseForm.price, [Validators.required, Validators.min(0)]],
+      editCourseOldPrice: [this.editCourseForm.oldPrice, Validators.min(0)],
+      editCourseDescription: [
+        this.editCourseForm.description,
+        [Validators.required, Validators.minLength(20), Validators.maxLength(300)],
+      ],
+      editCourseStatus: [this.editCourseForm.status, Validators.required],
+    });
+  }
 
-    if (title.length < 5 || title.length > 100) {
-      return 'Course title must be between 5 and 100 characters.';
-    }
-
-    if (!this.editCourseForm.category) {
-      return 'Please select a course category.';
-    }
-
-    if (!this.editCourseForm.instructors.length) {
-      return 'Please select at least one instructor.';
-    }
-
-    if (Number.isNaN(duration) || duration < 1) {
-      return 'Please enter a valid course duration.';
-    }
-
-    if (![1, 2].includes(Number(this.editCourseForm.durationUnit))) {
-      return 'Please select a valid duration unit.';
-    }
-
-    if (Number.isNaN(price) || price < 0) {
-      return 'Please enter a valid course price.';
-    }
-
-    if (oldPrice !== null && (Number.isNaN(oldPrice) || oldPrice < 0)) {
-      return 'Please enter a valid old price.';
-    }
-
-    if (description.length < 20 || description.length > 300) {
-      return 'Course description must be between 20 and 300 characters.';
-    }
-
+  private getEditHighlightsValidationMessage(): string {
     if (this.getCleanEditHighlights().some((highlight) => highlight.length > 255)) {
       return 'Each learning outcome must be 255 characters or fewer.';
     }
 
     return '';
+  }
+
+  private getEditFieldName(field: string): string {
+    const map: Record<string, string> = {
+      editCourseTitle: 'Course Title',
+      editCourseCategory: 'Course Category',
+      editCourseInstructor: 'Instructor',
+      editCourseDuration: 'Course Duration',
+      editCourseDurationUnit: 'Duration Unit',
+      editCoursePrice: 'Price',
+      editCourseOldPrice: 'Old Price',
+      editCourseDescription: 'Description',
+      editCourseStatus: 'Status',
+    };
+
+    return map[field] || field;
   }
 
   private getCleanEditHighlights(): string[] {

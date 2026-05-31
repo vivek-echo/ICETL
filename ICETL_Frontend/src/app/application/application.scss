@@ -93,6 +93,71 @@
   width: 100%;
 }
 
+.profile-date-field {
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  min-height: 60px;
+  overflow: hidden;
+  padding: 0 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-date-field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(47, 87, 239, 0.12);
+}
+
+.profile-date-field i {
+  align-items: center;
+  background: rgba(47, 87, 239, 0.08);
+  border-radius: 999px;
+  color: var(--color-primary);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  pointer-events: none;
+  width: 34px;
+}
+
+.profile-date-field input[type="date"] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-body);
+  font-weight: 700;
+  height: 56px;
+  min-width: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.profile-date-field input[type="date"]:focus {
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.profile-date-field input[type="date"]::-webkit-calendar-picker-indicator {
+  background-color: rgba(47, 87, 239, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  height: 28px;
+  margin-left: 8px;
+  opacity: 0.9;
+  padding: 6px;
+  width: 28px;
+}
+
+.profile-date-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(47, 87, 239, 0.16);
+  opacity: 1;
+}
+
 .profile-cover-stage {
   align-items: center;
   background:
@@ -294,6 +359,16 @@
 
   .profile-modal__actions {
     flex-direction: column-reverse;
+  }
+
+  .profile-date-field {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 0 12px;
+  }
+
+  .profile-date-field i {
+    height: 30px;
+    width: 30px;
   }
 
   .profile-modal__actions .rbt-btn {

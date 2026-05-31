@@ -26,11 +26,6 @@ interface CourseTab {
 export class ManageCourses implements OnInit, OnDestroy {
   private readonly parentRoute = '/application/courses/manageCourses';
   private readonly fallbackTabs: CourseTab[] = [
-    { id: 17, label: 'Add Course', route: 'add' },
-    { id: 18, label: 'View My Courses', route: 'view' },
-    { id: 19, label: 'View All Courses', route: 'viewAll' },
-    { id: 20, label: 'Browse Courses', route: 'browse' },
-    { id: 21, label: 'My Learning', route: 'myLearning' },
   ];
   private readonly isBrowser: boolean;
   private readonly refreshTabs = () => {

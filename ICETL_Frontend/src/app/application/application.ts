@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -10,6 +10,8 @@ import { UserProfile, UserProfileService } from '../commonServices/user-profile.
 import { SideNav } from './side-nav/side-nav';
 import { AuthService } from '../commonServices/auth.service';
 import { ProfileModalService } from '../commonServices/profile-modal.service';
+import { FormValidationService } from '../commonServices/form-validation-service';
+import { FormValidationRules } from '../commonServices/form-validation-rules';
 
 @Component({
   selector: 'app-application',
@@ -29,6 +31,8 @@ import { ProfileModalService } from '../commonServices/profile-modal.service';
 export class Application implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly el = inject(ElementRef);
+  private readonly formValidationService = inject(FormValidationService);
   private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly defaultProfileImage = 'assets/images/team/avatar-2.jpg';
@@ -48,11 +52,11 @@ export class Application implements OnInit, OnDestroy {
   profileErrorMessage = '';
 
   readonly profileForm = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3)]],
+    name: ['', FormValidationRules.requiredName()],
     email: [{ value: '', disabled: true }],
-    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
-    dob: [''],
-    gender: [''],
+    phone: ['', FormValidationRules.requiredMobile()],
+    dob: ['', Validators.required],
+    gender: ['', Validators.required],
   });
 
   private readonly subscriptions = new Subscription();
@@ -206,8 +210,7 @@ export class Application implements OnInit, OnDestroy {
   }
 
   submitProfileUpdate(): void {
-    if (this.profileForm.invalid) {
-      this.profileForm.markAllAsTouched();
+    if (!this.formValidationService.validateForm(this.profileForm, this.getFieldName, this.el)) {
       return;
     }
 
@@ -267,6 +270,18 @@ export class Application implements OnInit, OnDestroy {
       dob: profile.dob || '',
       gender: profile.gender || '',
     });
+  }
+
+  private getFieldName(field: string): string {
+    const map: Record<string, string> = {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      dob: 'Date of Birth',
+      gender: 'Gender',
+    };
+
+    return map[field] || field;
   }
 
   private scheduleProfileSync(profile: UserProfile | null): void {

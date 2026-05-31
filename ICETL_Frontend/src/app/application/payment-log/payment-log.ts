@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
-import { AlertHelperService } from '../../../commonServices/alert-helper-service';
-import { Invoice, PaymentLog, PaymentService } from '../services/payment';
+import { AlertHelperService } from '../../commonServices/alert-helper-service';
+import { Invoice, PaymentLog, PaymentService } from '../courses/services/payment';
 
 @Component({
   selector: 'app-payment-log',

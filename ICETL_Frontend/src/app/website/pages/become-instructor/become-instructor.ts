@@ -25,6 +25,8 @@ import { Router, RouterLink } from '@angular/router';
 import { IDropdownSettings, NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../commonServices/alert-helper-service';
+import { FormValidationService } from '../../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../../commonServices/form-validation-rules';
 import { SpinnerService } from '../../../commonServices/spinner/spinner.service';
 import {
   CompleteInstructorOnboardingPayload,
@@ -106,9 +108,11 @@ export class BecomeInstructor implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly el = inject(ElementRef);
   private readonly spinner = inject(SpinnerService);
   private readonly otpService = inject(OtpService);
   private readonly alertHelper = inject(AlertHelperService);
+  private readonly formValidationService = inject(FormValidationService);
   private readonly instructorRegistrationService = inject(InstructorRegistrationService);
   private readonly isBrowser: boolean;
   private readonly canUseObjectUrl: boolean;
@@ -350,16 +354,8 @@ export class BecomeInstructor implements OnDestroy {
   readonly registrationForm = this.fb.group({
     account: this.fb.group(
       {
-        fullName: [
-          '',
-          [
-            Validators.required,
-            Validators.minLength(3),
-            Validators.maxLength(150),
-            Validators.pattern(/^[A-Za-z ]+$/),
-          ],
-        ],
-        mobileNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+        fullName: ['', FormValidationRules.requiredName()],
+        mobileNumber: ['', FormValidationRules.requiredMobile()],
         gender: ['', Validators.required],
         dob: ['', Validators.required],
         password: ['', [Validators.required, Validators.minLength(8)]],
@@ -608,8 +604,7 @@ export class BecomeInstructor implements OnDestroy {
   }
 
   async submitEmail(): Promise<void> {
-    if (this.emailEntryForm.invalid) {
-      this.emailEntryForm.markAllAsTouched();
+    if (!this.formValidationService.validateForm(this.emailEntryForm, this.getFieldName, this.el)) {
       return;
     }
 
@@ -839,9 +834,7 @@ export class BecomeInstructor implements OnDestroy {
       return;
     }
 
-    this.markGroupTouched(this.agreementsGroup);
-
-    if (this.agreementsGroup.invalid) {
+    if (!this.formValidationService.validateForm(this.agreementsGroup, this.getFieldName, this.el)) {
       return;
     }
 
@@ -993,7 +986,7 @@ export class BecomeInstructor implements OnDestroy {
 
   sanitizeFullNameInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '');
+    const sanitized = input.value.replace(/[^A-Za-z ]+/g, '').slice(0, 50);
 
     if (input.value !== sanitized) {
       input.value = sanitized;
@@ -1387,22 +1380,50 @@ export class BecomeInstructor implements OnDestroy {
     }
 
     if (markTouched) {
-      this.markGroupTouched(group);
+      return this.formValidationService.validateForm(group, this.getFieldName, this.el);
     }
 
     return group.valid;
   }
 
-  private markGroupTouched(control: AbstractControl): void {
-    control.markAsTouched();
-
-    if (control instanceof FormGroup) {
-      Object.values(control.controls).forEach((child) => this.markGroupTouched(child));
-    }
-  }
-
   private getControl(path: string): AbstractControl | null {
     return this.registrationForm.get(path);
+  }
+
+  private getFieldName(field: string): string {
+    const map: Record<string, string> = {
+      email: 'Email',
+      fullName: 'Full Name',
+      mobileNumber: 'Mobile Number',
+      gender: 'Gender',
+      dob: 'Date of Birth',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      country: 'Country',
+      preferredLanguage: 'Preferred Language',
+      professionalHeadline: 'Professional Headline',
+      bio: 'Bio',
+      profilePhoto: 'Profile Photo',
+      yearsOfExperience: 'Years of Experience',
+      currentJobTitle: 'Current Job Title',
+      currentOrganization: 'Current Organization',
+      highestQualification: 'Highest Qualification',
+      skills: 'Skills',
+      teachingCategories: 'Teaching Categories',
+      languagesYouCanTeach: 'Teaching Languages',
+      governmentId: 'Government ID',
+      resume: 'Resume',
+      certifications: 'Certifications',
+      linkedInUrl: 'LinkedIn URL',
+      gitHubUrl: 'GitHub URL',
+      youTubeUrl: 'YouTube URL',
+      portfolioWebsite: 'Portfolio Website',
+      acceptTerms: 'Terms and Conditions',
+      acceptInstructorPolicy: 'Instructor Policy',
+      verifyInformation: 'Information Verification',
+    };
+
+    return map[field] || field;
   }
 
   private hasMeaningfulValue(value: unknown): boolean {

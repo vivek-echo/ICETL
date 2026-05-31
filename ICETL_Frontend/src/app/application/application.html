@@ -195,7 +195,10 @@
             <div class="col-lg-6 col-md-6 col-sm-6 col-12">
               <div class="rbt-form-group">
                 <label for="profile-update-dob">Date of Birth</label>
-                <input id="profile-update-dob" type="date" formControlName="dob" autocomplete="bday">
+                <div class="profile-date-field">
+                  <i class="feather-calendar"></i>
+                  <input id="profile-update-dob" type="date" formControlName="dob" autocomplete="bday">
+                </div>
               </div>
             </div>
 
@@ -223,7 +226,7 @@
                   [disabled]="isSavingProfile">
                   Cancel
                 </button>
-                <button type="submit" class="rbt-btn btn-gradient" [disabled]="profileForm.invalid || isSavingProfile">
+                <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingProfile">
                   {{ isSavingProfile ? 'Saving...' : 'Update Info' }}
                 </button>
               </div>

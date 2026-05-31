@@ -1,6 +1,7 @@
 import { Component, ElementRef, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../../../commonServices/form-validation-rules';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { lastValueFrom } from 'rxjs';
 import { Course } from '../../services/course';
@@ -29,15 +30,7 @@ export class AddCoursesCategories implements OnDestroy {
     private alertHelper: AlertHelperService,
   ) {
     this.categoryForm = this.fb.group({
-      categoryName: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(50),
-          Validators.pattern(/^[a-zA-Z\s]+$/),
-        ],
-      ],
+      categoryName: ['', FormValidationRules.requiredName()],
       status: ['1', Validators.required],
       categoryIcon: ['', [Validators.required, Validators.pattern(/^fa-[a-z]+ fa-[a-z-]+$/)]],
       icon: [null],

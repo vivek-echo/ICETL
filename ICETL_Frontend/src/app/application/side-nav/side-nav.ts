@@ -1,6 +1,6 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 interface StoredMenu {
   id: number;
@@ -30,10 +30,21 @@ interface MenuNode extends StoredMenu {
 })
 export class SideNav implements OnInit, OnDestroy {
   readonly defaultMenuIcon = 'feather-circle';
-  private readonly applicationRootSegments = new Set(['admin', 'courses', 'instructor', 'learner']);
+  private readonly applicationRootSegments = new Set([
+    'admin',
+    'courses',
+    'icetl-team',
+    'instructor',
+    'learner',
+    'workshopSeminar',
+    'workshop-seminar',
+  ]);
   private readonly parentActiveRoutes = new Set([
     '/application/courses/coursesCategories',
     '/application/courses/manageCourses',
+    '/application/courses/manageOfflineCourse',
+    '/application/workshopSeminar/workshop',
+    '/application/workshopSeminar/seminar',
   ]);
   menuItems: MenuNode[] = [];
   dashboardSetting: DashboardSetting | null = null;
@@ -43,7 +54,10 @@ export class SideNav implements OnInit, OnDestroy {
     this.loadMenuItems();
   };
 
-  constructor(@Inject(PLATFORM_ID) platformId: object) {
+  constructor(
+    @Inject(PLATFORM_ID) platformId: object,
+    private readonly router: Router,
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
@@ -207,6 +221,21 @@ export class SideNav implements OnInit, OnDestroy {
 
   protected shouldUseExactActiveMatch(route: string | null): boolean {
     return route ? !this.parentActiveRoutes.has(route) : true;
+  }
+
+  protected isRouteActive(route: string | null): boolean {
+    if (!route) {
+      return false;
+    }
+
+    const currentRoute = this.router.url.split(/[?#]/)[0].replace(/\/+$/g, '');
+    const menuRoute = route.replace(/\/+$/g, '');
+
+    if (this.parentActiveRoutes.has(menuRoute)) {
+      return currentRoute === menuRoute || currentRoute.startsWith(`${menuRoute}/`);
+    }
+
+    return currentRoute === menuRoute;
   }
 
   private resolveMenuRoute(url?: string | null): string | null {

@@ -1,0 +1,199 @@
+<div class="offline-catalog">
+  <header class="offline-catalog__hero">
+    <div>
+      <span>Offline Course Management</span>
+      <h1>My Offline Courses</h1>
+      <p>Review classroom course schedules, venue details, and publish status from one workspace.</p>
+    </div>
+
+    <div class="offline-catalog__hero-actions">
+      <button type="button" class="offline-action offline-action--primary" (click)="goToAddCourse()">
+        <i class="feather-plus"></i>
+        Add Offline Course
+      </button>
+      <button type="button" class="offline-action" (click)="clearFilters()">
+        <i class="feather-refresh-cw"></i>
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <section class="offline-summary" aria-label="Offline courses summary">
+    <div>
+      <i class="feather-book-open"></i>
+      <span>Total Courses</span>
+      <strong>{{ courses.length }}</strong>
+      <p>Offline courses added by you</p>
+    </div>
+    <div>
+      <i class="feather-check-circle"></i>
+      <span>Active</span>
+      <strong>{{ activeCourses }}</strong>
+      <p>Visible offline courses</p>
+    </div>
+    <div>
+      <i class="feather-calendar"></i>
+      <span>Upcoming</span>
+      <strong>{{ upcomingCourses }}</strong>
+      <p>Courses scheduled ahead</p>
+    </div>
+  </section>
+
+  <div class="offline-toolbar">
+    <div class="offline-toolbar__heading">
+      <h2>Filter Offline Courses</h2>
+      <p>Search and filter by city, status, and sort order.</p>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Search</label>
+      <div class="offline-field">
+        <i class="feather-search"></i>
+        <input type="text" placeholder="Course, venue, category..." [(ngModel)]="search">
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>City</label>
+      <div class="offline-field">
+        <i class="feather-map-pin"></i>
+        <select [(ngModel)]="city">
+          <option value="">All Cities</option>
+          @for (item of cityOptions; track item) {
+          <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Status</label>
+      <div class="offline-field">
+        <i class="feather-activity"></i>
+        <select [(ngModel)]="status">
+          <option value="">All Status</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <div class="offline-field">
+        <i class="feather-sliders"></i>
+        <select [(ngModel)]="sortBy">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <button type="button" class="offline-toolbar__reset" (click)="clearFilters()">
+      <i class="feather-refresh-cw"></i>
+      Reset
+    </button>
+  </div>
+
+  @if (loading) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  }
+
+  @if (!loading && filteredCourses.length === 0) {
+  <div class="offline-empty">
+    <i class="feather-calendar"></i>
+    <h5>No Offline Courses Found</h5>
+    <p>No offline courses match the selected filters.</p>
+    <a routerLink="/application/courses/manageOfflineCourse/add">Add Offline Course</a>
+  </div>
+  }
+
+  @if (!loading && filteredCourses.length > 0) {
+  <div class="offline-course-grid">
+    @for (course of filteredCourses; track trackByCourseId($index, course)) {
+    <article class="offline-course-card">
+      <div class="offline-course-card__top">
+        <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
+          {{ isActive(course) ? 'Active' : 'Inactive' }}
+        </span>
+        <span class="offline-course-card__category">{{ course.categoryName }}</span>
+      </div>
+
+      <h3>{{ course.title }}</h3>
+      <p class="offline-course-card__description">{{ course.description }}</p>
+
+      <div class="offline-course-card__meta">
+        <span>
+          <i class="feather-map-pin"></i>
+          {{ course.venue }}
+        </span>
+        <span>
+          <i class="feather-navigation"></i>
+          {{ course.city }}
+        </span>
+        <span>
+          <i class="feather-calendar"></i>
+          {{ formatDateRange(course) }}
+        </span>
+        <span>
+          <i class="feather-clock"></i>
+          {{ formatTimeRange(course) }}
+        </span>
+      </div>
+
+      @if (getHighlights(course).length > 0) {
+      <ul class="offline-course-card__highlights">
+        @for (highlight of getHighlights(course); track $index) {
+        <li>{{ highlight }}</li>
+        }
+      </ul>
+      }
+
+      <div class="offline-course-card__instructor">
+        <div>{{ getInitial(course) }}</div>
+        <span>
+          Instructor
+          <strong>{{ course.instructorName }}</strong>
+        </span>
+      </div>
+
+      @if (course.youtubeLiveUrl || course.meetingLink) {
+      <div class="offline-course-card__links">
+        @if (course.youtubeLiveUrl) {
+        <a [href]="getExternalLinkUrl(course.youtubeLiveUrl)" target="_blank" rel="noopener">
+          <i class="feather-youtube"></i>
+          YouTube Live
+        </a>
+        }
+
+        @if (course.meetingLink) {
+        <a [href]="getExternalLinkUrl(course.meetingLink)" target="_blank" rel="noopener">
+          <i class="feather-video"></i>
+          Meeting Link
+        </a>
+        }
+      </div>
+      }
+
+      <footer class="offline-course-card__footer">
+        <div>
+          <strong>{{ formatPrice(course.price) }}</strong>
+        </div>
+
+        <div class="offline-course-card__actions">
+          <button type="button" class="offline-icon-action" (click)="toggleStatus(course)" title="Toggle status">
+            <i class="feather-power"></i>
+          </button>
+          <button type="button" class="offline-icon-action offline-icon-action--danger" (click)="deleteCourse(course)" title="Delete course">
+            <i class="feather-trash-2"></i>
+          </button>
+        </div>
+      </footer>
+    </article>
+    }
+  </div>
+  }
+</div>

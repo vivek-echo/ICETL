@@ -45,6 +45,17 @@ export const applicationRoutes: Routes = [
         title: 'Learner | ICETL',
       },
       {
+        path: 'icetl-team',
+        canActivate: [roleGuard],
+        data: { roles: ['icetl-team', 'icetl team', 'team'] },
+        loadChildren: () =>
+          import('./icetl-team/icetl-team.routes').then(
+            (m) => m.icetlTeamRoutes
+          ),
+
+        title: 'ICETL Team | ICETL',
+      },
+      {
         path: 'courses',
         loadChildren: () =>
           import('./courses/courses.routes').then(
@@ -54,22 +65,38 @@ export const applicationRoutes: Routes = [
         title: 'Learner | ICETL',
       },
       {
+        path: 'workshopSeminar',
+        loadChildren: () =>
+          import('./workshop-seminar/workshop-seminar.routes').then(
+            (m) => m.workshopSeminarRoutes
+          ),
+        title: 'Workshop & Seminar | ICETL',
+      },
+      {
+        path: 'workshop-seminar',
+        loadChildren: () =>
+          import('./workshop-seminar/workshop-seminar.routes').then(
+            (m) => m.workshopSeminarRoutes
+          ),
+        title: 'Workshop & Seminar | ICETL',
+      },
+      {
         path: 'yourCart',
         data: { authOnly: true },
-        loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
+        loadComponent: () => import('./your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },
       {
         path: 'cart',
         data: { authOnly: true },
-        loadComponent: () => import('./courses/your-cart/your-cart').then((m) => m.YourCart),
+        loadComponent: () => import('./your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },
       {
         path: 'paymentLog',
         data: { authOnly: true },
         loadComponent: () =>
-          import('./courses/payment-log/payment-log').then((m) => m.PaymentLogComponent),
+          import('./payment-log/payment-log').then((m) => m.PaymentLogComponent),
         title: 'Payment Log | ICETL',
       },
       {

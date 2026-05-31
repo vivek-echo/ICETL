@@ -1,0 +1,228 @@
+<div class="program-catalog program-catalog--all-seminar">
+  <header class="program-catalog__hero">
+    <div>
+      <span>Seminar Management</span>
+      <h1>All Seminars</h1>
+      <p>Review seminars across creators, timeline, city, status, capacity, and pricing.</p>
+    </div>
+
+    <div class="program-catalog__hero-actions">
+      <button type="button" class="program-action" (click)="clearFilters()">
+        <i class="feather-refresh-cw"></i>
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <section class="program-summary" aria-label="All seminar summary">
+    <div>
+      <i class="feather-grid"></i>
+      <span>Total Seminars</span>
+      <strong>{{ summary.totalSeminars || meta.total }}</strong>
+      <p>Across all creators</p>
+    </div>
+    <div>
+      <i class="feather-check-circle"></i>
+      <span>Active</span>
+      <strong>{{ summary.activeSeminars }}</strong>
+      <p>Visible seminars</p>
+    </div>
+    <div>
+      <i class="feather-calendar"></i>
+      <span>Upcoming</span>
+      <strong>{{ summary.upcomingSeminars }}</strong>
+      <p>Scheduled ahead</p>
+    </div>
+    <div>
+      <i class="feather-check-square"></i>
+      <span>Completed</span>
+      <strong>{{ summary.completedSeminars }}</strong>
+      <p>Finished seminars</p>
+    </div>
+  </section>
+
+  <div class="program-toolbar program-toolbar--all">
+    <div class="program-toolbar__heading">
+      <h2>Filter Seminars</h2>
+      <p>Search by seminar, speaker, creator, city, timeline, and status.</p>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Search</label>
+      <div class="program-field">
+        <i class="feather-search"></i>
+        <input
+          type="text"
+          placeholder="Seminar, topic, speaker..."
+          [(ngModel)]="search"
+          (keyup.enter)="onSearch()">
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>City</label>
+      <div class="program-field">
+        <i class="feather-map-pin"></i>
+        <input type="text" placeholder="City" [(ngModel)]="city" (keyup.enter)="onFilterChange()">
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Status</label>
+      <div class="program-field">
+        <i class="feather-activity"></i>
+        <select [(ngModel)]="status" (change)="onFilterChange()">
+          <option value="">All Status</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Timeline</label>
+      <div class="program-field">
+        <i class="feather-calendar"></i>
+        <select [(ngModel)]="scheduleStatus" (change)="onFilterChange()">
+          @for (option of scheduleFilters; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Sort</label>
+      <div class="program-field">
+        <i class="feather-sliders"></i>
+        <select [(ngModel)]="sortBy" (change)="onFilterChange()">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group">
+      <label>Per Page</label>
+      <div class="program-field">
+        <i class="feather-list"></i>
+        <select [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  }
+
+  @if (!loading && seminars.length === 0) {
+  <div class="program-empty">
+    <i class="feather-calendar"></i>
+    <h5>No Seminars Found</h5>
+    <p>No seminars are available for the selected filters.</p>
+  </div>
+  }
+
+  @if (!loading && seminars.length > 0) {
+  <div class="program-grid">
+    @for (seminar of seminars; track trackBySeminarId($index, seminar)) {
+    <article class="program-card">
+      <div class="program-card__top">
+        <span class="program-card__status" [class.program-card__status--inactive]="!isActive(seminar)">
+          {{ seminar.statusLabel }}
+        </span>
+        <span class="program-card__topic">{{ seminar.topic }}</span>
+        <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+      </div>
+
+      <h3>{{ seminar.title }}</h3>
+      <p class="program-card__description">{{ seminar.description }}</p>
+
+      <div class="program-card__meta">
+        <span>
+          <i class="feather-user"></i>
+          {{ seminar.speakerName }}
+        </span>
+        <span>
+          <i class="feather-map-pin"></i>
+          {{ seminar.venue }}
+        </span>
+        <span>
+          <i class="feather-navigation"></i>
+          {{ seminar.city }}
+        </span>
+        <span>
+          <i class="feather-calendar"></i>
+          {{ formatDate(seminar.eventDate) }}
+        </span>
+        <span>
+          <i class="feather-clock"></i>
+          {{ formatTimeRange(seminar) }}
+        </span>
+        <span>
+          <i class="feather-users"></i>
+          {{ seminar.capacity }} seats
+        </span>
+      </div>
+
+      @if (getTakeaways(seminar).length > 0) {
+      <ul class="program-card__takeaways">
+        @for (takeaway of getTakeaways(seminar); track $index) {
+        <li>{{ takeaway }}</li>
+        }
+      </ul>
+      }
+
+      <footer class="program-card__footer">
+        <div class="program-card__creator">
+          <div>{{ getCreatorInitial(seminar) }}</div>
+          <span>
+            Added by
+            <strong>{{ seminar.createdByName }}</strong>
+          </span>
+        </div>
+
+        <strong>{{ formatPrice(seminar.price) }}</strong>
+      </footer>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <div class="program-pager">
+    <p>Showing {{ meta.from }}-{{ meta.to }} of {{ meta.total }} seminars</p>
+
+    <div class="program-pager__controls">
+      <button type="button" class="program-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="feather-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="program-pager__jump">
+        <span>Page</span>
+        <input
+          type="number"
+          min="1"
+          [max]="meta.lastPage"
+          [(ngModel)]="pageInput"
+          (keyup.enter)="goToPageInput()"
+          (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </div>
+
+      <button type="button" class="program-action program-action--primary" [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+        Next
+        <i class="feather-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  }
+</div>

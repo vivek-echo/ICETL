@@ -1,0 +1,304 @@
+<header class="program-builder__hero">
+  <div>
+    <span>Seminar</span>
+    <h1>{{ pageTitle }}</h1>
+    <p>Create seminar entries with speaker, topic, schedule, venue, capacity, and fee details.</p>
+  </div>
+
+  <a class="program-builder__view-link" [routerLink]="viewRoute">
+    <i class="feather-list"></i>
+    View My Seminar
+  </a>
+</header>
+
+@if (formMessage) {
+<div class="program-alert">
+  <i class="feather-alert-circle"></i>
+  <span>{{ formMessage }}</span>
+</div>
+}
+
+@if (loading) {
+<div class="text-center py-5">
+  <div class="spinner-border text-primary"></div>
+</div>
+}
+
+@if (!loading) {
+<div class="program-builder__grid">
+  <form [formGroup]="itemForm" (ngSubmit)="saveSeminar()" class="program-form">
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>01</span>
+        <div>
+          <h2>Seminar Details</h2>
+          <p>Core information shown on the seminar listing.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group program-form__full">
+        <label for="seminarTitle">Seminar Title</label>
+        <input id="seminarTitle" type="text" formControlName="title" placeholder="Emerging AI Practices Seminar"
+          [class.is-invalid]="isInvalid('title')">
+        @if (getFieldError('title')) {
+        <small class="program-field-error">{{ getFieldError('title') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarTopic">Topic</label>
+        <input id="seminarTopic" type="text" formControlName="topic" placeholder="Artificial Intelligence"
+          [class.is-invalid]="isInvalid('topic')">
+        @if (getFieldError('topic')) {
+        <small class="program-field-error">{{ getFieldError('topic') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarStatus">Status</label>
+        <select id="seminarStatus" formControlName="status" [class.is-invalid]="isInvalid('status')">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+        @if (getFieldError('status')) {
+        <small class="program-field-error">{{ getFieldError('status') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group program-form__full">
+        <label for="seminarDescription">Description</label>
+        <textarea id="seminarDescription" rows="4" formControlName="description"
+          placeholder="Describe the seminar focus and audience."
+          [class.is-invalid]="isInvalid('description')"></textarea>
+        <div class="program-form__helper">
+          @if (getFieldError('description')) {
+          <small class="program-field-error">{{ getFieldError('description') }}</small>
+          }
+          <span>{{ f['description'].value?.length || 0 }}/300</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>02</span>
+        <div>
+          <h2>Venue & Schedule</h2>
+          <p>Where and when the seminar will happen.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarVenue">Venue</label>
+        <input id="seminarVenue" type="text" formControlName="venue" placeholder="ICETL Auditorium"
+          [class.is-invalid]="isInvalid('venue')">
+        @if (getFieldError('venue')) {
+        <small class="program-field-error">{{ getFieldError('venue') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarCity">City</label>
+        <input id="seminarCity" type="text" formControlName="city" placeholder="Bhubaneswar"
+          [class.is-invalid]="isInvalid('city')">
+        @if (getFieldError('city')) {
+        <small class="program-field-error">{{ getFieldError('city') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarEventDate">Date</label>
+        <div class="program-date-field" [class.is-invalid]="isInvalid('eventDate')"
+          (click)="keepEventCalendarOpen($event)">
+          <button id="seminarEventDate" type="button" class="program-date-trigger"
+            [attr.aria-expanded]="isEventCalendarOpen" (click)="toggleEventCalendar($event)">
+            <span [class.is-placeholder]="!eventDateDisplayValue">
+              {{ eventDateDisplayValue || 'dd-mm-yyyy' }}
+            </span>
+            <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+          </button>
+
+          @if (isEventCalendarOpen) {
+          <div class="premium-calendar" (click)="keepEventCalendarOpen($event)">
+            <div class="premium-calendar__header">
+              <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                (click)="changeEventCalendarMonth(-1)">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="premium-calendar__selects">
+                <select aria-label="Calendar month" [value]="eventCalendarView.getMonth()"
+                  (change)="setEventCalendarMonth($event)">
+                  @for (month of calendarMonths; track month; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month }}</option>
+                  }
+                </select>
+                <select aria-label="Calendar year" [value]="eventCalendarView.getFullYear()"
+                  (change)="setEventCalendarYear($event)">
+                  @for (year of calendarYearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                (click)="changeEventCalendarMonth(1)">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="premium-calendar__weekdays">
+              @for (weekday of calendarWeekdays; track weekday) {
+              <span>{{ weekday }}</span>
+              }
+            </div>
+
+            <div class="premium-calendar__grid">
+              @for (day of eventCalendarDays; track day.iso) {
+              <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                (click)="selectEventDate(day)">
+                {{ day.day }}
+              </button>
+              }
+            </div>
+
+            <div class="premium-calendar__footer">
+              <button type="button" (click)="clearEventDate($event)">Clear</button>
+              <span>Format: dd-mm-yyyy</span>
+            </div>
+          </div>
+          }
+
+          <input type="hidden" formControlName="eventDate">
+        </div>
+        @if (getFieldError('eventDate')) {
+        <small class="program-field-error">{{ getFieldError('eventDate') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarStartTime">Start Time</label>
+        <input id="seminarStartTime" type="time" formControlName="startTime"
+          [class.is-invalid]="isInvalid('startTime')">
+        @if (getFieldError('startTime')) {
+        <small class="program-field-error">{{ getFieldError('startTime') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarEndTime">End Time</label>
+        <input id="seminarEndTime" type="time" formControlName="endTime" [class.is-invalid]="hasTimeRangeError()">
+        @if (hasTimeRangeError()) {
+        <small class="program-field-error">End time must be later than start time.</small>
+        }
+      </div>
+    </section>
+
+    <section class="program-form__section">
+      <div class="program-form__heading">
+        <span>03</span>
+        <div>
+          <h2>Speaker & Capacity</h2>
+          <p>Presenter, seats, pricing, and audience takeaways.</p>
+        </div>
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarSpeaker">Speaker</label>
+        <input id="seminarSpeaker" type="text" formControlName="speakerName" placeholder="Guest speaker"
+          [class.is-invalid]="isInvalid('speakerName')">
+        @if (getFieldError('speakerName')) {
+        <small class="program-field-error">{{ getFieldError('speakerName') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarCapacity">Capacity</label>
+        <input id="seminarCapacity" type="number" min="1" formControlName="capacity"
+          [class.is-invalid]="isInvalid('capacity')">
+        @if (getFieldError('capacity')) {
+        <small class="program-field-error">{{ getFieldError('capacity') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group">
+        <label for="seminarFee">Fee</label>
+        <input id="seminarFee" type="number" min="0" formControlName="price" [class.is-invalid]="isInvalid('price')">
+        @if (getFieldError('price')) {
+        <small class="program-field-error">{{ getFieldError('price') }}</small>
+        }
+      </div>
+
+      <div class="program-takeaways program-form__full">
+        <div class="program-takeaways__header">
+          <label>Key Takeaways</label>
+          <button type="button" class="program-icon-btn program-icon-btn--add" (click)="addTakeaway()"
+            aria-label="Add key takeaway">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <div formArrayName="takeaways" class="program-takeaways__list">
+          @for (takeaway of takeaways.controls; track $index) {
+          <div class="program-takeaways__row">
+            <input type="text" [formControlName]="$index" placeholder="Enter key takeaway">
+            <button type="button" class="program-icon-btn program-icon-btn--remove" (click)="removeTakeaway($index)"
+              aria-label="Remove key takeaway">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="program-form__actions">
+      <button type="button" class="rbt-btn btn-border" (click)="resetForm()" [disabled]="saving">
+        Reset
+      </button>
+      <button type="submit" class="rbt-btn btn-gradient" [disabled]="saving">
+        {{ saving ? 'Saving...' : submitLabel }}
+      </button>
+    </div>
+  </form>
+
+  <aside class="program-preview" aria-label="Seminar preview">
+    <div class="program-preview__top">
+      <span [class.program-preview__status--inactive]="f['status'].value === '0'">
+        {{ f['status'].value === '0' ? 'Inactive' : 'Active' }}
+      </span>
+      <strong>{{ f['topic'].value || 'Topic' }}</strong>
+    </div>
+
+    <h2>{{ f['title'].value || 'Seminar Title' }}</h2>
+    <p>{{ f['description'].value || 'Seminar preview will appear here as details are entered.' }}</p>
+
+    <div class="program-preview__meta">
+      <span>
+        <i class="feather-user"></i>
+        {{ f['speakerName'].value || 'Speaker' }}
+      </span>
+      <span>
+        <i class="feather-map-pin"></i>
+        {{ f['venue'].value || 'Venue' }}
+      </span>
+      <span>
+        <i class="feather-navigation"></i>
+        {{ f['city'].value || 'City' }}
+      </span>
+      <span>
+        <i class="feather-calendar"></i>
+        {{ scheduleLabel }}
+      </span>
+      <span>
+        <i class="feather-users"></i>
+        {{ f['capacity'].value || 0 }} seats
+      </span>
+    </div>
+
+    <div class="program-preview__footer">
+      <span>Seminar Fee</span>
+      <strong>{{ priceLabel }}</strong>
+    </div>
+  </aside>
+</div>
+}

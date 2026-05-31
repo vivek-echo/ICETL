@@ -1,0 +1,156 @@
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+
+interface StoredMenu {
+  id: number;
+  name: string;
+  url?: string | null;
+  parentId?: number | null;
+  deletedFlag?: number;
+  visiblity?: number;
+}
+
+interface WorkshopTab {
+  id: number;
+  label: string;
+  route: string;
+}
+
+@Component({
+  selector: 'app-workshop',
+  standalone: true,
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  templateUrl: './workshop.html',
+  styleUrl: './workshop.scss',
+})
+export class Workshop implements OnInit, OnDestroy {
+  private readonly parentRoute = '/application/workshopSeminar/workshop';
+  private readonly fallbackTabs: WorkshopTab[] = [
+  ];
+  private readonly isBrowser: boolean;
+  private readonly refreshTabs = () => {
+    this.loadTabs();
+  };
+
+  tabs: WorkshopTab[] = this.fallbackTabs;
+
+  constructor(@Inject(PLATFORM_ID) platformId: object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
+
+  ngOnInit(): void {
+    this.loadTabs();
+
+    if (!this.isBrowser) {
+      return;
+    }
+
+    window.addEventListener('storage', this.refreshTabs);
+    window.addEventListener('auth-user-updated', this.refreshTabs);
+    window.addEventListener('auth-session-cleared', this.refreshTabs);
+  }
+
+  ngOnDestroy(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    window.removeEventListener('storage', this.refreshTabs);
+    window.removeEventListener('auth-user-updated', this.refreshTabs);
+    window.removeEventListener('auth-session-cleared', this.refreshTabs);
+  }
+
+  private loadTabs(): void {
+    if (!this.isBrowser) {
+      this.tabs = this.fallbackTabs;
+      return;
+    }
+
+    const menus = this.readMenus();
+    const parentMenu = menus.find((menu) => this.normalizeRoute(menu.url) === this.parentRoute);
+    const parentId = parentMenu?.id ?? null;
+
+    if (!parentId) {
+      this.tabs = this.fallbackTabs;
+      return;
+    }
+
+    const permittedTabs = menus
+      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && menu.visiblity === 1)
+      .map((menu) => this.toWorkshopTab(menu))
+      .filter((tab): tab is WorkshopTab => tab !== null);
+
+    this.tabs = permittedTabs.length ? this.withDefaultViewAllTab(permittedTabs) : this.fallbackTabs;
+  }
+
+  private readMenus(): StoredMenu[] {
+    const storedMenus = this.normalizeMenus(this.readJson<unknown>('menus'));
+
+    if (storedMenus.length) {
+      return storedMenus;
+    }
+
+    const user = this.readJson<{ menus?: unknown }>('auth_user');
+    return this.normalizeMenus(user?.menus);
+  }
+
+  private readJson<T>(key: string): T | null {
+    try {
+      const raw = localStorage.getItem(key);
+
+      return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeMenus(value: unknown): StoredMenu[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter((item): item is StoredMenu => {
+      const menu = item as Partial<StoredMenu>;
+
+      return (
+        typeof menu.id === 'number' && typeof menu.name === 'string' && menu.name.trim().length > 0
+      );
+    });
+  }
+
+  private toWorkshopTab(menu: StoredMenu): WorkshopTab | null {
+    const route = this.normalizeRoute(menu.url);
+
+    if (!route.startsWith(`${this.parentRoute}/`)) {
+      return null;
+    }
+
+    return {
+      id: menu.id,
+      label: menu.name,
+      route: route.replace(`${this.parentRoute}/`, ''),
+    };
+  }
+
+  private withDefaultViewAllTab(tabs: WorkshopTab[]): WorkshopTab[] {
+    if (tabs.some((tab) => tab.route === 'viewAll')) {
+      return tabs;
+    }
+
+    return [...tabs, { id: 403, label: 'View All Workshops', route: 'viewAll' }];
+  }
+
+  private normalizeRoute(url?: string | null): string {
+    const route = url
+      ?.trim()
+      .replace(/\/+$/g, '')
+      .replace('/application/workshop-seminar', '/application/workshopSeminar');
+
+    if (!route) {
+      return '';
+    }
+
+    return route.startsWith('/') ? route : `/${route}`;
+  }
+}

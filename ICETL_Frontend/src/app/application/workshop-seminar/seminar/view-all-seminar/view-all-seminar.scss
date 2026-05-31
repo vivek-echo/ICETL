@@ -1,0 +1,94 @@
+@use '../view-my-seminar/view-my-seminar.scss';
+
+.program-toolbar--all {
+  grid-template-columns:
+    minmax(220px, 1fr)
+    minmax(160px, 0.8fr)
+    repeat(4, minmax(140px, 0.7fr));
+}
+
+.program-card__creator {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.program-card__creator > div {
+  align-items: center;
+  background: #eff6ff;
+  border-radius: 8px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-weight: 800;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.program-card__creator span {
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.program-card__creator strong {
+  color: #1f2937;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.program-pager {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding: 16px;
+}
+
+.program-pager p {
+  color: #64748b;
+  margin: 0;
+}
+
+.program-pager__controls,
+.program-pager__jump {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.program-pager__jump input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  height: 42px;
+  text-align: center;
+  width: 72px;
+}
+
+.program-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 1199px) {
+  .program-toolbar--all {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .program-pager,
+  .program-pager__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

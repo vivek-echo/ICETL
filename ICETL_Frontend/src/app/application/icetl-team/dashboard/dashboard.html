@@ -1,0 +1,85 @@
+<section class="icetl-team-dashboard">
+  <div class="dashboard-heading">
+    <div class="heading-main">
+      <span class="dashboard-kicker">ICETL Team Dashboard</span>
+      <h4>Team operations overview</h4>
+      <p>Monitor support requests, course coordination, events, and daily team activity.</p>
+    </div>
+    <div class="heading-meta">
+      <div class="heading-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action" routerLink="/application/icetl-team">
+          <i class="feather-home"></i>
+          <span>Welcome</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    @for (metric of metrics; track metric.label) {
+      <article class="metric-card">
+        <i [class]="metric.icon"></i>
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+        <small>{{ metric.helper }}</small>
+      </article>
+    }
+  </div>
+
+  <div class="dashboard-grid dashboard-grid--charts">
+    <article class="dashboard-panel">
+      <div class="panel-title">
+        <h5>Weekly Activity</h5>
+        <span>Handled items</span>
+      </div>
+      <div class="column-chart">
+        @for (point of weeklyActivity; track point.label) {
+          <div class="column-chart__item">
+            <div class="column-chart__bar">
+              <span [style.height.%]="chartHeight(point)"></span>
+            </div>
+            <small>{{ point.label }}</small>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-title">
+        <h5>Work Queues</h5>
+        <span>Open items</span>
+      </div>
+      <div class="bar-list">
+        @for (point of workQueues; track point.label) {
+          <div class="bar-row">
+            <div class="bar-row__label">
+              <span>{{ point.label }}</span>
+              <strong>{{ point.value }}</strong>
+            </div>
+            <div class="bar-track bar-track--accent">
+              <span [style.width.%]="chartWidth(point)"></span>
+            </div>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-title">
+        <h5>Recent Updates</h5>
+        <span>Today</span>
+      </div>
+      <div class="activity-list">
+        @for (activity of recentActivity; track activity.title) {
+          <div class="activity-item">
+            <div>
+              <strong>{{ activity.title }}</strong>
+              <span>{{ activity.detail }}</span>
+            </div>
+            <b>{{ activity.status }}</b>
+          </div>
+        }
+      </div>
+    </article>
+  </div>
+</section>

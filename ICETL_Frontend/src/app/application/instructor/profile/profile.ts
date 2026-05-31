@@ -12,6 +12,8 @@ import { RouterLink } from '@angular/router';
 import { IDropdownSettings, NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { lastValueFrom, Subscription } from 'rxjs';
 import { AlertHelperService } from '../../../commonServices/alert-helper-service';
+import { FormValidationService } from '../../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../../commonServices/form-validation-rules';
 import { UserProfile, UserProfileService } from '../../../commonServices/user-profile.service';
 import {
   DropdownOption,
@@ -42,6 +44,8 @@ export class Profile implements OnInit, OnDestroy {
 
   private readonly fb = inject(UntypedFormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly el = inject(ElementRef);
+  private readonly formValidationService = inject(FormValidationService);
   private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly defaultProfileImage = 'assets/images/team/avatar-2.jpg';
@@ -131,9 +135,9 @@ export class Profile implements OnInit, OnDestroy {
   coverImageFile: File | null = null;
 
   readonly profileForm = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3)]],
+    name: ['', FormValidationRules.requiredName()],
     email: [{ value: '', disabled: true }],
-    phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+    phone: ['', FormValidationRules.requiredMobile()],
     dob: ['', [Validators.required]],
     gender: ['', [Validators.required]],
     country: ['', [Validators.required, Validators.maxLength(100)]],
@@ -206,8 +210,7 @@ export class Profile implements OnInit, OnDestroy {
   }
 
   async submitProfileUpdate(): Promise<void> {
-    if (this.profileForm.invalid) {
-      this.profileForm.markAllAsTouched();
+    if (!this.formValidationService.validateForm(this.profileForm, this.getFieldName, this.el)) {
       return;
     }
 
@@ -733,6 +736,39 @@ export class Profile implements OnInit, OnDestroy {
     }
 
     return apiError?.error?.message || fallbackMessage;
+  }
+
+  private getFieldName(field: string): string {
+    const map: Record<string, string> = {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      dob: 'Date of Birth',
+      gender: 'Gender',
+      country: 'Country',
+      preferredLanguage: 'Preferred Language',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      professionalHeadline: 'Professional Headline',
+      bio: 'Bio',
+      profilePhoto: 'Profile Photo',
+      yearsOfExperience: 'Years of Experience',
+      currentJobTitle: 'Current Job Title',
+      currentOrganization: 'Current Organization',
+      highestQualification: 'Highest Qualification',
+      skills: 'Skills',
+      teachingCategories: 'Teaching Categories',
+      languagesYouCanTeach: 'Teaching Languages',
+      governmentId: 'Government ID',
+      resume: 'Resume',
+      certifications: 'Certifications',
+      linkedInUrl: 'LinkedIn URL',
+      gitHubUrl: 'GitHub URL',
+      youTubeUrl: 'YouTube URL',
+      portfolioWebsite: 'Portfolio Website',
+    };
+
+    return map[field] || field;
   }
 }
 

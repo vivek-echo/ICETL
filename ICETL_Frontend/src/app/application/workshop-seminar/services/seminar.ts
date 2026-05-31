@@ -1,0 +1,117 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+
+export type SeminarScheduleStatus = 'upcoming' | 'completed';
+export type SeminarScheduleFilter = '' | 'all' | SeminarScheduleStatus;
+export type SeminarSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
+
+export interface SeminarPayload {
+  title: string;
+  topic: string;
+  venue: string;
+  city: string;
+  eventDate: string;
+  startDate: string;
+  endDate: string | null;
+  startTime: string;
+  endTime: string | null;
+  speakerName: string;
+  capacity: number;
+  price: number;
+  description: string;
+  takeaways: string[];
+  status: number;
+}
+
+export interface SeminarItem extends SeminarPayload {
+  id: number;
+  type: 'seminar';
+  statusLabel: string;
+  scheduleStatus: SeminarScheduleStatus;
+  createdById: number | null;
+  createdByName: string;
+  createdByEmail: string | null;
+  createdOn: string | null;
+  updatedOn: string | null;
+}
+
+export interface SeminarPaginationMeta {
+  currentPage: number;
+  perPage: number | 'all';
+  total: number;
+  lastPage: number;
+  from: number | null;
+  to: number | null;
+}
+
+export interface SeminarSummary {
+  totalSeminars: number;
+  activeSeminars: number;
+  inactiveSeminars: number;
+  upcomingSeminars: number;
+  completedSeminars: number;
+}
+
+export interface SeminarListResponse {
+  status: boolean;
+  message: string;
+  data: SeminarItem[];
+  summary?: SeminarSummary;
+  meta?: SeminarPaginationMeta;
+}
+
+export interface SeminarDetailResponse {
+  status: boolean;
+  message: string;
+  data: SeminarItem;
+}
+
+export interface SeminarMutationResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    id: number;
+  };
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class SeminarService {
+  private readonly API_URL = environment.apiUrl;
+
+  constructor(private readonly http: HttpClient) {}
+
+  createSeminar(payload: SeminarPayload): Observable<SeminarMutationResponse> {
+    return this.http.post<SeminarMutationResponse>(`${this.API_URL}/createSeminar`, payload);
+  }
+
+  getMySeminars(payload: Record<string, unknown> = {}): Observable<SeminarListResponse> {
+    return this.http.post<SeminarListResponse>(`${this.API_URL}/getMySeminars`, payload);
+  }
+
+  getAllSeminars(payload: Record<string, unknown> = {}): Observable<SeminarListResponse> {
+    return this.http.post<SeminarListResponse>(`${this.API_URL}/getAllSeminars`, payload);
+  }
+
+  getSeminarById(payload: { id: number }): Observable<SeminarDetailResponse> {
+    return this.http.post<SeminarDetailResponse>(`${this.API_URL}/getSeminarById`, payload);
+  }
+
+  updateSeminar(payload: SeminarPayload & { id: number }): Observable<SeminarMutationResponse> {
+    return this.http.post<SeminarMutationResponse>(`${this.API_URL}/updateSeminar`, payload);
+  }
+
+  updateSeminarStatus(payload: {
+    id: number;
+    status: number;
+  }): Observable<SeminarMutationResponse> {
+    return this.http.post<SeminarMutationResponse>(`${this.API_URL}/updateSeminarStatus`, payload);
+  }
+
+  deleteSeminar(payload: { id: number }): Observable<SeminarMutationResponse> {
+    return this.http.post<SeminarMutationResponse>(`${this.API_URL}/deleteSeminar`, payload);
+  }
+}

@@ -1,18 +1,30 @@
 import { Routes } from '@angular/router';
 import { curriculumPendingChangesGuard } from './manage-courses/add-course-curriculum/curriculum-pending-changes.guard';
 
-const getRedirectRoute = (route: string): string => {
+const getRedirectRoute = (route: string, fallbackRoute = ''): string => {
+  if (typeof localStorage === 'undefined') {
+    return fallbackRoute;
+  }
+
   const getMenus = localStorage.getItem('menus');
 
-  if (!getMenus) return '';
+  if (!getMenus) return fallbackRoute;
 
   try {
     const menus = JSON.parse(getMenus);
+
+    if (!Array.isArray(menus)) {
+      return fallbackRoute;
+    }
 
     const matchedMenu = menus.find((menu: any) => {
       const menuUrl = menu.url || '';
       return menuUrl === route;
     });
+
+    if (!matchedMenu) {
+      return fallbackRoute;
+    }
 
     const getTab = (menuId: number | null) => {
       if (!menuId) return null;
@@ -23,10 +35,10 @@ const getRedirectRoute = (route: string): string => {
     if (tab) {
       return tab.url.split('/').pop() || '';
     }
-    return '';
+    return fallbackRoute;
   } catch (error) {
     console.error('Error parsing menus:', error);
-    return '';
+    return fallbackRoute;
   }
 };
 
@@ -133,6 +145,37 @@ export const coursesRoutes: Routes = [
             loadComponent: () =>
               import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),
             title: 'My Learning | ICETL',
+          },
+        ],
+      },
+      {
+        path: 'manageOfflineCourses',
+        loadComponent: () =>
+          import('./manage-offline-course/manage-offline-course').then(
+            (m) => m.ManageOfflineCourse,
+          ),
+        title: 'Offline Courses | ICETL',
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: getRedirectRoute('/application/courses/manageOfflineCourses', 'add'),
+          },
+          {
+            path: 'add',
+            loadComponent: () =>
+              import('./manage-offline-course/add-offline-course/add-offline-course').then(
+                (m) => m.AddOfflineCourse,
+              ),
+            title: 'Add Offline Course | ICETL',
+          },
+          {
+            path: 'view',
+            loadComponent: () =>
+              import(
+                './manage-offline-course/view-my-offline-course/view-my-offline-course'
+              ).then((m) => m.ViewMyOfflineCourse),
+            title: 'View My Offline Courses | ICETL',
           },
         ],
       },

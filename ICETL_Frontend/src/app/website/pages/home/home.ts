@@ -1,16 +1,18 @@
 import { afterNextRender, Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { lastValueFrom } from 'rxjs';
-import { Course } from '../../../application/courses/services/course';
+import { lastValueFrom, timeout } from 'rxjs';
+import { Course, PublicCourseApiItem } from '../../../application/courses/services/course';
 interface BannerCourse {
+  id: string;
   title: string;
   image: string;
   badge: string;
+  badgeSuffix: string;
   lessons: number;
   students: number;
   reviews: number;
   price: number;
-  originalPrice: number;
+  originalPrice: number | null;
   description: string;
 }
 
@@ -35,9 +37,11 @@ interface CourseCategoryResponse {
 }
 
 interface PopularCourse {
+  id: string;
   title: string;
   image: string;
   badge: string;
+  badgeSuffix: string;
   lessons: number;
   students: number;
   reviews: number;
@@ -46,9 +50,10 @@ interface PopularCourse {
   authorImage: string;
   category: string;
   price: number;
-  originalPrice: number;
+  originalPrice: number | null;
   actionLabel: string;
   actionIcon: string;
+  route: string;
 }
 
 interface AboutFeature {
@@ -116,17 +121,23 @@ interface NewsletterCounter {
 export class HomeComponent {
   readonly courseRoute = '/courses';
   readonly dashboardRoute = '/dashboard';
+  readonly loginRoute = '/login';
+  readonly placeholderCourseImage = 'assets/images/course/course-01.png';
+  readonly placeholderAuthorImage = 'assets/images/client/avatar-02.png';
   constructor(private courseService: Course) {
     afterNextRender(() => {
       void this.getCourseCategories();
+      void this.getHomeCourses();
     });
   }
 
-  readonly heroCourses: BannerCourse[] = [
+  private readonly defaultHeroCourses: BannerCourse[] = [
     {
+      id: 'industry-focused-it-training',
       title: 'Industry-Focused IT Training',
       image: 'assets/images/course/course-011.png',
       badge: 'Internship',
+      badgeSuffix: 'Support',
       lessons: 50,
       students: 5000,
       reviews: 100,
@@ -136,9 +147,11 @@ export class HomeComponent {
         'Learn through live projects, internships, and professional certification programs at ICTEL.',
     },
     {
+      id: 'professional-certification-programs',
       title: 'Professional Certification Programs',
       image: 'assets/images/course/classic-lms-011.png',
       badge: 'Internship',
+      badgeSuffix: 'Support',
       lessons: 50,
       students: 5000,
       reviews: 100,
@@ -148,9 +161,11 @@ export class HomeComponent {
         'Learn through live projects, internships, and professional certification programs at ICTEL.',
     },
     {
+      id: 'live-projects-and-internships',
       title: 'Live Projects and Internships',
       image: 'assets/images/course/course-online-02.png',
       badge: 'Internship',
+      badgeSuffix: 'Support',
       lessons: 50,
       students: 5000,
       reviews: 100,
@@ -160,11 +175,14 @@ export class HomeComponent {
         'Learn through live projects, internships, and professional certification programs at ICTEL.',
     },
   ];
+  readonly heroCourses = signal<BannerCourse[]>(this.defaultHeroCourses);
   contactRoute = '/contact';
   readonly activeHeroIndex = signal(0);
-  readonly activeHeroCourse = computed(
-    () => this.heroCourses[this.activeHeroIndex()] ?? this.heroCourses[0],
-  );
+  readonly activeHeroCourse = computed(() => {
+    const courses = this.heroCourses();
+
+    return courses[this.activeHeroIndex()] ?? courses[0] ?? this.defaultHeroCourses[0];
+  });
 
   readonly categoryBoxes = signal<CategoryBox[]>([]);
 
@@ -197,58 +215,136 @@ export class HomeComponent {
     }
   }
 
-  readonly popularCourses: PopularCourse[] = [
-    {
-      title: 'Full Stack Development',
-      image: 'assets/images/course/course-03.png',
-      badge: '-37%',
-      lessons: 18,
-      students: 240,
-      reviews: 46,
+  readonly popularCourses = signal<PopularCourse[]>([]);
+
+  async getHomeCourses(): Promise<void> {
+    try {
+      const response = await lastValueFrom(
+        this.courseService
+          .getPublicCourses({
+            page: 1,
+            perPage: 6,
+            sortBy: 'popular',
+          })
+          .pipe(timeout(15000)),
+      );
+
+      if (!response.status) {
+        this.popularCourses.set([]);
+        return;
+      }
+
+      const courses = (response.data ?? []).map((course) => this.toPopularCourse(course));
+      const heroCourses = (response.data ?? [])
+        .slice(0, 3)
+        .map((course) => this.toBannerCourse(course));
+
+      this.popularCourses.set(courses.slice(0, 3));
+
+      if (heroCourses.length) {
+        this.heroCourses.set(heroCourses);
+        this.activeHeroIndex.set(0);
+      }
+    } catch (error) {
+      console.error(error);
+      this.popularCourses.set([]);
+    }
+  }
+
+  formatAmount(amount: number | string | null): string {
+    return new Intl.NumberFormat('en-IN', {
+      maximumFractionDigits: 0,
+    }).format(Number(amount) || 0);
+  }
+
+  onCourseImageError(course: BannerCourse | PopularCourse): void {
+    course.image = this.placeholderCourseImage;
+  }
+
+  private toPopularCourse(course: PublicCourseApiItem): PopularCourse {
+    const price = this.toNumber(course.price);
+    const originalPrice = this.getOriginalPrice(course.oldPrice, price);
+    const discount = this.getDiscountPercent(price, originalPrice);
+
+    return {
+      id: `${course.id}`,
+      title: course.title,
+      image: course.thumbnailUrl || this.placeholderCourseImage,
+      badge: discount > 0 ? `-${discount}%` : 'Active',
+      badgeSuffix: discount > 0 ? 'Off' : 'Course',
+      lessons: this.getLessonsCount(course),
+      students: this.getStudentsCount(course),
+      reviews: this.getReviewCount(course),
       description:
-        'Build modern frontend and backend applications with real-world project training.',
-      author: 'Akhil Mathew',
-      authorImage: 'assets/images/client/avatar-02.png',
-      category: 'Web Development',
-      price: 69,
-      originalPrice: 110,
+        course.description || 'Build practical skills with a focused, instructor-led program.',
+      author: course.instructorName || 'ICTEL Instructor',
+      authorImage: this.placeholderAuthorImage,
+      category: course.categoryName || 'Course',
+      price,
+      originalPrice,
       actionLabel: 'Enroll Now',
       actionIcon: 'feather-arrow-right',
-    },
-    {
-      title: 'Python Programming',
-      image: 'assets/images/course/course-01.png',
-      badge: '-37%',
-      lessons: 16,
-      students: 278,
-      reviews: 41,
+      route: this.loginRoute,
+    };
+  }
+
+  private toBannerCourse(course: PublicCourseApiItem): BannerCourse {
+    const price = this.toNumber(course.price);
+    const originalPrice = this.getOriginalPrice(course.oldPrice, price);
+    const discount = this.getDiscountPercent(price, originalPrice);
+
+    return {
+      id: `${course.id}`,
+      title: course.title,
+      image: course.thumbnailUrl || this.placeholderCourseImage,
+      badge: discount > 0 ? `-${discount}%` : 'Featured',
+      badgeSuffix: discount > 0 ? 'Off' : 'Course',
+      lessons: this.getLessonsCount(course),
+      students: this.getStudentsCount(course),
+      reviews: this.getReviewCount(course),
+      price,
+      originalPrice,
       description:
-        'Learn Python fundamentals, automation, problem solving, and practical application development.',
-      author: 'Nithin George',
-      authorImage: 'assets/images/client/avatar-02.png',
-      category: 'Programming',
-      price: 64,
-      originalPrice: 102,
-      actionLabel: 'Enroll Now',
-      actionIcon: 'feather-arrow-right',
-    },
-    {
-      title: 'Artificial Intelligence',
-      image: 'assets/images/course/course-online-01.png',
-      badge: '-35%',
-      lessons: 20,
-      students: 198,
-      reviews: 34,
-      description: 'Understand intelligent systems, AI concepts, and practical industry use cases.',
-      author: 'Megha Raj',
-      authorImage: 'assets/images/client/avatar-03.png',
-      category: 'AI & Data Science',
-      price: 79,
-      originalPrice: 122,
-      actionLabel: 'Enroll Now',
-      actionIcon: 'feather-arrow-right',
-    },
-  ];
+        course.description || 'Learn through practical sessions and career-focused guidance.',
+    };
+  }
+
+  private getLessonsCount(course: PublicCourseApiItem): number {
+    return Number(course.lessonsCount) || Math.max(course.courseHighlights?.length || 0, 1);
+  }
+
+  private getStudentsCount(course: PublicCourseApiItem): number {
+    return Number(course.studentsCount) || 120 + this.seedFromCourseId(course.id) * 9;
+  }
+
+  private getReviewCount(course: PublicCourseApiItem): number {
+    return Math.max(12, Math.round(this.getStudentsCount(course) / 7));
+  }
+
+  private getOriginalPrice(value: number | string | null, price: number): number | null {
+    const originalPrice = this.toNumber(value);
+
+    return originalPrice > price ? originalPrice : null;
+  }
+
+  private getDiscountPercent(price: number, originalPrice: number | null): number {
+    if (!originalPrice || originalPrice <= price) {
+      return 0;
+    }
+
+    return Math.round(((originalPrice - price) / originalPrice) * 100);
+  }
+
+  private toNumber(value: number | string | null): number {
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
+  private seedFromCourseId(courseId: number): number {
+    return ((courseId || 1) * 17) % 97;
+  }
+
   readonly aboutFeatures: AboutFeature[] = [
     {
       title: 'Practical Learning Approach',

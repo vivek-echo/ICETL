@@ -42,10 +42,10 @@
               <div class="rbt-card variation-01 rbt-hover">
                 <div class="rbt-card-img">
                   <a [routerLink]="courseRoute">
-                    <img [src]="course.image" alt="Card image" />
+                    <img [src]="course.image" alt="Card image" (error)="onCourseImageError(course)" />
                     <div class="rbt-badge-3 bg-white">
                       <span>{{ course.badge }}</span>
-                      <span>Support</span>
+                      <span>{{ course.badgeSuffix }}</span>
                     </div>
                   </a>
                 </div>
@@ -68,8 +68,10 @@
                   </div>
                   <div class="rbt-card-bottom">
                     <div class="rbt-price">
-                      <span class="current-price">${{ course.price }}</span>
-                      <span class="off-price">${{ course.originalPrice }}</span>
+                      <span class="current-price">Rs. {{ formatAmount(course.price) }}</span>
+                      @if (course.originalPrice) {
+                      <span class="off-price">Rs. {{ formatAmount(course.originalPrice) }}</span>
+                      }
                     </div>
                     <a class="rbt-btn-link" [routerLink]="courseRoute">
                       Apply Now<i class="feather-arrow-right"></i>
@@ -80,7 +82,7 @@
             </div>
             }
             <div class="rbt-swiper-pagination">
-              @for (course of heroCourses; track course.title + course.image) {
+              @for (course of heroCourses(); track course.id) {
               <button type="button" class="hero-pagination-button" [class.is-active]="activeHeroIndex() === $index"
                 [attr.aria-label]="'Show hero course ' + ($index + 1)" (click)="selectHeroCourse($index)"></button>
               }
@@ -137,15 +139,15 @@
       </div>
     </div>
     <div class="row g-5">
-      @for (course of popularCourses; track course.title) {
+      @for (course of popularCourses(); track course.id) {
       <div class="col-lg-4 col-md-6 col-12">
         <div class="rbt-card variation-01 rbt-hover">
           <div class="rbt-card-img">
             <a [routerLink]="courseRoute">
-              <img [src]="course.image" [alt]="course.title" />
+              <img [src]="course.image" [alt]="course.title" (error)="onCourseImageError(course)" />
               <div class="rbt-badge-3 bg-white">
                 <span>{{ course.badge }}</span>
-                <span>Off</span>
+                <span>{{ course.badgeSuffix }}</span>
               </div>
             </a>
           </div>
@@ -173,7 +175,6 @@
               <li><i class="feather-book"></i>{{ course.lessons }} Lessons</li>
               <li><i class="feather-users"></i>{{ course.students }} Students</li>
             </ul>
-            <p class="rbt-card-text">{{ course.description }}</p>
             <div class="rbt-author-meta mb--20">
               <div class="rbt-avater">
                 <a href="javascript:void(0)">
@@ -188,11 +189,13 @@
 
             <div class="rbt-card-bottom">
               <div class="rbt-price">
-                <span class="current-price">${{ course.price }}</span>
-                <span class="off-price">${{ course.originalPrice }}</span>
+                <span class="current-price">Rs. {{ formatAmount(course.price) }}</span>
+                @if (course.originalPrice) {
+                <span class="off-price">Rs. {{ formatAmount(course.originalPrice) }}</span>
+                }
               </div>
               <a class="rbt-btn-link" [class.left-icon]="course.actionIcon === 'feather-shopping-cart'"
-                [routerLink]="courseRoute">
+                [routerLink]="course.route">
                 @if (course.actionIcon === 'feather-shopping-cart') {
                 <i [class]="course.actionIcon"></i>
                 }

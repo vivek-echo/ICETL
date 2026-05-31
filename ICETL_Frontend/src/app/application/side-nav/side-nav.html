@@ -21,6 +21,7 @@
           <li class="side-nav-item side-nav-item--single">
             <a
               class="side-nav-link"
+              [class.active]="isRouteActive(menu.route)"
               [routerLink]="menu.route"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{
@@ -75,6 +76,7 @@
 
           <a
             class="side-nav-link"
+            [class.active]="isRouteActive(menu.route)"
             [routerLink]="menu.route"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{
