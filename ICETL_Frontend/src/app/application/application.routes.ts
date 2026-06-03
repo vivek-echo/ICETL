@@ -47,13 +47,20 @@ export const applicationRoutes: Routes = [
       {
         path: 'icetl-team',
         canActivate: [roleGuard],
-        data: { roles: ['icetl-team', 'icetl team', 'team'] },
+        data: { roles: [ROLE.ICETL_TEAM, 'icetl-team', 'icetl team', 'team'] },
         loadChildren: () =>
           import('./icetl-team/icetl-team.routes').then(
             (m) => m.icetlTeamRoutes
           ),
 
         title: 'ICETL Team | ICETL',
+      },
+      {
+        path: 'enquiries',
+        canActivate: [roleGuard],
+        data: { roles: [ROLE.ADMIN, ROLE.ICETL_TEAM], allowWithoutMenu: true },
+        loadComponent: () => import('./enquiries/enquiries').then((m) => m.EnquiriesComponent),
+        title: 'Enquiries | ICETL',
       },
       {
         path: 'courses',

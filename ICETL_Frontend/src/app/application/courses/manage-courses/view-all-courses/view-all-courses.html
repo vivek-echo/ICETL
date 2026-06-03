@@ -1,5 +1,5 @@
 <div class="course-browser">
-  <header class="all-courses-hero">
+  <!-- <header class="all-courses-hero">
     <div class="all-courses-hero__content">
       <span class="all-courses-hero__eyebrow">Global Catalog</span>
       <h1>All Courses</h1>
@@ -18,7 +18,7 @@
       <strong>{{ metrics[0].value || meta.total || courses.length }}</strong>
       <p>{{ metrics[1].value || 0 }} active / {{ metrics[2].value || 0 }} inactive</p>
     </aside>
-  </header>
+  </header> -->
 
   <section class="course-summary" aria-label="All courses summary">
     @for (metric of metrics; track metric.label) {
@@ -39,10 +39,7 @@
   </section>
 
   <div class="course-toolbar">
-    <div class="course-toolbar__heading">
-      <h2>Search Catalog</h2>
-      <p>Filter all platform courses by keyword, category, status, sort order, and page size.</p>
-    </div>
+    
 
     <div class="rbt-form-group">
       <label>Search Course</label>

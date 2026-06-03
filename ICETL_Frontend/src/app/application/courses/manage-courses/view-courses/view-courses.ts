@@ -35,6 +35,7 @@ interface CourseItem {
   courseHighlights?: string[] | string | null;
   thumbnailUrl: string | null;
   status: number | string;
+  courseType?: number | string;
   statusLabel: string;
   createdOn: string | null;
 }
@@ -245,7 +246,7 @@ export class ViewCourses implements OnInit, OnDestroy {
       )) as CourseListResponse;
 
       if (response.status) {
-        this.courses = response.data || [];
+        this.courses = this.getOnlineCourses(response.data || []);
         this.meta = response.meta || this.meta;
         this.pageInput = this.meta.currentPage;
         this.updateMetrics(response.summary);
@@ -701,6 +702,10 @@ export class ViewCourses implements OnInit, OnDestroy {
         icon: 'feather-eye-off',
       },
     ];
+  }
+
+  private getOnlineCourses(courses: CourseItem[]): CourseItem[] {
+    return courses.filter((course) => `${course.courseType ?? 1}` !== '2');
   }
 
   private resetPagination(): void {

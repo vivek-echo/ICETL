@@ -1,4 +1,4 @@
-<header class="program-builder__hero">
+<!-- <header class="program-builder__hero">
   <div>
     <span>Workshop</span>
     <h1>{{ pageTitle }}</h1>
@@ -9,7 +9,7 @@
     <i class="feather-list"></i>
     View My Workshop
   </a>
-</header>
+</header> -->
 
 @if (formMessage) {
 <div class="program-alert">
@@ -75,6 +75,36 @@
           <small class="program-field-error">{{ getFieldError('description') }}</small>
           }
           <span>{{ f['description'].value?.length || 0 }}/300</span>
+        </div>
+      </div>
+
+      <div class="program-banner-upload program-form__full">
+        <div class="program-banner-upload__preview" [class.program-banner-upload__preview--empty]="!bannerPreviewUrl">
+          @if (bannerPreviewUrl) {
+          <img [src]="bannerPreviewUrl" alt="Workshop banner preview">
+          } @else {
+          <i class="feather-image"></i>
+          }
+        </div>
+
+        <div class="program-banner-upload__content">
+          <label for="workshopBannerImage">Banner Image</label>
+          <p>JPG, PNG, or WEBP up to 4 MB.</p>
+          <div class="program-banner-upload__actions">
+            <label class="program-banner-upload__button" for="workshopBannerImage">
+              <i class="feather-upload"></i>
+              Choose Image
+            </label>
+            @if (selectedBannerImage) {
+            <button type="button" class="program-banner-upload__button program-banner-upload__button--muted"
+              (click)="clearSelectedBannerImage()">
+              <i class="feather-x"></i>
+              Clear
+            </button>
+            }
+          </div>
+          <input id="workshopBannerImage" type="file" accept="image/png,image/jpeg,image/webp"
+            (change)="onBannerImageChange($event)">
         </div>
       </div>
     </section>
@@ -323,6 +353,14 @@
   </form>
 
   <aside class="program-preview" aria-label="Workshop preview">
+    <div class="program-preview__banner" [class.program-preview__banner--empty]="!bannerPreviewUrl">
+      @if (bannerPreviewUrl) {
+      <img [src]="bannerPreviewUrl" alt="Workshop banner">
+      } @else {
+      <i class="feather-image"></i>
+      }
+    </div>
+
     <div class="program-preview__top">
       <span [class.program-preview__status--inactive]="f['status'].value === '0'">
         {{ f['status'].value === '0' ? 'Inactive' : 'Active' }}

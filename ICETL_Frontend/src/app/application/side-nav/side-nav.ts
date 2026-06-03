@@ -9,6 +9,7 @@ interface StoredMenu {
   url?: string | null;
   icon?: string | null;
   parentId?: number | null;
+  sortOrder?: number | null;
   deletedFlag?: number;
 }
 
@@ -42,7 +43,7 @@ export class SideNav implements OnInit, OnDestroy {
   private readonly parentActiveRoutes = new Set([
     '/application/courses/coursesCategories',
     '/application/courses/manageCourses',
-    '/application/courses/manageOfflineCourse',
+    '/application/courses/manageOfflineCourses',
     '/application/workshopSeminar/workshop',
     '/application/workshopSeminar/seminar',
   ]);
@@ -152,8 +153,10 @@ export class SideNav implements OnInit, OnDestroy {
     const sortedMenus = [...menus].sort((left, right) => {
       const leftParentId = left.parentId ?? 0;
       const rightParentId = right.parentId ?? 0;
+      const leftSortOrder = this.normalizeSortOrder(left.sortOrder);
+      const rightSortOrder = this.normalizeSortOrder(right.sortOrder);
 
-      return leftParentId - rightParentId || left.id - right.id;
+      return leftParentId - rightParentId || leftSortOrder - rightSortOrder || left.id - right.id;
     });
 
     const menuMap = new Map<number, MenuNode>();
@@ -162,7 +165,7 @@ export class SideNav implements OnInit, OnDestroy {
     sortedMenus.forEach((menu) => {
       menuMap.set(menu.id, {
         ...menu,
-        route: this.resolveMenuRoute(menu.url),
+        route: this.normalizeKnownRoute(this.resolveMenuRoute(menu.url)),
         children: [],
       });
     });
@@ -219,6 +222,14 @@ export class SideNav implements OnInit, OnDestroy {
       .trim();
   }
 
+  private normalizeSortOrder(value: number | null | undefined): number {
+    const numericValue = Number(value);
+
+    return Number.isFinite(numericValue) && numericValue > 0
+      ? numericValue
+      : Number.MAX_SAFE_INTEGER;
+  }
+
   protected shouldUseExactActiveMatch(route: string | null): boolean {
     return route ? !this.parentActiveRoutes.has(route) : true;
   }
@@ -272,7 +283,14 @@ export class SideNav implements OnInit, OnDestroy {
     return `/application/${dashboardSegment}/${route}`;
   }
 
+  private normalizeKnownRoute(route: string | null): string | null {
+    return route?.replace(
+      /\/application\/courses\/manageOfflineCourse(\/|$)/,
+      '/application/courses/manageOfflineCourses$1',
+    ) ?? null;
+  }
+
   getDashboardRoute(): string | null {
-    return this.resolveMenuRoute(this.dashboardSetting?.dashboardUrl ?? null);
+    return this.normalizeKnownRoute(this.resolveMenuRoute(this.dashboardSetting?.dashboardUrl ?? null));
   }
 }

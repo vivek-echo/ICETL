@@ -13,6 +13,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LearningController;
 use App\Http\Controllers\WorkshopController;
 use App\Http\Controllers\SeminarController;
+use App\Http\Controllers\ContactEnquiryController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -53,6 +54,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/createCourse', [CoursesController::class, 'createCourse']);
     Route::post('/createOfflineCourse', [CoursesController::class, 'createOfflineCourse']);
     Route::post('/getOfflineCourses', [CoursesController::class, 'getOfflineCourses']);
+    Route::post('/getMyOfflineCourses', [CoursesController::class, 'getMyOfflineCourses']);
+    Route::post('/getAllOfflineCourses', [CoursesController::class, 'getAllOfflineCourses']);
+    Route::post('/offline-courses/enroll-student', [CoursesController::class, 'enrollStudent']);
     Route::post('/updateOfflineCourseStatus', [CoursesController::class, 'updateOfflineCourseStatus']);
     Route::post('/deleteOfflineCourse', [CoursesController::class, 'deleteOfflineCourse']);
     Route::post('/getCourses', [CoursesController::class, 'getCourses']);
@@ -129,6 +133,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dashboard/learner', [DashboardController::class, 'learner']);
     Route::get('/dashboard/instructor', [DashboardController::class, 'instructor']);
     Route::get('/dashboard/admin', [DashboardController::class, 'admin']);
+
+    // contact enquiry routes
+    Route::post('/getContactEnquiries', [ContactEnquiryController::class, 'index']);
+    Route::get('/contact-enquiries/unread-count', [ContactEnquiryController::class, 'unreadCount']);
+    Route::post('/contact-enquiries/mark-read', [ContactEnquiryController::class, 'markRead']);
 });
 
 Route::post('/razorpay/webhook', [PaymentController::class, 'webhook']);
@@ -145,6 +154,7 @@ Route::get('/files/instructor-documents/{path}', [InstructorRegistrationControll
     ->where('path', '.*');
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/contact-enquiries', [ContactEnquiryController::class, 'store']);
 
 Route::post('/sendOtp', [AuthController::class, 'sendOtp']);
 Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);

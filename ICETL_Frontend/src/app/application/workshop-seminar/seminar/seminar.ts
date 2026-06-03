@@ -81,7 +81,7 @@ export class Seminar implements OnInit, OnDestroy {
       .map((menu) => this.toSeminarTab(menu))
       .filter((tab): tab is SeminarTab => tab !== null);
 
-    this.tabs = permittedTabs.length ? this.withDefaultViewAllTab(permittedTabs) : this.fallbackTabs;
+    this.tabs = permittedTabs.length ? permittedTabs : this.fallbackTabs;
   }
 
   private readMenus(): StoredMenu[] {
@@ -131,14 +131,6 @@ export class Seminar implements OnInit, OnDestroy {
       label: menu.name,
       route: route.replace(`${this.parentRoute}/`, ''),
     };
-  }
-
-  private withDefaultViewAllTab(tabs: SeminarTab[]): SeminarTab[] {
-    if (tabs.some((tab) => tab.route === 'viewAll')) {
-      return tabs;
-    }
-
-    return [...tabs, { id: 503, label: 'View All Seminars', route: 'viewAll' }];
   }
 
   private normalizeRoute(url?: string | null): string {

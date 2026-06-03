@@ -25,8 +25,11 @@ interface OfflineCourseTab {
   styleUrl: './manage-offline-course.scss',
 })
 export class ManageOfflineCourse implements OnInit, OnDestroy {
-  private readonly parentRoute = '/application/courses/manageOfflineCourse';
+  private readonly parentRoute = '/application/courses/manageOfflineCourses';
   private readonly fallbackTabs: OfflineCourseTab[] = [
+    { id: -1, label: 'Add Offline Course', route: 'add' },
+    { id: -2, label: 'View My Offline Courses', route: 'viewMyOfflineCourses' },
+    { id: -3, label: 'View All Offline Courses', route: 'viewAllOfflineCourses' },
   ];
   private readonly isBrowser: boolean;
   private readonly refreshTabs = () => {
@@ -81,7 +84,11 @@ export class ManageOfflineCourse implements OnInit, OnDestroy {
       .map((menu) => this.toOfflineCourseTab(menu))
       .filter((tab): tab is OfflineCourseTab => tab !== null);
 
-    this.tabs = permittedTabs.length ? permittedTabs : this.fallbackTabs;
+    const visibleTabs = permittedTabs.length ? permittedTabs : this.fallbackTabs;
+    const visibleRoutes = new Set(visibleTabs.map((tab) => tab.route));
+    const missingDefaultTabs = this.fallbackTabs.filter((tab) => !visibleRoutes.has(tab.route));
+
+    this.tabs = [...visibleTabs, ...missingDefaultTabs];
   }
 
   private readMenus(): StoredMenu[] {
@@ -140,6 +147,11 @@ export class ManageOfflineCourse implements OnInit, OnDestroy {
       return '';
     }
 
-    return route.startsWith('/') ? route : `/${route}`;
+    const normalizedRoute = route.startsWith('/') ? route : `/${route}`;
+
+    return normalizedRoute.replace(
+      /\/application\/courses\/manageOfflineCourse(\/|$)/,
+      '/application/courses/manageOfflineCourses$1',
+    );
   }
 }

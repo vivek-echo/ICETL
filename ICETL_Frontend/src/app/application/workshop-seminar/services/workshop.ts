@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 
 export type WorkshopScheduleStatus = 'upcoming' | 'completed';
 export type WorkshopScheduleFilter = '' | 'all' | WorkshopScheduleStatus;
@@ -28,6 +29,8 @@ export interface WorkshopPayload {
 export interface WorkshopItem extends WorkshopPayload {
   id: number;
   type: 'workshop';
+  bannerImage?: string | null;
+  bannerImageUrl?: string | null;
   statusLabel: string;
   scheduleStatus: WorkshopScheduleStatus;
   createdById: number | null;
@@ -84,23 +87,31 @@ export class WorkshopService {
 
   constructor(private readonly http: HttpClient) {}
 
-  createWorkshop(payload: WorkshopPayload): Observable<WorkshopMutationResponse> {
+  createWorkshop(payload: WorkshopPayload | FormData): Observable<WorkshopMutationResponse> {
     return this.http.post<WorkshopMutationResponse>(`${this.API_URL}/createWorkshop`, payload);
   }
 
   getMyWorkshops(payload: Record<string, unknown> = {}): Observable<WorkshopListResponse> {
-    return this.http.post<WorkshopListResponse>(`${this.API_URL}/getMyWorkshops`, payload);
+    return this.http.post<WorkshopListResponse>(
+      `${this.API_URL}/getMyWorkshops`,
+      payload,
+      this.listRequestOptions(),
+    );
   }
 
   getAllWorkshops(payload: Record<string, unknown> = {}): Observable<WorkshopListResponse> {
-    return this.http.post<WorkshopListResponse>(`${this.API_URL}/getAllWorkshops`, payload);
+    return this.http.post<WorkshopListResponse>(
+      `${this.API_URL}/getAllWorkshops`,
+      payload,
+      this.listRequestOptions(),
+    );
   }
 
   getWorkshopById(payload: { id: number }): Observable<WorkshopDetailResponse> {
     return this.http.post<WorkshopDetailResponse>(`${this.API_URL}/getWorkshopById`, payload);
   }
 
-  updateWorkshop(payload: WorkshopPayload & { id: number }): Observable<WorkshopMutationResponse> {
+  updateWorkshop(payload: (WorkshopPayload & { id: number }) | FormData): Observable<WorkshopMutationResponse> {
     return this.http.post<WorkshopMutationResponse>(`${this.API_URL}/updateWorkshop`, payload);
   }
 
@@ -113,5 +124,11 @@ export class WorkshopService {
 
   deleteWorkshop(payload: { id: number }): Observable<WorkshopMutationResponse> {
     return this.http.post<WorkshopMutationResponse>(`${this.API_URL}/deleteWorkshop`, payload);
+  }
+
+  private listRequestOptions(): { context: HttpContext } {
+    return {
+      context: new HttpContext().set(SKIP_SPINNER, true),
+    };
   }
 }

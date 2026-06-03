@@ -1,14 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { lastValueFrom, timeout } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import {
   WorkshopItem,
+  WorkshopPaginationMeta,
   WorkshopScheduleFilter,
   WorkshopService,
   WorkshopSortOption,
+  WorkshopSummary,
 } from '../../services/workshop';
 
 @Component({
@@ -20,6 +22,8 @@ import {
 })
 export class ViewMyWorkshop implements OnInit {
   readonly addRoute = '/application/workshopSeminar/workshop/add';
+  readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
+  readonly skeletonRows = [1, 2, 3, 4];
   readonly sortOptions: Array<{ value: WorkshopSortOption; label: string }> = [
     { value: 'newest', label: 'Newest Added' },
     { value: 'oldest', label: 'Oldest Added' },
@@ -39,84 +43,77 @@ export class ViewMyWorkshop implements OnInit {
   status = '';
   scheduleStatus: WorkshopScheduleFilter = '';
   sortBy: WorkshopSortOption = 'newest';
+  pageInput = 1;
+  meta: WorkshopPaginationMeta = this.createDefaultMeta();
+  summary: WorkshopSummary = this.createDefaultSummary();
+
+  private requestSerial = 0;
 
   constructor(
     private readonly workshopService: WorkshopService,
     private readonly alertHelper: AlertHelperService,
     private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     void this.loadWorkshops();
   }
 
-  get filteredWorkshops(): WorkshopItem[] {
-    const searchTerm = this.search.trim().toLowerCase();
-    const cityFilter = this.city.trim().toLowerCase();
-    const statusFilter = this.status;
-    const scheduleFilter = this.scheduleStatus;
-
-    const filtered = this.workshops.filter((workshop) => {
-      const matchesSearch =
-        !searchTerm ||
-        [
-          workshop.title,
-          workshop.topic,
-          workshop.venue,
-          workshop.city,
-          workshop.speakerName,
-          workshop.description,
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(searchTerm);
-      const matchesCity = !cityFilter || workshop.city.toLowerCase() === cityFilter;
-      const matchesStatus = statusFilter === '' || `${workshop.status}` === statusFilter;
-      const matchesSchedule =
-        !scheduleFilter || scheduleFilter === 'all' || workshop.scheduleStatus === scheduleFilter;
-
-      return matchesSearch && matchesCity && matchesStatus && matchesSchedule;
-    });
-
-    return this.sortPrograms(filtered);
-  }
-
-  get cityOptions(): string[] {
-    return [...new Set(this.workshops.map((workshop) => workshop.city).filter(Boolean))].sort(
-      (left, right) => left.localeCompare(right),
-    );
-  }
-
-  get activeWorkshops(): number {
-    return this.workshops.filter((workshop) => this.isActive(workshop)).length;
-  }
-
-  get upcomingWorkshops(): number {
-    return this.workshops.filter((workshop) => workshop.scheduleStatus === 'upcoming').length;
-  }
-
-  get completedWorkshops(): number {
-    return this.workshops.filter((workshop) => workshop.scheduleStatus === 'completed').length;
-  }
-
-  async loadWorkshops(): Promise<void> {
+  async loadWorkshops(page = 1): Promise<void> {
+    const requestId = ++this.requestSerial;
     this.loading = true;
+    this.cdr.markForCheck();
 
     try {
       const response = await lastValueFrom(
-        this.workshopService.getMyWorkshops({}).pipe(timeout(15000)),
+        this.workshopService.getMyWorkshops(this.buildListPayload(page)).pipe(timeout(15000)),
       );
 
-      this.workshops = response.status ? response.data || [] : [];
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
+      if (response.status) {
+        this.workshops = this.normalizeWorkshops(response.data);
+        this.meta = response.meta || this.createDefaultMeta();
+        this.summary = response.summary || this.createDefaultSummary();
+        this.pageInput = this.meta.currentPage;
+
+        if (this.workshops.length === 0 && this.meta.currentPage > 1 && this.meta.total > 0) {
+          await this.loadWorkshops(this.meta.currentPage - 1);
+        }
+      } else {
+        this.resetResults();
+      }
     } catch (error: any) {
-      this.workshops = [];
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
+      this.resetResults();
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch workshops.',
         'Workshops',
       );
     } finally {
-      this.loading = false;
+      if (requestId === this.requestSerial) {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     }
+  }
+
+  onSearch(): void {
+    void this.loadWorkshops(1);
+  }
+
+  onFilterChange(): void {
+    void this.loadWorkshops(1);
+  }
+
+  onPerPageChange(): void {
+    void this.loadWorkshops(1);
   }
 
   clearFilters(): void {
@@ -125,6 +122,36 @@ export class ViewMyWorkshop implements OnInit {
     this.status = '';
     this.scheduleStatus = '';
     this.sortBy = 'newest';
+    this.meta.perPage = 10;
+    void this.loadWorkshops(1);
+  }
+
+  goToPreviousPage(): void {
+    if (this.meta.currentPage <= 1) {
+      return;
+    }
+
+    void this.loadWorkshops(this.meta.currentPage - 1);
+  }
+
+  goToNextPage(): void {
+    if (this.meta.currentPage >= this.meta.lastPage) {
+      return;
+    }
+
+    void this.loadWorkshops(this.meta.currentPage + 1);
+  }
+
+  goToPageInput(): void {
+    const page = Math.min(Math.max(Number(this.pageInput) || 1, 1), this.meta.lastPage || 1);
+
+    this.pageInput = page;
+
+    if (page === this.meta.currentPage) {
+      return;
+    }
+
+    void this.loadWorkshops(page);
   }
 
   goToAddWorkshop(): void {
@@ -151,7 +178,7 @@ export class ViewMyWorkshop implements OnInit {
       );
 
       if (response.status) {
-        await this.loadWorkshops();
+        await this.loadWorkshops(this.meta.currentPage);
         await this.alertHelper.success(response.message || 'Workshop deleted successfully.');
       }
     } catch (error: any) {
@@ -181,7 +208,7 @@ export class ViewMyWorkshop implements OnInit {
       );
 
       if (response.status) {
-        await this.loadWorkshops();
+        await this.loadWorkshops(this.meta.currentPage);
       }
     } catch (error: any) {
       await this.alertHelper.error(
@@ -200,19 +227,35 @@ export class ViewMyWorkshop implements OnInit {
   }
 
   formatPrice(value: number): string {
-    if (!value) {
+    const price = Number(value);
+
+    if (!Number.isFinite(price)) {
+      return 'N/A';
+    }
+
+    if (price === 0) {
       return 'Free';
     }
 
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
-    }).format(value);
+      maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    }).format(price);
   }
 
   formatDate(value: string | null): string {
-    if (!value) {
+    const rawDate = `${value || ''}`.trim();
+
+    if (!rawDate || rawDate === '0000-00-00') {
+      return 'N/A';
+    }
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+      ? new Date(`${rawDate}T00:00:00`)
+      : new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) {
       return 'N/A';
     }
 
@@ -220,7 +263,7 @@ export class ViewMyWorkshop implements OnInit {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-    }).format(new Date(value));
+    }).format(date);
   }
 
   formatDateRange(workshop: WorkshopItem): string {
@@ -247,30 +290,72 @@ export class ViewMyWorkshop implements OnInit {
   }
 
   getTakeaways(workshop: WorkshopItem, limit = 3): string[] {
-    return workshop.takeaways.slice(0, limit);
+    return (Array.isArray(workshop.takeaways) ? workshop.takeaways : []).slice(0, limit);
   }
 
-  private sortPrograms(programs: WorkshopItem[]): WorkshopItem[] {
-    return [...programs].sort((left, right) => {
-      if (this.sortBy === 'oldest') {
-        return this.getDateTime(left.createdOn) - this.getDateTime(right.createdOn);
-      }
+  getPaginationLabel(): string {
+    const from = this.meta.from ?? 0;
+    const to = this.meta.to ?? 0;
 
-      if (this.sortBy === 'dateAsc') {
-        return this.getDateTime(left.startDate) - this.getDateTime(right.startDate);
-      }
+    return `Showing ${from}-${to} of ${this.meta.total} workshops`;
+  }
 
-      if (this.sortBy === 'dateDesc') {
-        return this.getDateTime(right.startDate) - this.getDateTime(left.startDate);
-      }
+  private buildListPayload(page: number): Record<string, unknown> {
+    return {
+      page,
+      perPage: this.meta.perPage,
+      search: this.search.trim(),
+      city: this.city.trim(),
+      status: this.status,
+      scheduleStatus: this.scheduleStatus || 'all',
+      sortBy: this.sortBy,
+    };
+  }
 
-      return this.getDateTime(right.createdOn) - this.getDateTime(left.createdOn);
+  private resetResults(): void {
+    this.workshops = [];
+    this.meta = this.createDefaultMeta();
+    this.summary = this.createDefaultSummary();
+    this.pageInput = 1;
+  }
+
+  private normalizeWorkshops(workshops: WorkshopItem[] | null | undefined): WorkshopItem[] {
+    if (!Array.isArray(workshops)) {
+      return [];
+    }
+
+    return workshops.map((workshop) => {
+      const status = Number(workshop.status) === 0 ? 0 : 1;
+
+      return {
+        ...workshop,
+        price: Number.isFinite(Number(workshop.price)) ? Number(workshop.price) : 0,
+        status,
+        statusLabel: workshop.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
+        scheduleStatus: workshop.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        takeaways: Array.isArray(workshop.takeaways) ? workshop.takeaways : [],
+      };
     });
   }
 
-  private getDateTime(value: string | null): number {
-    const dateTime = value ? new Date(value).getTime() : 0;
+  private createDefaultMeta(): WorkshopPaginationMeta {
+    return {
+      currentPage: 1,
+      perPage: 10,
+      total: 0,
+      lastPage: 1,
+      from: null,
+      to: null,
+    };
+  }
 
-    return Number.isFinite(dateTime) ? dateTime : 0;
+  private createDefaultSummary(): WorkshopSummary {
+    return {
+      totalWorkshops: 0,
+      activeWorkshops: 0,
+      inactiveWorkshops: 0,
+      upcomingWorkshops: 0,
+      completedWorkshops: 0,
+    };
   }
 }

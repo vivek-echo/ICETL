@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS `contact_enquiries` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `fullName` VARCHAR(120) NOT NULL,
+  `email` VARCHAR(150) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `enquiryType` VARCHAR(80) NOT NULL DEFAULT 'Other',
+  `subject` VARCHAR(150) NOT NULL,
+  `message` TEXT NOT NULL,
+  `isRead` TINYINT(1) NOT NULL DEFAULT 0,
+  `readBy` BIGINT UNSIGNED NULL,
+  `readOn` TIMESTAMP NULL DEFAULT NULL,
+  `ipAddress` VARCHAR(64) NULL,
+  `browserInfo` TEXT NULL,
+  `deletedFlag` TINYINT(1) NOT NULL DEFAULT 0,
+  `createdOn` TIMESTAMP NULL DEFAULT NULL,
+  `updatedOn` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `contact_enquiries_email_index` (`email`),
+  KEY `contact_enquiries_phone_index` (`phone`),
+  KEY `contact_enquiries_is_read_index` (`isRead`),
+  KEY `contact_enquiries_created_on_index` (`createdOn`),
+  KEY `contact_enquiries_deleted_flag_index` (`deletedFlag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

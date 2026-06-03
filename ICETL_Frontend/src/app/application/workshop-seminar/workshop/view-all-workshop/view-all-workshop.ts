@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom, timeout } from 'rxjs';
 import {
@@ -20,6 +20,7 @@ import {
 })
 export class ViewAllWorkshop implements OnInit {
   readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
+  readonly skeletonRows = [1, 2, 3, 4];
   readonly sortOptions: Array<{ value: WorkshopSortOption; label: string }> = [
     { value: 'newest', label: 'Newest Added' },
     { value: 'oldest', label: 'Oldest Added' },
@@ -40,59 +41,58 @@ export class ViewAllWorkshop implements OnInit {
   scheduleStatus: WorkshopScheduleFilter = '';
   sortBy: WorkshopSortOption = 'newest';
   pageInput = 1;
-  meta: WorkshopPaginationMeta = {
-    currentPage: 1,
-    perPage: 10,
-    total: 0,
-    lastPage: 1,
-    from: null,
-    to: null,
-  };
-  summary: WorkshopSummary = {
-    totalWorkshops: 0,
-    activeWorkshops: 0,
-    inactiveWorkshops: 0,
-    upcomingWorkshops: 0,
-    completedWorkshops: 0,
-  };
+  meta: WorkshopPaginationMeta = this.createDefaultMeta();
+  summary: WorkshopSummary = this.createDefaultSummary();
 
-  constructor(private readonly workshopService: WorkshopService) {}
+  private requestSerial = 0;
+
+  constructor(
+    private readonly workshopService: WorkshopService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
     void this.loadWorkshops();
   }
 
   async loadWorkshops(page = 1): Promise<void> {
+    const requestId = ++this.requestSerial;
     this.loading = true;
+    this.cdr.markForCheck();
 
     try {
       const response = await lastValueFrom(
-        this.workshopService
-          .getAllWorkshops({
-            page,
-            perPage: this.meta.perPage,
-            search: this.search.trim(),
-            city: this.city.trim(),
-            status: this.status,
-            scheduleStatus: this.scheduleStatus || 'all',
-            sortBy: this.sortBy,
-          })
-          .pipe(timeout(15000)),
+        this.workshopService.getAllWorkshops(this.buildListPayload(page)).pipe(timeout(15000)),
       );
 
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
       if (response.status) {
-        this.workshops = response.data || [];
-        this.meta = response.meta || this.meta;
-        this.summary = response.summary || this.summary;
+        this.workshops = this.normalizeWorkshops(response.data);
+        this.meta = response.meta || this.createDefaultMeta();
+        this.summary = response.summary || this.createDefaultSummary();
         this.pageInput = this.meta.currentPage;
+
+        if (this.workshops.length === 0 && this.meta.currentPage > 1 && this.meta.total > 0) {
+          await this.loadWorkshops(this.meta.currentPage - 1);
+        }
       } else {
         this.resetResults();
       }
     } catch (error) {
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
       console.error(error);
       this.resetResults();
     } finally {
-      this.loading = false;
+      if (requestId === this.requestSerial) {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -159,15 +159,21 @@ export class ViewAllWorkshop implements OnInit {
   }
 
   formatPrice(value: number): string {
-    if (!value) {
+    const price = Number(value);
+
+    if (!Number.isFinite(price)) {
+      return 'N/A';
+    }
+
+    if (price === 0) {
       return 'Free';
     }
 
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
-    }).format(value);
+      maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    }).format(price);
   }
 
   formatDateRange(workshop: WorkshopItem): string {
@@ -194,27 +200,94 @@ export class ViewAllWorkshop implements OnInit {
   }
 
   getTakeaways(workshop: WorkshopItem, limit = 3): string[] {
-    return workshop.takeaways.slice(0, limit);
+    return (Array.isArray(workshop.takeaways) ? workshop.takeaways : []).slice(0, limit);
+  }
+
+  getPaginationLabel(): string {
+    const from = this.meta.from ?? 0;
+    const to = this.meta.to ?? 0;
+
+    return `Showing ${from}-${to} of ${this.meta.total} workshops`;
+  }
+
+  private buildListPayload(page: number): Record<string, unknown> {
+    return {
+      page,
+      perPage: this.meta.perPage,
+      search: this.search.trim(),
+      city: this.city.trim(),
+      status: this.status,
+      scheduleStatus: this.scheduleStatus || 'all',
+      sortBy: this.sortBy,
+    };
   }
 
   private resetResults(): void {
     this.workshops = [];
-    this.meta = {
-      ...this.meta,
+    this.meta = this.createDefaultMeta();
+    this.summary = this.createDefaultSummary();
+    this.pageInput = 1;
+  }
+
+  private normalizeWorkshops(workshops: WorkshopItem[] | null | undefined): WorkshopItem[] {
+    if (!Array.isArray(workshops)) {
+      return [];
+    }
+
+    return workshops.map((workshop) => {
+      const status = Number(workshop.status) === 0 ? 0 : 1;
+
+      return {
+        ...workshop,
+        price: Number.isFinite(Number(workshop.price)) ? Number(workshop.price) : 0,
+        status,
+        statusLabel: workshop.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
+        scheduleStatus: workshop.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        takeaways: Array.isArray(workshop.takeaways) ? workshop.takeaways : [],
+      };
+    });
+  }
+
+  private createDefaultMeta(): WorkshopPaginationMeta {
+    return {
       currentPage: 1,
+      perPage: 10,
       total: 0,
       lastPage: 1,
       from: null,
       to: null,
     };
-    this.pageInput = 1;
+  }
+
+  private createDefaultSummary(): WorkshopSummary {
+    return {
+      totalWorkshops: 0,
+      activeWorkshops: 0,
+      inactiveWorkshops: 0,
+      upcomingWorkshops: 0,
+      completedWorkshops: 0,
+    };
   }
 
   private formatDate(value: string): string {
+    const rawDate = `${value || ''}`.trim();
+
+    if (!rawDate || rawDate === '0000-00-00') {
+      return 'N/A';
+    }
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+      ? new Date(`${rawDate}T00:00:00`)
+      : new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) {
+      return 'N/A';
+    }
+
     return new Intl.DateTimeFormat('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-    }).format(new Date(value));
+    }).format(date);
   }
 }

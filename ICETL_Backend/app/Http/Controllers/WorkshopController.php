@@ -7,7 +7,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class WorkshopController extends Controller
 {
@@ -43,10 +45,12 @@ class WorkshopController extends Controller
         }
 
         DB::beginTransaction();
+        $bannerImagePath = null;
 
         try {
+            $bannerImagePath = $this->storeBannerImage($request);
             $workshopId = DB::table('workshops')->insertGetId([
-                ...$this->workshopPayload($request),
+                ...$this->workshopPayload($request, $bannerImagePath),
                 'createdBy' => (int) $user->id,
                 'createdByRoleId' => $user->role ?? null,
                 'deletedFlag' => 0,
@@ -65,6 +69,7 @@ class WorkshopController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+            $this->deleteBannerImage($bannerImagePath);
             Log::error('Error creating workshop: ' . $e->getMessage());
 
             return $this->exceptionResponse($e);
@@ -73,7 +78,7 @@ class WorkshopController extends Controller
 
     public function getMyWorkshops(Request $request)
     {
-        return $this->getWorkshopList($request, true, false);
+        return $this->getWorkshopList($request, true, true);
     }
 
     public function getAllWorkshops(Request $request)
@@ -117,7 +122,7 @@ class WorkshopController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Workshop fetched successfully',
-                'data' => $this->formatWorkshop($workshop),
+                'data' => $this->formatWorkshop($workshop, $request),
             ], 200);
         } catch (\Exception $e) {
             Log::error('Error fetching workshop: ' . $e->getMessage());
@@ -154,21 +159,36 @@ class WorkshopController extends Controller
             ], 422);
         }
 
+        $bannerImagePath = null;
+
         try {
-            $updated = DB::table('workshops')
+            $workshop = DB::table('workshops')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
                 ->where('deletedFlag', 0)
-                ->update([
-                    ...$this->workshopPayload($request),
-                    'updatedOn' => now(),
-                ]);
+                ->first();
 
-            if (!$updated) {
+            if (!$workshop) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Workshop not found'
                 ], 404);
+            }
+
+            $bannerImagePath = $this->storeBannerImage($request);
+            $currentBannerImage = $workshop->bannerImage ?? null;
+
+            DB::table('workshops')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->update([
+                    ...$this->workshopPayload($request, $bannerImagePath),
+                    'updatedOn' => now(),
+                ]);
+
+            if ($bannerImagePath) {
+                $this->deleteBannerImage($currentBannerImage);
             }
 
             return response()->json([
@@ -176,6 +196,7 @@ class WorkshopController extends Controller
                 'message' => 'Workshop updated successfully'
             ], 200);
         } catch (\Exception $e) {
+            $this->deleteBannerImage($bannerImagePath);
             Log::error('Error updating workshop: ' . $e->getMessage());
 
             return $this->exceptionResponse($e);
@@ -334,7 +355,7 @@ class WorkshopController extends Controller
             if (!$paginate) {
                 $workshops = $this->applySort($query, (string) $request->input('sortBy', 'newest'))
                     ->get()
-                    ->map(fn($workshop) => $this->formatWorkshop($workshop));
+                    ->map(fn($workshop) => $this->formatWorkshop($workshop, $request));
 
                 return response()->json([
                     'status' => true,
@@ -358,7 +379,7 @@ class WorkshopController extends Controller
                 'status' => true,
                 'message' => 'All workshops fetched successfully',
                 'data' => collect($workshops->items())
-                    ->map(fn($workshop) => $this->formatWorkshop($workshop))
+                    ->map(fn($workshop) => $this->formatWorkshop($workshop, $request))
                     ->values(),
                 'meta' => [
                     'currentPage' => $workshops->currentPage(),
@@ -397,6 +418,7 @@ class WorkshopController extends Controller
                 'w.price',
                 'w.description',
                 'w.takeaways',
+                'w.bannerImage',
                 'w.status',
                 'w.createdBy',
                 'creator.name as createdByName',
@@ -425,6 +447,7 @@ class WorkshopController extends Controller
             'description' => ['required', 'string', 'min:20', 'max:300'],
             'takeaways' => 'nullable|array',
             'takeaways.*' => 'string|max:255',
+            'bannerImage' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
             'status' => 'required|in:0,1',
         ];
 
@@ -435,11 +458,11 @@ class WorkshopController extends Controller
         return Validator::make($request->all(), $rules);
     }
 
-    private function workshopPayload(Request $request): array
+    private function workshopPayload(Request $request, ?string $bannerImagePath = null): array
     {
         $takeaways = $this->normalizeTakeaways($request->input('takeaways', []));
 
-        return [
+        $payload = [
             'title' => trim((string) $request->input('title')),
             'topic' => trim((string) $request->input('topic')),
             'venue' => trim((string) $request->input('venue')),
@@ -455,6 +478,12 @@ class WorkshopController extends Controller
             'takeaways' => !empty($takeaways) ? json_encode($takeaways) : null,
             'status' => (int) $request->input('status'),
         ];
+
+        if ($bannerImagePath) {
+            $payload['bannerImage'] = $bannerImagePath;
+        }
+
+        return $payload;
     }
 
     private function applyFilters($query, Request $request): void
@@ -585,10 +614,11 @@ class WorkshopController extends Controller
         return is_array($decoded) ? $this->normalizeTakeaways($decoded) : [];
     }
 
-    private function formatWorkshop(object $workshop): array
+    private function formatWorkshop(object $workshop, Request $request): array
     {
         $startDate = $workshop->startDate ? (string) $workshop->startDate : '';
         $endDate = $workshop->endDate ? (string) $workshop->endDate : null;
+        $bannerImage = $workshop->bannerImage ? (string) $workshop->bannerImage : null;
 
         return [
             'id' => (int) $workshop->id,
@@ -607,6 +637,8 @@ class WorkshopController extends Controller
             'price' => is_numeric($workshop->price) ? (float) $workshop->price : 0,
             'description' => (string) $workshop->description,
             'takeaways' => $this->decodeTakeaways($workshop->takeaways ?? null),
+            'bannerImage' => $bannerImage,
+            'bannerImageUrl' => $bannerImage ? $this->privateFileUrl($request, $bannerImage) : null,
             'status' => (int) $workshop->status,
             'statusLabel' => ((int) $workshop->status) === 1 ? 'Active' : 'Inactive',
             'scheduleStatus' => $this->getScheduleStatus($startDate, $endDate),
@@ -634,6 +666,40 @@ class WorkshopController extends Controller
         $time = trim((string) ($value ?? ''));
 
         return $time === '' ? null : substr($time, 0, 5);
+    }
+
+    private function storeBannerImage(Request $request): ?string
+    {
+        if (!$request->hasFile('bannerImage')) {
+            return null;
+        }
+
+        $file = $request->file('bannerImage');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+
+        return $file->storeAs(
+            'program-banners/workshops',
+            Str::uuid() . '.' . $extension,
+            'private'
+        );
+    }
+
+    private function deleteBannerImage(?string $path): void
+    {
+        if ($path && Storage::disk('private')->exists($path)) {
+            Storage::disk('private')->delete($path);
+        }
+    }
+
+    private function privateFileUrl(Request $request, string $path): string
+    {
+        $requestUrl = $request->url();
+        $apiPosition = strpos($requestUrl, '/api/');
+        $baseUrl = $apiPosition === false
+            ? $request->getSchemeAndHttpHost()
+            : substr($requestUrl, 0, $apiPosition);
+
+        return $baseUrl . '/api/getAfile?path=' . rawurlencode(trim($path, '/'));
     }
 
     private function hasInvalidSameDayTimeRange(Request $request): bool

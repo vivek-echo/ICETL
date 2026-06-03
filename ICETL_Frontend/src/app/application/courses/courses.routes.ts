@@ -1,6 +1,12 @@
 import { Routes } from '@angular/router';
 import { curriculumPendingChangesGuard } from './manage-courses/add-course-curriculum/curriculum-pending-changes.guard';
 
+const normalizeCourseRoute = (route: string): string =>
+  route.replace(
+    /\/application\/courses\/manageOfflineCourse(\/|$)/,
+    '/application/courses/manageOfflineCourses$1',
+  );
+
 const getRedirectRoute = (route: string, fallbackRoute = ''): string => {
   if (typeof localStorage === 'undefined') {
     return fallbackRoute;
@@ -18,8 +24,8 @@ const getRedirectRoute = (route: string, fallbackRoute = ''): string => {
     }
 
     const matchedMenu = menus.find((menu: any) => {
-      const menuUrl = menu.url || '';
-      return menuUrl === route;
+      const menuUrl = normalizeCourseRoute(menu.url || '');
+      return menuUrl === normalizeCourseRoute(route);
     });
 
     if (!matchedMenu) {
@@ -56,11 +62,6 @@ export const coursesRoutes: Routes = [
       {
         path: 'yourCart',
         redirectTo: '/application/yourCart',
-      },
-      {
-        path: 'myLearning',
-        pathMatch: 'full',
-        redirectTo: '/application/courses/manageCourses/myLearning',
       },
       {
         path: 'coursesCategories',
@@ -128,25 +129,76 @@ export const coursesRoutes: Routes = [
             title: 'Browse Courses | ICETL',
           },
           {
+            path: 'browseAcademicCourses',
+            loadComponent: () =>
+              import('./manage-courses/browse-academic-courses/browse-academic-courses').then(
+                (m) => m.BrowseAcademicCourses,
+              ),
+            title: 'Browse Academic Courses | ICETL',
+          },
+          {
             path: 'curriculum',
             loadComponent: () =>
               import('./manage-courses/add-course-curriculum/add-course-curriculum').then((m) => m.AddCourseCurriculum),
             canDeactivate: [curriculumPendingChangesGuard],
             title: 'Curriculum | ICETL',
+          }
+          // {
+          //   path: 'learn',
+          //   loadComponent: () =>
+          //     import('./manage-courses/course-player/course-player').then((m) => m.CoursePlayer),
+          //   title: 'Course Player | ICETL',
+          // },
+          // {
+          //   path: 'myLearning',
+          //   loadComponent: () =>
+          //     import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),
+          //   title: 'My Learning | ICETL',
+          // },
+        ],
+      },
+
+      {
+        path: 'myLearning',
+        loadComponent: () => import('./my-learning/my-learning').then((m) => m.MyLearning),
+        title: 'My Learning | ICETL',
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: getRedirectRoute('/application/courses/myLearning'),
           },
+         
           {
             path: 'learn',
             loadComponent: () =>
-              import('./manage-courses/course-player/course-player').then((m) => m.CoursePlayer),
+              import('./my-learning/course-player/course-player').then((m) => m.CoursePlayer),
             title: 'Course Player | ICETL',
           },
           {
-            path: 'myLearning',
+            path: 'myCourses',
             loadComponent: () =>
-              import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),
+              import('./my-learning/my-courses/my-courses').then((m) => m.MyCourses),
+            title: 'My Learning | ICETL',
+          },
+          {
+            path: 'myWorkshops',
+            loadComponent: () =>
+              import('./my-learning/my-workshop/my-workshop').then((m) => m.MyWorkshop),
+            title: 'My Learning | ICETL',
+          },
+          {
+            path: 'mySeminars',
+            loadComponent: () =>
+              import('./my-learning/my-seminar/my-seminar').then((m) => m.MySeminar),
             title: 'My Learning | ICETL',
           },
         ],
+      },
+      {
+        path: 'manageOfflineCourse',
+        redirectTo: 'manageOfflineCourses',
+        pathMatch: 'prefix',
       },
       {
         path: 'manageOfflineCourses',
@@ -162,6 +214,10 @@ export const coursesRoutes: Routes = [
             redirectTo: getRedirectRoute('/application/courses/manageOfflineCourses', 'add'),
           },
           {
+            path: 'view',
+            redirectTo: 'viewMyOfflineCourses',
+          },
+          {
             path: 'add',
             loadComponent: () =>
               import('./manage-offline-course/add-offline-course/add-offline-course').then(
@@ -170,12 +226,22 @@ export const coursesRoutes: Routes = [
             title: 'Add Offline Course | ICETL',
           },
           {
-            path: 'view',
+            path: 'viewMyOfflineCourses',
             loadComponent: () =>
               import(
                 './manage-offline-course/view-my-offline-course/view-my-offline-course'
               ).then((m) => m.ViewMyOfflineCourse),
+            data: { offlineCourseScope: 'mine' },
             title: 'View My Offline Courses | ICETL',
+          },
+          {
+            path: 'viewAllOfflineCourses',
+            loadComponent: () =>
+              import(
+                './manage-offline-course/view-all-offline-course/view-all-offline-course'
+              ).then((m) => m.ViewAllOfflineCourse),
+            data: { offlineCourseScope: 'all' },
+            title: 'View All Offline Courses | ICETL',
           },
         ],
       },

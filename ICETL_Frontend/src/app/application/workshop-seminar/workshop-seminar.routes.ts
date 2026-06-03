@@ -123,13 +123,13 @@ export const workshopSeminarRoutes: Routes = [
             title: 'Edit Seminar | ICETL',
           },
           {
-            path: 'view',
+            path: 'viewMySeminar',
             loadComponent: () =>
               import('./seminar/view-my-seminar/view-my-seminar').then((m) => m.ViewMySeminar),
             title: 'View My Seminar | ICETL',
           },
           {
-            path: 'viewAll',
+            path: 'viewAllSeminar',
             data: { authOnly: true },
             loadComponent: () =>
               import('./seminar/view-all-seminar/view-all-seminar').then(

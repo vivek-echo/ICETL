@@ -19,6 +19,8 @@ use Throwable;
 
 class AuthController extends Controller
 {
+    private const MENU_SERIALIZATION_KEY = '_serialization';
+
     public function logout(Request $request)
     {
         try {
@@ -622,8 +624,14 @@ class AuthController extends Controller
                 }
             }
 
+            $serialization = $this->extractMenuSerialization($decodedPermissions);
+
             $allowedMenuIds = collect($decodedPermissions)
-                ->filter(function ($isAllowed): bool {
+                ->filter(function ($isAllowed, $menuId): bool {
+                    if (!ctype_digit((string) $menuId)) {
+                        return false;
+                    }
+
                     if (is_bool($isAllowed)) {
                         return $isAllowed;
                     }
@@ -650,9 +658,9 @@ class AuthController extends Controller
                 : DB::table('menus')
                 ->where('deletedFlag', 0)
                 ->whereIn('id', $allowedMenuIds)
-                ->orderBy('parentId')
-                ->orderBy('id')
                 ->get();
+
+            $menus = $this->sortAuthorizedMenus($menus, $serialization['menuOrder']);
 
             return [
                 'token' => $tokenPayload['token'],
@@ -686,6 +694,61 @@ class AuthController extends Controller
 
             throw $e;
         }
+    }
+
+    private function extractMenuSerialization(array $permissionPayload): array
+    {
+        $serialization = $permissionPayload[self::MENU_SERIALIZATION_KEY] ?? [];
+
+        if (!is_array($serialization)) {
+            $serialization = [];
+        }
+
+        return [
+            'menuOrder' => $this->sanitizeMenuOrder($serialization['menuOrder'] ?? []),
+            'topMenuOrder' => $this->sanitizeMenuOrder($serialization['topMenuOrder'] ?? []),
+        ];
+    }
+
+    private function sanitizeMenuOrder($ids): array
+    {
+        if (!is_array($ids)) {
+            return [];
+        }
+
+        return collect($ids)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function sortAuthorizedMenus($menus, array $menuOrder)
+    {
+        $orderMap = array_flip($menuOrder);
+
+        return $menus
+            ->map(function ($menu) use ($orderMap) {
+                $position = $orderMap[(int) $menu->id] ?? null;
+                $menu->sortOrder = $position === null ? null : $position + 1;
+
+                return $menu;
+            })
+            ->sort(function ($left, $right) use ($orderMap) {
+                $leftOrder = $orderMap[(int) $left->id] ?? PHP_INT_MAX;
+                $rightOrder = $orderMap[(int) $right->id] ?? PHP_INT_MAX;
+
+                if ($leftOrder !== $rightOrder) {
+                    return $leftOrder <=> $rightOrder;
+                }
+
+                $leftParentId = (int) ($left->parentId ?? 0);
+                $rightParentId = (int) ($right->parentId ?? 0);
+
+                return $leftParentId <=> $rightParentId ?: (int) $left->id <=> (int) $right->id;
+            })
+            ->values();
     }
 
     private function dashboardUrlFromRoleName(?string $roleName): string
@@ -810,6 +873,7 @@ class AuthController extends Controller
             || str_starts_with($normalizedPath, 'uploads/instructors/profile/')
             || str_starts_with($normalizedPath, 'course-category-icons/')
             || str_starts_with($normalizedPath, 'course-thumbnails/')
+            || str_starts_with($normalizedPath, 'program-banners/')
             || str_starts_with($normalizedPath, 'curriculum-videos/')
         ) {
             return true;
@@ -848,6 +912,7 @@ class AuthController extends Controller
             || str_starts_with($normalizedPath, 'app/')
             || str_starts_with($normalizedPath, 'course-category-icons/')
             || str_starts_with($normalizedPath, 'course-thumbnails/')
+            || str_starts_with($normalizedPath, 'program-banners/')
             || str_starts_with($normalizedPath, 'curriculum-videos/')
             || str_starts_with($normalizedPath, 'uploads/user/')
             || str_starts_with($normalizedPath, 'uploads/instructors/')

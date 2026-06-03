@@ -44,6 +44,10 @@ export const roleGuard: CanActivateFn = (
     return getDashboardUrlTree(router, user);
   }
 
+  if (route.data['allowWithoutMenu'] === true && allowedRoles.length > 0) {
+    return true;
+  }
+
   if (isMenuRouteAllowed(user, state.url)) {
     return true;
   }
@@ -196,6 +200,8 @@ function getRoleDashboard(role: unknown): string {
       return 'learner';
     case ROLE.INSTRUCTOR:
       return 'instructor';
+    case ROLE.ICETL_TEAM:
+      return 'icetl-team';
     default:
       return '';
   }

@@ -101,78 +101,99 @@
         <div class="col-lg-7">
           <article id="contact-form" class="contact-form-card">
             <div class="section-title text-start mb--30">
-              <span class="subtitle bg-primary-opacity">Send Message</span>
+              <span class="subtitle bg-primary-opacity">Enquiry Form</span>
               <h2 id="contact-form-title" class="title">Tell Us How We Can Help</h2>
               <p class="description contact-form-card__description">
-                Fill out the form and our team will get back to you with the right course or
-                support information.
+                Share your details and our team will get back to you with the right support.
               </p>
             </div>
 
-            <form class="contact-form" (submit)="handleContactSubmit($event)" novalidate>
+            <form class="contact-form" [formGroup]="enquiryForm" (ngSubmit)="handleContactSubmit()" novalidate>
               <div class="row g-4">
                 <div class="col-md-6">
                   <div class="contact-form__group">
-                    <input id="contact-full-name" name="fullName" type="text" placeholder=" " autocomplete="name"
-                      required />
+                    <input id="contact-full-name" formControlName="fullName" type="text" placeholder=" "
+                      autocomplete="name" />
                     <label for="contact-full-name">Full Name</label>
                     <span class="contact-form__focus"></span>
+                    @if (isInvalid('fullName')) {
+                    <small class="contact-form__error">{{ getErrorText('fullName') }}</small>
+                    }
                   </div>
                 </div>
 
                 <div class="col-md-6">
                   <div class="contact-form__group">
-                    <input id="contact-email" name="email" type="email" placeholder=" " autocomplete="email" required />
+                    <input id="contact-email" formControlName="email" type="email" placeholder=" "
+                      autocomplete="email" />
                     <label for="contact-email">Email Address</label>
                     <span class="contact-form__focus"></span>
+                    @if (isInvalid('email')) {
+                    <small class="contact-form__error">{{ getErrorText('email') }}</small>
+                    }
                   </div>
                 </div>
 
                 <div class="col-md-6">
                   <div class="contact-form__group">
-                    <input id="contact-phone" name="phone" type="tel" placeholder=" " autocomplete="tel" inputmode="tel"
-                      required />
+                    <input id="contact-phone" formControlName="phone" type="tel" placeholder=" " autocomplete="tel"
+                      inputmode="tel" (keypress)="onlyPhoneCharacters($event)" />
                     <label for="contact-phone">Phone Number</label>
                     <span class="contact-form__focus"></span>
+                    @if (isInvalid('phone')) {
+                    <small class="contact-form__error">{{ getErrorText('phone') }}</small>
+                    }
                   </div>
                 </div>
 
                 <div class="col-md-6">
-                  <div class="contact-form__group contact-form__group--select">
-                    <select id="contact-course" name="courseInterestedIn" required>
-                      <option value="" selected disabled>Select Course</option>
-                      @for (option of courseOptions; track option) {
-                      <option [value]="option">{{ option }}</option>
-                      }
-                    </select>
-                    <label for="contact-course">Course Interested In</label>
+                  <div class="contact-form__group">
+                    <input id="contact-subject" formControlName="subject" type="text" placeholder=" "
+                      autocomplete="off" />
+                    <label for="contact-subject">Subject</label>
                     <span class="contact-form__focus"></span>
+                    @if (isInvalid('subject')) {
+                    <small class="contact-form__error">{{ getErrorText('subject') }}</small>
+                    }
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <div class="contact-form__group">
-                    <input id="contact-subject" name="subject" type="text" placeholder=" " autocomplete="off"
-                      required />
-                    <label for="contact-subject">Subject</label>
-                    <span class="contact-form__focus"></span>
+                  <div class="contact-form__choice-group">
+                    <span class="contact-form__choice-title">Enquiry Type</span>
+                    <div class="contact-form__choices">
+                      @for (option of enquiryOptions; track option) {
+                      <label class="contact-form__choice" [class.contact-form__choice--active]="enquiryForm.controls.enquiryType.value === option">
+                        <input type="radio" formControlName="enquiryType" [value]="option">
+                        <span>{{ option }}</span>
+                      </label>
+                      }
+                    </div>
                   </div>
                 </div>
 
                 <div class="col-12">
                   <div class="contact-form__group contact-form__group--textarea">
-                    <textarea id="contact-message" name="message" rows="5" placeholder=" " required></textarea>
+                    <textarea id="contact-message" formControlName="message" rows="5" placeholder=" "></textarea>
                     <label for="contact-message">Message</label>
                     <span class="contact-form__focus"></span>
+                    @if (isInvalid('message')) {
+                    <small class="contact-form__error">{{ getErrorText('message') }}</small>
+                    }
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse contact-form__submit">
+                  <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse contact-form__submit"
+                    [disabled]="isSubmitting">
                     <span class="icon-reverse-wrapper">
-                      <span class="btn-text">Send Message</span>
-                      <span class="btn-icon"><i class="fa-solid fa-paper-plane"></i></span>
-                      <span class="btn-icon"><i class="fa-solid fa-paper-plane"></i></span>
+                      <span class="btn-text">{{ isSubmitting ? 'Submitting...' : 'Submit Enquiry' }}</span>
+                      <span class="btn-icon">
+                        <i [class]="isSubmitting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-paper-plane'"></i>
+                      </span>
+                      <span class="btn-icon">
+                        <i [class]="isSubmitting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-paper-plane'"></i>
+                      </span>
                     </span>
                   </button>
                 </div>

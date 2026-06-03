@@ -39,8 +39,8 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-           // \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            // API clients authenticate with Sanctum bearer tokens; keep CSRF on web routes only.
+            // \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];

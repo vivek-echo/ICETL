@@ -38,6 +38,9 @@ Route::prefix('console')->middleware(['auth'])->group(function () {
     Route::get('/managePermission', function () {
         return view('adminConsole.permission.index');
     });
+    Route::get('/menuSerialization', function () {
+        return view('adminConsole.menuSerialization.index');
+    });
     // Route::get('/systemLogs', function () {
     //     return response()->json([
     //         'status'=>false
@@ -64,5 +67,7 @@ Route::prefix('console')->middleware(['auth'])->group(function () {
     Route::get('/getRolePermissions/{roleId}', [AdminConsoleController::class, 'getRolePermissions']);
 
     Route::get('/getRolePermissionsTree/{roleId}', [AdminConsoleController::class, 'getRolePermissionsTree']);
+    Route::get('/getRoleMenuSerialization/{roleId}', [AdminConsoleController::class, 'getRoleMenuSerialization']);
+    Route::post('/saveRoleMenuSerialization', [AdminConsoleController::class, 'saveRoleMenuSerialization']);
     Route::get('/getLogs', [AdminConsoleController::class, 'getLogs']);
 });

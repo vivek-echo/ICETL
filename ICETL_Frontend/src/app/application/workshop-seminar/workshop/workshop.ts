@@ -81,7 +81,7 @@ export class Workshop implements OnInit, OnDestroy {
       .map((menu) => this.toWorkshopTab(menu))
       .filter((tab): tab is WorkshopTab => tab !== null);
 
-    this.tabs = permittedTabs.length ? this.withDefaultViewAllTab(permittedTabs) : this.fallbackTabs;
+    this.tabs = permittedTabs.length ? permittedTabs : this.fallbackTabs;
   }
 
   private readMenus(): StoredMenu[] {
@@ -131,14 +131,6 @@ export class Workshop implements OnInit, OnDestroy {
       label: menu.name,
       route: route.replace(`${this.parentRoute}/`, ''),
     };
-  }
-
-  private withDefaultViewAllTab(tabs: WorkshopTab[]): WorkshopTab[] {
-    if (tabs.some((tab) => tab.route === 'viewAll')) {
-      return tabs;
-    }
-
-    return [...tabs, { id: 403, label: 'View All Workshops', route: 'viewAll' }];
   }
 
   private normalizeRoute(url?: string | null): string {

@@ -14,6 +14,11 @@ export interface PaymentLog {
   paymentStatus?: string | null;
   razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
+  paymentReference?: string | null;
+  paymentMethod?: string | null;
+  paymentBy?: string | null;
+  transactionNo?: string | null;
+  paymentDisplayId?: string | null;
   failureReason?: string | null;
   created_at: string;
   courseCount: number;
@@ -37,6 +42,11 @@ export interface Invoice {
   paymentStatus?: string | null;
   razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
+  paymentReference?: string | null;
+  paymentMethod?: string | null;
+  paymentBy?: string | null;
+  transactionNo?: string | null;
+  paymentDisplayId?: string | null;
   currency: string;
   company?: {
     name: string;
@@ -106,6 +116,11 @@ export interface AdminPaymentDashboard {
     userName?: string | null;
     userEmail?: string | null;
     razorpayPaymentId?: string | null;
+    paymentReference?: string | null;
+    paymentMethod?: string | null;
+    paymentBy?: string | null;
+    transactionNo?: string | null;
+    paymentDisplayId?: string | null;
     invoiceNumber?: string | null;
   }>;
 }

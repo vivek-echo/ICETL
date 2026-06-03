@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminConsoleController extends Controller
 {
+    private const SERIALIZATION_KEY = '_serialization';
+
     public function adminConsoleLoginView()
     {
         
@@ -445,19 +447,31 @@ class AdminConsoleController extends Controller
             ]);
 
             $roleId = $request->roleId;
-            $menuIds = $request->menuIds;
+            $menuIds = $this->sanitizeIdList($request->menuIds);
 
             // Convert to key-value like Node (optional)
             $permissions = [];
 
             foreach ($menuIds as $id) {
-                $permissions[$id] = 1; // simple flag (you can expand later)
+                $permissions[(string) $id] = 1; // simple flag (you can expand later)
             }
 
             $exists = DB::table('role_menu_permissions')
                 ->where('roleId', $roleId)
                 ->where('deletedFlag', 0)
                 ->first();
+
+            if ($exists) {
+                $existingPayload = $this->decodePermissionPayload($exists->permissionJson ?? null);
+                $serialization = $this->cleanSerializationForPermissions(
+                    $this->extractSerialization($existingPayload),
+                    $permissions
+                );
+
+                if (!empty($serialization['menuOrder']) || !empty($serialization['topMenuOrder'])) {
+                    $permissions[self::SERIALIZATION_KEY] = $serialization;
+                }
+            }
 
             if ($exists) {
 
@@ -482,7 +496,6 @@ class AdminConsoleController extends Controller
                 'message' => 'Permissions saved successfully'
             ]);
         } catch (\Exception $e) {
-            dd($e->getMessage());
             // \Log::error('Permission Save Error: ' . $e->getMessage());
 
             return response()->json([
@@ -535,6 +548,314 @@ class AdminConsoleController extends Controller
 
             return response()->json([], 500);
         }
+    }
+
+    public function getRoleMenuSerialization($roleId)
+    {
+        try {
+            $roleId = (int) $roleId;
+
+            if ($roleId <= 0) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid role'
+                ], 422);
+            }
+
+            $role = DB::table('roles')
+                ->where('id', $roleId)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$role) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Role not found'
+                ], 404);
+            }
+
+            $permission = DB::table('role_menu_permissions')
+                ->where('roleId', $roleId)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            $payload = $this->decodePermissionPayload($permission->permissionJson ?? null);
+            $serialization = $this->extractSerialization($payload);
+
+            $menus = DB::table('menus')
+                ->where('deletedFlag', 0)
+                ->orderBy('id')
+                ->get();
+
+            return response()->json([
+                'status' => true,
+                'role' => [
+                    'id' => (int) $role->id,
+                    'roleName' => $role->roleName
+                ],
+                'menus' => $this->sortMenusBySerialization($menus, $serialization),
+                'permissions' => $this->extractPermissionFlags($payload),
+                'serialization' => $serialization
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to load menu serialization'
+            ], 500);
+        }
+    }
+
+    public function saveRoleMenuSerialization(Request $request)
+    {
+        try {
+            $request->validate([
+                'roleId' => 'required|integer',
+                'menuIds' => 'array',
+                'menuIds.*' => 'integer',
+                'menuOrder' => 'array',
+                'menuOrder.*' => 'integer',
+                'topMenuOrder' => 'array',
+                'topMenuOrder.*' => 'integer',
+            ]);
+
+            $roleId = (int) $request->roleId;
+            $roleExists = DB::table('roles')
+                ->where('id', $roleId)
+                ->where('deletedFlag', 0)
+                ->exists();
+
+            if (!$roleExists) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Role not found'
+                ], 404);
+            }
+
+            $menus = DB::table('menus')
+                ->where('deletedFlag', 0)
+                ->select('id', 'type', 'parentId')
+                ->get()
+                ->keyBy('id');
+
+            $menuIds = collect($this->sanitizeIdList($request->input('menuIds', [])))
+                ->filter(fn($id) => $menus->has($id))
+                ->values();
+
+            $menuIds = $this->includeParentMenuIds($menuIds->all(), $menus);
+            $selectedMenuSet = array_flip($menuIds);
+
+            $menuOrder = collect($this->sanitizeIdList($request->input('menuOrder', [])))
+                ->filter(fn($id) => isset($selectedMenuSet[$id]))
+                ->unique()
+                ->values();
+
+            $menuOrder = $menuOrder
+                ->merge(collect($menuIds)->diff($menuOrder))
+                ->values()
+                ->all();
+
+            $topMenuOrder = collect($this->sanitizeIdList($request->input('topMenuOrder', [])))
+                ->filter(fn($id) => isset($selectedMenuSet[$id]) && (int) ($menus[$id]->type ?? 0) === 1)
+                ->unique()
+                ->values();
+
+            $selectedTopMenus = collect($menuIds)
+                ->filter(fn($id) => (int) ($menus[$id]->type ?? 0) === 1)
+                ->values();
+
+            $topMenuOrder = $topMenuOrder
+                ->merge($selectedTopMenus->diff($topMenuOrder))
+                ->values()
+                ->all();
+
+            $permissions = [];
+
+            foreach ($menuIds as $id) {
+                $permissions[(string) $id] = 1;
+            }
+
+            $permissions[self::SERIALIZATION_KEY] = [
+                'menuOrder' => $menuOrder,
+                'topMenuOrder' => $topMenuOrder,
+                'updatedAt' => now()->toIso8601String(),
+            ];
+
+            $exists = DB::table('role_menu_permissions')
+                ->where('roleId', $roleId)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if ($exists) {
+                DB::table('role_menu_permissions')
+                    ->where('id', $exists->id)
+                    ->update([
+                        'permissionJson' => json_encode($permissions),
+                        'updatedOn' => now()
+                    ]);
+            } else {
+                DB::table('role_menu_permissions')->insert([
+                    'roleId' => $roleId,
+                    'permissionJson' => json_encode($permissions),
+                    'createdOn' => now(),
+                    'updatedOn' => now(),
+                    'deletedFlag' => 0
+                ]);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Menu serialization saved successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to save menu serialization'
+            ], 500);
+        }
+    }
+
+    private function decodePermissionPayload(?string $permissionJson): array
+    {
+        if (!is_string($permissionJson) || trim($permissionJson) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($permissionJson, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function extractPermissionFlags(array $payload): array
+    {
+        $permissions = [];
+
+        foreach ($payload as $menuId => $isAllowed) {
+            if (!ctype_digit((string) $menuId) || !$this->isAllowedPermissionValue($isAllowed)) {
+                continue;
+            }
+
+            $permissions[(string) (int) $menuId] = 1;
+        }
+
+        return $permissions;
+    }
+
+    private function isAllowedPermissionValue($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+
+        if (is_string($value)) {
+            return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return false;
+    }
+
+    private function extractSerialization(array $payload): array
+    {
+        $serialization = $payload[self::SERIALIZATION_KEY] ?? [];
+
+        if (!is_array($serialization)) {
+            $serialization = [];
+        }
+
+        return [
+            'menuOrder' => $this->sanitizeIdList($serialization['menuOrder'] ?? []),
+            'topMenuOrder' => $this->sanitizeIdList($serialization['topMenuOrder'] ?? []),
+            'updatedAt' => is_string($serialization['updatedAt'] ?? null) ? $serialization['updatedAt'] : null,
+        ];
+    }
+
+    private function cleanSerializationForPermissions(array $serialization, array $permissions): array
+    {
+        $allowedMenuSet = array_flip(
+            collect(array_keys($permissions))
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->values()
+                ->all()
+        );
+
+        return [
+            'menuOrder' => collect($serialization['menuOrder'] ?? [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => isset($allowedMenuSet[$id]))
+                ->unique()
+                ->values()
+                ->all(),
+            'topMenuOrder' => collect($serialization['topMenuOrder'] ?? [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => isset($allowedMenuSet[$id]))
+                ->unique()
+                ->values()
+                ->all(),
+            'updatedAt' => is_string($serialization['updatedAt'] ?? null) ? $serialization['updatedAt'] : null,
+        ];
+    }
+
+    private function sanitizeIdList($ids): array
+    {
+        if (!is_array($ids)) {
+            return [];
+        }
+
+        return collect($ids)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function includeParentMenuIds(array $menuIds, $menus): array
+    {
+        $selected = collect($menuIds)->unique()->values()->all();
+        $selectedSet = array_flip($selected);
+
+        foreach ($menuIds as $menuId) {
+            $parentId = (int) ($menus[$menuId]->parentId ?? 0);
+
+            while ($parentId > 0 && $menus->has($parentId)) {
+                if (!isset($selectedSet[$parentId])) {
+                    $selected[] = $parentId;
+                    $selectedSet[$parentId] = true;
+                }
+
+                $parentId = (int) ($menus[$parentId]->parentId ?? 0);
+            }
+        }
+
+        return collect($selected)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function sortMenusBySerialization($menus, array $serialization)
+    {
+        $orderMap = array_flip($this->sanitizeIdList($serialization['menuOrder'] ?? []));
+
+        return $menus
+            ->sort(function ($left, $right) use ($orderMap) {
+                $leftOrder = $orderMap[(int) $left->id] ?? PHP_INT_MAX;
+                $rightOrder = $orderMap[(int) $right->id] ?? PHP_INT_MAX;
+
+                if ($leftOrder !== $rightOrder) {
+                    return $leftOrder <=> $rightOrder;
+                }
+
+                $leftParentId = (int) ($left->parentId ?? 0);
+                $rightParentId = (int) ($right->parentId ?? 0);
+
+                return $leftParentId <=> $rightParentId ?: (int) $left->id <=> (int) $right->id;
+            })
+            ->values();
     }
 
     public function getLogs(Request $request)

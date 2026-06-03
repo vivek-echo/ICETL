@@ -27,12 +27,86 @@ export interface OfflineCoursePayload {
   status: number;
 }
 
+export type OfflineCourseScheduleStatus = 'upcoming' | 'ongoing' | 'completed';
+export type OfflineCourseScheduleFilter = '' | 'all' | OfflineCourseScheduleStatus;
+export type OfflineCourseSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
+
 export interface OfflineCourseItem extends OfflineCoursePayload {
   id: number;
+  thumbnail?: string | null;
+  thumbnailUrl?: string | null;
+  statusLabel?: string;
+  scheduleStatus?: OfflineCourseScheduleStatus;
+  courseType?: number;
+  courseHighlights?: string[];
   createdById: number | null;
   createdByName: string;
+  createdByEmail?: string | null;
   createdOn: string;
   updatedOn: string;
+}
+
+export interface OfflineCoursePaginationMeta {
+  currentPage: number;
+  perPage: number | 'all';
+  total: number;
+  lastPage: number;
+  from: number | null;
+  to: number | null;
+}
+
+export interface OfflineCourseSummary {
+  totalCourses: number;
+  activeCourses: number;
+  inactiveCourses: number;
+  upcomingCourses: number;
+  ongoingCourses: number;
+  completedCourses: number;
+}
+
+export interface OfflineCourseListResponse {
+  status: boolean;
+  message: string;
+  data: OfflineCourseItem[];
+  summary?: OfflineCourseSummary;
+  meta?: OfflineCoursePaginationMeta;
+}
+
+export type OfflineCourseEnrollmentInstallmentStatus = 'PAID' | 'PENDING';
+export type OfflineCourseEnrollmentPaymentBy = 'CASH' | 'UPI' | 'NETBANKING';
+
+export interface OfflineCourseEnrollmentInstallmentPayload {
+  installmentNo: number;
+  amount: number;
+  expectedDate: string | null;
+  status: OfflineCourseEnrollmentInstallmentStatus;
+}
+
+export interface OfflineCourseEnrollmentPayload {
+  courseId: number;
+  name: string;
+  email: string;
+  dob: string;
+  gender: 1 | 2;
+  paymentBy: OfflineCourseEnrollmentPaymentBy;
+  transactionNo: string | null;
+  totalFee: number;
+  amountPaid: number;
+  amountBalance: number;
+  paidInFull: boolean;
+  installments: OfflineCourseEnrollmentInstallmentPayload[];
+}
+
+export interface OfflineCourseEnrollmentResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    userId: number;
+    courseId: number;
+    invoiceNumber: string;
+    paymentStatus: 'PAID' | 'PARTIAL';
+  };
+  errors?: Record<string, string[]>;
 }
 
 interface StoredAuthUser {
@@ -158,6 +232,8 @@ export class OfflineCourseStore {
       instructorName: this.getInstructorNames(value),
       price: Number(value.price) || 0,
       description: `${value.description || ''}`.trim(),
+      thumbnail: value.thumbnail ? `${value.thumbnail}`.trim() : null,
+      thumbnailUrl: value.thumbnailUrl ? `${value.thumbnailUrl}`.trim() : null,
       highlights: Array.isArray(value.highlights)
         ? value.highlights.map((item) => `${item}`.trim()).filter((item) => item.length > 0)
         : [],

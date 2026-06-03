@@ -7,13 +7,12 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { MyLearningCourse, PaymentService } from '../../services/payment';
 
 @Component({
-  selector: 'app-my-learning',
-  standalone: true,
+  selector: 'app-my-courses',
   imports: [CommonModule, RouterLink, FormsModule],
-  templateUrl: './my-learning.html',
-  styleUrl: './my-learning.scss',
+  templateUrl: './my-courses.html',
+  styleUrl: './my-courses.scss',
 })
-export class MyLearning implements OnInit {
+export class MyCourses implements OnInit {
   private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
   });

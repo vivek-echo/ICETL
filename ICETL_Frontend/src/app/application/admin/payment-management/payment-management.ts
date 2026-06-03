@@ -47,7 +47,7 @@ export class PaymentManagement implements OnInit {
 
   exportCsv(): void {
     const rows = this.dashboard?.recentTransactions ?? [];
-    const header = ['Order', 'Student', 'Email', 'Amount', 'Status', 'Payment ID', 'Invoice', 'Date'];
+    const header = ['Order', 'Student', 'Email', 'Amount', 'Status', 'Transaction No', 'Invoice', 'Date'];
     const csv = [
       header.join(','),
       ...rows.map((row) =>
@@ -57,7 +57,7 @@ export class PaymentManagement implements OnInit {
           row.userEmail || '',
           row.totalAmount,
           row.status,
-          row.razorpayPaymentId || '',
+          this.transactionIdentifier(row),
           row.invoiceNumber || '',
           row.created_at,
         ]
@@ -83,5 +83,32 @@ export class PaymentManagement implements OnInit {
     return value
       ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value))
       : 'N/A';
+  }
+
+  transactionIdentifier(row: AdminPaymentDashboard['recentTransactions'][number]): string {
+    const value =
+      row.paymentDisplayId ||
+      row.razorpayPaymentId ||
+      row.transactionNo ||
+      row.paymentReference ||
+      '';
+
+    return value.toString().trim() || 'Pending';
+  }
+
+  paymentMethodLabel(row: AdminPaymentDashboard['recentTransactions'][number]): string {
+    const value =
+      row.paymentBy ||
+      row.paymentMethod ||
+      (row.razorpayPaymentId ? 'RAZORPAY' : '');
+    const normalized = value.toString().trim().toUpperCase();
+    const labels: Record<string, string> = {
+      CASH: 'Cash',
+      UPI: 'UPI',
+      NETBANKING: 'Netbanking',
+      RAZORPAY: 'Razorpay',
+    };
+
+    return labels[normalized] || value || '';
   }
 }

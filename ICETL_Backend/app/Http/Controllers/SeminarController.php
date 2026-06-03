@@ -7,7 +7,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class SeminarController extends Controller
 {
@@ -43,10 +45,12 @@ class SeminarController extends Controller
         }
 
         DB::beginTransaction();
+        $bannerImagePath = null;
 
         try {
+            $bannerImagePath = $this->storeBannerImage($request);
             $seminarId = DB::table('seminars')->insertGetId([
-                ...$this->seminarPayload($request),
+                ...$this->seminarPayload($request, $bannerImagePath),
                 'createdBy' => (int) $user->id,
                 'createdByRoleId' => $user->role ?? null,
                 'deletedFlag' => 0,
@@ -65,6 +69,7 @@ class SeminarController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+            $this->deleteBannerImage($bannerImagePath);
             Log::error('Error creating seminar: ' . $e->getMessage());
 
             return $this->exceptionResponse($e);
@@ -73,7 +78,7 @@ class SeminarController extends Controller
 
     public function getMySeminars(Request $request)
     {
-        return $this->getSeminarList($request, true, false);
+        return $this->getSeminarList($request, true, true);
     }
 
     public function getAllSeminars(Request $request)
@@ -117,7 +122,7 @@ class SeminarController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Seminar fetched successfully',
-                'data' => $this->formatSeminar($seminar),
+                'data' => $this->formatSeminar($seminar, $request),
             ], 200);
         } catch (\Exception $e) {
             Log::error('Error fetching seminar: ' . $e->getMessage());
@@ -154,21 +159,36 @@ class SeminarController extends Controller
             ], 422);
         }
 
+        $bannerImagePath = null;
+
         try {
-            $updated = DB::table('seminars')
+            $seminar = DB::table('seminars')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
                 ->where('deletedFlag', 0)
-                ->update([
-                    ...$this->seminarPayload($request),
-                    'updatedOn' => now(),
-                ]);
+                ->first();
 
-            if (!$updated) {
+            if (!$seminar) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Seminar not found'
                 ], 404);
+            }
+
+            $bannerImagePath = $this->storeBannerImage($request);
+            $currentBannerImage = $seminar->bannerImage ?? null;
+
+            DB::table('seminars')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->update([
+                    ...$this->seminarPayload($request, $bannerImagePath),
+                    'updatedOn' => now(),
+                ]);
+
+            if ($bannerImagePath) {
+                $this->deleteBannerImage($currentBannerImage);
             }
 
             return response()->json([
@@ -176,6 +196,7 @@ class SeminarController extends Controller
                 'message' => 'Seminar updated successfully'
             ], 200);
         } catch (\Exception $e) {
+            $this->deleteBannerImage($bannerImagePath);
             Log::error('Error updating seminar: ' . $e->getMessage());
 
             return $this->exceptionResponse($e);
@@ -334,7 +355,7 @@ class SeminarController extends Controller
             if (!$paginate) {
                 $seminars = $this->applySort($query, (string) $request->input('sortBy', 'newest'))
                     ->get()
-                    ->map(fn($seminar) => $this->formatSeminar($seminar));
+                    ->map(fn($seminar) => $this->formatSeminar($seminar, $request));
 
                 return response()->json([
                     'status' => true,
@@ -358,7 +379,7 @@ class SeminarController extends Controller
                 'status' => true,
                 'message' => 'All seminars fetched successfully',
                 'data' => collect($seminars->items())
-                    ->map(fn($seminar) => $this->formatSeminar($seminar))
+                    ->map(fn($seminar) => $this->formatSeminar($seminar, $request))
                     ->values(),
                 'meta' => [
                     'currentPage' => $seminars->currentPage(),
@@ -396,6 +417,7 @@ class SeminarController extends Controller
                 's.price',
                 's.description',
                 's.takeaways',
+                's.bannerImage',
                 's.status',
                 's.createdBy',
                 'creator.name as createdByName',
@@ -423,6 +445,7 @@ class SeminarController extends Controller
             'description' => ['required', 'string', 'min:20', 'max:300'],
             'takeaways' => 'nullable|array',
             'takeaways.*' => 'string|max:255',
+            'bannerImage' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
             'status' => 'required|in:0,1',
         ];
 
@@ -433,11 +456,11 @@ class SeminarController extends Controller
         return Validator::make($request->all(), $rules);
     }
 
-    private function seminarPayload(Request $request): array
+    private function seminarPayload(Request $request, ?string $bannerImagePath = null): array
     {
         $takeaways = $this->normalizeTakeaways($request->input('takeaways', []));
 
-        return [
+        $payload = [
             'title' => trim((string) $request->input('title')),
             'topic' => trim((string) $request->input('topic')),
             'venue' => trim((string) $request->input('venue')),
@@ -452,6 +475,12 @@ class SeminarController extends Controller
             'takeaways' => !empty($takeaways) ? json_encode($takeaways) : null,
             'status' => (int) $request->input('status'),
         ];
+
+        if ($bannerImagePath) {
+            $payload['bannerImage'] = $bannerImagePath;
+        }
+
+        return $payload;
     }
 
     private function applyFilters($query, Request $request): void
@@ -581,9 +610,10 @@ class SeminarController extends Controller
         return is_array($decoded) ? $this->normalizeTakeaways($decoded) : [];
     }
 
-    private function formatSeminar(object $seminar): array
+    private function formatSeminar(object $seminar, Request $request): array
     {
         $eventDate = $seminar->eventDate ? (string) $seminar->eventDate : '';
+        $bannerImage = $seminar->bannerImage ? (string) $seminar->bannerImage : null;
 
         return [
             'id' => (int) $seminar->id,
@@ -602,6 +632,8 @@ class SeminarController extends Controller
             'price' => is_numeric($seminar->price) ? (float) $seminar->price : 0,
             'description' => (string) $seminar->description,
             'takeaways' => $this->decodeTakeaways($seminar->takeaways ?? null),
+            'bannerImage' => $bannerImage,
+            'bannerImageUrl' => $bannerImage ? $this->privateFileUrl($request, $bannerImage) : null,
             'status' => (int) $seminar->status,
             'statusLabel' => ((int) $seminar->status) === 1 ? 'Active' : 'Inactive',
             'scheduleStatus' => $this->getScheduleStatus($eventDate),
@@ -627,6 +659,40 @@ class SeminarController extends Controller
         $time = trim((string) ($value ?? ''));
 
         return $time === '' ? null : substr($time, 0, 5);
+    }
+
+    private function storeBannerImage(Request $request): ?string
+    {
+        if (!$request->hasFile('bannerImage')) {
+            return null;
+        }
+
+        $file = $request->file('bannerImage');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+
+        return $file->storeAs(
+            'program-banners/seminars',
+            Str::uuid() . '.' . $extension,
+            'private'
+        );
+    }
+
+    private function deleteBannerImage(?string $path): void
+    {
+        if ($path && Storage::disk('private')->exists($path)) {
+            Storage::disk('private')->delete($path);
+        }
+    }
+
+    private function privateFileUrl(Request $request, string $path): string
+    {
+        $requestUrl = $request->url();
+        $apiPosition = strpos($requestUrl, '/api/');
+        $baseUrl = $apiPosition === false
+            ? $request->getSchemeAndHttpHost()
+            : substr($requestUrl, 0, $apiPosition);
+
+        return $baseUrl . '/api/getAfile?path=' . rawurlencode(trim($path, '/'));
     }
 
     private function hasInvalidTimeRange(Request $request): bool

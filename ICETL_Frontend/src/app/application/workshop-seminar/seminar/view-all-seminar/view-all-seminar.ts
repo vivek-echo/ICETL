@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom, timeout } from 'rxjs';
 import {
@@ -20,6 +20,7 @@ import {
 })
 export class ViewAllSeminar implements OnInit {
   readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
+  readonly skeletonRows = [1, 2, 3, 4];
   readonly sortOptions: Array<{ value: SeminarSortOption; label: string }> = [
     { value: 'newest', label: 'Newest Added' },
     { value: 'oldest', label: 'Oldest Added' },
@@ -40,59 +41,58 @@ export class ViewAllSeminar implements OnInit {
   scheduleStatus: SeminarScheduleFilter = '';
   sortBy: SeminarSortOption = 'newest';
   pageInput = 1;
-  meta: SeminarPaginationMeta = {
-    currentPage: 1,
-    perPage: 10,
-    total: 0,
-    lastPage: 1,
-    from: null,
-    to: null,
-  };
-  summary: SeminarSummary = {
-    totalSeminars: 0,
-    activeSeminars: 0,
-    inactiveSeminars: 0,
-    upcomingSeminars: 0,
-    completedSeminars: 0,
-  };
+  meta: SeminarPaginationMeta = this.createDefaultMeta();
+  summary: SeminarSummary = this.createDefaultSummary();
 
-  constructor(private readonly seminarService: SeminarService) {}
+  private requestSerial = 0;
+
+  constructor(
+    private readonly seminarService: SeminarService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
     void this.loadSeminars();
   }
 
   async loadSeminars(page = 1): Promise<void> {
+    const requestId = ++this.requestSerial;
     this.loading = true;
+    this.cdr.markForCheck();
 
     try {
       const response = await lastValueFrom(
-        this.seminarService
-          .getAllSeminars({
-            page,
-            perPage: this.meta.perPage,
-            search: this.search.trim(),
-            city: this.city.trim(),
-            status: this.status,
-            scheduleStatus: this.scheduleStatus || 'all',
-            sortBy: this.sortBy,
-          })
-          .pipe(timeout(15000)),
+        this.seminarService.getAllSeminars(this.buildListPayload(page)).pipe(timeout(15000)),
       );
 
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
       if (response.status) {
-        this.seminars = response.data || [];
-        this.meta = response.meta || this.meta;
-        this.summary = response.summary || this.summary;
+        this.seminars = this.normalizeSeminars(response.data);
+        this.meta = response.meta || this.createDefaultMeta();
+        this.summary = response.summary || this.createDefaultSummary();
         this.pageInput = this.meta.currentPage;
+
+        if (this.seminars.length === 0 && this.meta.currentPage > 1 && this.meta.total > 0) {
+          await this.loadSeminars(this.meta.currentPage - 1);
+        }
       } else {
         this.resetResults();
       }
     } catch (error) {
+      if (requestId !== this.requestSerial) {
+        return;
+      }
+
       console.error(error);
       this.resetResults();
     } finally {
-      this.loading = false;
+      if (requestId === this.requestSerial) {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -159,19 +159,35 @@ export class ViewAllSeminar implements OnInit {
   }
 
   formatPrice(value: number): string {
-    if (!value) {
+    const price = Number(value);
+
+    if (!Number.isFinite(price)) {
+      return 'N/A';
+    }
+
+    if (price === 0) {
       return 'Free';
     }
 
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
-    }).format(value);
+      maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    }).format(price);
   }
 
   formatDate(value: string): string {
-    if (!value) {
+    const rawDate = `${value || ''}`.trim();
+
+    if (!rawDate || rawDate === '0000-00-00') {
+      return 'N/A';
+    }
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+      ? new Date(`${rawDate}T00:00:00`)
+      : new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) {
       return 'N/A';
     }
 
@@ -179,7 +195,7 @@ export class ViewAllSeminar implements OnInit {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-    }).format(new Date(value));
+    }).format(date);
   }
 
   formatTimeRange(seminar: SeminarItem): string {
@@ -191,19 +207,72 @@ export class ViewAllSeminar implements OnInit {
   }
 
   getTakeaways(seminar: SeminarItem, limit = 3): string[] {
-    return seminar.takeaways.slice(0, limit);
+    return (Array.isArray(seminar.takeaways) ? seminar.takeaways : []).slice(0, limit);
+  }
+
+  getPaginationLabel(): string {
+    const from = this.meta.from ?? 0;
+    const to = this.meta.to ?? 0;
+
+    return `Showing ${from}-${to} of ${this.meta.total} seminars`;
+  }
+
+  private buildListPayload(page: number): Record<string, unknown> {
+    return {
+      page,
+      perPage: this.meta.perPage,
+      search: this.search.trim(),
+      city: this.city.trim(),
+      status: this.status,
+      scheduleStatus: this.scheduleStatus || 'all',
+      sortBy: this.sortBy,
+    };
   }
 
   private resetResults(): void {
     this.seminars = [];
-    this.meta = {
-      ...this.meta,
+    this.meta = this.createDefaultMeta();
+    this.summary = this.createDefaultSummary();
+    this.pageInput = 1;
+  }
+
+  private normalizeSeminars(seminars: SeminarItem[] | null | undefined): SeminarItem[] {
+    if (!Array.isArray(seminars)) {
+      return [];
+    }
+
+    return seminars.map((seminar) => {
+      const status = Number(seminar.status) === 0 ? 0 : 1;
+
+      return {
+        ...seminar,
+        price: Number.isFinite(Number(seminar.price)) ? Number(seminar.price) : 0,
+        status,
+        statusLabel: seminar.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
+        scheduleStatus: seminar.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        takeaways: Array.isArray(seminar.takeaways) ? seminar.takeaways : [],
+      };
+    });
+  }
+
+  private createDefaultMeta(): SeminarPaginationMeta {
+    return {
       currentPage: 1,
+      perPage: 10,
       total: 0,
       lastPage: 1,
       from: null,
       to: null,
     };
-    this.pageInput = 1;
+  }
+
+  private createDefaultSummary(): SeminarSummary {
+    return {
+      totalSeminars: 0,
+      activeSeminars: 0,
+      inactiveSeminars: 0,
+      upcomingSeminars: 0,
+      completedSeminars: 0,
+    };
   }
 }

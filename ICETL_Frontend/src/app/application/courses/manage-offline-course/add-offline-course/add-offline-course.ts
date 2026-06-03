@@ -25,19 +25,56 @@ interface CourseCategory {
   categoryName: string;
 }
 
+type OfflineDateControl = 'startDate' | 'endDate';
+
+interface CalendarDay {
+  day: number;
+  iso: string;
+  isCurrentMonth: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  isDisabled: boolean;
+}
+
 @Component({
   selector: 'app-add-offline-course',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-offline-course.html',
   styleUrl: './add-offline-course.scss',
 })
 export class AddOfflineCourse implements OnInit {
+  readonly currentYear = new Date().getFullYear();
+  readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  readonly calendarMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  readonly calendarYearOptions = this.buildCalendarYearOptions();
   courseForm: FormGroup;
   categories: CourseCategory[] = [];
   instructorList: OfflineCourseInstructor[] = [];
   instructorSearchTerm = '';
   isInstructorPickerOpen = false;
+  openCalendar: OfflineDateControl | null = null;
+  calendarViews: Record<OfflineDateControl, Date> = {
+    startDate: this.defaultCalendarView(),
+    endDate: this.defaultCalendarView(),
+  };
+  selectedBannerImage: File | null = null;
+  bannerPreviewUrl: string | null = null;
+  private readonly maxBannerImageSize = 2 * 1024 * 1024;
+  private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
   constructor(
     private readonly fb: FormBuilder,
@@ -170,6 +207,22 @@ export class AddOfflineCourse implements OnInit {
     }).format(price);
   }
 
+  get startDateDisplayValue(): string {
+    return this.formatIsoDateForDisplay(`${this.f['startDate'].value || ''}`);
+  }
+
+  get endDateDisplayValue(): string {
+    return this.formatIsoDateForDisplay(`${this.f['endDate'].value || ''}`);
+  }
+
+  get startDateCalendarDays(): CalendarDay[] {
+    return this.buildCalendarDays('startDate');
+  }
+
+  get endDateCalendarDays(): CalendarDay[] {
+    return this.buildCalendarDays('endDate');
+  }
+
   async loadCategories(): Promise<void> {
     try {
       const response: any = await lastValueFrom(
@@ -217,11 +270,16 @@ export class AddOfflineCourse implements OnInit {
   closeInstructorPickerOnOutsideClick(event: MouseEvent): void {
     if (!this.el.nativeElement.contains(event.target)) {
       this.isInstructorPickerOpen = false;
+      this.openCalendar = null;
+      return;
     }
+
+    this.openCalendar = null;
   }
 
   toggleInstructorPicker(): void {
     this.isInstructorPickerOpen = !this.isInstructorPickerOpen;
+    this.openCalendar = null;
   }
 
   setInstructorSearch(event: Event): void {
@@ -318,6 +376,83 @@ export class AddOfflineCourse implements OnInit {
     );
   }
 
+  toggleCalendar(controlName: OfflineDateControl, event: Event): void {
+    event.stopPropagation();
+
+    if (this.openCalendar !== controlName) {
+      this.syncCalendarView(controlName);
+    }
+
+    this.openCalendar = this.openCalendar === controlName ? null : controlName;
+    this.isInstructorPickerOpen = false;
+  }
+
+  keepCalendarOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
+  changeCalendarMonth(controlName: OfflineDateControl, offset: number): void {
+    const currentView = this.calendarViews[controlName];
+    this.calendarViews = {
+      ...this.calendarViews,
+      [controlName]: new Date(currentView.getFullYear(), currentView.getMonth() + offset, 1),
+    };
+  }
+
+  setCalendarMonth(controlName: OfflineDateControl, event: Event): void {
+    const month = Number((event.target as HTMLSelectElement).value);
+    const currentView = this.calendarViews[controlName];
+
+    this.calendarViews = {
+      ...this.calendarViews,
+      [controlName]: new Date(currentView.getFullYear(), month, 1),
+    };
+  }
+
+  setCalendarYear(controlName: OfflineDateControl, event: Event): void {
+    const year = Number((event.target as HTMLSelectElement).value);
+    const currentView = this.calendarViews[controlName];
+
+    this.calendarViews = {
+      ...this.calendarViews,
+      [controlName]: new Date(year, currentView.getMonth(), 1),
+    };
+  }
+
+  selectCalendarDate(controlName: OfflineDateControl, day: CalendarDay): void {
+    if (day.isDisabled) {
+      return;
+    }
+
+    const control = this.courseForm.get(controlName);
+    control?.setValue(day.iso);
+    control?.markAsDirty();
+    control?.markAsTouched();
+    control?.updateValueAndValidity();
+
+    if (controlName === 'startDate') {
+      const endDate = `${this.f['endDate'].value || ''}`;
+      if (endDate && new Date(endDate) < new Date(day.iso)) {
+        this.courseForm.patchValue({ endDate: '' });
+      }
+      this.syncCalendarView('endDate');
+    }
+
+    this.courseForm.updateValueAndValidity();
+    this.openCalendar = null;
+  }
+
+  clearCalendarDate(controlName: OfflineDateControl, event: Event): void {
+    event.stopPropagation();
+    const control = this.courseForm.get(controlName);
+    control?.setValue('');
+    control?.markAsDirty();
+    control?.markAsTouched();
+    control?.updateValueAndValidity();
+    this.courseForm.updateValueAndValidity();
+    this.syncCalendarView(controlName);
+  }
+
   resetForm(): void {
     this.courseForm.reset({
       title: '',
@@ -338,6 +473,39 @@ export class AddOfflineCourse implements OnInit {
     });
     this.highlights.clear();
     this.addHighlight();
+    this.selectedBannerImage = null;
+    this.setBannerPreviewUrl(null);
+    this.syncCalendarView('startDate');
+    this.syncCalendarView('endDate');
+  }
+
+  onBannerImageChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!this.allowedBannerImageTypes.includes(file.type)) {
+      input.value = '';
+      void this.alertHelper.error('Please upload a JPG, PNG, or WEBP banner image.');
+      return;
+    }
+
+    if (file.size > this.maxBannerImageSize) {
+      input.value = '';
+      void this.alertHelper.error('Banner image cannot exceed 2 MB.');
+      return;
+    }
+
+    this.selectedBannerImage = file;
+    this.setBannerPreviewUrl(URL.createObjectURL(file));
+  }
+
+  clearBannerImage(): void {
+    this.selectedBannerImage = null;
+    this.setBannerPreviewUrl(null);
   }
 
   async submitCourse(): Promise<void> {
@@ -365,7 +533,7 @@ export class AddOfflineCourse implements OnInit {
           response.message || 'Offline course added successfully!',
         );
         this.resetForm();
-        void this.router.navigate(['/application/courses/manageOfflineCourse/view']);
+        void this.router.navigate(['/application/courses/manageOfflineCourses/viewMyOfflineCourses']);
       }
     } catch (error) {
       console.error(error);
@@ -387,6 +555,7 @@ export class AddOfflineCourse implements OnInit {
       endTime: 'End Time',
       youtubeLiveUrl: 'YouTube Live URL',
       meetingLink: 'Meeting Link',
+      thumbnail: 'Banner Image',
       instructors: 'Instructor',
       price: 'Price',
       description: 'Description',
@@ -397,27 +566,32 @@ export class AddOfflineCourse implements OnInit {
     return map[field] || field;
   }
 
-  private getPayload(): Record<string, unknown> {
+  private getPayload(): FormData {
     const value = this.courseForm.value;
     const categoryId = Number(value.categoryId);
+    const formData = new FormData();
 
-    return {
-      title: `${value.title}`.trim(),
-      category: Number.isFinite(categoryId) ? categoryId : null,
-      instructor: this.selectedInstructors.map((instructor) => instructor.id),
-      venue: `${value.venue}`.trim(),
-      city: `${value.city}`.trim(),
-      startDate: value.startDate,
-      endDate: value.endDate || null,
-      startTime: value.startTime,
-      endTime: value.endTime || null,
-      youtubeLiveUrl: this.normalizeOptionalText(value.youtubeLiveUrl),
-      meetingLink: this.normalizeOptionalText(value.meetingLink),
-      price: Number(value.price) || 0,
-      description: `${value.description}`.trim(),
-      courseHighlights: this.getCleanHighlights(),
-      status: Number(value.status) === 0 ? 0 : 1,
-    };
+    formData.append('title', `${value.title}`.trim());
+    formData.append('category', `${Number.isFinite(categoryId) ? categoryId : ''}`);
+    formData.append('instructor', JSON.stringify(this.selectedInstructors.map((instructor) => instructor.id)));
+    formData.append('venue', `${value.venue}`.trim());
+    formData.append('city', `${value.city}`.trim());
+    formData.append('startDate', value.startDate);
+    formData.append('endDate', value.endDate || '');
+    formData.append('startTime', value.startTime);
+    formData.append('endTime', value.endTime || '');
+    formData.append('youtubeLiveUrl', this.normalizeOptionalText(value.youtubeLiveUrl) || '');
+    formData.append('meetingLink', this.normalizeOptionalText(value.meetingLink) || '');
+    formData.append('price', `${Number(value.price) || 0}`);
+    formData.append('description', `${value.description}`.trim());
+    formData.append('courseHighlights', JSON.stringify(this.getCleanHighlights()));
+    formData.append('status', `${Number(value.status) === 0 ? 0 : 1}`);
+
+    if (this.selectedBannerImage) {
+      formData.append('thumbnail', this.selectedBannerImage);
+    }
+
+    return formData;
   }
 
   private getCleanHighlights(): string[] {
@@ -430,6 +604,14 @@ export class AddOfflineCourse implements OnInit {
     const text = `${value || ''}`.trim();
 
     return text || null;
+  }
+
+  private setBannerPreviewUrl(url: string | null): void {
+    if (this.bannerPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.bannerPreviewUrl);
+    }
+
+    this.bannerPreviewUrl = url;
   }
 
   private dateRangeValidator(control: AbstractControl): ValidationErrors | null {
@@ -473,6 +655,102 @@ export class AddOfflineCourse implements OnInit {
       month: 'short',
       year: 'numeric',
     }).format(new Date(value));
+  }
+
+  private buildCalendarDays(controlName: OfflineDateControl): CalendarDay[] {
+    const selectedIso = `${this.f[controlName].value || ''}`;
+    const todayIso = this.toIsoDate(new Date());
+    const calendarView = this.calendarViews[controlName];
+    const firstOfMonth = new Date(calendarView.getFullYear(), calendarView.getMonth(), 1);
+    const startDate = new Date(firstOfMonth);
+    startDate.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      const iso = this.toIsoDate(date);
+
+      return {
+        day: date.getDate(),
+        iso,
+        isCurrentMonth: date.getMonth() === calendarView.getMonth(),
+        isSelected: iso === selectedIso,
+        isToday: iso === todayIso,
+        isDisabled: this.isCalendarDayDisabled(controlName, iso),
+      };
+    });
+  }
+
+  private isCalendarDayDisabled(controlName: OfflineDateControl, iso: string): boolean {
+    const startDate = `${this.f['startDate'].value || ''}`;
+
+    return controlName === 'endDate' && !!startDate && new Date(iso) < new Date(startDate);
+  }
+
+  private syncCalendarView(controlName: OfflineDateControl): void {
+    const selectedDate = this.parseIsoDate(`${this.f[controlName].value || ''}`);
+    const fallbackDate =
+      controlName === 'endDate'
+        ? this.parseIsoDate(`${this.f['startDate'].value || ''}`)
+        : null;
+
+    this.calendarViews = {
+      ...this.calendarViews,
+      [controlName]: selectedDate
+        ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+        : fallbackDate
+          ? new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1)
+          : this.defaultCalendarView(),
+    };
+  }
+
+  private defaultCalendarView(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  private buildCalendarYearOptions(): number[] {
+    return Array.from({ length: 8 }, (_, index) => this.currentYear - 1 + index);
+  }
+
+  private parseIsoDate(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const isSameDate =
+      date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+
+    return isSameDate ? date : null;
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatIsoDateForDisplay(value: string): string {
+    const date = this.parseIsoDate(value);
+
+    if (!date) {
+      return '';
+    }
+
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+
+    return `${day}-${month}-${date.getFullYear()}`;
   }
 
   private getStoredUser(): any {

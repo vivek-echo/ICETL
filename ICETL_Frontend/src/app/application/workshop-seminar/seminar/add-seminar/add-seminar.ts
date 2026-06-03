@@ -29,7 +29,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-add-seminar',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-seminar.html',
   styleUrl: './add-seminar.scss',
 })
@@ -58,6 +58,11 @@ export class AddSeminar implements OnInit {
   saving = false;
   isEventCalendarOpen = false;
   eventCalendarView = this.defaultCalendarView();
+  selectedBannerImage: File | null = null;
+  bannerPreviewUrl: string | null = null;
+  private readonly maxBannerImageSize = 4 * 1024 * 1024;
+  private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private existingBannerImageUrl: string | null = null;
   private seminarId: number | null = null;
 
   constructor(
@@ -320,7 +325,40 @@ export class AddSeminar implements OnInit {
     });
     this.takeaways.clear();
     this.addTakeaway();
+    this.selectedBannerImage = null;
+    this.existingBannerImageUrl = null;
+    this.setBannerPreviewUrl(null);
     this.formMessage = '';
+  }
+
+  onBannerImageChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!this.allowedBannerImageTypes.includes(file.type)) {
+      input.value = '';
+      this.formMessage = 'Please upload a JPG, PNG, or WEBP banner image.';
+      return;
+    }
+
+    if (file.size > this.maxBannerImageSize) {
+      input.value = '';
+      this.formMessage = 'Banner image cannot exceed 4 MB.';
+      return;
+    }
+
+    this.selectedBannerImage = file;
+    this.formMessage = '';
+    this.setBannerPreviewUrl(URL.createObjectURL(file));
+  }
+
+  clearSelectedBannerImage(): void {
+    this.selectedBannerImage = null;
+    this.setBannerPreviewUrl(this.existingBannerImageUrl);
   }
 
   async saveSeminar(): Promise<void> {
@@ -351,9 +389,10 @@ export class AddSeminar implements OnInit {
 
     try {
       const payload = this.getPayload();
+      const requestPayload = this.toFormData(payload, this.seminarId);
       const request$ = this.isEditMode && this.seminarId
-        ? this.seminarService.updateSeminar({ ...payload, id: this.seminarId })
-        : this.seminarService.createSeminar(payload);
+        ? this.seminarService.updateSeminar(requestPayload)
+        : this.seminarService.createSeminar(requestPayload);
       const response = await lastValueFrom(request$.pipe(timeout(20000)));
 
       if (response.status) {
@@ -414,6 +453,9 @@ export class AddSeminar implements OnInit {
       status: `${seminar.status}`,
     });
 
+    this.selectedBannerImage = null;
+    this.existingBannerImageUrl = seminar.bannerImageUrl || null;
+    this.setBannerPreviewUrl(this.existingBannerImageUrl);
     this.takeaways.clear();
     const takeaways = seminar.takeaways.length ? seminar.takeaways : [''];
     takeaways.forEach((takeaway) => this.takeaways.push(this.fb.control(takeaway)));
@@ -454,6 +496,44 @@ export class AddSeminar implements OnInit {
     return text || null;
   }
 
+  private toFormData(payload: SeminarPayload, id?: number | null): FormData {
+    const formData = new FormData();
+
+    if (id) {
+      formData.append('id', `${id}`);
+    }
+
+    formData.append('title', payload.title);
+    formData.append('topic', payload.topic);
+    formData.append('venue', payload.venue);
+    formData.append('city', payload.city);
+    formData.append('eventDate', payload.eventDate);
+    formData.append('startDate', payload.startDate);
+    formData.append('endDate', payload.endDate || '');
+    formData.append('startTime', payload.startTime);
+    formData.append('endTime', payload.endTime || '');
+    formData.append('speakerName', payload.speakerName);
+    formData.append('capacity', `${payload.capacity}`);
+    formData.append('price', `${payload.price}`);
+    formData.append('description', payload.description);
+    formData.append('takeaways', JSON.stringify(payload.takeaways));
+    formData.append('status', `${payload.status}`);
+
+    if (this.selectedBannerImage) {
+      formData.append('bannerImage', this.selectedBannerImage);
+    }
+
+    return formData;
+  }
+
+  private setBannerPreviewUrl(url: string | null): void {
+    if (this.bannerPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.bannerPreviewUrl);
+    }
+
+    this.bannerPreviewUrl = url;
+  }
+
   private getTimeValidationMessage(): string {
     const startTime = this.f['startTime'].value;
     const endTime = this.f['endTime'].value;
@@ -478,6 +558,7 @@ export class AddSeminar implements OnInit {
       capacity: 'Capacity',
       price: 'Fee',
       description: 'Description',
+      bannerImage: 'Banner Image',
       status: 'Status',
     };
 

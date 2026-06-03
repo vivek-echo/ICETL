@@ -200,16 +200,12 @@
 }
 
 .offline-date-field {
-  align-items: center;
   background: #ffffff;
   border: 1px solid #dbe4f0;
   border-radius: 8px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 38px minmax(0, 1fr);
   min-height: 54px;
-  overflow: hidden;
-  padding: 0 12px;
+  overflow: visible;
+  position: relative;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -224,52 +220,67 @@
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
 }
 
-.offline-date-field i {
+.offline-date-trigger {
   align-items: center;
-  background: #f1f4ff;
-  border-radius: 999px;
-  color: #2f57ef;
-  display: inline-flex;
-  font-size: 16px;
-  height: 34px;
-  justify-content: center;
-  pointer-events: none;
-  width: 34px;
-}
-
-.offline-date-field input[type="date"] {
   background: transparent;
   border: 0;
-  box-shadow: none;
   color: #172033;
-  font-weight: 700;
+  display: flex;
+  font-size: 15px;
+  font-weight: 800;
+  gap: 12px;
   height: 52px;
-  min-width: 0;
-  padding: 0;
+  justify-content: space-between;
+  padding: 0 12px 0 16px;
+  text-align: left;
   width: 100%;
 }
 
-.offline-date-field input[type="date"]:focus {
-  border: 0;
-  box-shadow: none;
+.offline-date-trigger:focus {
   outline: none;
 }
 
-.offline-date-field input[type="date"]::-webkit-calendar-picker-indicator {
-  background-color: #eef6ff;
-  border-radius: 8px;
-  cursor: pointer;
-  filter: hue-rotate(130deg) saturate(1.2);
-  height: 28px;
-  margin-left: 8px;
-  opacity: 0.9;
-  padding: 6px;
-  width: 28px;
+.offline-date-trigger .is-placeholder {
+  color: #334155;
 }
 
-.offline-date-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  background-color: #dfe6ff;
-  opacity: 1;
+.offline-date-trigger i {
+  align-items: center;
+  background: #f1f4ff;
+  border-radius: 10px;
+  color: #2f57ef;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 15px;
+  height: 36px;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 36px;
+}
+
+.offline-date-trigger:hover i,
+.offline-date-trigger[aria-expanded="true"] i {
+  background: linear-gradient(135deg, #2f57ef, #b966e7);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.offline-date-field .premium-calendar {
+  width: min(360px, calc(100vw - 48px));
+}
+
+.offline-date-field--end .premium-calendar {
+  left: auto;
+  right: 0;
+}
+
+.offline-date-field--end .premium-calendar::before {
+  left: auto;
+  right: 32px;
+}
+
+.offline-date-field .premium-calendar__day.is-selected {
+  background: linear-gradient(135deg, #2f57ef, #b966e7);
 }
 
 .offline-field-error {
@@ -279,6 +290,96 @@
   font-weight: 750;
   line-height: 1.35;
   margin-top: 7px;
+}
+
+.offline-banner-upload {
+  align-items: stretch;
+  background: #f8fbff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+  padding: 16px;
+}
+
+.offline-banner-upload__preview,
+.offline-preview__banner {
+  align-items: center;
+  background: #eef6ff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  color: #2f57ef;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.offline-banner-upload__preview {
+  aspect-ratio: 16 / 9;
+  min-height: 132px;
+}
+
+.offline-banner-upload__preview img,
+.offline-preview__banner img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.offline-banner-upload__preview i,
+.offline-preview__banner i {
+  font-size: 28px;
+}
+
+.offline-banner-upload__content {
+  align-self: center;
+}
+
+.offline-banner-upload__content > label {
+  color: #192335;
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.offline-banner-upload__content p {
+  color: #64748b;
+  font-size: 13px;
+  margin: -4px 0 12px;
+}
+
+.offline-banner-upload__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.offline-banner-upload__button {
+  align-items: center;
+  background: #2f57ef;
+  border: 1px solid #2f57ef;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.offline-banner-upload__button--muted {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.offline-banner-upload input[type='file'] {
+  display: none;
 }
 
 .offline-highlights {
@@ -534,6 +635,11 @@
   margin: -24px -24px 22px;
 }
 
+.offline-preview__banner {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 18px;
+}
+
 .offline-preview__top {
   align-items: center;
   display: flex;
@@ -678,14 +784,22 @@
     grid-template-columns: 1fr;
   }
 
-  .offline-date-field {
-    grid-template-columns: 34px minmax(0, 1fr);
-    padding: 0 10px;
+  .offline-banner-upload {
+    grid-template-columns: 1fr;
   }
 
-  .offline-date-field i {
-    height: 30px;
-    width: 30px;
+  .offline-date-trigger {
+    padding: 0 10px 0 12px;
+  }
+
+  .offline-date-field--end .premium-calendar {
+    left: 0;
+    right: auto;
+  }
+
+  .offline-date-field--end .premium-calendar::before {
+    left: 32px;
+    right: auto;
   }
 
   .offline-icon-btn {

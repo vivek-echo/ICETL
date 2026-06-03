@@ -1,0 +1,170 @@
+<section class="enquiries-page" aria-labelledby="enquiries-title">
+  <div class="enquiries-page__header">
+    <div>
+      <span class="enquiries-page__eyebrow">Contact Desk</span>
+      <h1 id="enquiries-title">Enquiries</h1>
+      <p>Review contact form enquiries and clear new items after follow-up.</p>
+    </div>
+
+    <div class="enquiries-page__actions">
+      @if (unreadCount > 0) {
+      <button
+        type="button"
+        class="enquiries-page__mark-all"
+        (click)="markAllRead()"
+        [disabled]="markingRead">
+        <i class="fa-solid fa-check-double"></i>
+        Mark All Read
+      </button>
+      }
+
+      <button
+        type="button"
+        class="enquiries-page__refresh"
+        (click)="loadEnquiries()"
+        [disabled]="loading"
+        title="Refresh enquiries">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="enquiry-summary">
+    <article>
+      <span>Total</span>
+      <strong>{{ total }}</strong>
+    </article>
+    <article>
+      <span>Unread</span>
+      <strong>{{ unreadCount }}</strong>
+    </article>
+  </div>
+
+  <div class="enquiry-filters">
+    <label>
+      <span>Search</span>
+      <input
+        type="search"
+        [(ngModel)]="search"
+        (keyup.enter)="applyFilters()"
+        placeholder="Name, email, phone, subject">
+    </label>
+
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="readStatus" (change)="applyFilters()">
+        @for (option of readStatusOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      <span>From</span>
+      <input type="date" [(ngModel)]="dateFrom" (change)="applyFilters()">
+    </label>
+
+    <label>
+      <span>To</span>
+      <input type="date" [(ngModel)]="dateTo" (change)="applyFilters()">
+    </label>
+
+    <button type="button" class="enquiry-filter-btn" (click)="applyFilters()">
+      <i class="fa-solid fa-filter"></i>
+      Filter
+    </button>
+    <button type="button" class="enquiry-filter-btn enquiry-filter-btn--ghost" (click)="clearFilters()">
+      <i class="fa-solid fa-rotate-left"></i>
+      Reset
+    </button>
+  </div>
+
+  @if (loading) {
+  <div class="enquiries-page__state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    Loading enquiries...
+  </div>
+  }
+
+  @if (!loading && enquiries.length === 0) {
+  <div class="enquiries-page__empty">
+    <i class="fa-solid fa-inbox"></i>
+    <h2>No enquiries found</h2>
+    <p>New contact form submissions will appear here.</p>
+  </div>
+  }
+
+  @if (!loading && enquiries.length > 0) {
+  <div class="enquiry-table-wrap">
+    <table class="enquiry-table">
+      <thead>
+        <tr>
+          <th>Visitor</th>
+          <th>Contact</th>
+          <th>Enquiry</th>
+          <th>Message</th>
+          <th>Received</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (enquiry of enquiries; track enquiry.id) {
+        <tr [class.enquiry-row--unread]="!enquiry.isRead">
+          <td>
+            <strong>{{ enquiry.fullName }}</strong>
+            <span>{{ enquiry.enquiryType }}</span>
+          </td>
+          <td>
+            <a [href]="'mailto:' + enquiry.email">{{ enquiry.email }}</a>
+            <a [href]="'tel:' + enquiry.phone">{{ enquiry.phone }}</a>
+          </td>
+          <td>
+            <strong>{{ enquiry.subject }}</strong>
+          </td>
+          <td>
+            <p>{{ enquiry.message }}</p>
+          </td>
+          <td>{{ formatDate(enquiry.createdOn) }}</td>
+          <td>
+            <span
+              class="enquiry-status"
+              [class.enquiry-status--read]="enquiry.isRead"
+              [class.enquiry-status--new]="!enquiry.isRead">
+              {{ enquiry.statusLabel }}
+            </span>
+            @if (enquiry.readByName && enquiry.readOn) {
+            <small>By {{ enquiry.readByName }} on {{ formatDate(enquiry.readOn) }}</small>
+            }
+          </td>
+          <td>
+            <button
+              type="button"
+              class="enquiry-table__action"
+              (click)="markAsRead(enquiry)"
+              [disabled]="enquiry.isRead || markingRead">
+              <i class="fa-solid fa-check"></i>
+              {{ enquiry.isRead ? 'Read' : 'Mark Read' }}
+            </button>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="enquiry-pagination">
+    <span>{{ total }} enquiry{{ total === 1 ? '' : 's' }}</span>
+    <div>
+      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <strong>{{ currentPage }} / {{ lastPage }}</strong>
+      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </footer>
+  }
+</section>

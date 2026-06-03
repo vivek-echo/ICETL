@@ -297,6 +297,96 @@
   margin-top: 7px;
 }
 
+.program-banner-upload {
+  align-items: stretch;
+  background: #f8fbff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+  padding: 16px;
+}
+
+.program-banner-upload__preview,
+.program-preview__banner {
+  align-items: center;
+  background: #eef6ff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  color: #2f57ef;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.program-banner-upload__preview {
+  aspect-ratio: 16 / 9;
+  min-height: 132px;
+}
+
+.program-banner-upload__preview img,
+.program-preview__banner img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.program-banner-upload__preview i,
+.program-preview__banner i {
+  font-size: 28px;
+}
+
+.program-banner-upload__content {
+  align-self: center;
+}
+
+.program-banner-upload__content > label {
+  color: #192335;
+  display: block;
+  font-size: 14px;
+  font-weight: 750;
+  margin-bottom: 10px;
+}
+
+.program-banner-upload__content p {
+  color: #64748b;
+  font-size: 13px;
+  margin: -4px 0 12px;
+}
+
+.program-banner-upload__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.program-banner-upload__button {
+  align-items: center;
+  background: #2f57ef;
+  border: 1px solid #2f57ef;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.program-banner-upload__button--muted {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.program-banner-upload input[type='file'] {
+  display: none;
+}
+
 .program-form__helper {
   align-items: flex-start;
   display: flex;
@@ -379,6 +469,11 @@
   display: block;
   height: 5px;
   margin: -24px -24px 22px;
+}
+
+.program-preview__banner {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 18px;
 }
 
 .program-preview__top {
@@ -530,6 +625,10 @@
   }
 
   .program-takeaways__row {
+    grid-template-columns: 1fr;
+  }
+
+  .program-banner-upload {
     grid-template-columns: 1fr;
   }
 

@@ -53,7 +53,7 @@
           <th>Student</th>
           <th>Amount</th>
           <th>Status</th>
-          <th>Payment ID</th>
+          <th>Transaction No</th>
           <th>Invoice</th>
           <th>Date</th>
         </tr>
@@ -68,7 +68,12 @@
           </td>
           <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(row.totalAmount) }}</td>
           <td><span class="admin-payment-chip" [class.admin-payment-chip--failed]="row.status !== 'paid'">{{ row.status }}</span></td>
-          <td>{{ row.razorpayPaymentId || 'Pending' }}</td>
+          <td>
+            <strong>{{ transactionIdentifier(row) }}</strong>
+            @if (paymentMethodLabel(row)) {
+            <span>{{ paymentMethodLabel(row) }}</span>
+            }
+          </td>
           <td>{{ row.invoiceNumber || 'Not generated' }}</td>
           <td>{{ formatDate(row.created_at) }}</td>
         </tr>

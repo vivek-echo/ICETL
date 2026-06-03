@@ -1,9 +1,9 @@
-<div class="offline-catalog">
-  <header class="offline-catalog__hero">
+<div class="offline-catalog" [class.offline-catalog--all]="isAllCoursesView">
+  <!-- <header class="offline-catalog__hero">
     <div>
-      <span>Offline Course Management</span>
-      <h1>My Offline Courses</h1>
-      <p>Review classroom course schedules, venue details, and publish status from one workspace.</p>
+      <span>{{ pageEyebrow }}</span>
+      <h1>{{ pageTitle }}</h1>
+      <p>{{ pageDescription }}</p>
     </div>
 
     <div class="offline-catalog__hero-actions">
@@ -11,66 +11,60 @@
         <i class="feather-plus"></i>
         Add Offline Course
       </button>
-      <button type="button" class="offline-action" (click)="clearFilters()">
-        <i class="feather-refresh-cw"></i>
-        Reset
-      </button>
-    </div>
-  </header>
 
+    </div>
+  </header> -->
+
+  @if (isAllCoursesView) {
   <section class="offline-summary" aria-label="Offline courses summary">
     <div>
       <i class="feather-book-open"></i>
       <span>Total Courses</span>
-      <strong>{{ courses.length }}</strong>
-      <p>Offline courses added by you</p>
+      <strong>{{ summary.totalCourses || meta.total }}</strong>
+      <p>{{ totalSummaryLabel }}</p>
     </div>
     <div>
       <i class="feather-check-circle"></i>
       <span>Active</span>
-      <strong>{{ activeCourses }}</strong>
+      <strong>{{ summary.activeCourses }}</strong>
       <p>Visible offline courses</p>
     </div>
     <div>
       <i class="feather-calendar"></i>
       <span>Upcoming</span>
-      <strong>{{ upcomingCourses }}</strong>
+      <strong>{{ summary.upcomingCourses }}</strong>
       <p>Courses scheduled ahead</p>
     </div>
+    <div>
+      <i class="feather-clock"></i>
+      <span>Ongoing</span>
+      <strong>{{ summary.ongoingCourses }}</strong>
+      <p>Courses in session today</p>
+    </div>
+    <div>
+      <i class="feather-check-square"></i>
+      <span>Completed</span>
+      <strong>{{ summary.completedCourses }}</strong>
+      <p>Finished classroom courses</p>
+    </div>
   </section>
+  }
 
   <div class="offline-toolbar">
-    <div class="offline-toolbar__heading">
-      <h2>Filter Offline Courses</h2>
-      <p>Search and filter by city, status, and sort order.</p>
-    </div>
-
-    <div class="rbt-form-group">
-      <label>Search</label>
+    <div class="rbt-form-group offline-toolbar__field offline-toolbar__field--search">
+      <label for="offlineCourseSearch">Search</label>
       <div class="offline-field">
         <i class="feather-search"></i>
-        <input type="text" placeholder="Course, venue, category..." [(ngModel)]="search">
+        <input id="offlineCourseSearch" type="text" placeholder="Course, venue, instructor..." autocomplete="off"
+          [(ngModel)]="search" (keyup.enter)="onSearch()">
       </div>
     </div>
 
-    <div class="rbt-form-group">
-      <label>City</label>
-      <div class="offline-field">
-        <i class="feather-map-pin"></i>
-        <select [(ngModel)]="city">
-          <option value="">All Cities</option>
-          @for (item of cityOptions; track item) {
-          <option [value]="item">{{ item }}</option>
-          }
-        </select>
-      </div>
-    </div>
-
-    <div class="rbt-form-group">
-      <label>Status</label>
-      <div class="offline-field">
+    <div class="rbt-form-group offline-toolbar__field">
+      <label for="offlineCourseStatus">Status</label>
+      <div class="offline-field offline-field--select">
         <i class="feather-activity"></i>
-        <select [(ngModel)]="status">
+        <select id="offlineCourseStatus" [(ngModel)]="status" (change)="onFilterChange()">
           <option value="">All Status</option>
           <option value="1">Active</option>
           <option value="0">Inactive</option>
@@ -78,11 +72,23 @@
       </div>
     </div>
 
-    <div class="rbt-form-group">
-      <label>Sort</label>
-      <div class="offline-field">
+    <div class="rbt-form-group offline-toolbar__field">
+      <label for="offlineCourseTimeline">Timeline</label>
+      <div class="offline-field offline-field--select">
+        <i class="feather-calendar"></i>
+        <select id="offlineCourseTimeline" [(ngModel)]="scheduleStatus" (change)="onFilterChange()">
+          @for (option of scheduleFilters; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group offline-toolbar__field">
+      <label for="offlineCourseSort">Sort</label>
+      <div class="offline-field offline-field--select">
         <i class="feather-sliders"></i>
-        <select [(ngModel)]="sortBy">
+        <select id="offlineCourseSort" [(ngModel)]="sortBy" (change)="onFilterChange()">
           @for (option of sortOptions; track option.value) {
           <option [ngValue]="option.value">{{ option.label }}</option>
           }
@@ -90,49 +96,96 @@
       </div>
     </div>
 
-    <button type="button" class="offline-toolbar__reset" (click)="clearFilters()">
-      <i class="feather-refresh-cw"></i>
-      Reset
-    </button>
+    <div class="rbt-form-group offline-toolbar__field">
+      <label for="offlineCoursePerPage">Per Page</label>
+      <div class="offline-field offline-field--select">
+        <i class="feather-list"></i>
+        <select id="offlineCoursePerPage" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="offline-toolbar__actions">
+        <button type="button" class="offline-action offline-action--primary offline-toolbar__button" (click)="onSearch()"
+          [disabled]="loading">
+          <i class="feather-filter"></i>
+          Apply
+        </button>
+        <button type="button" class="offline-action offline-toolbar__button" (click)="clearFilters()" [disabled]="loading">
+          <i class="feather-refresh-cw"></i>
+          Reset
+        </button>
+
+    </div>
   </div>
 
   @if (loading) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
+  <div class="offline-course-grid offline-course-grid--loading" aria-label="Loading offline courses">
+    @for (loader of skeletonRows; track loader) {
+    <article class="offline-course-card offline-course-card--skeleton">
+      <div class="offline-skeleton-media"></div>
+      <div class="offline-skeleton offline-skeleton--short"></div>
+      <div class="offline-skeleton offline-skeleton--title"></div>
+      <div class="offline-skeleton"></div>
+      <div class="offline-skeleton-grid">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </article>
+    }
   </div>
   }
 
-  @if (!loading && filteredCourses.length === 0) {
+  @if (!loading && courses.length === 0) {
   <div class="offline-empty">
     <i class="feather-calendar"></i>
     <h5>No Offline Courses Found</h5>
     <p>No offline courses match the selected filters.</p>
-    <a routerLink="/application/courses/manageOfflineCourse/add">Add Offline Course</a>
+    <a [routerLink]="addRoute">Add Offline Course</a>
   </div>
   }
 
-  @if (!loading && filteredCourses.length > 0) {
+  @if (!loading && courses.length > 0) {
   <div class="offline-course-grid">
-    @for (course of filteredCourses; track trackByCourseId($index, course)) {
+    @for (course of courses; track trackByCourseId($index, course)) {
     <article class="offline-course-card">
+      <div class="offline-course-card__banner" [class.offline-course-card__banner--empty]="!course.thumbnailUrl">
+        @if (course.thumbnailUrl) {
+        <img [src]="course.thumbnailUrl" [alt]="course.title + ' banner'" (error)="course.thumbnailUrl = null">
+        } @else {
+        <i class="feather-image"></i>
+        }
+      </div>
+
       <div class="offline-course-card__top">
         <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
-          {{ isActive(course) ? 'Active' : 'Inactive' }}
+          {{ course.statusLabel || (isActive(course) ? 'Active' : 'Inactive') }}
         </span>
         <span class="offline-course-card__category">{{ course.categoryName }}</span>
+        <span class="offline-course-card__timeline"
+          [class.offline-course-card__timeline--completed]="course.scheduleStatus === 'completed'">
+          {{ getScheduleLabel(course) }}
+        </span>
       </div>
 
       <h3>{{ course.title }}</h3>
-      <p class="offline-course-card__description">{{ course.description }}</p>
+      <p class="offline-course-card__description">
+        {{ course.description || 'Classroom learning details will appear here.' }}
+      </p>
 
       <div class="offline-course-card__meta">
         <span>
           <i class="feather-map-pin"></i>
-          {{ course.venue }}
+          {{ course.venue || 'Venue' }}
         </span>
         <span>
           <i class="feather-navigation"></i>
-          {{ course.city }}
+          {{ course.city || 'City' }}
         </span>
         <span>
           <i class="feather-calendar"></i>
@@ -152,12 +205,27 @@
       </ul>
       }
 
-      <div class="offline-course-card__instructor">
-        <div>{{ getInitial(course) }}</div>
-        <span>
-          Instructor
-          <strong>{{ course.instructorName }}</strong>
-        </span>
+      <div class="offline-course-card__people">
+        <div class="offline-course-card__person">
+          <div>{{ getInitial(course) }}</div>
+          <span>
+            Instructor
+            <strong>{{ course.instructorName || 'Instructor' }}</strong>
+          </span>
+        </div>
+
+        @if (isAllCoursesView) {
+        <div class="offline-course-card__person">
+          <div>{{ getCreatorInitial(course) }}</div>
+          <span>
+            Created by
+            <strong>{{ course.createdByName || 'Unknown User' }}</strong>
+            @if (course.createdByEmail) {
+            <small>{{ course.createdByEmail }}</small>
+            }
+          </span>
+        </div>
+        }
       </div>
 
       @if (course.youtubeLiveUrl || course.meetingLink) {
@@ -179,21 +247,399 @@
       }
 
       <footer class="offline-course-card__footer">
-        <div>
-          <strong>{{ formatPrice(course.price) }}</strong>
-        </div>
+        <strong>{{ formatPrice(course.price) }}</strong>
 
+        @if (isAllCoursesView) {
+        <button type="button" class="offline-action offline-action--primary offline-enroll-trigger"
+          (click)="openEnrollmentModal(course)">
+          <i class="feather-user-plus"></i>
+          Enroll Student
+        </button>
+        }
+
+        @if (!isAllCoursesView) {
         <div class="offline-course-card__actions">
           <button type="button" class="offline-icon-action" (click)="toggleStatus(course)" title="Toggle status">
             <i class="feather-power"></i>
           </button>
-          <button type="button" class="offline-icon-action offline-icon-action--danger" (click)="deleteCourse(course)" title="Delete course">
+          <button type="button" class="offline-icon-action offline-icon-action--danger" (click)="deleteCourse(course)"
+            title="Delete course">
             <i class="feather-trash-2"></i>
           </button>
         </div>
+        }
       </footer>
     </article>
     }
+  </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <div class="offline-pager">
+    <p>{{ getPaginationLabel() }}</p>
+
+    <div class="offline-pager__controls">
+      <button type="button" class="offline-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="feather-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="offline-pager__jump">
+        <span>Page</span>
+        <input type="number" min="1" [max]="meta.lastPage" [(ngModel)]="pageInput" (keyup.enter)="goToPageInput()"
+          (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </div>
+
+      <button type="button" class="offline-action offline-action--primary"
+        [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+        Next
+        <i class="feather-chevron-right"></i>
+      </button>
+    </div>
+    </div>
+  }
+
+  @if (enrollmentModalOpen) {
+  <div class="offline-modal-backdrop" (click)="closeEnrollmentModal()">
+    <section class="offline-enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="offlineEnrollmentTitle"
+      (click)="$event.stopPropagation()">
+      <header class="offline-enrollment-modal__header">
+        <div>
+          <span>Manual Offline Enrollment</span>
+          <h3 id="offlineEnrollmentTitle">Enroll Student</h3>
+          <p>{{ selectedEnrollmentCourse?.title }}</p>
+        </div>
+        <button type="button" class="offline-icon-action" title="Close" (click)="closeEnrollmentModal()"
+          [disabled]="enrollmentSubmitting">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <form class="offline-enrollment-form" (ngSubmit)="submitEnrollment()" novalidate>
+        <section class="offline-enrollment-summary-panel" aria-label="Enrollment payment summary">
+          <div>
+            <span>Course Fee</span>
+            <strong>{{ formatPrice(enrollmentForm.totalFee) }}</strong>
+          </div>
+          <div>
+            <span>Payment By</span>
+            <strong>{{ paymentByDisplayLabel }}</strong>
+          </div>
+          <div>
+            <span>Balance</span>
+            <strong>{{ formatPrice(enrollmentForm.amountBalance) }}</strong>
+          </div>
+        </section>
+
+        <div class="offline-enrollment-grid">
+          <div class="rbt-form-group">
+            <label for="offlineEnrollName">Name</label>
+            <input id="offlineEnrollName" name="enrollName" type="text" autocomplete="name"
+              [(ngModel)]="enrollmentForm.name" [class.offline-input--invalid]="getEnrollmentError('name')">
+            @if (getEnrollmentError('name')) {
+            <small class="offline-form-error">{{ getEnrollmentError('name') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="offlineEnrollEmail">Email</label>
+            <input id="offlineEnrollEmail" name="enrollEmail" type="email" autocomplete="email"
+              [(ngModel)]="enrollmentForm.email" [class.offline-input--invalid]="getEnrollmentError('email')">
+            @if (getEnrollmentError('email')) {
+            <small class="offline-form-error">{{ getEnrollmentError('email') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="offlineEnrollDob">DOB</label>
+            <div class="offline-date-field" [class.is-invalid]="getEnrollmentError('dob')"
+              [class.is-open]="openEnrollmentCalendar === 'dob'" (click)="keepEnrollmentCalendarOpen($event)">
+              <button id="offlineEnrollDob" type="button" class="offline-date-trigger"
+                [attr.aria-expanded]="openEnrollmentCalendar === 'dob'"
+                (click)="toggleEnrollmentCalendar('dob', $event)">
+                <span [class.is-placeholder]="!dobDisplayValue">{{ dobDisplayValue || 'dd-mm-yyyy' }}</span>
+                <i class="feather-calendar"></i>
+              </button>
+
+              @if (openEnrollmentCalendar === 'dob') {
+              <div class="premium-calendar offline-premium-calendar" (click)="keepEnrollmentCalendarOpen($event)">
+                <div class="premium-calendar__header">
+                  <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                    (click)="changeEnrollmentCalendarMonth('dob', -1)">
+                    <i class="feather-chevron-left"></i>
+                  </button>
+                  <div class="premium-calendar__selects">
+                    <select aria-label="DOB month" [value]="getEnrollmentCalendarView('dob').getMonth()"
+                      (change)="setEnrollmentCalendarMonth('dob', $event)">
+                      @for (month of calendarMonths; track month; let monthIndex = $index) {
+                      <option [value]="monthIndex">{{ month }}</option>
+                      }
+                    </select>
+                    <select aria-label="DOB year" [value]="getEnrollmentCalendarView('dob').getFullYear()"
+                      (change)="setEnrollmentCalendarYear('dob', $event)">
+                      @for (year of dobCalendarYearOptions; track year) {
+                      <option [value]="year">{{ year }}</option>
+                      }
+                    </select>
+                  </div>
+                  <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                    (click)="changeEnrollmentCalendarMonth('dob', 1)">
+                    <i class="feather-chevron-right"></i>
+                  </button>
+                </div>
+
+                <div class="premium-calendar__weekdays">
+                  @for (weekday of calendarWeekdays; track weekday) {
+                  <span>{{ weekday }}</span>
+                  }
+                </div>
+
+                <div class="premium-calendar__grid">
+                  @for (day of getEnrollmentCalendarDays('dob'); track day.iso) {
+                  <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                    [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                    (click)="selectEnrollmentCalendarDate('dob', day)">
+                    {{ day.day }}
+                  </button>
+                  }
+                </div>
+
+                <div class="premium-calendar__footer">
+                  <button type="button" (click)="clearEnrollmentCalendarDate('dob', $event)">Clear</button>
+                  <span>Format: dd-mm-yyyy</span>
+                </div>
+              </div>
+              }
+            </div>
+            @if (getEnrollmentError('dob')) {
+            <small class="offline-form-error">{{ getEnrollmentError('dob') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="offlineEnrollGender">Gender</label>
+            <select id="offlineEnrollGender" name="enrollGender" [(ngModel)]="enrollmentForm.gender"
+              [class.offline-input--invalid]="getEnrollmentError('gender')">
+              <option [ngValue]="''">Select Gender</option>
+              <option [ngValue]="1">Male</option>
+              <option [ngValue]="2">Female</option>
+            </select>
+            @if (getEnrollmentError('gender')) {
+            <small class="offline-form-error">{{ getEnrollmentError('gender') }}</small>
+            }
+          </div>
+        </div>
+
+        <div class="offline-payment-grid">
+          <div class="rbt-form-group">
+            <label for="offlineEnrollPaymentBy">Payment By</label>
+            <select id="offlineEnrollPaymentBy" name="enrollPaymentBy" [(ngModel)]="enrollmentForm.paymentBy"
+              (change)="onPaymentByChange()" [class.offline-input--invalid]="getEnrollmentError('paymentBy')">
+              <option [ngValue]="'CASH'">Cash</option>
+              <option [ngValue]="'UPI'">UPI</option>
+              <option [ngValue]="'NETBANKING'">Netbanking</option>
+            </select>
+            @if (getEnrollmentError('paymentBy')) {
+            <small class="offline-form-error">{{ getEnrollmentError('paymentBy') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="offlineEnrollTransactionNo">Transaction No</label>
+            <input id="offlineEnrollTransactionNo" name="enrollTransactionNo" type="text" maxlength="100"
+              autocomplete="off" [(ngModel)]="enrollmentForm.transactionNo"
+              (ngModelChange)="onTransactionNoChange()"
+              [class.offline-input--invalid]="getEnrollmentError('transactionNo')">
+            @if (getEnrollmentError('transactionNo')) {
+            <small class="offline-form-error">{{ getEnrollmentError('transactionNo') }}</small>
+            }
+          </div>
+        </div>
+
+        <div class="offline-fee-grid">
+          <div class="rbt-form-group">
+            <label for="offlineEnrollTotalFee">Total Fee</label>
+            <input id="offlineEnrollTotalFee" name="enrollTotalFee" type="number" readonly
+              [(ngModel)]="enrollmentForm.totalFee">
+          </div>
+
+          <div class="rbt-form-group offline-paid-field">
+            <label for="offlineEnrollAmountPaid">Amount Paid</label>
+            <input id="offlineEnrollAmountPaid" name="enrollAmountPaid" type="number" min="0" step="0.01"
+              [(ngModel)]="enrollmentForm.amountPaid" (ngModelChange)="onEnrollmentAmountPaidChange()"
+              [readonly]="enrollmentForm.paidInFull"
+              [class.offline-input--invalid]="getEnrollmentError('amountPaid')">
+            <label class="offline-checkbox">
+              <input name="enrollPaidInFull" type="checkbox" [(ngModel)]="enrollmentForm.paidInFull"
+                (change)="onPaidInFullChange()">
+              <span class="offline-checkbox__box" [class.is-checked]="enrollmentForm.paidInFull" aria-hidden="true">
+                <i class="feather-check"></i>
+              </span>
+              <span class="ms-2">Amount paid in full</span>
+            </label>
+            @if (getEnrollmentError('amountPaid')) {
+            <small class="offline-form-error">{{ getEnrollmentError('amountPaid') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="offlineEnrollBalance">Amount Balance</label>
+            <input id="offlineEnrollBalance" name="enrollBalance" type="number" readonly
+              [(ngModel)]="enrollmentForm.amountBalance"
+              [class.offline-input--invalid]="getEnrollmentError('amountBalance')">
+            @if (getEnrollmentError('amountBalance')) {
+            <small class="offline-form-error">{{ getEnrollmentError('amountBalance') }}</small>
+            }
+          </div>
+        </div>
+
+        @if (enrollmentForm.amountBalance > 0) {
+        <section class="offline-installments">
+          <div class="offline-installments__header">
+            <div>
+              <span>Installments</span>
+              <strong>{{ formatPrice(enrollmentForm.amountBalance) }} balance</strong>
+            </div>
+            <button type="button" class="offline-action" (click)="addPendingInstallment()"
+              [disabled]="enrollmentForm.installments.length >= maxInstallmentRows">
+              <i class="feather-plus"></i>
+              Add Row
+            </button>
+          </div>
+
+          @if (installmentLimitMessage || getEnrollmentError('installments')) {
+          <small class="offline-form-error offline-form-error--block">
+            {{ installmentLimitMessage || getEnrollmentError('installments') }}
+          </small>
+          }
+
+          <div class="offline-installment-list">
+            @for (installment of enrollmentForm.installments; track installment.installmentNo; let i = $index) {
+            <div class="offline-installment-row" [class.offline-installment-row--paid]="installment.status === 'PAID'">
+              <span class="offline-installment-row__number">#{{ installment.installmentNo }}</span>
+
+              <div class="rbt-form-group">
+                <label [for]="'offlineInstallmentDate' + i">
+                  {{ installment.status === 'PAID' ? 'Paid Date' : 'Expected Date' }}
+                </label>
+                @if (installment.status === 'PAID') {
+                <div class="offline-paid-date-chip">
+                  <i class="feather-check-circle"></i>
+                  <span>Paid on enrollment</span>
+                </div>
+                } @else {
+                <div class="offline-date-field offline-date-field--installment"
+                  [class.is-invalid]="getEnrollmentError('installments.' + i + '.expectedDate')"
+                  [class.is-open]="openEnrollmentCalendar === calendarTargetForInstallment(i)"
+                  (click)="keepEnrollmentCalendarOpen($event)">
+                  <button [id]="'offlineInstallmentDate' + i" type="button" class="offline-date-trigger"
+                    [attr.aria-expanded]="openEnrollmentCalendar === calendarTargetForInstallment(i)"
+                    (click)="toggleEnrollmentCalendar(calendarTargetForInstallment(i), $event)">
+                    <span [class.is-placeholder]="!installment.expectedDate">
+                      {{ getEnrollmentDateDisplay(installment.expectedDate) || 'dd-mm-yyyy' }}
+                    </span>
+                    <i class="feather-calendar"></i>
+                  </button>
+
+                  @if (openEnrollmentCalendar === calendarTargetForInstallment(i)) {
+                  <div class="premium-calendar offline-premium-calendar offline-premium-calendar--right"
+                    (click)="keepEnrollmentCalendarOpen($event)">
+                    <div class="premium-calendar__header">
+                      <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                        [disabled]="isEnrollmentPreviousMonthDisabled(calendarTargetForInstallment(i))"
+                        (click)="changeEnrollmentCalendarMonth(calendarTargetForInstallment(i), -1)">
+                        <i class="feather-chevron-left"></i>
+                      </button>
+                      <div class="premium-calendar__selects">
+                        <select aria-label="Installment month"
+                          [value]="getEnrollmentCalendarView(calendarTargetForInstallment(i)).getMonth()"
+                          (change)="setEnrollmentCalendarMonth(calendarTargetForInstallment(i), $event)">
+                          @for (month of calendarMonths; track month; let monthIndex = $index) {
+                          <option [value]="monthIndex">{{ month }}</option>
+                          }
+                        </select>
+                        <select aria-label="Installment year"
+                          [value]="getEnrollmentCalendarView(calendarTargetForInstallment(i)).getFullYear()"
+                          (change)="setEnrollmentCalendarYear(calendarTargetForInstallment(i), $event)">
+                          @for (year of installmentCalendarYearOptions; track year) {
+                          <option [value]="year">{{ year }}</option>
+                          }
+                        </select>
+                      </div>
+                      <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                        (click)="changeEnrollmentCalendarMonth(calendarTargetForInstallment(i), 1)">
+                        <i class="feather-chevron-right"></i>
+                      </button>
+                    </div>
+
+                    <div class="premium-calendar__weekdays">
+                      @for (weekday of calendarWeekdays; track weekday) {
+                      <span>{{ weekday }}</span>
+                      }
+                    </div>
+
+                    <div class="premium-calendar__grid">
+                      @for (day of getEnrollmentCalendarDays(calendarTargetForInstallment(i)); track day.iso) {
+                      <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                        [class.is-selected]="day.isSelected" [class.is-today]="day.isToday"
+                        [disabled]="day.isDisabled"
+                        (click)="selectEnrollmentCalendarDate(calendarTargetForInstallment(i), day)">
+                        {{ day.day }}
+                      </button>
+                      }
+                    </div>
+
+                    <div class="premium-calendar__footer">
+                      <button type="button"
+                        (click)="clearEnrollmentCalendarDate(calendarTargetForInstallment(i), $event)">Clear</button>
+                      <span>Format: dd-mm-yyyy</span>
+                    </div>
+                  </div>
+                  }
+                </div>
+                }
+                @if (getEnrollmentError('installments.' + i + '.expectedDate')) {
+                <small class="offline-form-error">
+                  {{ getEnrollmentError('installments.' + i + '.expectedDate') }}
+                </small>
+                }
+              </div>
+
+              <div class="rbt-form-group">
+                <label [for]="'offlineInstallmentAmount' + i">Amount</label>
+                <input [id]="'offlineInstallmentAmount' + i" [name]="'installmentAmount' + i" type="number" readonly
+                  [(ngModel)]="installment.amount">
+              </div>
+
+              <span class="offline-installment-row__status">{{ installment.status === 'PAID' ? 'Paid now' : 'Pending' }}</span>
+
+              @if (installment.status === 'PENDING') {
+              <button type="button" class="offline-icon-action offline-icon-action--danger" title="Remove row"
+                (click)="removePendingInstallment(i)" [disabled]="pendingInstallmentCount <= 1">
+                <i class="feather-trash-2"></i>
+              </button>
+              }
+            </div>
+            }
+          </div>
+        </section>
+        }
+
+        <footer class="offline-enrollment-modal__footer">
+          <button type="button" class="offline-action" (click)="closeEnrollmentModal()"
+            [disabled]="enrollmentSubmitting">
+            Cancel
+          </button>
+          <button type="submit" class="offline-action offline-action--primary" [disabled]="enrollmentSubmitting">
+            @if (enrollmentSubmitting) {
+            <span class="offline-button-spinner"></span>
+            }
+            Enroll Student
+          </button>
+        </footer>
+      </form>
+    </section>
   </div>
   }
 </div>

@@ -140,4 +140,36 @@ export class PaymentLogComponent implements OnInit {
       year: 'numeric',
     }).format(new Date(value));
   }
+
+  paymentIdentifier(record: Invoice | PaymentLog | null | undefined): string {
+    const value =
+      record?.paymentDisplayId ||
+      record?.razorpayPaymentId ||
+      record?.transactionNo ||
+      record?.paymentReference ||
+      '';
+
+    return value.toString().trim() || 'Pending';
+  }
+
+  paymentMethodLabel(record: Invoice | PaymentLog | null | undefined): string {
+    const value =
+      record?.paymentBy ||
+      record?.paymentMethod ||
+      (record?.razorpayPaymentId ? 'RAZORPAY' : '');
+
+    return this.formatPaymentMethod(value);
+  }
+
+  private formatPaymentMethod(value: string | null | undefined): string {
+    const normalized = (value || '').toString().trim().toUpperCase();
+    const labels: Record<string, string> = {
+      CASH: 'Cash',
+      UPI: 'UPI',
+      NETBANKING: 'Netbanking',
+      RAZORPAY: 'Razorpay',
+    };
+
+    return labels[normalized] || value || '';
+  }
 }

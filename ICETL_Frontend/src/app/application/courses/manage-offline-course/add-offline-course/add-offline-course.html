@@ -1,15 +1,15 @@
-<header class="offline-builder__hero">
+<!-- <header class="offline-builder__hero">
   <div>
     <span>Offline Course</span>
     <h1>Add Offline Course</h1>
     <p>Create classroom, workshop, and campus training entries with venue, schedule, and pricing.</p>
   </div>
 
-  <a class="offline-builder__view-link" routerLink="/application/courses/manageOfflineCourse/view">
+  <a class="offline-builder__view-link" routerLink="/application/courses/manageOfflineCourses/viewMyOfflineCourses">
     <i class="feather-list"></i>
     View My Offline Courses
   </a>
-</header>
+</header> -->
 
 <div class="offline-builder__grid">
   <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="offline-form">
@@ -67,6 +67,36 @@
           <span>{{ f['description'].value?.length || 0 }}/300</span>
         </div>
       </div>
+
+      <div class="offline-banner-upload offline-form__full">
+        <div class="offline-banner-upload__preview" [class.offline-banner-upload__preview--empty]="!bannerPreviewUrl">
+          @if (bannerPreviewUrl) {
+          <img [src]="bannerPreviewUrl" alt="Offline course banner preview">
+          } @else {
+          <i class="feather-image"></i>
+          }
+        </div>
+
+        <div class="offline-banner-upload__content">
+          <label for="offlineBannerImage">Banner Image</label>
+          <p>JPG, PNG, or WEBP up to 2 MB.</p>
+          <div class="offline-banner-upload__actions">
+            <label class="offline-banner-upload__button" for="offlineBannerImage">
+              <i class="feather-upload"></i>
+              Choose Image
+            </label>
+            @if (selectedBannerImage) {
+            <button type="button" class="offline-banner-upload__button offline-banner-upload__button--muted"
+              (click)="clearBannerImage()">
+              <i class="feather-x"></i>
+              Clear
+            </button>
+            }
+          </div>
+          <input id="offlineBannerImage" type="file" accept="image/png,image/jpeg,image/webp"
+            (change)="onBannerImageChange($event)">
+        </div>
+      </div>
     </section>
 
     <section class="offline-form__section">
@@ -98,9 +128,66 @@
 
       <div class="rbt-form-group">
         <label for="offlineStartDate">Start Date</label>
-        <div class="offline-date-field" [class.is-invalid]="isInvalid('startDate')">
-          <i class="feather-calendar"></i>
-          <input id="offlineStartDate" type="date" formControlName="startDate">
+        <div class="offline-date-field" [class.is-invalid]="isInvalid('startDate')" (click)="keepCalendarOpen($event)">
+          <button id="offlineStartDate" type="button" class="offline-date-trigger"
+            [attr.aria-expanded]="openCalendar === 'startDate'" (click)="toggleCalendar('startDate', $event)">
+            <span [class.is-placeholder]="!startDateDisplayValue">
+              {{ startDateDisplayValue || 'dd-mm-yyyy' }}
+            </span>
+            <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+          </button>
+
+          @if (openCalendar === 'startDate') {
+          <div class="premium-calendar" (click)="keepCalendarOpen($event)">
+            <div class="premium-calendar__header">
+              <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                (click)="changeCalendarMonth('startDate', -1)">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="premium-calendar__selects">
+                <select aria-label="Start date month" [value]="calendarViews.startDate.getMonth()"
+                  (change)="setCalendarMonth('startDate', $event)">
+                  @for (month of calendarMonths; track month; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month }}</option>
+                  }
+                </select>
+                <select aria-label="Start date year" [value]="calendarViews.startDate.getFullYear()"
+                  (change)="setCalendarYear('startDate', $event)">
+                  @for (year of calendarYearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                (click)="changeCalendarMonth('startDate', 1)">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="premium-calendar__weekdays">
+              @for (weekday of calendarWeekdays; track weekday) {
+              <span>{{ weekday }}</span>
+              }
+            </div>
+
+            <div class="premium-calendar__grid">
+              @for (day of startDateCalendarDays; track day.iso) {
+              <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                (click)="selectCalendarDate('startDate', day)">
+                {{ day.day }}
+              </button>
+              }
+            </div>
+
+            <div class="premium-calendar__footer">
+              <button type="button" (click)="clearCalendarDate('startDate', $event)">Clear</button>
+              <span>Format: dd-mm-yyyy</span>
+            </div>
+          </div>
+          }
+
+          <input type="hidden" formControlName="startDate">
         </div>
         @if (getFieldError('startDate')) {
         <small class="offline-field-error">{{ getFieldError('startDate') }}</small>
@@ -109,9 +196,67 @@
 
       <div class="rbt-form-group">
         <label for="offlineEndDate">End Date</label>
-        <div class="offline-date-field" [class.is-invalid]="isInvalid('endDate') || hasDateRangeError()">
-          <i class="feather-calendar"></i>
-          <input id="offlineEndDate" type="date" formControlName="endDate" [attr.min]="f['startDate'].value || null">
+        <div class="offline-date-field offline-date-field--end"
+          [class.is-invalid]="isInvalid('endDate') || hasDateRangeError()" (click)="keepCalendarOpen($event)">
+          <button id="offlineEndDate" type="button" class="offline-date-trigger"
+            [attr.aria-expanded]="openCalendar === 'endDate'" (click)="toggleCalendar('endDate', $event)">
+            <span [class.is-placeholder]="!endDateDisplayValue">
+              {{ endDateDisplayValue || 'dd-mm-yyyy' }}
+            </span>
+            <i class="fa-regular fa-calendar-days" aria-hidden="true"></i>
+          </button>
+
+          @if (openCalendar === 'endDate') {
+          <div class="premium-calendar" (click)="keepCalendarOpen($event)">
+            <div class="premium-calendar__header">
+              <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                (click)="changeCalendarMonth('endDate', -1)">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="premium-calendar__selects">
+                <select aria-label="End date month" [value]="calendarViews.endDate.getMonth()"
+                  (change)="setCalendarMonth('endDate', $event)">
+                  @for (month of calendarMonths; track month; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month }}</option>
+                  }
+                </select>
+                <select aria-label="End date year" [value]="calendarViews.endDate.getFullYear()"
+                  (change)="setCalendarYear('endDate', $event)">
+                  @for (year of calendarYearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                (click)="changeCalendarMonth('endDate', 1)">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="premium-calendar__weekdays">
+              @for (weekday of calendarWeekdays; track weekday) {
+              <span>{{ weekday }}</span>
+              }
+            </div>
+
+            <div class="premium-calendar__grid">
+              @for (day of endDateCalendarDays; track day.iso) {
+              <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                (click)="selectCalendarDate('endDate', day)">
+                {{ day.day }}
+              </button>
+              }
+            </div>
+
+            <div class="premium-calendar__footer">
+              <button type="button" (click)="clearCalendarDate('endDate', $event)">Clear</button>
+              <span>Format: dd-mm-yyyy</span>
+            </div>
+          </div>
+          }
+
+          <input type="hidden" formControlName="endDate">
         </div>
         @if (hasDateRangeError()) {
         <small class="offline-field-error">End date cannot be earlier than start date.</small>
@@ -259,6 +404,14 @@
   </form>
 
   <aside class="offline-preview" aria-label="Offline course preview">
+    <div class="offline-preview__banner" [class.offline-preview__banner--empty]="!bannerPreviewUrl">
+      @if (bannerPreviewUrl) {
+      <img [src]="bannerPreviewUrl" alt="Offline course banner">
+      } @else {
+      <i class="feather-image"></i>
+      }
+    </div>
+
     <div class="offline-preview__top">
       <span [class.offline-preview__status--inactive]="f['status'].value === '0'">
         {{ f['status'].value === '0' ? 'Inactive' : 'Active' }}

@@ -164,6 +164,7 @@
 <!-- Menu Tree -->
 <div id="menuTree" class="menu-permission-card mt-2"></div>
 
+@csrf
 <button class="btn-main mt-3" onclick="savePermissions()"><i class="fa-solid fa-check-to-slot me-1"></i>Update</button>
 <script>
     function showLoader() {
@@ -186,6 +187,8 @@
         <p>Please choose a role to view and assign menu permissions.</p>
     </div>
 `;
+    let permissionLoadToken = 0;
+
     loadRoles();
 
     function loadRoles() {
@@ -207,25 +210,32 @@
     document.getElementById('roleSelect').addEventListener('change', function() {
 
         let roleId = this.value;
+        let currentToken = ++permissionLoadToken;
 
         if (!roleId) {
-            showEmptyState(); // optional
+            showEmptyState();
             return;
         }
 
         // Step 1: Load menu tree
         loadMenuTree(() => {
             // Step 2: After tree rendered → load permissions
-            loadSavedPermissions(roleId);
+            if (currentToken === permissionLoadToken) {
+                loadSavedPermissions(roleId, currentToken);
+            }
         });
 
     });
 
-    function loadSavedPermissions(roleId) {
+    function loadSavedPermissions(roleId, currentToken) {
 
         fetch(`{{ url('/console/getRolePermissions') }}/${roleId}`)
             .then(res => res.json())
             .then(data => {
+
+                if (currentToken !== permissionLoadToken || document.getElementById('roleSelect').value !== roleId) {
+                    return;
+                }
 
                 if (!data) return;
 
@@ -233,18 +243,20 @@
 
                     let id = cb.dataset.id;
 
+                    cb.checked = false;
+
                     if (data[id]) {
                         cb.checked = true;
                     }
                 });
+
+                syncCheckedParents();
 
                 // 🔥 Re-trigger logic (VERY IMPORTANT)
                 document.querySelectorAll('.global').forEach(el => el.dispatchEvent(new Event('change')));
                 document.querySelectorAll('.primary').forEach(el => el.dispatchEvent(new Event('change')));
             });
     }
-
-    document.getElementById('roleSelect').addEventListener('change', loadMenuTree);
 
     function loadMenuTree(callback = null) {
         showLoader();
@@ -335,6 +347,44 @@
             });
     }
 
+    function showEmptyState() {
+        permissionLoadToken++;
+
+        document.getElementById('menuTree').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <h5>Select a Role</h5>
+                <p>Please choose a role to view and assign menu permissions.</p>
+            </div>
+        `;
+    }
+
+    function syncCheckedParents() {
+        document.querySelectorAll('.primary:checked').forEach(primary => {
+            let global = primary.closest('.menu-group')?.querySelector('.global');
+
+            if (global) {
+                global.checked = true;
+            }
+        });
+
+        document.querySelectorAll('.tab:checked').forEach(tab => {
+            let primaryRow = tab.closest('.menu-children')?.previousElementSibling;
+            let primary = primaryRow?.querySelector('.primary');
+            let global = tab.closest('.menu-group')?.querySelector('.global');
+
+            if (primary) {
+                primary.checked = true;
+            }
+
+            if (global) {
+                global.checked = true;
+            }
+        });
+    }
+
     function attachCheckboxLogic() {
 
         // 🔥 GLOBAL SWITCH
@@ -396,6 +446,11 @@
     function savePermissions() {
 
         let roleId = document.getElementById('roleSelect').value;
+
+        if (!roleId) {
+            Swal.fire("Warning", "Please select a role", "warning");
+            return;
+        }
 
         let checked = document.querySelectorAll('.menu-check:checked');
 

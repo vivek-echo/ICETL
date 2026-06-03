@@ -12,6 +12,8 @@ import { AuthService } from '../commonServices/auth.service';
 import { ProfileModalService } from '../commonServices/profile-modal.service';
 import { FormValidationService } from '../commonServices/form-validation-service';
 import { FormValidationRules } from '../commonServices/form-validation-rules';
+import { ContactEnquiryService } from '../commonServices/contact-enquiry.service';
+import { ROLE } from '../commonServices/constants.service';
 
 @Component({
   selector: 'app-application',
@@ -34,8 +36,10 @@ export class Application implements OnInit, OnDestroy {
   private readonly el = inject(ElementRef);
   private readonly formValidationService = inject(FormValidationService);
   private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private hasCheckedEnquiryAlert = false;
 
   readonly defaultProfileImage = 'assets/images/team/avatar-2.jpg';
+  readonly enquiriesRoute = '/application/enquiries';
   readonly genderOptions = [
     { label: 'Male', value: '1' },
     { label: 'Female', value: '2' },
@@ -67,6 +71,7 @@ export class Application implements OnInit, OnDestroy {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly profileModalService: ProfileModalService,
+    private readonly contactEnquiryService: ContactEnquiryService,
   ) {
     this.userProfile = this.userProfileService.currentProfile;
   }
@@ -83,6 +88,8 @@ export class Application implements OnInit, OnDestroy {
         this.openProfileSettings();
       }),
     );
+
+    this.checkForNewEnquiries();
   }
 
   ngOnDestroy(): void {
@@ -115,6 +122,12 @@ export class Application implements OnInit, OnDestroy {
 
   get isInstructorProfileRoute(): boolean {
     return this.router.url.includes('/application/instructorProfile');
+  }
+
+  get canManageEnquiries(): boolean {
+    const role = Number(this.authService.getUser()?.role);
+
+    return role === ROLE.ADMIN || role === ROLE.ICETL_TEAM;
   }
 
   openProfileSettings(event?: Event): void {
@@ -326,6 +339,42 @@ export class Application implements OnInit, OnDestroy {
     }
 
     return apiError?.error?.message || fallbackMessage;
+  }
+
+  private checkForNewEnquiries(): void {
+    if (this.hasCheckedEnquiryAlert || !this.canManageEnquiries) {
+      return;
+    }
+
+    this.hasCheckedEnquiryAlert = true;
+
+    this.subscriptions.add(
+      this.contactEnquiryService.getUnreadCount().subscribe({
+        next: (response) => {
+          const unreadCount = Number(response.data?.unreadCount ?? 0);
+
+          if (!response.status || unreadCount <= 0) {
+            return;
+          }
+
+          const message =
+            unreadCount === 1
+              ? 'There is 1 new enquiry waiting for review.'
+              : `There are ${unreadCount} new enquiries waiting for review.`;
+
+          void this.alertHelper
+            .confirm(message, 'New Enquiry', 'See enquiries', 'OK', 'info')
+            .then((seeEnquiries) => {
+              if (seeEnquiries) {
+                void this.router.navigate([this.enquiriesRoute]);
+              }
+            });
+        },
+        error: () => {
+          this.hasCheckedEnquiryAlert = false;
+        },
+      }),
+    );
   }
 
   async logoutUser(event: Event): Promise<void> {

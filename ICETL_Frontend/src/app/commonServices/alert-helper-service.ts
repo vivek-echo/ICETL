@@ -62,7 +62,7 @@ export class AlertHelperService {
       text: message,
       showCancelButton: true,
       confirmButtonColor: '#5E35B1',
-      cancelButtonColor: cancelButtonText === 'Stay Here' ? '#6b7280' : '#d33',
+      cancelButtonColor: ['Stay Here', 'OK'].includes(cancelButtonText) ? '#6b7280' : '#d33',
       confirmButtonText,
       cancelButtonText,
       reverseButtons: cancelButtonText === 'Stay Here',

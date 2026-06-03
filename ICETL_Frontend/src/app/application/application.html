@@ -77,6 +77,11 @@
                             <li><a routerLink="/application/paymentLog" routerLinkActive="active"
                                 [routerLinkActiveOptions]="{ exact: true }"><i
                                   class="feather-file-text"></i><span>Payment Log</span></a></li>
+                            @if (canManageEnquiries) {
+                            <li><a [routerLink]="enquiriesRoute" routerLinkActive="active"
+                                [routerLinkActiveOptions]="{ exact: true }"><i
+                                  class="feather-inbox"></i><span>Enquiries</span></a></li>
+                            }
                             <li><a href="javascript:void(0);" (click)="logoutUser($event)"><i
                                   class="feather-log-out"></i><span>Logout</span></a></li>
                           </ul>

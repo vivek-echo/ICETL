@@ -531,6 +531,7 @@ class PaymentController extends Controller
         $status = $request->query('status');
         $search = trim((string) $request->query('search', ''));
         $perPage = min(max((int) $request->query('perPage', 10), 5), 50);
+        $hasOfflinePaymentColumns = $this->hasOfflinePaymentLogColumns();
 
         $query = DB::table('orders as o')
             ->leftJoin('payments as p', function ($join) {
@@ -541,33 +542,56 @@ class PaymentController extends Controller
             })
             ->where('o.userId', $userId)
             ->where('o.deletedFlag', 0)
-            ->whereIn('o.status', ['paid', 'failed', 'cancelled', 'pending'])
-            ->select(
-                'o.id',
-                'o.orderReference',
-                'o.totalAmount',
-                'o.currency',
-                'o.status',
-                'o.razorpayOrderId',
-                'o.created_at',
-                'p.razorpayPaymentId',
-                'p.status as paymentStatus',
-                'p.failureReason',
-                'i.invoiceNumber',
-                'i.id as invoiceId'
-            )
-            ->orderByDesc('o.id');
+            ->whereIn('o.status', ['paid', 'failed', 'cancelled', 'pending']);
+
+        if ($hasOfflinePaymentColumns) {
+            $query->leftJoin('payment_logs as pl', function ($join) {
+                $join->on('pl.orderId', '=', 'o.id')
+                    ->where('pl.eventType', 'offline.manual_enrollment')
+                    ->where('pl.deletedFlag', 0);
+            });
+        }
+
+        $selectColumns = [
+            'o.id',
+            'o.orderReference',
+            'o.totalAmount',
+            'o.currency',
+            'o.status',
+            'o.razorpayOrderId',
+            'o.created_at',
+            'p.razorpayPaymentId',
+            'p.paymentReference',
+            'p.paymentMethod',
+            'p.status as paymentStatus',
+            'p.failureReason',
+            'i.invoiceNumber',
+            'i.paymentReference as invoicePaymentReference',
+            'i.id as invoiceId',
+        ];
+
+        $query->select(...array_merge(
+            $selectColumns,
+            $this->offlinePaymentLogSelects($hasOfflinePaymentColumns)
+        ))->orderByDesc('o.id');
 
         if ($status && $status !== 'all') {
             $query->where('o.status', $status);
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $query->where(function ($q) use ($search, $hasOfflinePaymentColumns) {
                 $q->where('o.orderReference', 'like', "%{$search}%")
                     ->orWhere('o.razorpayOrderId', 'like', "%{$search}%")
                     ->orWhere('p.razorpayPaymentId', 'like', "%{$search}%")
+                    ->orWhere('p.paymentReference', 'like', "%{$search}%")
+                    ->orWhere('i.paymentReference', 'like', "%{$search}%")
                     ->orWhere('i.invoiceNumber', 'like', "%{$search}%");
+
+                if ($hasOfflinePaymentColumns) {
+                    $q->orWhere('pl.transactionNo', 'like', "%{$search}%")
+                        ->orWhere('pl.referenceNo', 'like', "%{$search}%");
+                }
             });
         }
 
@@ -588,6 +612,25 @@ class PaymentController extends Controller
             'paymentStatus' => $order->paymentStatus,
             'razorpayOrderId' => $order->razorpayOrderId,
             'razorpayPaymentId' => $order->razorpayPaymentId,
+            'paymentReference' => $order->paymentReference,
+            'paymentMethod' => $this->paymentMethodLabel(
+                $order->paymentMethod,
+                $order->offlinePaymentBy,
+                $order->razorpayPaymentId
+            ),
+            'paymentBy' => $this->paymentMethodLabel(
+                $order->paymentMethod,
+                $order->offlinePaymentBy,
+                $order->razorpayPaymentId
+            ),
+            'transactionNo' => $order->offlineTransactionNo,
+            'paymentDisplayId' => $this->paymentDisplayId(
+                $order->razorpayPaymentId,
+                $order->offlineTransactionNo,
+                $order->invoicePaymentReference,
+                $order->paymentReference,
+                $order->offlineReferenceNo
+            ),
             'failureReason' => $order->failureReason,
             'created_at' => $order->created_at,
             'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
@@ -751,20 +794,71 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        $hasOfflinePaymentColumns = $this->hasOfflinePaymentLogColumns();
         $paidTotal = (float) DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->sum('totalAmount');
         $successfulPayments = DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->count();
         $failedPayments = DB::table('payments')->whereIn('status', ['failed', 'cancelled'])->where('deletedFlag', 0)->count();
         $refunds = DB::table('refund_requests')->where('deletedFlag', 0)->count();
 
-        $recent = DB::table('orders as o')
+        $recentQuery = DB::table('orders as o')
             ->leftJoin('users as u', 'u.id', '=', 'o.userId')
-            ->leftJoin('payments as p', 'p.orderId', '=', 'o.id')
+            ->leftJoin('payments as p', function ($join) {
+                $join->on('p.orderId', '=', 'o.id')->where('p.deletedFlag', 0);
+            })
             ->leftJoin('invoices as i', 'i.orderId', '=', 'o.id')
-            ->where('o.deletedFlag', 0)
-            ->select('o.id', 'o.orderReference', 'o.totalAmount', 'o.status', 'o.created_at', 'u.name as userName', 'u.email as userEmail', 'p.razorpayPaymentId', 'i.invoiceNumber')
+            ->where('o.deletedFlag', 0);
+
+        if ($hasOfflinePaymentColumns) {
+            $recentQuery->leftJoin('payment_logs as pl', function ($join) {
+                $join->on('pl.orderId', '=', 'o.id')
+                    ->where('pl.eventType', 'offline.manual_enrollment')
+                    ->where('pl.deletedFlag', 0);
+            });
+        }
+
+        $recentSelectColumns = [
+            'o.id',
+            'o.orderReference',
+            'o.totalAmount',
+            'o.status',
+            'o.created_at',
+            'u.name as userName',
+            'u.email as userEmail',
+            'p.razorpayPaymentId',
+            'p.paymentReference',
+            'p.paymentMethod',
+            'i.invoiceNumber',
+            'i.paymentReference as invoicePaymentReference',
+        ];
+
+        $recent = $recentQuery
+            ->select(...array_merge(
+                $recentSelectColumns,
+                $this->offlinePaymentLogSelects($hasOfflinePaymentColumns)
+            ))
             ->orderByDesc('o.id')
             ->limit(20)
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $paymentMethod = $this->paymentMethodLabel(
+                    $row->paymentMethod,
+                    $row->offlinePaymentBy,
+                    $row->razorpayPaymentId
+                );
+
+                $row->paymentMethod = $paymentMethod;
+                $row->paymentBy = $paymentMethod;
+                $row->transactionNo = $row->offlineTransactionNo;
+                $row->paymentDisplayId = $this->paymentDisplayId(
+                    $row->razorpayPaymentId,
+                    $row->offlineTransactionNo,
+                    $row->invoicePaymentReference,
+                    $row->paymentReference,
+                    $row->offlineReferenceNo
+                );
+
+                return $row;
+            });
 
         return response()->json([
             'success' => true,
@@ -806,7 +900,7 @@ class PaymentController extends Controller
             'tax' => $payload['tax'],
             'grandTotal' => $payload['totalAmount'],
             'currency' => $payload['currency'],
-            'paymentReference' => $payload['razorpayPaymentId'],
+            'paymentReference' => $payload['paymentDisplayId'] ?? $payload['paymentReference'] ?? $payload['razorpayPaymentId'] ?? null,
             'invoiceData' => json_encode($payload),
             'created_at' => now(),
             'updated_at' => now(),
@@ -831,7 +925,7 @@ class PaymentController extends Controller
             $payload = json_decode($invoice->invoiceData, true);
             if (is_array($payload)) {
                 $payload['invoiceNo'] = $invoice->invoiceNumber;
-                return $payload;
+                return $this->normalizeInvoicePaymentFields($payload);
             }
         }
 
@@ -848,7 +942,17 @@ class PaymentController extends Controller
             ->where('o.userId', $userId)
             ->where('o.status', 'paid')
             ->where('o.deletedFlag', 0)
-            ->select('o.*', 'p.razorpayPaymentId', 'p.status as paymentStatus', 'p.currency as paymentCurrency', 'u.name as userName', 'u.email as userEmail', 'u.phone as userPhone')
+            ->select(
+                'o.*',
+                'p.razorpayPaymentId',
+                'p.paymentReference',
+                'p.paymentMethod',
+                'p.status as paymentStatus',
+                'p.currency as paymentCurrency',
+                'u.name as userName',
+                'u.email as userEmail',
+                'u.phone as userPhone'
+            )
             ->first();
 
         if (!$order) {
@@ -875,6 +979,12 @@ class PaymentController extends Controller
 
         $invoice = DB::table('invoices')->where('orderId', $orderId)->where('deletedFlag', 0)->first();
 
+        $paymentMethod = $this->paymentMethodLabel(
+            $order->paymentMethod,
+            null,
+            $order->razorpayPaymentId
+        );
+
         return [
             'invoiceNo' => $invoice->invoiceNumber ?? 'INV-' . date('Y') . '-' . str_pad((string) $orderId, 6, '0', STR_PAD_LEFT),
             'orderId' => (int) $order->id,
@@ -885,6 +995,13 @@ class PaymentController extends Controller
             'paymentStatus' => $order->paymentStatus,
             'razorpayOrderId' => $order->razorpayOrderId,
             'razorpayPaymentId' => $order->razorpayPaymentId,
+            'paymentReference' => $order->paymentReference,
+            'paymentMethod' => $paymentMethod,
+            'paymentBy' => $paymentMethod,
+            'paymentDisplayId' => $this->paymentDisplayId(
+                $order->razorpayPaymentId,
+                $order->paymentReference
+            ),
             'currency' => $order->paymentCurrency ?: ($order->currency ?: self::CURRENCY),
             'customer' => [
                 'name' => $order->userName,
@@ -910,7 +1027,18 @@ class PaymentController extends Controller
         }
 
         try {
-            DB::table('payment_logs')->insert([
+            $transactionNo = $this->paymentDisplayId(
+                $data['transactionNo'] ?? null,
+                $request->input('razorpay_payment_id'),
+                data_get($data, 'webhookPayload.payload.payment.entity.id'),
+                data_get($data, 'webhookPayload.payload.refund.entity.payment_id')
+            );
+            $referenceNo = $this->paymentDisplayId(
+                $data['referenceNo'] ?? null,
+                $request->input('razorpay_order_id'),
+                data_get($data, 'webhookPayload.payload.payment.entity.order_id')
+            );
+            $payload = [
                 'userId' => $data['userId'] ?? optional($request->user())->id,
                 'orderId' => $data['orderId'] ?? null,
                 'paymentId' => $data['paymentId'] ?? null,
@@ -927,7 +1055,22 @@ class PaymentController extends Controller
                 'deletedFlag' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+
+            $optionalColumns = [
+                'paymentMode' => $transactionNo ? 'ONLINE' : null,
+                'paymentBy' => $transactionNo ? 'RAZORPAY' : null,
+                'referenceNo' => $referenceNo,
+                'transactionNo' => $transactionNo,
+            ];
+
+            foreach ($optionalColumns as $column => $value) {
+                if ($value !== null && Schema::hasColumn('payment_logs', $column)) {
+                    $payload[$column] = $value;
+                }
+            }
+
+            DB::table('payment_logs')->insert($payload);
         } catch (Throwable $e) {
             Log::warning('Unable to write payment log', ['error' => $e->getMessage()]);
         }
@@ -971,6 +1114,71 @@ class PaymentController extends Controller
         ], 422);
     }
 
+    private function hasOfflinePaymentLogColumns(): bool
+    {
+        return Schema::hasTable('payment_logs')
+            && Schema::hasColumn('payment_logs', 'transactionNo')
+            && Schema::hasColumn('payment_logs', 'referenceNo')
+            && Schema::hasColumn('payment_logs', 'paymentBy');
+    }
+
+    private function offlinePaymentLogSelects(bool $hasOfflinePaymentColumns): array
+    {
+        if ($hasOfflinePaymentColumns) {
+            return [
+                'pl.transactionNo as offlineTransactionNo',
+                'pl.referenceNo as offlineReferenceNo',
+                'pl.paymentBy as offlinePaymentBy',
+            ];
+        }
+
+        return [
+            DB::raw('NULL as offlineTransactionNo'),
+            DB::raw('NULL as offlineReferenceNo'),
+            DB::raw('NULL as offlinePaymentBy'),
+        ];
+    }
+
+    private function paymentDisplayId(mixed ...$values): ?string
+    {
+        foreach ($values as $value) {
+            $normalized = trim((string) ($value ?? ''));
+            if ($normalized !== '') {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function paymentMethodLabel(?string $paymentMethod, ?string $paymentBy, ?string $razorpayPaymentId): ?string
+    {
+        if ($this->paymentDisplayId($razorpayPaymentId)) {
+            return $this->paymentDisplayId($paymentMethod, 'RAZORPAY');
+        }
+
+        return $this->paymentDisplayId($paymentBy, $paymentMethod);
+    }
+
+    private function normalizeInvoicePaymentFields(array $payload): array
+    {
+        $payload['paymentDisplayId'] = $payload['paymentDisplayId'] ?? $this->paymentDisplayId(
+            $payload['razorpayPaymentId'] ?? null,
+            $payload['transactionNo'] ?? null,
+            $payload['paymentReference'] ?? null
+        );
+
+        $payload['paymentMethod'] = $payload['paymentMethod'] ?? $this->paymentMethodLabel(
+            null,
+            $payload['paymentBy'] ?? null,
+            $payload['razorpayPaymentId'] ?? null
+        );
+
+        $payload['paymentBy'] = $payload['paymentBy'] ?? $payload['paymentMethod'] ?? null;
+
+        return $payload;
+    }
+
     private function reference(string $prefix): string
     {
         return $prefix . '-' . now()->format('YmdHis') . '-' . strtoupper(bin2hex(random_bytes(4)));
@@ -984,8 +1192,11 @@ class PaymentController extends Controller
     private function invoiceHtml(array $invoice): string
     {
         $rows = collect($invoice['items'])->map(fn ($item) => '<tr><td>' . e($item['title']) . '</td><td>' . e($item['categoryName']) . '</td><td style="text-align:right">Rs. ' . number_format((float) $item['totalAmount'], 2) . '</td></tr>')->join('');
+        $paymentDisplayId = $invoice['paymentDisplayId'] ?? $this->paymentDisplayId($invoice['razorpayPaymentId'] ?? null, $invoice['transactionNo'] ?? null, $invoice['paymentReference'] ?? null);
+        $paymentMethod = $invoice['paymentBy'] ?? $invoice['paymentMethod'] ?? (($invoice['razorpayPaymentId'] ?? null) ? 'RAZORPAY' : null);
+        $orderReference = $invoice['orderReference'] ?? $invoice['razorpayOrderId'] ?? '';
 
-        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($invoice['razorpayOrderId'] ?? '') . '</p><p>Payment: ' . e($invoice['razorpayPaymentId'] ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Course</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
+        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Course</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
     }
 
     private function privateFileUrl(Request $request, string $path): string

@@ -24,7 +24,7 @@
         type="search"
         [(ngModel)]="search"
         (keyup.enter)="applyFilters()"
-        placeholder="Invoice, order, or payment ID">
+        placeholder="Invoice, order, or transaction no">
     </label>
 
     <label>
@@ -71,7 +71,7 @@
           <th>Courses</th>
           <th>Amount</th>
           <th>Status</th>
-          <th>Payment ID</th>
+          <th>Transaction No</th>
           <th></th>
         </tr>
       </thead>
@@ -97,7 +97,12 @@
             <small class="payment-failure-reason">{{ log.failureReason }}</small>
             }
           </td>
-          <td>{{ log.razorpayPaymentId || 'Pending' }}</td>
+          <td>
+            <strong>{{ paymentIdentifier(log) }}</strong>
+            @if (paymentMethodLabel(log)) {
+            <span>{{ paymentMethodLabel(log) }}</span>
+            }
+          </td>
           <td>
             @if (log.status === 'paid') {
             <button type="button" class="payment-table__action" (click)="viewInvoice(log.id)">
@@ -175,8 +180,11 @@
       <div>
         <span>Order Date</span>
         <strong>{{ formatDate(selectedInvoice.orderDate) }}</strong>
-        <p>Order ID: {{ selectedInvoice.razorpayOrderId }}</p>
-        <p>Payment ID: {{ selectedInvoice.razorpayPaymentId || 'Pending' }}</p>
+        <p>Order Ref: {{ selectedInvoice.orderReference || selectedInvoice.razorpayOrderId || ('Order #' + selectedInvoice.orderId) }}</p>
+        <p>Transaction No: {{ paymentIdentifier(selectedInvoice) }}</p>
+        @if (paymentMethodLabel(selectedInvoice)) {
+        <p>Payment By: {{ paymentMethodLabel(selectedInvoice) }}</p>
+        }
       </div>
     </div>
 
@@ -208,7 +216,7 @@
 
     <div class="invoice-note">
       <i class="fa-solid fa-circle-check"></i>
-      This invoice is generated for a verified Razorpay payment.
+      This invoice is generated for a verified payment record.
     </div>
   </div>
 </section>

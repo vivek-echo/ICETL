@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
+import {
+  OfflineCourseEnrollmentPayload,
+  OfflineCourseEnrollmentResponse,
+  OfflineCourseListResponse,
+} from './offline-course';
 
 export interface PublicCourseInstructor {
   id: number;
@@ -97,8 +103,31 @@ export class Course {
   createOfflineCourse(payload: any): any {
     return this.http.post(`${this.API_URL}/createOfflineCourse`, payload, {});
   }
-  getOfflineCourses(payload: any = {}): any {
-    return this.http.post(`${this.API_URL}/getOfflineCourses`, payload, {});
+  getOfflineCourses(payload: any = {}): Observable<OfflineCourseListResponse> {
+    return this.getMyOfflineCourses(payload);
+  }
+  getMyOfflineCourses(payload: any = {}): Observable<OfflineCourseListResponse> {
+    return this.http.post<OfflineCourseListResponse>(
+      `${this.API_URL}/getMyOfflineCourses`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
+  }
+  getAllOfflineCourses(payload: any = {}): Observable<OfflineCourseListResponse> {
+    return this.http.post<OfflineCourseListResponse>(
+      `${this.API_URL}/getAllOfflineCourses`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
+  }
+  enrollOfflineCourseStudent(
+    payload: OfflineCourseEnrollmentPayload,
+  ): Observable<OfflineCourseEnrollmentResponse> {
+    return this.http.post<OfflineCourseEnrollmentResponse>(
+      `${this.API_URL}/offline-courses/enroll-student`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
   }
   updateOfflineCourseStatus(payload: any): any {
     return this.http.post(`${this.API_URL}/updateOfflineCourseStatus`, payload, {});
@@ -117,5 +146,11 @@ export class Course {
   }
   updateCourse(payload: any): any {
     return this.http.post(`${this.API_URL}/updateCourse`, payload, {});
+  }
+
+  private skipSpinnerOptions(): { context: HttpContext } {
+    return {
+      context: new HttpContext().set(SKIP_SPINNER, true),
+    };
   }
 }

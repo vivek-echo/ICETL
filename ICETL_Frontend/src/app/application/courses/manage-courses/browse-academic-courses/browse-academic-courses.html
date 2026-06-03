@@ -1,0 +1,289 @@
+<section class="academic-browser" aria-labelledby="academic-browser-title">
+  <header class="academic-hero">
+    <div class="academic-hero__content">
+      <span>Classroom Programs</span>
+      <h1 id="academic-browser-title">Browse Academic Courses</h1>
+      <p>Active offline courses that are open now or scheduled ahead.</p>
+    </div>
+
+    <div class="academic-hero__status" aria-label="Current catalog summary">
+      <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+      <span>Available Now</span>
+      <strong>{{ meta.total }}</strong>
+    </div>
+  </header>
+
+  <!-- <section class="academic-summary" aria-label="Academic course summary">
+    <div>
+      <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+      <span>Current Catalog</span>
+      <strong>{{ meta.total }}</strong>
+      <p>{{ selectedCategoryLabel }}</p>
+    </div>
+    <div>
+      <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+      <span>Upcoming</span>
+      <strong>{{ summary.upcomingCourses }}</strong>
+      <p>Starts after today</p>
+    </div>
+    <div>
+      <i class="fa-solid fa-person-chalkboard" aria-hidden="true"></i>
+      <span>Ongoing</span>
+      <strong>{{ summary.ongoingCourses }}</strong>
+      <p>In session today</p>
+    </div>
+    <div>
+      <i class="fa-solid fa-filter" aria-hidden="true"></i>
+      <span>Active Filters</span>
+      <strong>{{ activeFilterCount }}</strong>
+      <p>Newest courses first</p>
+    </div>
+  </section> -->
+
+  <section class="academic-toolbar" aria-label="Academic course filters">
+    <div class="academic-toolbar__top">
+      <div>
+        <h2>Academic Course Catalog</h2>
+        <p>Active offline courses, sorted by latest creation.</p>
+      </div>
+
+      <div class="timeline-control" aria-label="Timeline filter">
+        @for (option of timelineFilters; track option.value) {
+        <button
+          type="button"
+          [class.is-active]="timeline === option.value"
+          (click)="selectTimeline(option.value)">
+          {{ option.label }}
+        </button>
+        }
+      </div>
+    </div>
+
+    <div class="academic-filter-grid">
+      <div class="rbt-form-group academic-field academic-field--search">
+        <label for="academicCourseSearch">Search</label>
+        <div class="academic-field__control">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input
+            id="academicCourseSearch"
+            type="text"
+            placeholder="Course, venue, instructor"
+            autocomplete="off"
+            [(ngModel)]="search"
+            (keyup.enter)="onSearch()">
+        </div>
+      </div>
+
+      <div class="rbt-form-group academic-field">
+        <label for="academicCourseCategory">Category</label>
+        <div class="academic-field__control academic-field__control--select">
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          <select
+            id="academicCourseCategory"
+            [(ngModel)]="categoryId"
+            (change)="onFilterChange()"
+            [disabled]="categoriesLoading">
+            <option value="">All Categories</option>
+            @for (category of categories; track category.id) {
+            <option [ngValue]="category.id">{{ category.categoryName }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="rbt-form-group academic-field">
+        <label for="academicCourseCity">City</label>
+        <div class="academic-field__control">
+          <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+          <input
+            id="academicCourseCity"
+            type="text"
+            placeholder="Any city"
+            autocomplete="off"
+            [(ngModel)]="city"
+            (keyup.enter)="onFilterChange()">
+        </div>
+      </div>
+
+      <div class="rbt-form-group academic-field">
+        <label for="academicCourseSort">Sort</label>
+        <div class="academic-field__control academic-field__control--select">
+          <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+          <select id="academicCourseSort" [(ngModel)]="sortBy" (change)="onFilterChange()">
+            @for (option of sortOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="rbt-form-group academic-field">
+        <label for="academicCoursePerPage">Per Page</label>
+        <div class="academic-field__control academic-field__control--select">
+          <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+          <select id="academicCoursePerPage" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+            @for (option of perPageOptions; track option) {
+            <option [ngValue]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="academic-toolbar__actions">
+        <button type="button" class="academic-action academic-action--primary" (click)="onSearch()" [disabled]="loading">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          Apply
+        </button>
+        <button type="button" class="academic-action" (click)="clearFilters()" [disabled]="loading">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          Reset
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (message) {
+  <div class="academic-message" role="status">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    {{ message }}
+  </div>
+  }
+
+  @if (loading) {
+  <div class="academic-grid" aria-label="Loading academic courses">
+    @for (loader of skeletonRows; track loader) {
+    <article class="academic-card academic-card--skeleton">
+      <span class="academic-skeleton academic-skeleton--media"></span>
+      <div class="academic-card__body">
+        <span class="academic-skeleton academic-skeleton--pill"></span>
+        <span class="academic-skeleton academic-skeleton--title"></span>
+        <span class="academic-skeleton academic-skeleton--line"></span>
+        <span class="academic-skeleton academic-skeleton--line academic-skeleton--short"></span>
+        <div class="academic-skeleton-grid">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && courses.length === 0) {
+  <section class="academic-empty">
+    <div aria-hidden="true">
+      <i class="fa-solid fa-book-open-reader"></i>
+    </div>
+    <h2>No academic courses found</h2>
+    <p>Adjust the current filters and refresh the catalog.</p>
+    <button type="button" class="academic-action academic-action--primary" (click)="clearFilters()">
+      <i class="fa-solid fa-compass" aria-hidden="true"></i>
+      Browse Current Courses
+    </button>
+  </section>
+  }
+
+  @if (!loading && courses.length > 0) {
+  <div class="academic-grid">
+    @for (course of courses; track trackByCourseId($index, course)) {
+    <article class="academic-card">
+      <div class="academic-card__media">
+        <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+        <span class="academic-card__badge">Active</span>
+        <span class="academic-card__timeline" [ngClass]="getScheduleClass(course)">
+          {{ getScheduleLabel(course) }}
+        </span>
+      </div>
+
+      <div class="academic-card__body">
+        <div class="academic-card__kicker">
+          <span>{{ course.categoryName || 'Academic Course' }}</span>
+          <strong>{{ formatPrice(course.price) }}</strong>
+        </div>
+
+        <h2>{{ course.title }}</h2>
+        <p class="academic-card__description">
+          {{ course.description || 'Instructor-led classroom learning with structured sessions and guided practice.' }}
+        </p>
+
+        <div class="academic-meta">
+          <span>
+            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+            {{ getDateRange(course) }}
+          </span>
+          <span>
+            <i class="fa-regular fa-clock" aria-hidden="true"></i>
+            {{ getTimeRange(course) }}
+          </span>
+          <span>
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+            {{ getLocation(course) }}
+          </span>
+          <span>
+            <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+            {{ getInstructorLabel(course) }}
+          </span>
+        </div>
+
+        @if (getCourseHighlights(course).length > 0) {
+        <ul class="academic-highlights">
+          @for (highlight of getCourseHighlights(course); track $index) {
+          <li>{{ highlight }}</li>
+          }
+        </ul>
+        }
+      </div>
+
+      <footer class="academic-card__footer">
+        <span>
+          <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+          Created {{ formatCreatedDate(course.createdOn) }}
+        </span>
+        @if (course.meetingLink || course.youtubeLiveUrl) {
+        <span>
+          <i class="fa-solid fa-video" aria-hidden="true"></i>
+          Hybrid support
+        </span>
+        }
+      </footer>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <footer class="academic-pager">
+    <p>{{ getPaginationLabel() }}</p>
+
+    <div class="academic-pager__controls" aria-label="Pagination">
+      <button type="button" class="academic-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        Previous
+      </button>
+
+      <label class="academic-pager__jump">
+        <span>Page</span>
+        <input
+          type="number"
+          min="1"
+          [max]="meta.lastPage"
+          [(ngModel)]="pageInput"
+          (keyup.enter)="goToPageInput()"
+          (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </label>
+
+      <button
+        type="button"
+        class="academic-action academic-action--primary"
+        [disabled]="meta.currentPage === meta.lastPage"
+        (click)="goToNextPage()">
+        Next
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </footer>
+  }
+</section>

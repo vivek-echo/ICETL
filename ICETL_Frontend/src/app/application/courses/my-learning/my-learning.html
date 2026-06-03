@@ -1,0 +1,22 @@
+<div class="rbt-dashboard-content bg-color-white rbt-shadow-box mb--60 course-categories-page">
+  <div class="content">
+    <div class="advance-tab-button mb--30">
+      <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs" role="tablist">
+        @for (tab of tabs; track tab.id) {
+          <li role="presentation">
+            <a
+              class="tab-button"
+              [routerLink]="[tab.route]"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              #activeTab="routerLinkActive"
+              [attr.aria-selected]="activeTab.isActive">
+              <span class="title">  {{ tab.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+    <router-outlet />
+  </div>
+</div>

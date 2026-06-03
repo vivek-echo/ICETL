@@ -31,7 +31,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-add-workshop',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './add-workshop.html',
   styleUrl: './add-workshop.scss',
 })
@@ -63,6 +63,11 @@ export class AddWorkshop implements OnInit {
     startDate: this.defaultCalendarView(),
     endDate: this.defaultCalendarView(),
   };
+  selectedBannerImage: File | null = null;
+  bannerPreviewUrl: string | null = null;
+  private readonly maxBannerImageSize = 4 * 1024 * 1024;
+  private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private existingBannerImageUrl: string | null = null;
   private workshopId: number | null = null;
 
   constructor(
@@ -345,7 +350,40 @@ export class AddWorkshop implements OnInit {
     });
     this.takeaways.clear();
     this.addTakeaway();
+    this.selectedBannerImage = null;
+    this.existingBannerImageUrl = null;
+    this.setBannerPreviewUrl(null);
     this.formMessage = '';
+  }
+
+  onBannerImageChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!this.allowedBannerImageTypes.includes(file.type)) {
+      input.value = '';
+      this.formMessage = 'Please upload a JPG, PNG, or WEBP banner image.';
+      return;
+    }
+
+    if (file.size > this.maxBannerImageSize) {
+      input.value = '';
+      this.formMessage = 'Banner image cannot exceed 4 MB.';
+      return;
+    }
+
+    this.selectedBannerImage = file;
+    this.formMessage = '';
+    this.setBannerPreviewUrl(URL.createObjectURL(file));
+  }
+
+  clearSelectedBannerImage(): void {
+    this.selectedBannerImage = null;
+    this.setBannerPreviewUrl(this.existingBannerImageUrl);
   }
 
   async saveWorkshop(): Promise<void> {
@@ -376,9 +414,10 @@ export class AddWorkshop implements OnInit {
 
     try {
       const payload = this.getPayload();
+      const requestPayload = this.toFormData(payload, this.workshopId);
       const request$ = this.isEditMode && this.workshopId
-        ? this.workshopService.updateWorkshop({ ...payload, id: this.workshopId })
-        : this.workshopService.createWorkshop(payload);
+        ? this.workshopService.updateWorkshop(requestPayload)
+        : this.workshopService.createWorkshop(requestPayload);
       const response = await lastValueFrom(request$.pipe(timeout(20000)));
 
       if (response.status) {
@@ -439,6 +478,9 @@ export class AddWorkshop implements OnInit {
       status: `${workshop.status}`,
     });
 
+    this.selectedBannerImage = null;
+    this.existingBannerImageUrl = workshop.bannerImageUrl || null;
+    this.setBannerPreviewUrl(this.existingBannerImageUrl);
     this.takeaways.clear();
     const takeaways = workshop.takeaways.length ? workshop.takeaways : [''];
     takeaways.forEach((takeaway) => this.takeaways.push(this.fb.control(takeaway)));
@@ -480,6 +522,44 @@ export class AddWorkshop implements OnInit {
     return text || null;
   }
 
+  private toFormData(payload: WorkshopPayload, id?: number | null): FormData {
+    const formData = new FormData();
+
+    if (id) {
+      formData.append('id', `${id}`);
+    }
+
+    formData.append('title', payload.title);
+    formData.append('topic', payload.topic);
+    formData.append('venue', payload.venue);
+    formData.append('city', payload.city);
+    formData.append('eventDate', payload.eventDate);
+    formData.append('startDate', payload.startDate);
+    formData.append('endDate', payload.endDate || '');
+    formData.append('startTime', payload.startTime);
+    formData.append('endTime', payload.endTime || '');
+    formData.append('speakerName', payload.speakerName);
+    formData.append('capacity', `${payload.capacity}`);
+    formData.append('price', `${payload.price}`);
+    formData.append('description', payload.description);
+    formData.append('takeaways', JSON.stringify(payload.takeaways));
+    formData.append('status', `${payload.status}`);
+
+    if (this.selectedBannerImage) {
+      formData.append('bannerImage', this.selectedBannerImage);
+    }
+
+    return formData;
+  }
+
+  private setBannerPreviewUrl(url: string | null): void {
+    if (this.bannerPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.bannerPreviewUrl);
+    }
+
+    this.bannerPreviewUrl = url;
+  }
+
   private getDateValidationMessage(): string {
     if (this.itemForm.hasError('dateRange')) {
       this.f['endDate'].markAsTouched();
@@ -519,6 +599,7 @@ export class AddWorkshop implements OnInit {
       speakerName: 'Speaker',
       price: 'Fee',
       description: 'Description',
+      bannerImage: 'Banner Image',
       status: 'Status',
     };
 
