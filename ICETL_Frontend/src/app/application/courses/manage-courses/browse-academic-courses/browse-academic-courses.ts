@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { lastValueFrom, timeout } from 'rxjs';
+import { CourseCart, CourseCartItem } from '../../services/cart';
 import { Course } from '../../services/course';
 import {
   OfflineCourseItem,
@@ -45,6 +47,8 @@ export class BrowseAcademicCourses implements OnInit {
   loading = false;
   categoriesLoading = false;
   courses: OfflineCourseItem[] = [];
+  cartItems: CourseCartItem[] = [];
+  addingCourseIds = new Set<number>();
   categories: CourseCategory[] = [];
   search = '';
   city = '';
@@ -59,10 +63,18 @@ export class BrowseAcademicCourses implements OnInit {
 
   constructor(
     private readonly courseService: Course,
+    private readonly cartService: CourseCart,
+    private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
+    this.cartService.items$.subscribe((items) => {
+      this.cartItems = items;
+      this.cdr.markForCheck();
+    });
+
+    void this.cartService.loadCart();
     void this.loadCategories();
     void this.loadCourses();
   }
@@ -264,6 +276,56 @@ export class BrowseAcademicCourses implements OnInit {
     return course.instructorName || course.instructors?.map((instructor) => instructor.name).join(', ') || 'Instructor';
   }
 
+  async addToCart(course: OfflineCourseItem): Promise<void> {
+    if (this.isEnrolled(course)) {
+      this.message = 'Already enrolled in this course.';
+      return;
+    }
+
+    if (this.isInCart(course.id) || this.isAdding(course.id)) {
+      return;
+    }
+
+    this.addingCourseIds.add(course.id);
+
+    try {
+      const items = await this.cartService.addItem(this.toCartItem(course));
+      this.message = items.some((item) => item.id === course.id)
+        ? 'Course added to your cart.'
+        : 'Unable to add course to your cart.';
+    } finally {
+      this.addingCourseIds.delete(course.id);
+      this.cdr.markForCheck();
+    }
+  }
+
+  async buyNow(course: OfflineCourseItem): Promise<void> {
+    if (this.isEnrolled(course)) {
+      this.message = 'Already enrolled in this course.';
+      return;
+    }
+
+    if (!this.isInCart(course.id)) {
+      await this.addToCart(course);
+    }
+
+    if (this.isInCart(course.id)) {
+      void this.router.navigate(['/application/yourCart']);
+    }
+  }
+
+  isEnrolled(course: OfflineCourseItem): boolean {
+    return course.isEnrolled === true;
+  }
+
+  isInCart(courseId: number): boolean {
+    return this.cartItems.some((item) => item.id === courseId);
+  }
+
+  isAdding(courseId: number): boolean {
+    return this.addingCourseIds.has(courseId);
+  }
+
   getCourseHighlights(course: OfflineCourseItem, limit = 3): string[] {
     const highlights = course.courseHighlights?.length ? course.courseHighlights : course.highlights || [];
 
@@ -352,6 +414,22 @@ export class BrowseAcademicCourses implements OnInit {
       upcomingCourses: 0,
       ongoingCourses: 0,
       completedCourses: 0,
+    };
+  }
+
+  private toCartItem(course: OfflineCourseItem): CourseCartItem {
+    return {
+      id: course.id,
+      title: course.title,
+      categoryName: course.categoryName || 'Academic Course',
+      instructorName: this.getInstructorLabel(course),
+      duration: null,
+      durationUnit: null,
+      price: course.price,
+      oldPrice: null,
+      description: course.description,
+      courseHighlights: course.courseHighlights?.length ? course.courseHighlights : course.highlights || [],
+      thumbnailUrl: course.thumbnailUrl || null,
     };
   }
 

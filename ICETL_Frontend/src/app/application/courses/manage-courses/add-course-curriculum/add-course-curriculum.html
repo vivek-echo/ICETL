@@ -15,6 +15,9 @@
             Curriculum Builder
           </div>
           <h1>{{ course.title }}</h1>
+          @if (course.code) {
+          <span class="entity-code-badge entity-code-badge--light">{{ course.code }}</span>
+          }
           <p class="instructor-name">Instructor: {{ course.instructor }}</p>
 
           <div class="course-stats">

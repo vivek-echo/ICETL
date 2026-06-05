@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -313,6 +314,10 @@ class PaymentController extends Controller
                 'orderId' => (int) $order->id,
                 'paymentId' => $paymentId,
                 'status' => 'success',
+                'entityType' => $invoice['entityType'] ?? null,
+                'entityId' => $invoice['entityId'] ?? null,
+                'entityCode' => $invoice['entityCode'] ?? null,
+                'entityTitle' => $invoice['entityTitle'] ?? null,
                 'requestPayload' => $request->only(['orderId', 'razorpay_payment_id', 'razorpay_order_id']),
                 'verificationResult' => ['signature' => 'valid', 'enrollments' => $orderItems->count()],
             ]);
@@ -566,6 +571,9 @@ class PaymentController extends Controller
             'p.status as paymentStatus',
             'p.failureReason',
             'i.invoiceNumber',
+            Schema::hasColumn('invoices', 'entityType') ? 'i.entityType' : DB::raw('NULL as entityType'),
+            Schema::hasColumn('invoices', 'entityCode') ? 'i.entityCode' : DB::raw('NULL as entityCode'),
+            Schema::hasColumn('invoices', 'entityTitle') ? 'i.entityTitle' : DB::raw('NULL as entityTitle'),
             'i.paymentReference as invoicePaymentReference',
             'i.id as invoiceId',
         ];
@@ -588,9 +596,17 @@ class PaymentController extends Controller
                     ->orWhere('i.paymentReference', 'like', "%{$search}%")
                     ->orWhere('i.invoiceNumber', 'like', "%{$search}%");
 
+                if (Schema::hasColumn('invoices', 'entityCode')) {
+                    $q->orWhere('i.entityCode', 'like', "%{$search}%");
+                }
+
                 if ($hasOfflinePaymentColumns) {
                     $q->orWhere('pl.transactionNo', 'like', "%{$search}%")
                         ->orWhere('pl.referenceNo', 'like', "%{$search}%");
+
+                    if (Schema::hasColumn('payment_logs', 'entityCode')) {
+                        $q->orWhere('pl.entityCode', 'like', "%{$search}%");
+                    }
                 }
             });
         }
@@ -631,6 +647,9 @@ class PaymentController extends Controller
                 $order->paymentReference,
                 $order->offlineReferenceNo
             ),
+            'entityType' => $order->offlineEntityType ?? $order->entityType ?? null,
+            'entityCode' => $order->offlineEntityCode ?? $order->entityCode ?? null,
+            'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? null,
             'failureReason' => $order->failureReason,
             'created_at' => $order->created_at,
             'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
@@ -669,6 +688,7 @@ class PaymentController extends Controller
                 'e.progressPercent',
                 'e.lastWatchedAt',
                 'c.id',
+                EntityCodeService::codeSelect('courses', 'c'),
                 'c.title',
                 'c.categoryId',
                 'cc.categoryName as categoryName',
@@ -681,6 +701,9 @@ class PaymentController extends Controller
                 'c.courseHighlights',
                 'c.thumbnail',
                 'c.status',
+                'c.courseType',
+                'c.youtubeLiveUrl',
+                'c.meetingLink',
                 'o.razorpayOrderId',
                 'i.invoiceNumber'
             )
@@ -717,6 +740,7 @@ class PaymentController extends Controller
             return [
                 'enrollmentId' => (int) $course->enrollmentId,
                 'id' => (int) $course->id,
+                'code' => $course->code ?? null,
                 'title' => $course->title,
                 'categoryId' => (int) $course->categoryId,
                 'categoryName' => $course->categoryName ?: 'Uncategorized',
@@ -731,6 +755,9 @@ class PaymentController extends Controller
                 'thumbnailUrl' => $course->thumbnail ? $this->privateFileUrl($request, $course->thumbnail) : null,
                 'status' => (int) $course->status,
                 'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
+                'courseType' => (int) ($course->courseType ?? 1),
+                'youtubeLiveUrl' => $course->youtubeLiveUrl,
+                'meetingLink' => $course->meetingLink,
                 'progressPercent' => (int) ($course->progressPercent ?? 0),
                 'lastWatchedAt' => $course->lastWatchedAt,
                 'enrolledAt' => $course->enrolledAt,
@@ -749,7 +776,7 @@ class PaymentController extends Controller
 
     public function invoice(Request $request, int $orderId)
     {
-        $invoice = $this->buildInvoice($orderId, (int) $request->user()->id);
+        $invoice = $this->buildInvoice($orderId, (int) $request->user()->id, $this->isAdmin($request));
 
         if (!$invoice) {
             return response()->json(['success' => false, 'message' => 'Invoice not found.'], 404);
@@ -760,7 +787,7 @@ class PaymentController extends Controller
 
     public function downloadInvoice(Request $request, int $orderId)
     {
-        $invoice = $this->buildInvoice($orderId, (int) $request->user()->id);
+        $invoice = $this->buildInvoice($orderId, (int) $request->user()->id, $this->isAdmin($request));
 
         if (!$invoice) {
             return response('Invoice not found.', 404);
@@ -828,6 +855,9 @@ class PaymentController extends Controller
             'p.paymentReference',
             'p.paymentMethod',
             'i.invoiceNumber',
+            Schema::hasColumn('invoices', 'entityType') ? 'i.entityType' : DB::raw('NULL as entityType'),
+            Schema::hasColumn('invoices', 'entityCode') ? 'i.entityCode' : DB::raw('NULL as entityCode'),
+            Schema::hasColumn('invoices', 'entityTitle') ? 'i.entityTitle' : DB::raw('NULL as entityTitle'),
             'i.paymentReference as invoicePaymentReference',
         ];
 
@@ -856,6 +886,9 @@ class PaymentController extends Controller
                     $row->paymentReference,
                     $row->offlineReferenceNo
                 );
+                $row->entityType = $row->offlineEntityType ?? $row->entityType ?? null;
+                $row->entityCode = $row->offlineEntityCode ?? $row->entityCode ?? null;
+                $row->entityTitle = $row->offlineEntityTitle ?? $row->entityTitle ?? null;
 
                 return $row;
             });
@@ -887,12 +920,16 @@ class PaymentController extends Controller
             return null;
         }
 
-        $invoiceId = DB::table('invoices')->insertGetId([
+        $invoiceId = DB::table('invoices')->insertGetId($this->filterExistingColumns('invoices', [
             'userId' => $userId,
             'orderId' => $orderId,
             'paymentId' => $paymentId,
             'invoiceNumber' => 'INV-' . date('Y') . '-PENDING',
             'invoiceDate' => now()->toDateString(),
+            'entityType' => $payload['entityType'] ?? null,
+            'entityId' => $payload['entityId'] ?? null,
+            'entityCode' => $payload['entityCode'] ?? null,
+            'entityTitle' => $payload['entityTitle'] ?? null,
             'customerName' => $payload['customer']['name'],
             'customerEmail' => $payload['customer']['email'],
             'customerPhone' => $payload['customer']['phone'],
@@ -904,33 +941,115 @@ class PaymentController extends Controller
             'invoiceData' => json_encode($payload),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ]));
 
         $invoiceNumber = 'INV-' . date('Y') . '-' . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
         $payload['invoiceNo'] = $invoiceNumber;
 
-        DB::table('invoices')->where('id', $invoiceId)->update([
+        DB::table('invoices')->where('id', $invoiceId)->update($this->filterExistingColumns('invoices', [
             'invoiceNumber' => $invoiceNumber,
+            'entityType' => $payload['entityType'] ?? null,
+            'entityId' => $payload['entityId'] ?? null,
+            'entityCode' => $payload['entityCode'] ?? null,
+            'entityTitle' => $payload['entityTitle'] ?? null,
             'invoiceData' => json_encode($payload),
             'updated_at' => now(),
-        ]);
+        ]));
 
         return $payload;
     }
 
-    private function buildInvoice(int $orderId, int $userId): ?array
+    private function buildInvoice(int $orderId, int $userId, bool $allowAnyUser = false): ?array
     {
-        $invoice = DB::table('invoices')->where('orderId', $orderId)->where('userId', $userId)->where('deletedFlag', 0)->first();
+        $invoiceQuery = DB::table('invoices')
+            ->where('orderId', $orderId)
+            ->where('deletedFlag', 0);
+
+        if (!$allowAnyUser) {
+            $invoiceQuery->where('userId', $userId);
+        }
+
+        $invoice = $invoiceQuery->first();
         if ($invoice && $invoice->invoiceData) {
             $payload = json_decode($invoice->invoiceData, true);
             if (is_array($payload)) {
                 $payload['invoiceNo'] = $invoice->invoiceNumber;
+                $payload = $this->enrichStoredInvoicePayload($payload, $invoice, $orderId);
                 return $this->normalizeInvoicePaymentFields($payload);
             }
         }
 
-        $payment = DB::table('payments')->where('orderId', $orderId)->where('userId', $userId)->where('status', 'success')->where('deletedFlag', 0)->first();
-        return $payment ? $this->invoicePayload($orderId, (int) $payment->id, $userId) : null;
+        $paymentQuery = DB::table('payments')
+            ->where('orderId', $orderId)
+            ->where('status', 'success')
+            ->where('deletedFlag', 0);
+
+        if (!$allowAnyUser) {
+            $paymentQuery->where('userId', $userId);
+        }
+
+        $payment = $paymentQuery->first();
+        return $payment ? $this->invoicePayload($orderId, (int) $payment->id, $allowAnyUser ? (int) $payment->userId : $userId) : null;
+    }
+
+    private function enrichStoredInvoicePayload(array $payload, object $invoice, int $orderId): array
+    {
+        foreach (['entityType', 'entityId', 'entityCode', 'entityTitle'] as $field) {
+            if (empty($payload[$field]) && isset($invoice->{$field})) {
+                $payload[$field] = $invoice->{$field};
+            }
+        }
+
+        if (!isset($payload['items']) || !is_array($payload['items'])) {
+            return $payload;
+        }
+
+        $itemsByCourseId = collect();
+        if (Schema::hasTable('order_items') && Schema::hasTable('courses')) {
+            $itemsByCourseId = DB::table('order_items as oi')
+                ->join('courses as c', 'c.id', '=', 'oi.courseId')
+                ->where('oi.orderId', $orderId)
+                ->where('oi.deletedFlag', 0)
+                ->select(
+                    'oi.courseId',
+                    'c.title',
+                    'c.courseType',
+                    EntityCodeService::codeSelect('courses', 'c')
+                )
+                ->get()
+                ->keyBy(fn($item) => (int) $item->courseId);
+        }
+
+        $singleItemInvoice = count($payload['items']) === 1;
+        $payload['items'] = array_map(function ($item) use ($itemsByCourseId, $invoice, $singleItemInvoice) {
+            if (!is_array($item)) {
+                return $item;
+            }
+
+            $courseId = (int) ($item['courseId'] ?? 0);
+            $course = $courseId > 0 ? $itemsByCourseId->get($courseId) : null;
+
+            if ($course) {
+                $entityType = ((int) ($course->courseType ?? 1)) === 2 ? 'Academic Course' : 'Main Course';
+                $item['code'] = $item['code'] ?? ($course->code ?? null);
+                $item['entityType'] = $item['entityType'] ?? $entityType;
+                $item['entityCode'] = $item['entityCode'] ?? ($course->code ?? null);
+                $item['entityTitle'] = $item['entityTitle'] ?? ($course->title ?? ($item['title'] ?? null));
+
+                return $item;
+            }
+
+            if ($singleItemInvoice) {
+                $item['entityType'] = $item['entityType'] ?? ($invoice->entityType ?? null);
+                $item['entityCode'] = $item['entityCode'] ?? ($invoice->entityCode ?? null);
+                $item['entityTitle'] = $item['entityTitle'] ?? ($invoice->entityTitle ?? ($item['title'] ?? null));
+                $item['code'] = $item['code'] ?? ($invoice->entityCode ?? null);
+            }
+
+            return $item;
+        }, $payload['items']);
+
+        return $payload;
     }
 
     private function invoicePayload(int $orderId, int $paymentId, int $userId): ?array
@@ -964,11 +1083,24 @@ class PaymentController extends Controller
             ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
             ->where('oi.orderId', $orderId)
             ->where('oi.deletedFlag', 0)
-            ->select('oi.courseId', 'oi.price', 'oi.taxAmount', 'oi.totalAmount', 'c.title', 'cc.categoryName')
+            ->select(
+                'oi.courseId',
+                'oi.price',
+                'oi.taxAmount',
+                'oi.totalAmount',
+                'c.title',
+                'c.courseType',
+                EntityCodeService::codeSelect('courses', 'c'),
+                'cc.categoryName'
+            )
             ->get()
             ->map(fn ($item) => [
                 'courseId' => (int) $item->courseId,
                 'title' => $item->title,
+                'code' => $item->code ?? null,
+                'entityType' => ((int) ($item->courseType ?? 1)) === 2 ? 'Academic Course' : 'Main Course',
+                'entityCode' => $item->code ?? null,
+                'entityTitle' => $item->title,
                 'categoryName' => $item->categoryName ?: 'Course',
                 'price' => $item->price,
                 'taxAmount' => $item->taxAmount ?? 0,
@@ -976,6 +1108,9 @@ class PaymentController extends Controller
             ])
             ->values()
             ->all();
+
+        $firstItem = $items[0] ?? null;
+        $singleItemInvoice = count($items) === 1;
 
         $invoice = DB::table('invoices')->where('orderId', $orderId)->where('deletedFlag', 0)->first();
 
@@ -1014,6 +1149,10 @@ class PaymentController extends Controller
                 'email' => 'support@icetl.com',
             ],
             'items' => $items,
+            'entityType' => $singleItemInvoice ? ($firstItem['entityType'] ?? null) : 'Course Bundle',
+            'entityId' => $singleItemInvoice ? ($firstItem['courseId'] ?? null) : null,
+            'entityCode' => $singleItemInvoice ? ($firstItem['entityCode'] ?? null) : null,
+            'entityTitle' => $singleItemInvoice ? ($firstItem['entityTitle'] ?? null) : count($items) . ' Courses',
             'subtotal' => (float) ($order->subtotalAmount ?? array_sum(array_map(fn ($item) => (float) $item['price'], $items))),
             'tax' => (float) ($order->taxAmount ?? 0),
             'totalAmount' => (float) $order->totalAmount,
@@ -1062,6 +1201,10 @@ class PaymentController extends Controller
                 'paymentBy' => $transactionNo ? 'RAZORPAY' : null,
                 'referenceNo' => $referenceNo,
                 'transactionNo' => $transactionNo,
+                'entityType' => $data['entityType'] ?? null,
+                'entityId' => $data['entityId'] ?? null,
+                'entityCode' => $data['entityCode'] ?? null,
+                'entityTitle' => $data['entityTitle'] ?? null,
             ];
 
             foreach ($optionalColumns as $column => $value) {
@@ -1122,6 +1265,17 @@ class PaymentController extends Controller
             && Schema::hasColumn('payment_logs', 'paymentBy');
     }
 
+    private function filterExistingColumns(string $table, array $payload): array
+    {
+        static $columnsByTable = [];
+
+        if (!isset($columnsByTable[$table])) {
+            $columnsByTable[$table] = array_flip(Schema::getColumnListing($table));
+        }
+
+        return array_intersect_key($payload, $columnsByTable[$table]);
+    }
+
     private function offlinePaymentLogSelects(bool $hasOfflinePaymentColumns): array
     {
         if ($hasOfflinePaymentColumns) {
@@ -1129,6 +1283,9 @@ class PaymentController extends Controller
                 'pl.transactionNo as offlineTransactionNo',
                 'pl.referenceNo as offlineReferenceNo',
                 'pl.paymentBy as offlinePaymentBy',
+                Schema::hasColumn('payment_logs', 'entityType') ? 'pl.entityType as offlineEntityType' : DB::raw('NULL as offlineEntityType'),
+                Schema::hasColumn('payment_logs', 'entityCode') ? 'pl.entityCode as offlineEntityCode' : DB::raw('NULL as offlineEntityCode'),
+                Schema::hasColumn('payment_logs', 'entityTitle') ? 'pl.entityTitle as offlineEntityTitle' : DB::raw('NULL as offlineEntityTitle'),
             ];
         }
 
@@ -1136,6 +1293,9 @@ class PaymentController extends Controller
             DB::raw('NULL as offlineTransactionNo'),
             DB::raw('NULL as offlineReferenceNo'),
             DB::raw('NULL as offlinePaymentBy'),
+            DB::raw('NULL as offlineEntityType'),
+            DB::raw('NULL as offlineEntityCode'),
+            DB::raw('NULL as offlineEntityTitle'),
         ];
     }
 
@@ -1191,12 +1351,18 @@ class PaymentController extends Controller
 
     private function invoiceHtml(array $invoice): string
     {
-        $rows = collect($invoice['items'])->map(fn ($item) => '<tr><td>' . e($item['title']) . '</td><td>' . e($item['categoryName']) . '</td><td style="text-align:right">Rs. ' . number_format((float) $item['totalAmount'], 2) . '</td></tr>')->join('');
+        $rows = collect($invoice['items'])->map(function ($item) {
+            $entityType = $item['entityType'] ?? 'Course';
+            $entityCode = $item['entityCode'] ?? $item['code'] ?? null;
+            $codeHtml = $entityCode ? '<br><span class="code">' . e($entityType) . ' Code: ' . e($entityCode) . '</span>' : '';
+
+            return '<tr><td>' . e($item['title']) . $codeHtml . '</td><td>' . e($item['categoryName']) . '</td><td style="text-align:right">Rs. ' . number_format((float) $item['totalAmount'], 2) . '</td></tr>';
+        })->join('');
         $paymentDisplayId = $invoice['paymentDisplayId'] ?? $this->paymentDisplayId($invoice['razorpayPaymentId'] ?? null, $invoice['transactionNo'] ?? null, $invoice['paymentReference'] ?? null);
         $paymentMethod = $invoice['paymentBy'] ?? $invoice['paymentMethod'] ?? (($invoice['razorpayPaymentId'] ?? null) ? 'RAZORPAY' : null);
         $orderReference = $invoice['orderReference'] ?? $invoice['razorpayOrderId'] ?? '';
 
-        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Course</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
+        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.code{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));color:#4f46e5;font:700 12px monospace;border:1px solid rgba(79,70,229,.18)}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Entity</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
     }
 
     private function privateFileUrl(Request $request, string $path): string

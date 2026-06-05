@@ -74,6 +74,26 @@ export class MyCourses implements OnInit {
     return (course.courseHighlights ?? []).slice(0, 3);
   }
 
+  isAcademicCourse(course: MyLearningCourse): boolean {
+    return Number(course.courseType) === 2;
+  }
+
+  hasYoutubeLink(course: MyLearningCourse): boolean {
+    return this.normalizeExternalUrl(course.youtubeLiveUrl).length > 0;
+  }
+
+  hasMeetingLink(course: MyLearningCourse): boolean {
+    return this.normalizeExternalUrl(course.meetingLink).length > 0;
+  }
+
+  getYoutubeUrl(course: MyLearningCourse): string {
+    return this.normalizeExternalUrl(course.youtubeLiveUrl);
+  }
+
+  getMeetingUrl(course: MyLearningCourse): string {
+    return this.normalizeExternalUrl(course.meetingLink);
+  }
+
   formatAmount(value: number | string | null | undefined): string {
     return this.amountFormatter.format(Number(value) || 0);
   }
@@ -127,6 +147,16 @@ export class MyCourses implements OnInit {
     );
 
     return Math.round(totalProgress / this.courses.length);
+  }
+
+  private normalizeExternalUrl(value: string | null | undefined): string {
+    const url = `${value ?? ''}`.trim();
+
+    if (!url) {
+      return '';
+    }
+
+    return /^https?:\/\//i.test(url) ? url : `https://${url}`;
   }
 
 }

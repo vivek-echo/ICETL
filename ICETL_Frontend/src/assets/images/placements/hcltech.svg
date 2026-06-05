@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="96" viewBox="0 0 260 96" role="img" aria-label="HCLTech logo">
+  <rect width="260" height="96" rx="16" fill="none"/>
+  <rect x="20" y="27" width="82" height="42" rx="10" fill="#0066b3"/>
+  <text x="31" y="56" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900">HCL</text>
+  <text x="113" y="57" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="800">Tech</text>
+</svg>

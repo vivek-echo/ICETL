@@ -312,9 +312,7 @@ export class ViewMyOfflineCourse implements OnInit {
 
   onEnrollmentAmountPaidChange(): void {
     this.enrollmentForm.amountPaid = this.toMoney(this.enrollmentForm.amountPaid);
-    this.enrollmentForm.paidInFull =
-      this.enrollmentForm.totalFee > 0 &&
-      this.enrollmentForm.amountPaid === this.enrollmentForm.totalFee;
+    this.enrollmentForm.paidInFull = false;
     this.recalculateEnrollmentPlan();
     this.clearEnrollmentErrors(['amountPaid', 'amountBalance', 'installments']);
   }
@@ -545,9 +543,10 @@ export class ViewMyOfflineCourse implements OnInit {
         const invoiceNumber = response.data?.invoiceNumber
           ? ` Invoice: ${response.data.invoiceNumber}`
           : '';
+        const courseCode = response.data?.courseCode ? ` Code: ${response.data.courseCode}` : '';
         this.closeEnrollmentModal(true);
         await this.alertHelper.success(
-          `${response.message || 'Student enrolled successfully.'}${invoiceNumber}`,
+          `${response.message || 'Student enrolled successfully.'}${invoiceNumber}${courseCode}`,
           'Offline Enrollment',
         );
       } else {
@@ -809,13 +808,17 @@ export class ViewMyOfflineCourse implements OnInit {
   }
 
   private recalculateEnrollmentPlan(): void {
-    if (this.enrollmentForm.paidInFull) {
-      this.enrollmentForm.amountPaid = this.enrollmentForm.totalFee;
-    }
+    this.enrollmentForm.totalFee = this.toMoney(this.enrollmentForm.totalFee);
+    this.enrollmentForm.amountPaid = this.toMoney(
+      Math.max(this.toMoney(this.enrollmentForm.amountPaid), 0),
+    );
 
     this.enrollmentForm.amountBalance = this.toMoney(
       Math.max(this.enrollmentForm.totalFee - this.enrollmentForm.amountPaid, 0),
     );
+    this.enrollmentForm.paidInFull =
+      this.enrollmentForm.totalFee <= 0 ||
+      this.enrollmentForm.amountPaid === this.enrollmentForm.totalFee;
 
     if (this.enrollmentForm.amountBalance <= 0) {
       this.enrollmentForm.installments = [];

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
@@ -480,6 +481,7 @@ class CoursesController extends Controller
 
         return [
             'id' => (int) $course->id,
+            'code' => $course->code ?? null,
             'title' => (string) $course->title,
             'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
             'categoryName' => $course->categoryName ?: 'Uncategorized',
@@ -549,6 +551,7 @@ class CoursesController extends Controller
                 ->where('c.status', 1)
                 ->select(
                     'c.id',
+                    EntityCodeService::codeSelect('courses', 'c'),
                     'c.title',
                     'c.categoryId',
                     'cc.categoryName as categoryName',
@@ -626,6 +629,7 @@ class CoursesController extends Controller
                     $subQuery->where('c.title', 'LIKE', '%' . $search . '%')
                         ->orWhere('c.description', 'LIKE', '%' . $search . '%')
                         ->orWhere('cc.categoryName', 'LIKE', '%' . $search . '%');
+                    EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
                 });
             }
 
@@ -855,6 +859,12 @@ class CoursesController extends Controller
                 'createdOn' => now()
             ]);
 
+            $courseCode = EntityCodeService::assignIfMissing(
+                'courses',
+                $courseId,
+                EntityCodeService::PREFIX_MAIN_COURSE
+            );
+
             foreach ($instructorIds as $instructorId) {
                 DB::table('courseinstructors')
                     ->insert([
@@ -866,7 +876,11 @@ class CoursesController extends Controller
             DB::commit();
             return response()->json([
                 'status' => true,
-                'message' => 'Course created successfully'
+                'message' => 'Course created successfully',
+                'data' => [
+                    'id' => $courseId,
+                    'code' => $courseCode,
+                ]
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -988,6 +1002,12 @@ class CoursesController extends Controller
                 'createdOn' => now(),
             ]);
 
+            $courseCode = EntityCodeService::assignIfMissing(
+                'courses',
+                $courseId,
+                EntityCodeService::PREFIX_ACADEMIC_COURSE
+            );
+
             foreach ($instructorIds as $instructorId) {
                 DB::table('courseinstructors')->insert([
                     'courseId' => $courseId,
@@ -1002,7 +1022,8 @@ class CoursesController extends Controller
                 'status' => true,
                 'message' => 'Offline course created successfully',
                 'data' => [
-                    'id' => $courseId
+                    'id' => $courseId,
+                    'code' => $courseCode,
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -1119,11 +1140,13 @@ class CoursesController extends Controller
             $courseItems = collect($courses->items());
             $courseInstructorMap = $this->courseInstructorMap($courseItems);
             $fallbackInstructors = $this->fallbackInstructorNames($courseItems);
+            $enrolledCourseLookup = $this->enrolledCourseLookup($request, $courseItems);
             $data = $courseItems
                 ->map(fn($course) => $this->formatOfflineCourse(
                     $course,
                     $courseInstructorMap,
-                    $fallbackInstructors
+                    $fallbackInstructors,
+                    $enrolledCourseLookup
                 ))
                 ->values();
 
@@ -1163,6 +1186,7 @@ class CoursesController extends Controller
             ->where('c.courseType', 2)
             ->select(
                 'c.id',
+                EntityCodeService::codeSelect('courses', 'c'),
                 'c.title',
                 'c.categoryId',
                 'cc.categoryName as categoryName',
@@ -1213,6 +1237,7 @@ class CoursesController extends Controller
                                     ->orWhere('instructor.email', 'LIKE', '%' . $search . '%');
                             });
                     });
+                EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
             });
         }
 
@@ -1324,7 +1349,33 @@ class CoursesController extends Controller
         }
     }
 
-    private function formatOfflineCourse(object $course, $courseInstructorMap, $fallbackInstructors): array
+    private function enrolledCourseLookup(Request $request, $courseItems): array
+    {
+        if (!Schema::hasTable('enrollments') || !$request->user()) {
+            return [];
+        }
+
+        $courseIds = collect($courseItems)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($courseIds->isEmpty()) {
+            return [];
+        }
+
+        return DB::table('enrollments')
+            ->where('userId', (int) $request->user()->id)
+            ->whereIn('courseId', $courseIds)
+            ->where('deletedFlag', 0)
+            ->pluck('courseId')
+            ->mapWithKeys(fn($courseId) => [(int) $courseId => true])
+            ->all();
+    }
+
+    private function formatOfflineCourse(object $course, $courseInstructorMap, $fallbackInstructors, array $enrolledCourseLookup = []): array
     {
         $relationInstructors = collect($courseInstructorMap->get($course->id, []))
             ->map(fn($instructor) => [
@@ -1347,6 +1398,7 @@ class CoursesController extends Controller
 
         return [
             'id' => (int) $course->id,
+            'code' => $course->code ?? null,
             'title' => (string) $course->title,
             'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
             'categoryName' => $course->categoryName ?: 'Uncategorized',
@@ -1361,6 +1413,7 @@ class CoursesController extends Controller
             'status' => (int) $course->status,
             'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
             'scheduleStatus' => $this->getOfflineCourseScheduleStatus($startDate, $endDate),
+            'isEnrolled' => !empty($enrolledCourseLookup[(int) $course->id]),
             'courseType' => (int) $course->courseType,
             'venue' => $course->venue,
             'city' => $course->city,
@@ -1515,6 +1568,12 @@ class CoursesController extends Controller
                 ], 404);
             }
 
+            $courseCode = EntityCodeService::assignIfMissing(
+                'courses',
+                (int) $course->id,
+                EntityCodeService::PREFIX_ACADEMIC_COURSE
+            ) ?? ($course->code ?? null);
+            $course->code = $courseCode;
             $courseFee = $this->offlineEnrollmentMoney($course->price ?? 0);
 
             if (abs($courseFee - $totalFee) > 0.01) {
@@ -1553,6 +1612,7 @@ class CoursesController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));
+            EntityCodeService::assignIfMissing('users', $studentId, EntityCodeService::PREFIX_LEARNER);
 
             $alreadyEnrolled = DB::table('enrollments')
                 ->where('userId', $studentId)
@@ -1575,9 +1635,9 @@ class CoursesController extends Controller
             $orderId = DB::table('orders')->insertGetId([
                 'userId' => $studentId,
                 'orderReference' => $this->offlineEnrollmentReference('OFFORD'),
-                'subtotalAmount' => $totalFee,
+                'subtotalAmount' => $amountPaid,
                 'taxAmount' => 0,
-                'totalAmount' => $totalFee,
+                'totalAmount' => $amountPaid,
                 'currency' => 'INR',
                 'status' => 'paid',
                 'razorpayOrderId' => null,
@@ -1590,9 +1650,9 @@ class CoursesController extends Controller
             DB::table('order_items')->insert([
                 'orderId' => $orderId,
                 'courseId' => (int) $course->id,
-                'price' => $totalFee,
+                'price' => $amountPaid,
                 'taxAmount' => 0,
-                'totalAmount' => $totalFee,
+                'totalAmount' => $amountPaid,
                 'deletedFlag' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -1618,7 +1678,7 @@ class CoursesController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::table('enrollments')->insert([
+            $enrollmentId = DB::table('enrollments')->insertGetId([
                 'userId' => $studentId,
                 'courseId' => (int) $course->id,
                 'orderId' => $orderId,
@@ -1631,19 +1691,23 @@ class CoursesController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $invoiceId = DB::table('invoices')->insertGetId([
+            $invoiceId = DB::table('invoices')->insertGetId($this->filterExistingColumns('invoices', [
                 'userId' => $studentId,
                 'orderId' => $orderId,
                 'paymentId' => $paymentId,
+                'entityType' => 'Academic Course',
+                'entityId' => (int) $course->id,
+                'entityCode' => $courseCode,
+                'entityTitle' => (string) $course->title,
                 'invoiceNumber' => $this->offlineEnrollmentReference('OFFINV'),
                 'invoiceDate' => now()->toDateString(),
                 'customerName' => $student ? $student->name : trim((string) $request->input('name')),
                 'customerEmail' => $email,
                 'customerPhone' => $student->phone ?? null,
                 'gstNumber' => null,
-                'subtotal' => $totalFee,
+                'subtotal' => $amountPaid,
                 'tax' => 0,
-                'grandTotal' => $totalFee,
+                'grandTotal' => $amountPaid,
                 'currency' => 'INR',
                 'paymentReference' => $transactionNo ?: $referenceNo,
                 'pdfPath' => null,
@@ -1651,7 +1715,7 @@ class CoursesController extends Controller
                 'deletedFlag' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ]));
 
             $invoiceNumber = $this->offlineEnrollmentInvoiceNumber($invoiceId);
             $invoiceData = $this->offlineEnrollmentInvoiceData(
@@ -1678,8 +1742,10 @@ class CoursesController extends Controller
             ]);
 
             $responseData = [
+                'enrollmentId' => $enrollmentId,
                 'userId' => $studentId,
                 'courseId' => (int) $course->id,
+                'courseCode' => $courseCode,
                 'invoiceNumber' => $invoiceNumber,
                 'paymentStatus' => $paymentStatus,
                 'paymentBy' => $paymentBy,
@@ -1691,11 +1757,17 @@ class CoursesController extends Controller
                 'orderId' => $orderId,
                 'paymentId' => $paymentId,
                 'courseId' => (int) $course->id,
+                'enrollmentId' => $enrollmentId,
+                'entityType' => 'Academic Course',
+                'entityId' => (int) $course->id,
+                'entityCode' => $courseCode,
+                'entityTitle' => (string) $course->title,
                 'eventType' => 'offline.manual_enrollment',
                 'gateway' => 'offline',
                 'status' => $paymentStatus,
                 'totalFee' => $totalFee,
                 'amountPaid' => $amountPaid,
+                'amount' => $amountPaid,
                 'amountBalance' => $amountBalance,
                 'paymentMode' => 'OFFLINE',
                 'paymentBy' => $paymentBy,
@@ -1724,19 +1796,28 @@ class CoursesController extends Controller
 
             if ($amountBalance > 0) {
                 foreach ($installments as $installment) {
-                    DB::table('offline_course_installments')->insert([
+                    DB::table('offline_course_installments')->insert($this->filterExistingColumns('offline_course_installments', [
                         'paymentLogId' => $paymentLogId,
                         'userId' => $studentId,
                         'courseId' => (int) $course->id,
+                        'enrollmentId' => $enrollmentId,
                         'installmentNo' => (int) $installment['installmentNo'],
                         'amount' => $installment['amount'],
+                        'paidAmount' => $installment['status'] === 'PAID' ? $installment['amount'] : 0,
+                        'balanceAmount' => $installment['status'] === 'PAID' ? 0 : $installment['amount'],
+                        'paymentStatus' => $installment['status'],
                         'expectedDate' => $installment['expectedDate'],
                         'paidDate' => $installment['status'] === 'PAID' ? now()->toDateString() : null,
+                        'paymentDate' => $installment['status'] === 'PAID' ? now()->toDateString() : null,
+                        'paymentBy' => $installment['status'] === 'PAID' ? $paymentBy : null,
+                        'paymentType' => $installment['status'] === 'PAID' ? $paymentBy : null,
+                        'transactionNo' => $installment['status'] === 'PAID' ? $transactionNo : null,
+                        'invoiceId' => $installment['status'] === 'PAID' ? $invoiceId : null,
                         'status' => $installment['status'],
                         'deletedFlag' => 0,
                         'createdOn' => now(),
                         'updatedOn' => null,
-                    ]);
+                    ]));
                 }
             }
 
@@ -1765,7 +1846,7 @@ class CoursesController extends Controller
             return [];
         }
 
-        return collect($installments)
+        $rows = collect($installments)
             ->map(function ($installment, int $index): array {
                 $item = is_array($installment) ? $installment : [];
                 $status = strtoupper((string) ($item['status'] ?? 'PENDING'));
@@ -1778,6 +1859,14 @@ class CoursesController extends Controller
                 ];
             })
             ->values()
+            ->all();
+
+        return collect($rows)
+            ->sortBy(fn(array $row): string => ($row['status'] === 'PAID' ? '0' : '1') . '-' . str_pad((string) $row['installmentNo'], 2, '0', STR_PAD_LEFT))
+            ->values()
+            ->map(fn(array $row, int $index): array => array_merge($row, [
+                'installmentNo' => $index + 1,
+            ]))
             ->all();
     }
 
@@ -1906,16 +1995,23 @@ class CoursesController extends Controller
             'items' => [
                 [
                     'courseId' => (int) $course->id,
+                    'code' => $course->code ?? null,
+                    'entityType' => 'Academic Course',
+                    'entityCode' => $course->code ?? null,
+                    'entityTitle' => (string) $course->title,
                     'title' => (string) $course->title,
                     'categoryName' => $course->categoryName ?? 'Offline Course',
-                    'price' => $totalFee,
+                    'courseTotalFee' => $totalFee,
+                    'price' => $amountPaid,
                     'taxAmount' => 0,
-                    'totalAmount' => $totalFee,
+                    'totalAmount' => $amountPaid,
                 ],
             ],
-            'subtotal' => $totalFee,
+            'totalFee' => $totalFee,
+            'courseTotalFee' => $totalFee,
+            'subtotal' => $amountPaid,
             'tax' => 0,
-            'totalAmount' => $totalFee,
+            'totalAmount' => $amountPaid,
             'amountPaid' => $amountPaid,
             'amountBalance' => $amountBalance,
             'installments' => $installments,
@@ -1931,6 +2027,1804 @@ class CoursesController extends Controller
         }
 
         return array_intersect_key($payload, $columnsByTable[$table]);
+    }
+
+    public function getOfflineCourseEnrolledStudents(Request $request)
+    {
+        if ((int) ($request->user()->role ?? 0) !== 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only admins can view offline-course student payments.',
+            ], 403);
+        }
+
+        if ($schemaResponse = $this->offlineStudentLedgerSchemaResponse()) {
+            return $schemaResponse;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'perPage' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value === null || $value === '' || $value === 'all') {
+                        return;
+                    }
+
+                    if (
+                        !filter_var($value, FILTER_VALIDATE_INT)
+                        || !in_array((int) $value, [10, 20, 50, 100], true)
+                    ) {
+                        $fail('The per page value must be 10, 20, 50, 100, or all.');
+                    }
+                },
+            ],
+            'search' => 'nullable|string|max:100',
+            'courseId' => 'nullable|integer|min:1',
+            'courseCode' => 'nullable|string|max:40',
+            'paymentStatus' => 'nullable|in:PAID,PARTIAL',
+            'installmentStatus' => 'nullable|in:all,pending,paid,overdue,none',
+            'sortBy' => 'nullable|in:nextInstallment,newest,paidDesc,balanceDesc',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $query = $this->baseOfflineCourseStudentQuery();
+            $this->applyOfflineCourseStudentFilters($query, $request);
+
+            $summaryQuery = clone $query;
+            $summary = $this->buildOfflineCourseStudentSummary($summaryQuery);
+
+            $page = (int) $request->input('page', 1);
+            $isAllPageSize = $request->input('perPage') === 'all';
+            $filteredTotal = (clone $query)->count();
+            $perPage = $isAllPageSize
+                ? max($filteredTotal, 1)
+                : (int) $request->input('perPage', 10);
+
+            $students = $this->applyOfflineCourseStudentSort(
+                $query->select($this->offlineCourseStudentSelectColumns()),
+                (string) $request->input('sortBy', 'nextInstallment')
+            )->paginate($perPage, ['*'], 'page', $page);
+
+            $studentItems = collect($students->items());
+            $paymentLogIds = $studentItems
+                ->pluck('paymentLogId')
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values();
+            $installmentMap = $this->offlineCourseInstallmentsByPaymentLogIds($paymentLogIds);
+
+            $data = $studentItems
+                ->map(fn($row) => $this->formatOfflineCourseStudentRow($row, $installmentMap))
+                ->values();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course enrolled students fetched successfully',
+                'data' => $data,
+                'meta' => [
+                    'currentPage' => $students->currentPage(),
+                    'perPage' => $isAllPageSize ? 'all' : $students->perPage(),
+                    'total' => $students->total(),
+                    'lastPage' => $students->lastPage(),
+                    'from' => $students->firstItem(),
+                    'to' => $students->lastItem(),
+                ],
+                'summary' => $summary,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching offline course enrolled students: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateOfflineCourseInstallments(Request $request)
+    {
+        if ((int) ($request->user()->role ?? 0) !== 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only admins can update offline-course installments.',
+            ], 403);
+        }
+
+        if ($schemaResponse = $this->offlineStudentLedgerSchemaResponse()) {
+            return $schemaResponse;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'paymentLogId' => 'required|integer|min:1',
+            'installments' => 'required|array|min:1|max:4',
+            'installments.*.id' => 'nullable|integer|min:1',
+            'installments.*.installmentNo' => 'required|integer|min:1|max:4',
+            'installments.*.amount' => 'required|numeric|min:0',
+            'installments.*.expectedDate' => 'nullable|date',
+            'installments.*.paidDate' => 'nullable|date',
+            'installments.*.paymentBy' => ['nullable', Rule::in(array_merge($this->offlineInstallmentPaymentTypes(), ['NETBANKING']))],
+            'installments.*.transactionNo' => 'nullable|string|max:100',
+            'installments.*.status' => ['required', Rule::in(['PAID', 'PENDING'])],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $paymentLogId = (int) $request->input('paymentLogId');
+            $paymentLog = DB::table('payment_logs')
+                ->where('id', $paymentLogId)
+                ->where('eventType', 'offline.manual_enrollment')
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$paymentLog) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline enrollment payment record not found.',
+                ], 404);
+            }
+
+            $course = DB::table('courses')
+                ->where('id', (int) $paymentLog->courseId)
+                ->where('courseType', 2)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$course) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline course not found.',
+                ], 404);
+            }
+
+            $existingInstallments = DB::table('offline_course_installments')
+                ->where('paymentLogId', $paymentLogId)
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+            $installments = $this->normalizeOfflineCourseInstallmentUpdateRows(
+                $request->input('installments', [])
+            );
+            $totalFee = $this->offlineEnrollmentMoney($paymentLog->totalFee ?? $course->price ?? 0);
+            $validationErrors = $this->validateOfflineCourseInstallmentUpdateRows(
+                $installments,
+                $existingInstallments,
+                $totalFee
+            );
+
+            if (!empty($validationErrors)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validationErrors,
+                ], 422);
+            }
+
+            $paidTotal = $this->offlineEnrollmentMoney(
+                collect($installments)
+                    ->filter(fn(array $row): bool => $row['status'] === 'PAID')
+                    ->sum('amount')
+            );
+            $amountBalance = $this->offlineEnrollmentMoney(max($totalFee - $paidTotal, 0));
+            $paymentStatus = $amountBalance <= 0 ? 'PAID' : 'PARTIAL';
+
+            DB::table('offline_course_installments')
+                ->where('paymentLogId', $paymentLogId)
+                ->update([
+                    'deletedFlag' => 1,
+                    'updatedOn' => now(),
+                ]);
+
+            foreach ($installments as $installment) {
+                $existing = $installment['id']
+                    ? $existingInstallments->get($installment['id'])
+                    : null;
+                $paidDate = $installment['status'] === 'PAID'
+                    ? ($installment['paidDate'] ?: ($existing->paidDate ?? now()->toDateString()))
+                    : null;
+                $paidAmount = $installment['status'] === 'PAID' ? $installment['amount'] : 0;
+                $balanceAmount = $installment['status'] === 'PAID' ? 0 : $installment['amount'];
+                $payload = $this->filterExistingColumns('offline_course_installments', [
+                    'paymentLogId' => $paymentLogId,
+                    'userId' => (int) $paymentLog->userId,
+                    'courseId' => (int) $paymentLog->courseId,
+                    'enrollmentId' => $existing->enrollmentId ?? null,
+                    'installmentNo' => (int) $installment['installmentNo'],
+                    'amount' => $installment['amount'],
+                    'paidAmount' => $paidAmount,
+                    'balanceAmount' => $balanceAmount,
+                    'paymentStatus' => $installment['status'],
+                    'expectedDate' => $installment['expectedDate'],
+                    'paidDate' => $paidDate,
+                    'paymentDate' => $paidDate,
+                    'paymentBy' => $installment['status'] === 'PAID' ? $installment['paymentBy'] : null,
+                    'paymentType' => $installment['status'] === 'PAID' ? $installment['paymentBy'] : null,
+                    'transactionNo' => $installment['status'] === 'PAID' ? $installment['transactionNo'] : null,
+                    'status' => $installment['status'],
+                    'deletedFlag' => 0,
+                    'updatedOn' => now(),
+                ]);
+
+                if ($existing) {
+                    DB::table('offline_course_installments')
+                        ->where('id', (int) $existing->id)
+                        ->update($payload);
+                } else {
+                    DB::table('offline_course_installments')->insert(array_merge($payload, [
+                        'createdOn' => now(),
+                    ]));
+                }
+            }
+
+            $savedInstallments = DB::table('offline_course_installments')
+                ->where('paymentLogId', $paymentLogId)
+                ->where('deletedFlag', 0)
+                ->orderBy('installmentNo')
+                ->get()
+                ->map(fn($row) => $this->formatOfflineInstallmentForResponse($row))
+                ->values()
+                ->all();
+            $latestPaidInstallment = collect($savedInstallments)
+                ->filter(fn(array $row): bool => $row['status'] === 'PAID')
+                ->sortByDesc(fn(array $row): string => ($row['paidDate'] ?? '') . '-' . str_pad((string) ($row['installmentNo'] ?? 0), 4, '0', STR_PAD_LEFT))
+                ->first();
+            $latestPaymentBy = is_array($latestPaidInstallment)
+                ? ($latestPaidInstallment['paymentBy'] ?? null)
+                : ($paymentLog->paymentBy ?? null);
+            $latestTransactionNo = is_array($latestPaidInstallment)
+                ? ($latestPaidInstallment['transactionNo'] ?? null)
+                : ($paymentLog->transactionNo ?? null);
+
+            DB::table('payment_logs')
+                ->where('id', $paymentLogId)
+                ->update($this->filterExistingColumns('payment_logs', [
+                    'status' => $paymentStatus,
+                    'amountPaid' => $paidTotal,
+                    'amountBalance' => $amountBalance,
+                    'paymentBy' => $latestPaymentBy,
+                    'paymentStatus' => $paymentStatus,
+                    'transactionNo' => $latestTransactionNo,
+                    'responsePayload' => json_encode([
+                        'userId' => (int) $paymentLog->userId,
+                        'courseId' => (int) $paymentLog->courseId,
+                        'paymentStatus' => $paymentStatus,
+                        'paymentBy' => $latestPaymentBy,
+                        'transactionNo' => $latestTransactionNo,
+                        'amountPaid' => $paidTotal,
+                        'amountBalance' => $amountBalance,
+                    ]),
+                    'verificationResult' => json_encode([
+                        'source' => 'manual_offline_installment_update',
+                        'updatedBy' => (int) $request->user()->id,
+                        'installmentCount' => count($savedInstallments),
+                    ]),
+                    'updated_at' => now(),
+                ]));
+
+            if ((int) ($paymentLog->paymentId ?? 0) > 0) {
+                DB::table('payments')
+                    ->where('id', (int) $paymentLog->paymentId)
+                    ->update([
+                        'amount' => $paidTotal,
+                        'totalAmount' => $paidTotal,
+                        'paymentMethod' => $latestPaymentBy,
+                        'status' => $paidTotal > 0 ? 'success' : 'pending',
+                        'paidAt' => $paidTotal > 0 ? now() : null,
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            if ((int) ($paymentLog->orderId ?? 0) > 0) {
+                DB::table('orders')
+                    ->where('id', (int) $paymentLog->orderId)
+                    ->update([
+                        'status' => 'paid',
+                        'updated_at' => now(),
+                    ]);
+
+                $invoice = DB::table('invoices')
+                    ->where('orderId', (int) $paymentLog->orderId)
+                    ->where('deletedFlag', 0)
+                    ->first();
+
+                if ($invoice) {
+                    $invoiceData = json_decode((string) ($invoice->invoiceData ?? ''), true);
+                    $invoiceData = is_array($invoiceData) ? $invoiceData : [];
+                    $invoiceData['paymentStatus'] = $paymentStatus;
+                    $invoiceData['paymentBy'] = $latestPaymentBy;
+                    $invoiceData['transactionNo'] = $latestTransactionNo;
+                    $invoiceData['paymentReference'] = $latestTransactionNo ?: ($invoiceData['paymentReference'] ?? $paymentLog->referenceNo ?? null);
+                    $invoiceData['amountPaid'] = $paidTotal;
+                    $invoiceData['amountBalance'] = $amountBalance;
+                    $invoiceData['installments'] = $savedInstallments;
+
+                    DB::table('invoices')
+                        ->where('id', (int) $invoice->id)
+                        ->update([
+                            'invoiceData' => json_encode($invoiceData),
+                            'updated_at' => now(),
+                        ]);
+                }
+            }
+
+            DB::table('enrollments')
+                ->where('userId', (int) $paymentLog->userId)
+                ->where('courseId', (int) $paymentLog->courseId)
+                ->where('deletedFlag', 0)
+                ->update(['updated_at' => now()]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Installments updated successfully',
+                'data' => [
+                    'paymentLogId' => $paymentLogId,
+                    'paymentStatus' => $paymentStatus,
+                    'totalFee' => $totalFee,
+                    'amountPaid' => $paidTotal,
+                    'amountBalance' => $amountBalance,
+                    'installments' => $savedInstallments,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating offline course installments: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function payOfflineCourseInstallment(Request $request)
+    {
+        if ((int) ($request->user()->role ?? 0) !== 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only admins can collect offline-course installments.',
+            ], 403);
+        }
+
+        if ($schemaResponse = $this->offlineInstallmentPaymentSchemaResponse()) {
+            return $schemaResponse;
+        }
+
+        $request->merge([
+            'paymentType' => $this->normalizeOfflineInstallmentPaymentType($request->input('paymentType'))
+                ?: strtoupper(str_replace(' ', '_', trim((string) $request->input('paymentType', '')))),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'enrollmentId' => 'required|integer|min:1',
+            'installmentId' => 'required|integer|min:1',
+            'paymentDate' => 'required|date',
+            'paymentType' => ['required', Rule::in($this->offlineInstallmentPaymentTypes())],
+            'transactionNo' => 'nullable|string|max:100',
+            'amountPaid' => 'required|numeric|min:0.01',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $paymentType = (string) $request->input('paymentType');
+        $transactionNo = trim((string) $request->input('transactionNo', '')) ?: null;
+
+        if ($paymentType !== 'CASH' && $transactionNo === null) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'transactionNo' => ['Transaction no is required for non-cash installment payments.'],
+                ],
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $enrollmentId = (int) $request->input('enrollmentId');
+            $installmentId = (int) $request->input('installmentId');
+            $amountPaidNow = $this->offlineEnrollmentMoney($request->input('amountPaid'));
+            $paymentDate = substr((string) $request->input('paymentDate'), 0, 10);
+            $remarks = trim((string) $request->input('remarks', '')) ?: null;
+
+            $enrollment = DB::table('enrollments as e')
+                ->join('users as student', 'student.id', '=', 'e.userId')
+                ->join('courses as c', 'c.id', '=', 'e.courseId')
+                ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+                ->where('e.id', $enrollmentId)
+                ->where('e.deletedFlag', 0)
+                ->where('student.deletedFlag', 0)
+                ->where('c.deletedFlag', 0)
+                ->where('c.courseType', 2)
+                ->lockForUpdate()
+                ->select(
+                    'e.id as enrollmentId',
+                    'e.userId',
+                    'e.courseId',
+                    'e.orderId',
+                    'e.paymentId',
+                    'student.name as studentName',
+                    'student.email as studentEmail',
+                    'student.phone as studentPhone',
+                    EntityCodeService::codeSelect('courses', 'c'),
+                    'c.title as courseTitle',
+                    'c.price as coursePrice',
+                    'cc.categoryName as categoryName'
+                )
+                ->first();
+
+            if (!$enrollment) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline course enrollment not found.',
+                ], 404);
+            }
+            $enrollment->code = EntityCodeService::assignIfMissing(
+                'courses',
+                (int) $enrollment->courseId,
+                EntityCodeService::PREFIX_ACADEMIC_COURSE
+            ) ?? ($enrollment->code ?? null);
+
+            $installment = DB::table('offline_course_installments')
+                ->where('id', $installmentId)
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$installment) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Installment row not found.',
+                ], 404);
+            }
+
+            if (
+                (int) $installment->userId !== (int) $enrollment->userId
+                || (int) $installment->courseId !== (int) $enrollment->courseId
+                || (!empty($installment->enrollmentId) && (int) $installment->enrollmentId !== $enrollmentId)
+            ) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Installment does not belong to the selected enrollment.',
+                ], 422);
+            }
+
+            $paymentLog = DB::table('payment_logs')
+                ->where('id', (int) $installment->paymentLogId)
+                ->where('eventType', 'offline.manual_enrollment')
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$paymentLog) {
+                $paymentLog = DB::table('payment_logs')
+                    ->where('userId', (int) $enrollment->userId)
+                    ->where('courseId', (int) $enrollment->courseId)
+                    ->where('paymentId', (int) $enrollment->paymentId)
+                    ->where('eventType', 'offline.manual_enrollment')
+                    ->where('deletedFlag', 0)
+                    ->orderByDesc('id')
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            if (!$paymentLog) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Original offline enrollment payment record not found.',
+                ], 404);
+            }
+
+            $formattedInstallment = $this->formatOfflineInstallmentForResponse($installment);
+            $installmentAmount = $this->offlineEnrollmentMoney($formattedInstallment['amount'] ?? 0);
+            $paidSoFar = $this->offlineEnrollmentMoney($formattedInstallment['paidAmount'] ?? 0);
+            $balanceBefore = $this->offlineEnrollmentMoney($formattedInstallment['balanceAmount'] ?? 0);
+            $currentPaymentStatus = strtoupper((string) ($formattedInstallment['paymentStatus'] ?? 'PENDING'));
+
+            if ($currentPaymentStatus === 'PAID' || $balanceBefore <= 0.01) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'This installment is already fully paid.',
+                ], 409);
+            }
+
+            if ($amountPaidNow - $balanceBefore > 0.01) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'amountPaid' => ['Amount paid cannot be greater than the pending installment balance.'],
+                    ],
+                ], 422);
+            }
+
+            $newPaidAmount = $this->offlineEnrollmentMoney(min($installmentAmount, $paidSoFar + $amountPaidNow));
+            $newBalanceAmount = $this->offlineEnrollmentMoney(max($installmentAmount - $newPaidAmount, 0));
+            $newPaymentStatus = $newBalanceAmount <= 0.01 ? 'PAID' : 'PARTIALLY_PAID';
+            $displayInstallmentNo = $this->offlineInstallmentDisplayNumberForPaymentLog(
+                (int) $installment->paymentLogId,
+                $installmentId
+            ) ?: (int) $installment->installmentNo;
+            $referenceNo = $this->offlineEnrollmentReference('OFFINSTPAY');
+
+            $orderId = DB::table('orders')->insertGetId([
+                'userId' => (int) $enrollment->userId,
+                'orderReference' => $this->offlineEnrollmentReference('OFFINSTORD'),
+                'subtotalAmount' => $amountPaidNow,
+                'taxAmount' => 0,
+                'totalAmount' => $amountPaidNow,
+                'currency' => 'INR',
+                'status' => 'paid',
+                'razorpayOrderId' => null,
+                'expiresAt' => null,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('order_items')->insert([
+                'orderId' => $orderId,
+                'courseId' => (int) $enrollment->courseId,
+                'price' => $amountPaidNow,
+                'taxAmount' => 0,
+                'totalAmount' => $amountPaidNow,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $paymentId = DB::table('payments')->insertGetId([
+                'orderId' => $orderId,
+                'userId' => (int) $enrollment->userId,
+                'paymentReference' => $referenceNo,
+                'razorpayPaymentId' => null,
+                'razorpayOrderId' => null,
+                'razorpaySignature' => null,
+                'amount' => $amountPaidNow,
+                'taxAmount' => 0,
+                'totalAmount' => $amountPaidNow,
+                'currency' => 'INR',
+                'paymentMethod' => $paymentType,
+                'status' => 'success',
+                'failureReason' => null,
+                'paidAt' => now(),
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $invoiceId = null;
+            $invoiceNumber = null;
+            $invoice = null;
+
+            if ($newPaymentStatus === 'PAID') {
+                $invoiceId = DB::table('invoices')->insertGetId($this->filterExistingColumns('invoices', [
+                    'userId' => (int) $enrollment->userId,
+                    'orderId' => $orderId,
+                    'paymentId' => $paymentId,
+                    'enrollmentId' => $enrollmentId,
+                    'courseId' => (int) $enrollment->courseId,
+                    'installmentId' => $installmentId,
+                    'invoiceType' => 'Course Installment',
+                    'entityType' => 'Academic Course',
+                    'entityId' => (int) $enrollment->courseId,
+                    'entityCode' => $enrollment->code ?? null,
+                    'entityTitle' => (string) $enrollment->courseTitle,
+                    'invoiceAmount' => $amountPaidNow,
+                    'paymentType' => $paymentType,
+                    'transactionNo' => $transactionNo,
+                    'paymentDate' => $paymentDate,
+                    'invoiceStatus' => 'PAID',
+                    'createdBy' => (int) $request->user()->id,
+                    'invoiceNumber' => $this->offlineEnrollmentReference('OFFINSTINV'),
+                    'invoiceDate' => now()->toDateString(),
+                    'customerName' => $enrollment->studentName,
+                    'customerEmail' => $enrollment->studentEmail,
+                    'customerPhone' => $enrollment->studentPhone,
+                    'gstNumber' => null,
+                    'subtotal' => $amountPaidNow,
+                    'tax' => 0,
+                    'grandTotal' => $amountPaidNow,
+                    'currency' => 'INR',
+                    'paymentReference' => $transactionNo ?: $referenceNo,
+                    'pdfPath' => null,
+                    'invoiceData' => null,
+                    'deletedFlag' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+
+                $invoiceNumber = $this->offlineInstallmentInvoiceNumber($invoiceId);
+                $invoiceInstallment = clone $installment;
+                $invoiceInstallment->installmentNo = $displayInstallmentNo;
+                $invoiceData = $this->offlineInstallmentInvoiceData(
+                    $invoiceNumber,
+                    $orderId,
+                    $paymentId,
+                    $enrollment,
+                    $invoiceInstallment,
+                    $installmentAmount,
+                    $amountPaidNow,
+                    $newPaidAmount,
+                    $newBalanceAmount,
+                    $paymentType,
+                    $transactionNo,
+                    $referenceNo,
+                    $paymentDate,
+                    $remarks
+                );
+
+                DB::table('invoices')
+                    ->where('id', $invoiceId)
+                    ->update($this->filterExistingColumns('invoices', [
+                        'invoiceNumber' => $invoiceNumber,
+                        'entityType' => 'Academic Course',
+                        'entityId' => (int) $enrollment->courseId,
+                        'entityCode' => $enrollment->code ?? null,
+                        'entityTitle' => (string) $enrollment->courseTitle,
+                        'invoiceData' => json_encode($invoiceData),
+                        'updated_at' => now(),
+                    ]));
+
+                $invoice = DB::table('invoices')->where('id', $invoiceId)->first();
+            }
+
+            $paymentLogId = DB::table('payment_logs')->insertGetId($this->filterExistingColumns('payment_logs', [
+                'userId' => (int) $enrollment->userId,
+                'orderId' => $orderId,
+                'paymentId' => $paymentId,
+                'courseId' => (int) $enrollment->courseId,
+                'enrollmentId' => $enrollmentId,
+                'installmentId' => $installmentId,
+                'entityType' => 'Academic Course',
+                'entityId' => (int) $enrollment->courseId,
+                'entityCode' => $enrollment->code ?? null,
+                'entityTitle' => (string) $enrollment->courseTitle,
+                'eventType' => 'offline.installment_payment',
+                'gateway' => 'offline',
+                'status' => $newPaymentStatus,
+                'totalFee' => $this->offlineEnrollmentMoney($paymentLog->totalFee ?? $enrollment->coursePrice ?? 0),
+                'amountPaid' => $amountPaidNow,
+                'amount' => $amountPaidNow,
+                'amountBalance' => $newBalanceAmount,
+                'paymentMode' => 'OFFLINE',
+                'paymentBy' => $paymentType,
+                'paymentType' => $paymentType,
+                'paymentStatus' => $newPaymentStatus,
+                'invoiceNumber' => $invoiceNumber,
+                'referenceNo' => $referenceNo,
+                'transactionNo' => $transactionNo,
+                'createdBy' => (int) $request->user()->id,
+                'paymentFor' => 'Course Installment',
+                'remarks' => $remarks,
+                'requestPayload' => json_encode($request->all()),
+                'responsePayload' => json_encode([
+                    'enrollmentId' => $enrollmentId,
+                    'installmentId' => $installmentId,
+                    'courseCode' => $enrollment->code ?? null,
+                    'paymentStatus' => $newPaymentStatus,
+                    'invoiceNumber' => $invoiceNumber,
+                ]),
+                'verificationResult' => json_encode([
+                    'source' => 'manual_offline_installment_payment',
+                    'paidSoFarBefore' => $paidSoFar,
+                    'paidThisTransaction' => $amountPaidNow,
+                    'balanceBefore' => $balanceBefore,
+                    'balanceAfter' => $newBalanceAmount,
+                ]),
+                'webhookPayload' => null,
+                'errorStack' => null,
+                'ipAddress' => $request->ip(),
+                'browserInfo' => $request->userAgent(),
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+
+            DB::table('offline_course_installments')
+                ->where('id', $installmentId)
+                ->update($this->filterExistingColumns('offline_course_installments', [
+                    'enrollmentId' => $enrollmentId,
+                    'paidAmount' => $newPaidAmount,
+                    'balanceAmount' => $newBalanceAmount,
+                    'paymentStatus' => $newPaymentStatus,
+                    'paymentDate' => $paymentDate,
+                    'paidDate' => $newPaymentStatus === 'PAID' ? $paymentDate : null,
+                    'paymentBy' => $paymentType,
+                    'paymentType' => $paymentType,
+                    'transactionNo' => $transactionNo,
+                    'invoiceId' => $invoiceId ?: ($installment->invoiceId ?? null),
+                    'remarks' => $remarks,
+                    'status' => $newPaymentStatus === 'PAID' ? 'PAID' : 'PENDING',
+                    'updatedOn' => now(),
+                ]));
+
+            $savedInstallments = DB::table('offline_course_installments')
+                ->where('paymentLogId', (int) $paymentLog->id)
+                ->where('deletedFlag', 0)
+                ->orderBy('installmentNo')
+                ->get();
+            $summary = $this->offlineInstallmentTotals(
+                $savedInstallments,
+                $this->offlineEnrollmentMoney($paymentLog->totalFee ?? $enrollment->coursePrice ?? 0)
+            );
+            $manualPaymentStatus = $summary['amountBalance'] <= 0.01 ? 'PAID' : 'PARTIAL';
+
+            DB::table('payment_logs')
+                ->where('id', (int) $paymentLog->id)
+                ->update($this->filterExistingColumns('payment_logs', [
+                    'enrollmentId' => $enrollmentId,
+                    'status' => $manualPaymentStatus,
+                    'amountPaid' => $summary['amountPaid'],
+                    'amountBalance' => $summary['amountBalance'],
+                    'paymentBy' => $paymentType,
+                    'paymentType' => $paymentType,
+                    'paymentStatus' => $manualPaymentStatus,
+                    'transactionNo' => $transactionNo ?: ($paymentLog->transactionNo ?? null),
+                    'responsePayload' => json_encode([
+                        'userId' => (int) $enrollment->userId,
+                        'courseId' => (int) $enrollment->courseId,
+                        'paymentStatus' => $manualPaymentStatus,
+                        'amountPaid' => $summary['amountPaid'],
+                        'amountBalance' => $summary['amountBalance'],
+                    ]),
+                    'verificationResult' => json_encode([
+                        'source' => 'manual_offline_installment_payment_summary',
+                        'updatedBy' => (int) $request->user()->id,
+                        'installmentPaymentLogId' => $paymentLogId,
+                    ]),
+                    'updated_at' => now(),
+                ]));
+
+            $this->updateOfflineEnrollmentInvoiceSnapshot(
+                (int) ($paymentLog->orderId ?? 0),
+                $manualPaymentStatus,
+                $summary['amountPaid'],
+                $summary['amountBalance'],
+                $savedInstallments
+            );
+
+            DB::table('enrollments')
+                ->where('id', $enrollmentId)
+                ->update(['updated_at' => now()]);
+
+            $freshInstallment = DB::table('offline_course_installments as oci')
+                ->leftJoin('invoices as inv', 'inv.id', '=', 'oci.invoiceId')
+                ->where('oci.id', $installmentId)
+                ->select('oci.*', 'inv.invoiceNumber', 'inv.orderId as invoiceOrderId')
+                ->first();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => $newPaymentStatus === 'PAID'
+                    ? 'Installment paid and invoice generated successfully.'
+                    : 'Partial installment payment saved successfully.',
+                'data' => [
+                    'enrollmentId' => $enrollmentId,
+                    'installmentId' => $installmentId,
+                    'paymentStatus' => $newPaymentStatus,
+                    'amountPaid' => $newPaidAmount,
+                    'balanceAmount' => $newBalanceAmount,
+                    'summary' => [
+                        'paymentStatus' => $manualPaymentStatus,
+                        'totalFee' => $summary['totalFee'],
+                        'amountPaid' => $summary['amountPaid'],
+                        'amountBalance' => $summary['amountBalance'],
+                    ],
+                    'installment' => $freshInstallment
+                        ? $this->formatOfflineInstallmentForResponse($freshInstallment)
+                        : null,
+                    'invoice' => $this->formatOfflineInstallmentInvoiceResponse($invoice),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error paying offline course installment: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function offlineInstallmentPaymentSchemaResponse()
+    {
+        $requiredTables = [
+            'orders',
+            'payments',
+            'order_items',
+            'enrollments',
+            'payment_logs',
+            'invoices',
+            'offline_course_installments',
+        ];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn(string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline installment payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        $requiredInstallmentColumns = [
+            'paidAmount',
+            'balanceAmount',
+            'paymentStatus',
+            'paymentDate',
+            'paymentType',
+            'invoiceId',
+            'remarks',
+        ];
+        $missingInstallmentColumns = array_values(array_filter(
+            $requiredInstallmentColumns,
+            fn(string $column): bool => !Schema::hasColumn('offline_course_installments', $column)
+        ));
+
+        if (!empty($missingInstallmentColumns)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline installment payment columns are missing: ' . implode(', ', $missingInstallmentColumns) . '. Run database/sql/offline_course_manual_enrollment.sql first.',
+            ], 500);
+        }
+
+        $requiredPaymentLogColumns = [
+            'enrollmentId',
+            'installmentId',
+            'amount',
+            'paymentType',
+            'paymentFor',
+            'remarks',
+        ];
+        $missingPaymentLogColumns = array_values(array_filter(
+            $requiredPaymentLogColumns,
+            fn(string $column): bool => !Schema::hasColumn('payment_logs', $column)
+        ));
+
+        if (!empty($missingPaymentLogColumns)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline installment payment log columns are missing: ' . implode(', ', $missingPaymentLogColumns) . '. Run database/sql/offline_course_manual_enrollment.sql first.',
+            ], 500);
+        }
+
+        return null;
+    }
+
+    private function offlineInstallmentPaymentTypes(): array
+    {
+        return ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'];
+    }
+
+    private function normalizeOfflineInstallmentPaymentType(mixed $value): ?string
+    {
+        $paymentType = strtoupper(trim((string) ($value ?? '')));
+        $paymentType = str_replace([' ', '-'], '_', $paymentType);
+
+        if ($paymentType === 'NETBANKING' || $paymentType === 'NET_BANKING' || $paymentType === 'BANKTRANSFER') {
+            $paymentType = 'BANK_TRANSFER';
+        }
+
+        return in_array($paymentType, $this->offlineInstallmentPaymentTypes(), true) ? $paymentType : null;
+    }
+
+    private function offlineInstallmentInvoiceNumber(int $invoiceId): string
+    {
+        return 'ICETL-INST-' . now()->format('Ymd') . '-' . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function offlineInstallmentInvoiceData(
+        string $invoiceNumber,
+        int $orderId,
+        int $paymentId,
+        object $enrollment,
+        object $installment,
+        float $installmentAmount,
+        float $paidThisTransaction,
+        float $paidAmount,
+        float $balanceAmount,
+        string $paymentType,
+        ?string $transactionNo,
+        string $referenceNo,
+        string $paymentDate,
+        ?string $remarks
+    ): array {
+        return [
+            'invoiceNo' => $invoiceNumber,
+            'orderId' => $orderId,
+            'paymentId' => $paymentId,
+            'enrollmentId' => (int) $enrollment->enrollmentId,
+            'studentId' => (int) $enrollment->userId,
+            'courseId' => (int) $enrollment->courseId,
+            'courseCode' => $enrollment->code ?? null,
+            'entityType' => 'Academic Course',
+            'entityId' => (int) $enrollment->courseId,
+            'entityCode' => $enrollment->code ?? null,
+            'entityTitle' => (string) $enrollment->courseTitle,
+            'installmentId' => (int) $installment->id,
+            'installmentNo' => (int) $installment->installmentNo,
+            'invoiceType' => 'Course Installment',
+            'invoiceDate' => now()->toDateString(),
+            'paymentDate' => $paymentDate,
+            'status' => 'paid',
+            'paymentStatus' => 'PAID',
+            'paymentMode' => 'OFFLINE',
+            'paymentBy' => $paymentType,
+            'paymentType' => $paymentType,
+            'transactionNo' => $transactionNo,
+            'paymentReference' => $transactionNo ?: $referenceNo,
+            'remarks' => $remarks,
+            'currency' => 'INR',
+            'customer' => [
+                'name' => $enrollment->studentName,
+                'email' => $enrollment->studentEmail,
+                'phone' => $enrollment->studentPhone,
+            ],
+            'company' => [
+                'name' => 'ICETL',
+                'subtitle' => 'Ice Technology Lab',
+                'email' => 'support@icetl.com',
+            ],
+            'items' => [
+                [
+                    'courseId' => (int) $enrollment->courseId,
+                    'code' => $enrollment->code ?? null,
+                    'entityType' => 'Academic Course',
+                    'entityCode' => $enrollment->code ?? null,
+                    'entityTitle' => (string) $enrollment->courseTitle,
+                    'title' => (string) $enrollment->courseTitle . ' - Installment ' . (int) $installment->installmentNo,
+                    'categoryName' => $enrollment->categoryName ?: 'Offline Course',
+                    'installmentNo' => (int) $installment->installmentNo,
+                    'installmentAmount' => $installmentAmount,
+                    'price' => $paidThisTransaction,
+                    'taxAmount' => 0,
+                    'totalAmount' => $paidThisTransaction,
+                ],
+            ],
+            'subtotal' => $paidThisTransaction,
+            'tax' => 0,
+            'totalAmount' => $paidThisTransaction,
+            'installmentAmount' => $installmentAmount,
+            'paidThisTransaction' => $paidThisTransaction,
+            'paidAmount' => $paidAmount,
+            'balanceAmount' => $balanceAmount,
+        ];
+    }
+
+    private function formatOfflineInstallmentInvoiceResponse(?object $invoice): ?array
+    {
+        if (!$invoice) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $invoice->id,
+            'invoiceNumber' => $invoice->invoiceNumber,
+            'orderId' => (int) $invoice->orderId,
+            'invoiceDate' => $invoice->invoiceDate,
+            'invoiceAmount' => $this->offlineEnrollmentMoney($invoice->invoiceAmount ?? $invoice->grandTotal ?? 0),
+            'downloadUrl' => '/api/invoice/' . (int) $invoice->orderId . '/download',
+        ];
+    }
+
+    private function offlineInstallmentTotals($installments, float $fallbackTotalFee): array
+    {
+        $totalFee = 0.0;
+        $amountPaid = 0.0;
+
+        foreach ($installments as $installment) {
+            $amount = $this->offlineEnrollmentMoney($installment->amount ?? 0);
+            $status = strtoupper((string) ($installment->paymentStatus ?? $installment->status ?? 'PENDING'));
+            $paidAmount = $this->offlineEnrollmentMoney(
+                $installment->paidAmount ?? ($status === 'PAID' ? $amount : 0)
+            );
+
+            $totalFee = $this->offlineEnrollmentMoney($totalFee + $amount);
+            $amountPaid = $this->offlineEnrollmentMoney($amountPaid + min($paidAmount, $amount));
+        }
+
+        if ($totalFee <= 0 && $fallbackTotalFee > 0) {
+            $totalFee = $fallbackTotalFee;
+        }
+
+        return [
+            'totalFee' => $this->offlineEnrollmentMoney($totalFee),
+            'amountPaid' => $this->offlineEnrollmentMoney($amountPaid),
+            'amountBalance' => $this->offlineEnrollmentMoney(max($totalFee - $amountPaid, 0)),
+        ];
+    }
+
+    private function updateOfflineEnrollmentInvoiceSnapshot(
+        int $orderId,
+        string $paymentStatus,
+        float $amountPaid,
+        float $amountBalance,
+        $installments
+    ): void {
+        if ($orderId <= 0) {
+            return;
+        }
+
+        $invoice = DB::table('invoices')
+            ->where('orderId', $orderId)
+            ->where('deletedFlag', 0)
+            ->first();
+
+        if (!$invoice) {
+            return;
+        }
+
+        $invoiceData = json_decode((string) ($invoice->invoiceData ?? ''), true);
+        $invoiceData = is_array($invoiceData) ? $invoiceData : [];
+        $invoiceData['paymentStatus'] = $paymentStatus;
+        $invoiceData['amountPaid'] = $amountPaid;
+        $invoiceData['amountBalance'] = $amountBalance;
+        $invoiceData['installments'] = collect($installments)
+            ->map(fn($row) => $this->formatOfflineInstallmentForResponse($row))
+            ->values()
+            ->all();
+
+        DB::table('invoices')
+            ->where('id', (int) $invoice->id)
+            ->update([
+                'invoiceData' => json_encode($invoiceData),
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function offlineStudentLedgerSchemaResponse()
+    {
+        $requiredTables = [
+            'orders',
+            'payments',
+            'enrollments',
+            'payment_logs',
+            'invoices',
+            'offline_course_installments',
+        ];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn(string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline student payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        $requiredPaymentLogColumns = [
+            'courseId',
+            'totalFee',
+            'amountPaid',
+            'amountBalance',
+            'paymentMode',
+            'paymentBy',
+            'paymentStatus',
+            'invoiceNumber',
+            'referenceNo',
+            'transactionNo',
+            'createdBy',
+        ];
+        $missingColumns = array_values(array_filter(
+            $requiredPaymentLogColumns,
+            fn(string $column): bool => !Schema::hasColumn('payment_logs', $column)
+        ));
+
+        if (!empty($missingColumns)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline student payment columns are missing: ' . implode(', ', $missingColumns),
+            ], 500);
+        }
+
+        $requiredInstallmentColumns = [
+            'paymentBy',
+            'paymentType',
+            'transactionNo',
+            'paidAmount',
+            'balanceAmount',
+            'paymentStatus',
+            'paymentDate',
+            'invoiceId',
+        ];
+        $missingInstallmentColumns = array_values(array_filter(
+            $requiredInstallmentColumns,
+            fn(string $column): bool => !Schema::hasColumn('offline_course_installments', $column)
+        ));
+
+        if (!empty($missingInstallmentColumns)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline installment payment columns are missing: ' . implode(', ', $missingInstallmentColumns),
+            ], 500);
+        }
+
+        return null;
+    }
+
+    private function baseOfflineCourseStudentQuery()
+    {
+        $manualPaymentLogs = DB::table('payment_logs')
+            ->select(
+                DB::raw('MAX(id) as id'),
+                'userId',
+                'paymentId',
+                'courseId'
+            )
+            ->where('eventType', 'offline.manual_enrollment')
+            ->where('deletedFlag', 0)
+            ->groupBy('userId', 'paymentId', 'courseId');
+        $installmentStatus = $this->offlineInstallmentPaymentStatusExpression();
+        $installmentPaidAmount = $this->offlineInstallmentPaidAmountExpression();
+        $installmentBalanceAmount = $this->offlineInstallmentBalanceAmountExpression();
+        $installmentUnpaid = "({$installmentStatus} <> 'PAID' OR {$installmentBalanceAmount} > 0.01)";
+        $installmentSummary = DB::table('offline_course_installments')
+            ->select(
+                'paymentLogId',
+                'userId',
+                'courseId',
+                DB::raw('COUNT(*) as installmentCount'),
+                DB::raw("SUM(CASE WHEN {$installmentUnpaid} THEN 1 ELSE 0 END) as pendingInstallments"),
+                DB::raw("SUM(CASE WHEN {$installmentStatus} = 'PAID' AND {$installmentBalanceAmount} <= 0.01 THEN 1 ELSE 0 END) as paidInstallments"),
+                DB::raw("SUM(CASE WHEN {$installmentUnpaid} THEN {$installmentBalanceAmount} ELSE 0 END) as pendingAmount"),
+                DB::raw("SUM({$installmentPaidAmount}) as paidInstallmentAmount"),
+                DB::raw("SUM(CASE WHEN {$installmentUnpaid} AND expectedDate < CURDATE() THEN 1 ELSE 0 END) as overdueInstallments"),
+                DB::raw("MIN(CASE WHEN {$installmentUnpaid} THEN expectedDate ELSE NULL END) as nextInstallmentDate"),
+                DB::raw("MIN(CASE WHEN {$installmentUnpaid} AND expectedDate >= CURDATE() THEN expectedDate ELSE NULL END) as nextUpcomingInstallmentDate")
+            )
+            ->where('deletedFlag', 0)
+            ->groupBy('paymentLogId', 'userId', 'courseId');
+
+        return DB::table('enrollments as e')
+            ->join('users as student', 'student.id', '=', 'e.userId')
+            ->join('courses as c', 'c.id', '=', 'e.courseId')
+            ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+            ->leftJoin('orders as o', 'o.id', '=', 'e.orderId')
+            ->leftJoin('payments as p', 'p.id', '=', 'e.paymentId')
+            ->leftJoin('invoices as i', function ($join) {
+                $join->on('i.orderId', '=', 'e.orderId')
+                    ->where('i.deletedFlag', 0);
+            })
+            ->leftJoinSub($manualPaymentLogs, 'latest_pl', function ($join) {
+                $join->on('latest_pl.userId', '=', 'e.userId')
+                    ->on('latest_pl.paymentId', '=', 'e.paymentId')
+                    ->on('latest_pl.courseId', '=', 'e.courseId');
+            })
+            ->leftJoin('payment_logs as pl', 'pl.id', '=', 'latest_pl.id')
+            ->leftJoinSub($installmentSummary, 'inst', function ($join) {
+                $join->on('inst.paymentLogId', '=', 'pl.id')
+                    ->on('inst.userId', '=', 'e.userId')
+                    ->on('inst.courseId', '=', 'e.courseId');
+            })
+            ->where('e.deletedFlag', 0)
+            ->where('student.deletedFlag', 0)
+            ->where('c.deletedFlag', 0)
+            ->where('c.courseType', 2);
+    }
+
+    private function offlineCourseStudentSelectColumns(): array
+    {
+        $totalFee = $this->offlineStudentTotalFeeExpression();
+        $amountPaid = $this->offlineStudentAmountPaidExpression();
+        $amountBalance = $this->offlineStudentAmountBalanceExpression();
+        $paymentStatus = $this->offlineStudentPaymentStatusExpression();
+        $paymentDisplayId = $this->offlineStudentPaymentDisplayExpression();
+
+        return [
+            'e.id as enrollmentId',
+            'e.status as enrollmentStatus',
+            'e.created_at as enrolledAt',
+            'student.id as studentId',
+            'student.name as studentName',
+            'student.email as studentEmail',
+            'student.phone as studentPhone',
+            Schema::hasColumn('users', 'code') ? DB::raw('student.code as studentCode') : DB::raw('NULL as studentCode'),
+            'student.dob as studentDob',
+            'student.gender as studentGender',
+            'c.id as courseId',
+            EntityCodeService::codeSelect('courses', 'c'),
+            'c.title as courseTitle',
+            'cc.categoryName as categoryName',
+            'c.price as coursePrice',
+            'c.venue',
+            'c.city',
+            'c.startDate',
+            'c.endDate',
+            'o.id as orderId',
+            'o.orderReference',
+            'p.id as paymentId',
+            'pl.id as paymentLogId',
+            DB::raw("{$totalFee} as totalFee"),
+            DB::raw("{$amountPaid} as amountPaid"),
+            DB::raw("{$amountBalance} as amountBalance"),
+            DB::raw("{$paymentStatus} as paymentStatus"),
+            DB::raw("COALESCE(pl.paymentMode, p.paymentMethod, 'OFFLINE') as paymentMode"),
+            DB::raw("COALESCE(pl.paymentBy, p.paymentMethod, 'OFFLINE') as paymentBy"),
+            'pl.referenceNo',
+            'pl.transactionNo',
+            DB::raw("{$paymentDisplayId} as paymentDisplayId"),
+            DB::raw('COALESCE(pl.invoiceNumber, i.invoiceNumber) as invoiceNumber'),
+            'i.invoiceDate',
+            DB::raw('COALESCE(inst.installmentCount, 0) as installmentCount'),
+            DB::raw('COALESCE(inst.pendingInstallments, 0) as pendingInstallments'),
+            DB::raw('COALESCE(inst.paidInstallments, 0) as paidInstallments'),
+            DB::raw('COALESCE(inst.pendingAmount, 0) as pendingInstallmentAmount'),
+            DB::raw('COALESCE(inst.paidInstallmentAmount, 0) as paidInstallmentAmount'),
+            DB::raw('COALESCE(inst.overdueInstallments, 0) as overdueInstallments'),
+            'inst.nextInstallmentDate',
+            'inst.nextUpcomingInstallmentDate',
+        ];
+    }
+
+    private function applyOfflineCourseStudentFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $paymentDisplayId = $this->offlineStudentPaymentDisplayExpression();
+
+            $query->where(function ($subQuery) use ($search, $paymentDisplayId) {
+                $subQuery->where('student.name', 'LIKE', '%' . $search . '%')
+                    ->orWhere('student.email', 'LIKE', '%' . $search . '%')
+                    ->orWhere('student.phone', 'LIKE', '%' . $search . '%')
+                    ->orWhere('c.title', 'LIKE', '%' . $search . '%')
+                    ->orWhere('cc.categoryName', 'LIKE', '%' . $search . '%')
+                    ->orWhere('o.orderReference', 'LIKE', '%' . $search . '%')
+                    ->orWhere('i.invoiceNumber', 'LIKE', '%' . $search . '%')
+                    ->orWhereRaw("{$paymentDisplayId} LIKE ?", ['%' . $search . '%']);
+                EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
+
+                if (Schema::hasColumn('users', 'code')) {
+                    $subQuery->orWhere('student.code', 'LIKE', '%' . $search . '%');
+                }
+            });
+        }
+
+        if ($request->filled('courseId')) {
+            $query->where('c.id', (int) $request->input('courseId'));
+        }
+
+        if ($request->filled('courseCode') && Schema::hasColumn('courses', 'code')) {
+            $courseCode = trim((string) $request->input('courseCode'));
+
+            if ($courseCode !== '') {
+                $query->where('c.code', 'LIKE', '%' . $courseCode . '%');
+            }
+        }
+
+        if ($request->filled('paymentStatus')) {
+            $paymentStatus = strtoupper((string) $request->input('paymentStatus'));
+            $amountBalance = $this->offlineStudentAmountBalanceExpression();
+
+            if ($paymentStatus === 'PAID') {
+                $query->whereRaw("{$amountBalance} <= 0");
+            } elseif ($paymentStatus === 'PARTIAL') {
+                $query->whereRaw("{$amountBalance} > 0");
+            }
+        }
+
+        $installmentStatus = (string) $request->input('installmentStatus', 'all');
+
+        if ($installmentStatus === 'pending') {
+            $query->whereRaw('COALESCE(inst.pendingInstallments, 0) > 0');
+        } elseif ($installmentStatus === 'paid') {
+            $query->whereRaw($this->offlineStudentAmountBalanceExpression() . ' <= 0');
+        } elseif ($installmentStatus === 'overdue') {
+            $query->whereRaw('COALESCE(inst.overdueInstallments, 0) > 0');
+        } elseif ($installmentStatus === 'none') {
+            $query->whereRaw('COALESCE(inst.installmentCount, 0) = 0');
+        }
+    }
+
+    private function applyOfflineCourseStudentSort($query, string $sortBy)
+    {
+        if ($sortBy === 'newest') {
+            return $query->orderBy('e.created_at', 'DESC')
+                ->orderBy('e.id', 'DESC');
+        }
+
+        if ($sortBy === 'paidDesc') {
+            return $query->orderByRaw($this->offlineStudentAmountPaidExpression() . ' DESC')
+                ->orderBy('e.created_at', 'DESC');
+        }
+
+        if ($sortBy === 'balanceDesc') {
+            return $query->orderByRaw($this->offlineStudentAmountBalanceExpression() . ' DESC')
+                ->orderByRaw('CASE WHEN inst.nextInstallmentDate IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('inst.nextInstallmentDate', 'ASC');
+        }
+
+        return $query->orderByRaw('CASE WHEN COALESCE(inst.pendingInstallments, 0) > 0 THEN 0 ELSE 1 END ASC')
+            ->orderByRaw('CASE WHEN inst.nextInstallmentDate IS NULL THEN 1 ELSE 0 END ASC')
+            ->orderBy('inst.nextInstallmentDate', 'ASC')
+            ->orderBy('e.created_at', 'DESC');
+    }
+
+    private function buildOfflineCourseStudentSummary($query): array
+    {
+        $totalFee = $this->offlineStudentTotalFeeExpression();
+        $amountPaid = $this->offlineStudentAmountPaidExpression();
+        $amountBalance = $this->offlineStudentAmountBalanceExpression();
+        $row = $query
+            ->selectRaw('COUNT(*) as totalEnrollments')
+            ->selectRaw('COUNT(DISTINCT e.userId) as totalStudents')
+            ->selectRaw('COUNT(DISTINCT c.id) as totalCourses')
+            ->selectRaw("SUM({$totalFee}) as totalFee")
+            ->selectRaw("SUM({$amountPaid}) as totalPaid")
+            ->selectRaw("SUM({$amountBalance}) as totalBalance")
+            ->selectRaw("SUM(CASE WHEN {$amountBalance} <= 0 THEN 1 ELSE 0 END) as paidStudents")
+            ->selectRaw("SUM(CASE WHEN {$amountBalance} > 0 THEN 1 ELSE 0 END) as partialStudents")
+            ->selectRaw('SUM(COALESCE(inst.pendingInstallments, 0)) as pendingInstallments')
+            ->selectRaw('SUM(COALESCE(inst.overdueInstallments, 0)) as overdueInstallments')
+            ->selectRaw('MIN(inst.nextInstallmentDate) as nextInstallmentDate')
+            ->selectRaw('MIN(inst.nextUpcomingInstallmentDate) as nextUpcomingInstallmentDate')
+            ->first();
+
+        return [
+            'totalEnrollments' => (int) ($row->totalEnrollments ?? 0),
+            'totalStudents' => (int) ($row->totalStudents ?? 0),
+            'totalCourses' => (int) ($row->totalCourses ?? 0),
+            'paidStudents' => (int) ($row->paidStudents ?? 0),
+            'partialStudents' => (int) ($row->partialStudents ?? 0),
+            'pendingInstallments' => (int) ($row->pendingInstallments ?? 0),
+            'overdueInstallments' => (int) ($row->overdueInstallments ?? 0),
+            'totalFee' => $this->offlineEnrollmentMoney($row->totalFee ?? 0),
+            'totalPaid' => $this->offlineEnrollmentMoney($row->totalPaid ?? 0),
+            'totalBalance' => $this->offlineEnrollmentMoney($row->totalBalance ?? 0),
+            'nextInstallmentDate' => $row->nextInstallmentDate ?? null,
+            'nextUpcomingInstallmentDate' => $row->nextUpcomingInstallmentDate ?? null,
+        ];
+    }
+
+    private function offlineCourseInstallmentsByPaymentLogIds($paymentLogIds): array
+    {
+        if ($paymentLogIds->isEmpty()) {
+            return [];
+        }
+
+        $statusExpression = $this->offlineInstallmentPaymentStatusExpression('oci');
+        $balanceExpression = $this->offlineInstallmentBalanceAmountExpression('oci');
+        $paidCondition = "({$statusExpression} = 'PAID' AND {$balanceExpression} <= 0.01)";
+        $query = DB::table('offline_course_installments as oci')
+            ->leftJoin('payment_logs as enrollment_pl', 'enrollment_pl.id', '=', 'oci.paymentLogId')
+            ->leftJoin('invoices as enrollment_inv', function ($join) {
+                $join->on('enrollment_inv.orderId', '=', 'enrollment_pl.orderId')
+                    ->where('enrollment_inv.deletedFlag', 0);
+            })
+            ->whereIn('oci.paymentLogId', $paymentLogIds->all())
+            ->where('oci.deletedFlag', 0);
+
+        if (Schema::hasColumn('offline_course_installments', 'invoiceId')) {
+            $query
+                ->leftJoin('invoices as inv', 'inv.id', '=', 'oci.invoiceId')
+                ->select(
+                    'oci.*',
+                    DB::raw("COALESCE(oci.invoiceId, CASE WHEN {$paidCondition} THEN enrollment_inv.id ELSE NULL END) as invoiceId"),
+                    DB::raw("COALESCE(inv.invoiceNumber, CASE WHEN {$paidCondition} THEN enrollment_inv.invoiceNumber ELSE NULL END) as invoiceNumber"),
+                    DB::raw("COALESCE(inv.orderId, CASE WHEN {$paidCondition} THEN enrollment_inv.orderId ELSE NULL END) as invoiceOrderId")
+                );
+        } else {
+            $query->select(
+                'oci.*',
+                DB::raw("CASE WHEN {$paidCondition} THEN enrollment_inv.id ELSE NULL END as invoiceId"),
+                DB::raw("CASE WHEN {$paidCondition} THEN enrollment_inv.invoiceNumber ELSE NULL END as invoiceNumber"),
+                DB::raw("CASE WHEN {$paidCondition} THEN enrollment_inv.orderId ELSE NULL END as invoiceOrderId")
+            );
+        }
+
+        return $query
+            ->orderBy('oci.installmentNo')
+            ->orderByRaw('CASE WHEN oci.expectedDate IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('oci.expectedDate')
+            ->get()
+            ->groupBy('paymentLogId')
+            ->map(fn($rows) => $this->normalizeOfflineInstallmentSequenceForResponse($rows))
+            ->all();
+    }
+
+    private function normalizeOfflineInstallmentSequenceForResponse($rows): array
+    {
+        $formattedRows = collect($rows)
+            ->map(fn($row) => $this->formatOfflineInstallmentForResponse($row))
+            ->values();
+
+        $hasEnrollmentPaidRow = $formattedRows->contains(
+            fn(array $row): bool => $row['paymentStatus'] === 'PAID' && empty($row['expectedDate'])
+        );
+
+        if (!$hasEnrollmentPaidRow) {
+            return $formattedRows
+                ->sortBy(fn(array $row): string => str_pad((string) ($row['installmentNo'] ?? 0), 4, '0', STR_PAD_LEFT))
+                ->values()
+                ->all();
+        }
+
+        return $formattedRows
+            ->sortBy(function (array $row): string {
+                $isEnrollmentPaidRow = $row['paymentStatus'] === 'PAID' && empty($row['expectedDate']);
+
+                return ($isEnrollmentPaidRow ? '0' : '1')
+                    . '-' . str_pad((string) ($row['installmentNo'] ?? 0), 4, '0', STR_PAD_LEFT)
+                    . '-' . str_pad((string) ($row['id'] ?? 0), 8, '0', STR_PAD_LEFT);
+            })
+            ->values()
+            ->map(fn(array $row, int $index): array => array_merge($row, [
+                'installmentNo' => $index + 1,
+            ]))
+            ->all();
+    }
+
+    private function offlineInstallmentDisplayNumberForPaymentLog(int $paymentLogId, int $installmentId): int
+    {
+        if ($paymentLogId <= 0 || $installmentId <= 0) {
+            return 0;
+        }
+
+        $rows = DB::table('offline_course_installments')
+            ->where('paymentLogId', $paymentLogId)
+            ->where('deletedFlag', 0)
+            ->orderBy('installmentNo')
+            ->orderBy('id')
+            ->get();
+
+        return (int) (collect($this->normalizeOfflineInstallmentSequenceForResponse($rows))
+            ->firstWhere('id', $installmentId)['installmentNo'] ?? 0);
+    }
+
+    private function formatOfflineCourseStudentRow(object $row, array $installmentMap): array
+    {
+        $paymentLogId = (int) ($row->paymentLogId ?? 0);
+        $installments = $paymentLogId > 0 ? ($installmentMap[$paymentLogId] ?? []) : [];
+        $studentId = (int) ($row->studentId ?? 0);
+        $studentCode = trim((string) ($row->studentCode ?? ''));
+
+        if ($studentCode === '' && $studentId > 0) {
+            $studentCode = EntityCodeService::assignIfMissing(
+                'users',
+                $studentId,
+                EntityCodeService::PREFIX_LEARNER
+            ) ?? '';
+        }
+
+        return [
+            'id' => (int) $row->enrollmentId,
+            'enrollmentId' => (int) $row->enrollmentId,
+            'enrollmentStatus' => $row->enrollmentStatus,
+            'enrolledAt' => $row->enrolledAt,
+            'studentId' => $studentId,
+            'studentCode' => $studentCode !== '' ? $studentCode : null,
+            'studentName' => $row->studentName,
+            'studentEmail' => $row->studentEmail,
+            'studentPhone' => $row->studentPhone,
+            'studentDob' => $row->studentDob,
+            'studentGender' => $row->studentGender ? (int) $row->studentGender : null,
+            'courseId' => (int) $row->courseId,
+            'courseCode' => $row->code ?? null,
+            'courseTitle' => $row->courseTitle,
+            'categoryName' => $row->categoryName ?: 'Offline Course',
+            'coursePrice' => $this->offlineEnrollmentMoney($row->coursePrice ?? 0),
+            'venue' => $row->venue,
+            'city' => $row->city,
+            'startDate' => $row->startDate,
+            'endDate' => $row->endDate,
+            'orderId' => $row->orderId ? (int) $row->orderId : null,
+            'orderReference' => $row->orderReference,
+            'paymentId' => $row->paymentId ? (int) $row->paymentId : null,
+            'paymentLogId' => $paymentLogId ?: null,
+            'totalFee' => $this->offlineEnrollmentMoney($row->totalFee ?? 0),
+            'amountPaid' => $this->offlineEnrollmentMoney($row->amountPaid ?? 0),
+            'amountBalance' => $this->offlineEnrollmentMoney($row->amountBalance ?? 0),
+            'paymentStatus' => $row->paymentStatus,
+            'paymentMode' => $row->paymentMode,
+            'paymentBy' => $row->paymentBy,
+            'referenceNo' => $row->referenceNo,
+            'transactionNo' => $row->transactionNo,
+            'paymentDisplayId' => $row->paymentDisplayId,
+            'invoiceNumber' => $row->invoiceNumber,
+            'invoiceDate' => $row->invoiceDate,
+            'installmentCount' => (int) ($row->installmentCount ?? 0),
+            'pendingInstallments' => (int) ($row->pendingInstallments ?? 0),
+            'paidInstallments' => (int) ($row->paidInstallments ?? 0),
+            'pendingInstallmentAmount' => $this->offlineEnrollmentMoney($row->pendingInstallmentAmount ?? 0),
+            'paidInstallmentAmount' => $this->offlineEnrollmentMoney($row->paidInstallmentAmount ?? 0),
+            'overdueInstallments' => (int) ($row->overdueInstallments ?? 0),
+            'nextInstallmentDate' => $row->nextInstallmentDate,
+            'nextUpcomingInstallmentDate' => $row->nextUpcomingInstallmentDate,
+            'installments' => $installments,
+        ];
+    }
+
+    private function normalizeOfflineCourseInstallmentUpdateRows(mixed $installments): array
+    {
+        if (!is_array($installments)) {
+            return [];
+        }
+
+        return collect($installments)
+            ->map(function ($installment, int $index): array {
+                $item = is_array($installment) ? $installment : [];
+                $status = strtoupper((string) ($item['status'] ?? 'PENDING'));
+
+                return [
+                    'id' => empty($item['id']) ? null : (int) $item['id'],
+                    'installmentNo' => (int) ($item['installmentNo'] ?? ($index + 1)),
+                    'amount' => $this->offlineEnrollmentMoney($item['amount'] ?? 0),
+                    'expectedDate' => trim((string) ($item['expectedDate'] ?? '')) ?: null,
+                    'paidDate' => trim((string) ($item['paidDate'] ?? '')) ?: null,
+                    'paymentBy' => $this->normalizeOfflineInstallmentPaymentBy($item['paymentBy'] ?? null),
+                    'transactionNo' => trim((string) ($item['transactionNo'] ?? '')) ?: null,
+                    'status' => in_array($status, ['PAID', 'PENDING'], true) ? $status : 'PENDING',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function validateOfflineCourseInstallmentUpdateRows(array $installments, $existingInstallments, float $totalFee): array
+    {
+        $errors = [];
+
+        if (count($installments) === 0) {
+            $errors['installments'][] = 'Add at least one installment row.';
+            return $errors;
+        }
+
+        if (count($installments) > 4) {
+            $errors['installments'][] = 'Installments cannot be greater than 4.';
+        }
+
+        $seenNumbers = [];
+        $rowTotal = 0;
+        $pendingRows = [];
+
+        foreach ($installments as $index => $installment) {
+            if ($installment['id'] && !$existingInstallments->has($installment['id'])) {
+                $errors["installments.$index.id"][] = 'Installment row does not belong to this payment.';
+            }
+
+            if (isset($seenNumbers[$installment['installmentNo']])) {
+                $errors["installments.$index.installmentNo"][] = 'Installment no must be unique.';
+            }
+
+            $seenNumbers[$installment['installmentNo']] = true;
+            $rowTotal = $this->offlineEnrollmentMoney($rowTotal + $installment['amount']);
+
+            if ($installment['status'] === 'PENDING') {
+                $pendingRows[] = $installment;
+
+                if (empty($installment['expectedDate'])) {
+                    $errors["installments.$index.expectedDate"][] = 'Expected date is required for pending installments.';
+                }
+            } else {
+                if (empty($installment['paymentBy'])) {
+                    $errors["installments.$index.paymentBy"][] = 'Payment by is required for paid installments.';
+                }
+
+                if (
+                    !empty($installment['paymentBy'])
+                    && $installment['paymentBy'] !== 'CASH'
+                    && empty($installment['transactionNo'])
+                ) {
+                    $errors["installments.$index.transactionNo"][] = 'Transaction no is required for UPI and Netbanking installments.';
+                }
+            }
+        }
+
+        if (abs($rowTotal - $totalFee) > 0.01) {
+            $errors['installments'][] = 'Installment amounts must equal the total fee.';
+        }
+
+        if (count($pendingRows) === 0 && $rowTotal < $totalFee) {
+            $errors['installments'][] = 'At least one pending installment is required while balance remains.';
+        }
+
+        return $errors;
+    }
+
+    private function formatOfflineInstallmentForResponse(object $row): array
+    {
+        $expectedDate = $row->expectedDate ? (string) $row->expectedDate : null;
+        $amount = $this->offlineEnrollmentMoney($row->amount ?? 0);
+        $rawStatus = strtoupper((string) ($row->paymentStatus ?? $row->status ?? 'PENDING'));
+        $hasEnrollmentPaymentProof = $expectedDate === null
+            && $amount > 0
+            && (
+                trim((string) ($row->paymentBy ?? '')) !== ''
+                || trim((string) ($row->paymentType ?? '')) !== ''
+                || trim((string) ($row->transactionNo ?? '')) !== ''
+                || trim((string) ($row->paymentDate ?? '')) !== ''
+                || trim((string) ($row->paidDate ?? '')) !== ''
+            );
+
+        if ($hasEnrollmentPaymentProof) {
+            $rawStatus = 'PAID';
+        }
+
+        $paidAmount = $this->offlineEnrollmentMoney(
+            $row->paidAmount ?? ($rawStatus === 'PAID' ? $amount : 0)
+        );
+
+        if ($rawStatus === 'PAID' && $paidAmount <= 0.01) {
+            $paidAmount = $amount;
+        }
+
+        $balanceAmount = $this->offlineEnrollmentMoney(
+            $row->balanceAmount ?? max($amount - $paidAmount, 0)
+        );
+
+        if ($rawStatus === 'PAID') {
+            $balanceAmount = 0;
+        }
+
+        $isOverdue = $rawStatus !== 'PAID'
+            && $balanceAmount > 0.01
+            && $expectedDate !== null
+            && $expectedDate < now()->toDateString();
+        $paymentStatus = $balanceAmount <= 0.01
+            ? 'PAID'
+            : ($paidAmount > 0 ? 'PARTIALLY_PAID' : ($isOverdue ? 'OVERDUE' : 'PENDING'));
+
+        return [
+            'id' => (int) $row->id,
+            'paymentLogId' => (int) $row->paymentLogId,
+            'enrollmentId' => empty($row->enrollmentId ?? null) ? null : (int) $row->enrollmentId,
+            'installmentNo' => (int) $row->installmentNo,
+            'amount' => $amount,
+            'installmentAmount' => $amount,
+            'paidAmount' => $paidAmount,
+            'balanceAmount' => $balanceAmount,
+            'expectedDate' => $expectedDate,
+            'paidDate' => $row->paidDate ? (string) $row->paidDate : null,
+            'paymentDate' => ($row->paymentDate ?? null) ? (string) $row->paymentDate : (($row->paidDate ?? null) ? (string) $row->paidDate : null),
+            'paymentBy' => $row->paymentBy ? (string) $row->paymentBy : null,
+            'paymentType' => ($row->paymentType ?? null) ? (string) $row->paymentType : ($row->paymentBy ? (string) $row->paymentBy : null),
+            'transactionNo' => $row->transactionNo ? (string) $row->transactionNo : null,
+            'invoiceId' => empty($row->invoiceId ?? null) ? null : (int) $row->invoiceId,
+            'invoiceNumber' => $row->invoiceNumber ?? null,
+            'invoiceOrderId' => empty($row->invoiceOrderId ?? null) ? null : (int) $row->invoiceOrderId,
+            'invoiceDownloadUrl' => empty($row->invoiceOrderId ?? null) ? null : '/api/invoice/' . (int) $row->invoiceOrderId . '/download',
+            'remarks' => ($row->remarks ?? null) ? (string) $row->remarks : null,
+            'status' => $paymentStatus,
+            'paymentStatus' => $paymentStatus,
+            'isOverdue' => $isOverdue,
+        ];
+    }
+
+    private function normalizeOfflineInstallmentPaymentBy(mixed $value): ?string
+    {
+        return $this->normalizeOfflineInstallmentPaymentType($value);
+    }
+
+    private function offlineInstallmentPaymentStatusExpression(string $alias = ''): string
+    {
+        $prefix = $alias !== '' ? $alias . '.' : '';
+        $paymentProofCondition = "(
+            {$prefix}expectedDate IS NULL
+            AND COALESCE({$prefix}amount, 0) > 0
+            AND (
+                NULLIF({$prefix}paymentBy, '') IS NOT NULL
+                OR NULLIF({$prefix}paymentType, '') IS NOT NULL
+                OR NULLIF({$prefix}transactionNo, '') IS NOT NULL
+                OR {$prefix}paymentDate IS NOT NULL
+                OR {$prefix}paidDate IS NOT NULL
+            )
+        )";
+
+        if (Schema::hasColumn('offline_course_installments', 'paymentStatus')) {
+            return "CASE WHEN {$paymentProofCondition} THEN 'PAID' ELSE UPPER(COALESCE(NULLIF({$prefix}paymentStatus, ''), {$prefix}status)) END";
+        }
+
+        return "CASE WHEN {$paymentProofCondition} THEN 'PAID' ELSE UPPER({$prefix}status) END";
+    }
+
+    private function offlineInstallmentPaidAmountExpression(string $alias = ''): string
+    {
+        $prefix = $alias !== '' ? $alias . '.' : '';
+        $amount = "COALESCE({$prefix}amount, 0)";
+        $status = $this->offlineInstallmentPaymentStatusExpression($alias);
+        $fallback = "CASE WHEN {$status} = 'PAID' THEN {$amount} ELSE 0 END";
+
+        if (Schema::hasColumn('offline_course_installments', 'paidAmount')) {
+            return "CASE WHEN {$status} = 'PAID' AND COALESCE({$prefix}paidAmount, 0) <= 0.01 THEN {$amount} ELSE LEAST({$amount}, COALESCE({$prefix}paidAmount, {$fallback})) END";
+        }
+
+        return $fallback;
+    }
+
+    private function offlineInstallmentBalanceAmountExpression(string $alias = ''): string
+    {
+        $prefix = $alias !== '' ? $alias . '.' : '';
+        $amount = "COALESCE({$prefix}amount, 0)";
+        $paidAmount = $this->offlineInstallmentPaidAmountExpression($alias);
+        $fallback = "GREATEST({$amount} - {$paidAmount}, 0)";
+
+        if (Schema::hasColumn('offline_course_installments', 'balanceAmount')) {
+            return "CASE WHEN {$this->offlineInstallmentPaymentStatusExpression($alias)} = 'PAID' THEN 0 ELSE COALESCE({$prefix}balanceAmount, {$fallback}) END";
+        }
+
+        return $fallback;
+    }
+
+    private function offlineStudentTotalFeeExpression(): string
+    {
+        return 'COALESCE(pl.totalFee, o.totalAmount, c.price, 0)';
+    }
+
+    private function offlineStudentAmountPaidExpression(): string
+    {
+        return 'COALESCE(pl.amountPaid, p.totalAmount, 0)';
+    }
+
+    private function offlineStudentAmountBalanceExpression(): string
+    {
+        return 'COALESCE(pl.amountBalance, GREATEST(COALESCE(o.totalAmount, c.price, 0) - COALESCE(p.totalAmount, 0), 0))';
+    }
+
+    private function offlineStudentPaymentStatusExpression(): string
+    {
+        return "CASE WHEN {$this->offlineStudentAmountBalanceExpression()} <= 0 THEN 'PAID' ELSE 'PARTIAL' END";
+    }
+
+    private function offlineStudentPaymentDisplayExpression(): string
+    {
+        return "COALESCE(NULLIF(pl.transactionNo, ''), NULLIF(p.razorpayPaymentId, ''), NULLIF(pl.referenceNo, ''), NULLIF(p.paymentReference, ''), NULLIF(i.paymentReference, ''))";
     }
 
     public function updateOfflineCourseStatus(Request $request)
@@ -1966,9 +3860,19 @@ class CoursesController extends Controller
                 ], 404);
             }
 
+            $courseCode = EntityCodeService::assignIfMissing(
+                'courses',
+                (int) $request->input('id'),
+                EntityCodeService::PREFIX_ACADEMIC_COURSE
+            );
+
             return response()->json([
                 'status' => true,
-                'message' => 'Offline course status updated successfully'
+                'message' => 'Offline course status updated successfully',
+                'data' => [
+                    'id' => (int) $request->input('id'),
+                    'code' => $courseCode,
+                ],
             ], 200);
         } catch (\Exception $e) {
             Log::error('Error updating offline course status: ' . $e->getMessage());
@@ -2094,6 +3998,7 @@ class CoursesController extends Controller
                 ->where('c.createdBy', $user->id)
                 ->select(
                     'c.id',
+                    EntityCodeService::codeSelect('courses', 'c'),
                     'c.title',
                     'c.categoryId',
                     'cc.categoryName as categoryName',
@@ -2118,6 +4023,7 @@ class CoursesController extends Controller
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('c.title', 'LIKE', '%' . $search . '%')
                         ->orWhere('c.description', 'LIKE', '%' . $search . '%');
+                    EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
                 });
             }
 
@@ -2322,6 +4228,7 @@ class CoursesController extends Controller
             )
                 ->select(
                     'c.id',
+                    EntityCodeService::codeSelect('courses', 'c'),
                     'c.title',
                     'c.categoryId',
                     'cc.categoryName as categoryName',
@@ -2351,6 +4258,7 @@ class CoursesController extends Controller
                         ->orWhere('c.description', 'LIKE', '%' . $search . '%')
                         ->orWhere('creator.name', 'LIKE', '%' . $search . '%')
                         ->orWhere('creator.email', 'LIKE', '%' . $search . '%');
+                    EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
                 });
             }
 
@@ -2522,6 +4430,7 @@ class CoursesController extends Controller
             )
                 ->select(
                     'c.id',
+                    EntityCodeService::codeSelect('courses', 'c'),
                     'c.title',
                     'c.categoryId',
                     'cc.categoryName as categoryName',
@@ -2715,11 +4624,21 @@ class CoursesController extends Controller
                     ]);
             }
 
+            $courseCode = EntityCodeService::assignIfMissing(
+                'courses',
+                $courseId,
+                EntityCodeService::PREFIX_MAIN_COURSE
+            );
+
             DB::commit();
 
             return response()->json([
                 'status' => true,
-                'message' => 'Course updated successfully'
+                'message' => 'Course updated successfully',
+                'data' => [
+                    'id' => $courseId,
+                    'code' => $courseCode,
+                ],
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();

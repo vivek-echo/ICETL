@@ -388,7 +388,7 @@
   <aside class="mobile-menu-panel" [class.open]="isMobileMenuOpen()">
     <div class="mobile-menu-panel__header">
       <a routerLink="/" (click)="closeAllMenus()">
-        <img src="assets/images/logo/logo.png" alt="ICETL logo" />
+        <img src="assets/images/logo/ice_logo.png" alt="ICETL logo" />
       </a>
 
       <button type="button" class="rbt-round-btn" (click)="closeMobileMenu()">
@@ -427,7 +427,7 @@
       </ul>
       }
 
-      <div class="mobile-menu-panel__section">
+      <!-- <div class="mobile-menu-panel__section">
         <button type="button" class="mobile-menu-toggle" (click)="toggleMobileSection('categories')"
           [attr.aria-expanded]="openMobileSection() === 'categories'">
           <span>Popular categories</span>
@@ -442,7 +442,7 @@
           }
         </div>
         }
-      </div>
+      </div> -->
 
       <div class="mobile-menu-panel__section">
         <h6 class="mobile-menu-panel__section-title">Follow us</h6>
@@ -476,13 +476,13 @@
       }
 
       <div class="mobile-menu-panel__actions">
-        <a class="rbt-btn btn-sm btn-gradient" routerLink="/courses" (click)="closeAllMenus()">
+        <!-- <a class="rbt-btn btn-sm btn-gradient" routerLink="/courses" (click)="closeAllMenus()">
           Explore Courses
-        </a>
+        </a> -->
         @if (isLoggedIn()) {
-        <a class="rbt-btn btn-sm btn-border-gradient" [routerLink]="profileRoute" (click)="closeAllMenus()">
+        <!-- <a class="rbt-btn btn-sm btn-border-gradient" [routerLink]="profileRoute" (click)="closeAllMenus()">
           Profile
-        </a>
+        </a> -->
         <a class="rbt-btn btn-sm btn-white" href="#" (click)="logoutUser($event)">
           Logout
         </a>

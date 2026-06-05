@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="96" viewBox="0 0 260 96" role="img" aria-label="IBM logo">
+  <rect width="260" height="96" rx="16" fill="none"/>
+  <g fill="#0f62fe">
+    <text x="20" y="63" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="47" font-weight="900">IBM</text>
+    <rect x="20" y="30" width="104" height="5" fill="#fff" opacity=".75"/>
+    <rect x="20" y="44" width="104" height="5" fill="#fff" opacity=".75"/>
+    <rect x="20" y="58" width="104" height="5" fill="#fff" opacity=".75"/>
+  </g>
+</svg>

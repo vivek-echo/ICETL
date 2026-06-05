@@ -57,6 +57,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/getMyOfflineCourses', [CoursesController::class, 'getMyOfflineCourses']);
     Route::post('/getAllOfflineCourses', [CoursesController::class, 'getAllOfflineCourses']);
     Route::post('/offline-courses/enroll-student', [CoursesController::class, 'enrollStudent']);
+    Route::post('/offline-courses/enrolled-students', [CoursesController::class, 'getOfflineCourseEnrolledStudents']);
+    Route::post('/offline-courses/installments/pay', [CoursesController::class, 'payOfflineCourseInstallment']);
+    Route::post('/offline-courses/installments/update', [CoursesController::class, 'updateOfflineCourseInstallments']);
     Route::post('/updateOfflineCourseStatus', [CoursesController::class, 'updateOfflineCourseStatus']);
     Route::post('/deleteOfflineCourse', [CoursesController::class, 'deleteOfflineCourse']);
     Route::post('/getCourses', [CoursesController::class, 'getCourses']);
@@ -170,4 +173,6 @@ Route::post('/instructors/verify-otp', [InstructorRegistrationController::class,
 Route::group(['prefix' => '/preloginapi'], function () {
     Route::post('/getCourseCategories', [CoursesController::class, 'getCourseCategories']);
     Route::post('/getPublicCourses', [CoursesController::class, 'getPublicCourses']);
+    Route::post('/getPublicWorkshops', [WorkshopController::class, 'getPublicWorkshops']);
+    Route::post('/getPublicSeminars', [SeminarController::class, 'getPublicSeminars']);
 });

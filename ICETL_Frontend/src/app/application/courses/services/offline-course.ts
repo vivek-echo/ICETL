@@ -33,10 +33,12 @@ export type OfflineCourseSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDes
 
 export interface OfflineCourseItem extends OfflineCoursePayload {
   id: number;
+  code?: string | null;
   thumbnail?: string | null;
   thumbnailUrl?: string | null;
   statusLabel?: string;
   scheduleStatus?: OfflineCourseScheduleStatus;
+  isEnrolled?: boolean;
   courseType?: number;
   courseHighlights?: string[];
   createdById: number | null;
@@ -72,8 +74,15 @@ export interface OfflineCourseListResponse {
   meta?: OfflineCoursePaginationMeta;
 }
 
-export type OfflineCourseEnrollmentInstallmentStatus = 'PAID' | 'PENDING';
+export type OfflineCourseEnrollmentInstallmentStatus = 'PAID' | 'PENDING' | 'PARTIALLY_PAID' | 'OVERDUE';
 export type OfflineCourseEnrollmentPaymentBy = 'CASH' | 'UPI' | 'NETBANKING';
+export type OfflineInstallmentPaymentType =
+  | 'CASH'
+  | 'UPI'
+  | 'BANK_TRANSFER'
+  | 'CHEQUE'
+  | 'CARD'
+  | 'OTHER';
 
 export interface OfflineCourseEnrollmentInstallmentPayload {
   installmentNo: number;
@@ -103,8 +112,173 @@ export interface OfflineCourseEnrollmentResponse {
   data?: {
     userId: number;
     courseId: number;
+    courseCode?: string | null;
     invoiceNumber: string;
     paymentStatus: 'PAID' | 'PARTIAL';
+  };
+  errors?: Record<string, string[]>;
+}
+
+export interface OfflineCourseStudentInstallment {
+  id: number | null;
+  paymentLogId: number;
+  enrollmentId?: number | null;
+  installmentNo: number;
+  amount: number;
+  installmentAmount?: number;
+  paidAmount?: number;
+  balanceAmount?: number;
+  expectedDate: string | null;
+  paidDate: string | null;
+  paymentDate?: string | null;
+  paymentBy: OfflineCourseEnrollmentPaymentBy | null;
+  paymentType?: OfflineInstallmentPaymentType | OfflineCourseEnrollmentPaymentBy | string | null;
+  transactionNo: string | null;
+  invoiceId?: number | null;
+  invoiceNumber?: string | null;
+  invoiceOrderId?: number | null;
+  invoiceDownloadUrl?: string | null;
+  remarks?: string | null;
+  status: OfflineCourseEnrollmentInstallmentStatus;
+  paymentStatus?: OfflineCourseEnrollmentInstallmentStatus;
+  isOverdue?: boolean;
+}
+
+export interface OfflineCourseStudentItem {
+  id: number;
+  enrollmentId: number;
+  enrollmentStatus: string;
+  enrolledAt: string | null;
+  studentId: number;
+  studentCode?: string | null;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string | null;
+  studentDob: string | null;
+  studentGender: number | null;
+  courseId: number;
+  courseCode?: string | null;
+  courseTitle: string;
+  categoryName: string;
+  coursePrice: number;
+  venue: string | null;
+  city: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  orderId: number | null;
+  orderReference: string | null;
+  paymentId: number | null;
+  paymentLogId: number | null;
+  totalFee: number;
+  amountPaid: number;
+  amountBalance: number;
+  paymentStatus: 'PAID' | 'PARTIAL';
+  paymentMode: string | null;
+  paymentBy: string | null;
+  referenceNo: string | null;
+  transactionNo: string | null;
+  paymentDisplayId: string | null;
+  invoiceNumber: string | null;
+  invoiceDate: string | null;
+  installmentCount: number;
+  pendingInstallments: number;
+  paidInstallments: number;
+  pendingInstallmentAmount: number;
+  paidInstallmentAmount: number;
+  overdueInstallments: number;
+  nextInstallmentDate: string | null;
+  nextUpcomingInstallmentDate: string | null;
+  installments: OfflineCourseStudentInstallment[];
+}
+
+export interface OfflineCourseStudentSummary {
+  totalEnrollments: number;
+  totalStudents: number;
+  totalCourses: number;
+  paidStudents: number;
+  partialStudents: number;
+  pendingInstallments: number;
+  overdueInstallments: number;
+  totalFee: number;
+  totalPaid: number;
+  totalBalance: number;
+  nextInstallmentDate: string | null;
+  nextUpcomingInstallmentDate: string | null;
+}
+
+export interface OfflineCourseStudentsResponse {
+  status: boolean;
+  message: string;
+  data: OfflineCourseStudentItem[];
+  meta: OfflineCoursePaginationMeta;
+  summary: OfflineCourseStudentSummary;
+}
+
+export interface OfflineCourseInstallmentUpdatePayload {
+  paymentLogId: number;
+  installments: Array<{
+    id: number | null;
+    installmentNo: number;
+    amount: number;
+    expectedDate: string | null;
+    paidDate: string | null;
+    paymentBy: OfflineInstallmentPaymentType | OfflineCourseEnrollmentPaymentBy | null;
+    transactionNo: string | null;
+    status: OfflineCourseEnrollmentInstallmentStatus;
+  }>;
+}
+
+export interface OfflineCourseInstallmentUpdateResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    paymentLogId: number;
+    paymentStatus: 'PAID' | 'PARTIAL';
+    totalFee: number;
+    amountPaid: number;
+    amountBalance: number;
+    installments: OfflineCourseStudentInstallment[];
+  };
+  errors?: Record<string, string[]>;
+}
+
+export interface OfflineCourseInstallmentPayPayload {
+  enrollmentId: number;
+  installmentId: number;
+  paymentDate: string;
+  paymentType: OfflineInstallmentPaymentType;
+  transactionNo: string | null;
+  amountPaid: number;
+  remarks: string | null;
+}
+
+export interface OfflineCourseInstallmentInvoice {
+  id: number;
+  invoiceNumber: string;
+  orderId: number;
+  invoiceDate: string | null;
+  invoiceAmount: number;
+  downloadUrl: string | null;
+}
+
+export interface OfflineCourseInstallmentPayResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    enrollmentId: number;
+    installmentId: number;
+    courseCode?: string | null;
+    paymentStatus: OfflineCourseEnrollmentInstallmentStatus;
+    amountPaid: number;
+    balanceAmount: number;
+    summary?: {
+      paymentStatus: 'PAID' | 'PARTIAL';
+      totalFee: number;
+      amountPaid: number;
+      amountBalance: number;
+    };
+    installment?: OfflineCourseStudentInstallment | null;
+    invoice?: OfflineCourseInstallmentInvoice | null;
   };
   errors?: Record<string, string[]>;
 }
@@ -132,6 +306,7 @@ export class OfflineCourseStore {
     const course: OfflineCourseItem = {
       ...payload,
       id: Date.now(),
+      code: null,
       createdById: currentUser.id,
       createdByName: currentUser.name,
       createdOn: now,
@@ -217,6 +392,7 @@ export class OfflineCourseStore {
   private normalizeCourse(value: Partial<OfflineCourseItem>): OfflineCourseItem {
     return {
       id: Number(value.id) || Date.now(),
+      code: value.code ? `${value.code}`.trim() : null,
       title: `${value.title || ''}`.trim(),
       categoryId: this.normalizeNullableNumber(value.categoryId),
       categoryName: `${value.categoryName || 'Uncategorized'}`.trim(),

@@ -28,6 +28,7 @@ type QuizQuestionType = 'single_choice' | 'multiple_choice' | 'true_false';
 
 interface CourseSummary {
   title: string;
+  code?: string | null;
   instructor: string;
   thumbnail: string;
   progress: number;
@@ -368,6 +369,7 @@ export class AddCourseCurriculum implements OnDestroy {
 
     this.course = {
       title: this.courseData?.title || this.courseData?.courseTitle || '',
+      code: this.courseData?.code || this.courseData?.courseCode || null,
       instructor: this.courseData?.instructor || this.courseData?.instructorName || '',
       thumbnail: this.resolveCourseThumbnail(this.courseData),
       progress: this.courseData?.progress ?? 0,

@@ -123,18 +123,24 @@
   </div>
 
   @if (loading) {
-  <div class="offline-course-grid offline-course-grid--loading" aria-label="Loading offline courses">
+  <div class="offline-course-list offline-course-list--loading" aria-label="Loading offline courses">
     @for (loader of skeletonRows; track loader) {
-    <article class="offline-course-card offline-course-card--skeleton">
+    <article class="offline-course-row offline-course-row--skeleton">
       <div class="offline-skeleton-media"></div>
-      <div class="offline-skeleton offline-skeleton--short"></div>
-      <div class="offline-skeleton offline-skeleton--title"></div>
-      <div class="offline-skeleton"></div>
-      <div class="offline-skeleton-grid">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+      <div class="offline-skeleton-content">
+        <div class="offline-skeleton offline-skeleton--short"></div>
+        <div class="offline-skeleton offline-skeleton--title"></div>
+        <div class="offline-skeleton"></div>
+        <div class="offline-skeleton-grid">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="offline-skeleton-side">
+        <div class="offline-skeleton offline-skeleton--short"></div>
+        <div class="offline-skeleton"></div>
       </div>
     </article>
     }
@@ -151,10 +157,10 @@
   }
 
   @if (!loading && courses.length > 0) {
-  <div class="offline-course-grid">
+  <div class="offline-course-list">
     @for (course of courses; track trackByCourseId($index, course)) {
-    <article class="offline-course-card">
-      <div class="offline-course-card__banner" [class.offline-course-card__banner--empty]="!course.thumbnailUrl">
+    <article class="offline-course-row">
+      <div class="offline-course-row__media" [class.offline-course-row__media--empty]="!course.thumbnailUrl">
         @if (course.thumbnailUrl) {
         <img [src]="course.thumbnailUrl" [alt]="course.title + ' banner'" (error)="course.thumbnailUrl = null">
         } @else {
@@ -162,92 +168,103 @@
         }
       </div>
 
-      <div class="offline-course-card__top">
-        <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
-          {{ course.statusLabel || (isActive(course) ? 'Active' : 'Inactive') }}
-        </span>
-        <span class="offline-course-card__category">{{ course.categoryName }}</span>
-        <span class="offline-course-card__timeline"
-          [class.offline-course-card__timeline--completed]="course.scheduleStatus === 'completed'">
-          {{ getScheduleLabel(course) }}
-        </span>
-      </div>
-
-      <h3>{{ course.title }}</h3>
-      <p class="offline-course-card__description">
-        {{ course.description || 'Classroom learning details will appear here.' }}
-      </p>
-
-      <div class="offline-course-card__meta">
-        <span>
-          <i class="feather-map-pin"></i>
-          {{ course.venue || 'Venue' }}
-        </span>
-        <span>
-          <i class="feather-navigation"></i>
-          {{ course.city || 'City' }}
-        </span>
-        <span>
-          <i class="feather-calendar"></i>
-          {{ formatDateRange(course) }}
-        </span>
-        <span>
-          <i class="feather-clock"></i>
-          {{ formatTimeRange(course) }}
-        </span>
-      </div>
-
-      @if (getHighlights(course).length > 0) {
-      <ul class="offline-course-card__highlights">
-        @for (highlight of getHighlights(course); track $index) {
-        <li>{{ highlight }}</li>
-        }
-      </ul>
-      }
-
-      <div class="offline-course-card__people">
-        <div class="offline-course-card__person">
-          <div>{{ getInitial(course) }}</div>
-          <span>
-            Instructor
-            <strong>{{ course.instructorName || 'Instructor' }}</strong>
+      <div class="offline-course-row__main">
+        <div class="offline-course-row__badges">
+          <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
+            {{ course.statusLabel || (isActive(course) ? 'Active' : 'Inactive') }}
+          </span>
+          <span class="offline-course-card__category">{{ course.categoryName }}</span>
+          <span class="offline-course-card__timeline"
+            [class.offline-course-card__timeline--completed]="course.scheduleStatus === 'completed'">
+            {{ getScheduleLabel(course) }}
           </span>
         </div>
 
-        @if (isAllCoursesView) {
-        <div class="offline-course-card__person">
-          <div>{{ getCreatorInitial(course) }}</div>
+        <div class="offline-course-row__title">
+          <h3>{{ course.title }}</h3>
+          @if (course.code) {
+          <span class="entity-code-badge">{{ course.code }}</span>
+          }
+        </div>
+
+        <p class="offline-course-row__description">
+          {{ course.description || 'Classroom learning details will appear here.' }}
+        </p>
+
+        <div class="offline-course-row__meta">
           <span>
-            Created by
-            <strong>{{ course.createdByName || 'Unknown User' }}</strong>
-            @if (course.createdByEmail) {
-            <small>{{ course.createdByEmail }}</small>
-            }
+            <i class="feather-map-pin"></i>
+            {{ course.venue || 'Venue' }}
+          </span>
+          <span>
+            <i class="feather-navigation"></i>
+            {{ course.city || 'City' }}
+          </span>
+          <span>
+            <i class="feather-calendar"></i>
+            {{ formatDateRange(course) }}
+          </span>
+          <span>
+            <i class="feather-clock"></i>
+            {{ formatTimeRange(course) }}
           </span>
         </div>
+
+        @if (getHighlights(course).length > 0) {
+        <ul class="offline-course-row__highlights">
+          @for (highlight of getHighlights(course); track $index) {
+          <li>{{ highlight }}</li>
+          }
+        </ul>
         }
       </div>
 
-      @if (course.youtubeLiveUrl || course.meetingLink) {
-      <div class="offline-course-card__links">
-        @if (course.youtubeLiveUrl) {
-        <a [href]="getExternalLinkUrl(course.youtubeLiveUrl)" target="_blank" rel="noopener">
-          <i class="feather-youtube"></i>
-          YouTube Live
-        </a>
-        }
+      <aside class="offline-course-row__side">
+        <div class="offline-course-row__price">
+          <span>Price</span>
+          <strong>{{ formatPrice(course.price) }}</strong>
+        </div>
 
-        @if (course.meetingLink) {
-        <a [href]="getExternalLinkUrl(course.meetingLink)" target="_blank" rel="noopener">
-          <i class="feather-video"></i>
-          Meeting Link
-        </a>
-        }
-      </div>
-      }
+        <div class="offline-course-card__people">
+          <div class="offline-course-card__person">
+            <div>{{ getInitial(course) }}</div>
+            <span>
+              Instructor
+              <strong>{{ course.instructorName || 'Instructor' }}</strong>
+            </span>
+          </div>
 
-      <footer class="offline-course-card__footer">
-        <strong>{{ formatPrice(course.price) }}</strong>
+          @if (isAllCoursesView) {
+          <div class="offline-course-card__person">
+            <div>{{ getCreatorInitial(course) }}</div>
+            <span>
+              Created by
+              <strong>{{ course.createdByName || 'Unknown User' }}</strong>
+              @if (course.createdByEmail) {
+              <small>{{ course.createdByEmail }}</small>
+              }
+            </span>
+          </div>
+          }
+        </div>
+
+        @if (course.youtubeLiveUrl || course.meetingLink) {
+        <div class="offline-course-card__links">
+          @if (course.youtubeLiveUrl) {
+          <a [href]="getExternalLinkUrl(course.youtubeLiveUrl)" target="_blank" rel="noopener">
+            <i class="feather-youtube"></i>
+            YouTube Live
+          </a>
+          }
+
+          @if (course.meetingLink) {
+          <a [href]="getExternalLinkUrl(course.meetingLink)" target="_blank" rel="noopener">
+            <i class="feather-video"></i>
+            Meeting Link
+          </a>
+          }
+        </div>
+        }
 
         @if (isAllCoursesView) {
         <button type="button" class="offline-action offline-action--primary offline-enroll-trigger"
@@ -268,7 +285,7 @@
           </button>
         </div>
         }
-      </footer>
+      </aside>
     </article>
     }
   </div>
@@ -309,6 +326,9 @@
           <span>Manual Offline Enrollment</span>
           <h3 id="offlineEnrollmentTitle">Enroll Student</h3>
           <p>{{ selectedEnrollmentCourse?.title }}</p>
+          @if (selectedEnrollmentCourse?.code) {
+          <span class="entity-code-badge entity-code-badge--light">{{ selectedEnrollmentCourse?.code }}</span>
+          }
         </div>
         <button type="button" class="offline-icon-action" title="Close" (click)="closeEnrollmentModal()"
           [disabled]="enrollmentSubmitting">

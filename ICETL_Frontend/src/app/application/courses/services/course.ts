@@ -4,9 +4,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 import {
+  OfflineCourseInstallmentUpdatePayload,
+  OfflineCourseInstallmentUpdateResponse,
+  OfflineCourseInstallmentPayPayload,
+  OfflineCourseInstallmentPayResponse,
   OfflineCourseEnrollmentPayload,
   OfflineCourseEnrollmentResponse,
   OfflineCourseListResponse,
+  OfflineCourseStudentsResponse,
 } from './offline-course';
 
 export interface PublicCourseInstructor {
@@ -16,6 +21,7 @@ export interface PublicCourseInstructor {
 
 export interface PublicCourseApiItem {
   id: number;
+  code?: string | null;
   title: string;
   categoryId: number | null;
   categoryName: string;
@@ -125,6 +131,31 @@ export class Course {
   ): Observable<OfflineCourseEnrollmentResponse> {
     return this.http.post<OfflineCourseEnrollmentResponse>(
       `${this.API_URL}/offline-courses/enroll-student`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
+  }
+  getOfflineCourseEnrolledStudents(payload: any = {}): Observable<OfflineCourseStudentsResponse> {
+    return this.http.post<OfflineCourseStudentsResponse>(
+      `${this.API_URL}/offline-courses/enrolled-students`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
+  }
+  updateOfflineCourseInstallments(
+    payload: OfflineCourseInstallmentUpdatePayload,
+  ): Observable<OfflineCourseInstallmentUpdateResponse> {
+    return this.http.post<OfflineCourseInstallmentUpdateResponse>(
+      `${this.API_URL}/offline-courses/installments/update`,
+      payload,
+      this.skipSpinnerOptions(),
+    );
+  }
+  payOfflineCourseInstallment(
+    payload: OfflineCourseInstallmentPayPayload,
+  ): Observable<OfflineCourseInstallmentPayResponse> {
+    return this.http.post<OfflineCourseInstallmentPayResponse>(
+      `${this.API_URL}/offline-courses/installments/pay`,
       payload,
       this.skipSpinnerOptions(),
     );

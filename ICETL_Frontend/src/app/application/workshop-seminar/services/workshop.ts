@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 
-export type WorkshopScheduleStatus = 'upcoming' | 'completed';
+export type WorkshopScheduleStatus = 'upcoming' | 'ongoing' | 'completed';
 export type WorkshopScheduleFilter = '' | 'all' | WorkshopScheduleStatus;
 export type WorkshopSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
 
@@ -28,6 +28,7 @@ export interface WorkshopPayload {
 
 export interface WorkshopItem extends WorkshopPayload {
   id: number;
+  code?: string | null;
   type: 'workshop';
   bannerImage?: string | null;
   bannerImageUrl?: string | null;
@@ -54,6 +55,7 @@ export interface WorkshopSummary {
   activeWorkshops: number;
   inactiveWorkshops: number;
   upcomingWorkshops: number;
+  ongoingWorkshops?: number;
   completedWorkshops: number;
 }
 
@@ -76,6 +78,7 @@ export interface WorkshopMutationResponse {
   message: string;
   data?: {
     id: number;
+    code?: string | null;
   };
 }
 
@@ -84,6 +87,7 @@ export interface WorkshopMutationResponse {
 })
 export class WorkshopService {
   private readonly API_URL = environment.apiUrl;
+  private readonly PRE_LOGIN_API_URL = environment.preLoginApi;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -102,6 +106,14 @@ export class WorkshopService {
   getAllWorkshops(payload: Record<string, unknown> = {}): Observable<WorkshopListResponse> {
     return this.http.post<WorkshopListResponse>(
       `${this.API_URL}/getAllWorkshops`,
+      payload,
+      this.listRequestOptions(),
+    );
+  }
+
+  getPublicWorkshops(payload: Record<string, unknown> = {}): Observable<WorkshopListResponse> {
+    return this.http.post<WorkshopListResponse>(
+      `${this.PRE_LOGIN_API_URL}/getPublicWorkshops`,
       payload,
       this.listRequestOptions(),
     );

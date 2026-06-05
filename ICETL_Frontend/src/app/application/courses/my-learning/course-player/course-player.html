@@ -27,6 +27,9 @@
       <div class="player-header__body">
         <span class="player-kicker">{{ vm.course.categoryName || 'Course' }}</span>
         <h1 id="course-player-title">{{ vm.course.title }}</h1>
+        @if (vm.course.code) {
+        <span class="entity-code-badge entity-code-badge--light">{{ vm.course.code }}</span>
+        }
         <div class="player-header__meta">
           <span><i class="fa-solid fa-user-tie"></i>{{ vm.course.instructorName || 'Instructor' }}</span>
           <span><i class="fa-solid fa-layer-group"></i>{{ vm.summary.totalItems }} items</span>

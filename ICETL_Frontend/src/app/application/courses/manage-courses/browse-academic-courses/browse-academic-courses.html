@@ -166,6 +166,11 @@
           <span></span>
         </div>
       </div>
+      <aside class="academic-card__purchase">
+        <span class="academic-skeleton academic-skeleton--price"></span>
+        <span class="academic-skeleton academic-skeleton--button"></span>
+        <span class="academic-skeleton academic-skeleton--button"></span>
+      </aside>
     </article>
     }
   </div>
@@ -195,15 +200,27 @@
         <span class="academic-card__timeline" [ngClass]="getScheduleClass(course)">
           {{ getScheduleLabel(course) }}
         </span>
+        @if (isEnrolled(course)) {
+        <span class="academic-card__enrolled">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          Already Enrolled
+        </span>
+        }
       </div>
 
       <div class="academic-card__body">
         <div class="academic-card__kicker">
           <span>{{ course.categoryName || 'Academic Course' }}</span>
-          <strong>{{ formatPrice(course.price) }}</strong>
+          <span class="academic-card__mode">
+            <i class="fa-solid fa-person-chalkboard" aria-hidden="true"></i>
+            Classroom
+          </span>
         </div>
 
         <h2>{{ course.title }}</h2>
+        @if (course.code) {
+        <span class="entity-code-badge">{{ course.code }}</span>
+        }
         <p class="academic-card__description">
           {{ course.description || 'Instructor-led classroom learning with structured sessions and guided practice.' }}
         </p>
@@ -236,18 +253,53 @@
         }
       </div>
 
-      <footer class="academic-card__footer">
-        <span>
-          <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
-          Created {{ formatCreatedDate(course.createdOn) }}
-        </span>
-        @if (course.meetingLink || course.youtubeLiveUrl) {
-        <span>
-          <i class="fa-solid fa-video" aria-hidden="true"></i>
-          Hybrid support
-        </span>
-        }
-      </footer>
+      <aside class="academic-card__purchase">
+        <div class="academic-card__price">
+          <span>Course Fee</span>
+          <strong>{{ formatPrice(course.price) }}</strong>
+        </div>
+
+        <div class="academic-card__side-meta">
+          <span>
+            <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+            Created {{ formatCreatedDate(course.createdOn) }}
+          </span>
+          @if (course.meetingLink || course.youtubeLiveUrl) {
+          <span>
+            <i class="fa-solid fa-video" aria-hidden="true"></i>
+            Hybrid support
+          </span>
+          }
+        </div>
+
+        <div class="academic-card__actions">
+          @if (isEnrolled(course)) {
+          <span class="academic-enrolled-state" role="status">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            Already Enrolled
+          </span>
+          } @else {
+          <button
+            type="button"
+            class="academic-action academic-action--cart"
+            [disabled]="isInCart(course.id) || isAdding(course.id)"
+            (click)="addToCart(course)">
+            <i
+              [class]="isAdding(course.id) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cart-plus'"
+              aria-hidden="true"></i>
+            {{ isInCart(course.id) ? 'Added' : (isAdding(course.id) ? 'Adding...' : 'Add to Cart') }}
+          </button>
+          <button
+            type="button"
+            class="academic-action academic-action--primary"
+            [disabled]="isAdding(course.id)"
+            (click)="buyNow(course)">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            Buy Now
+          </button>
+          }
+        </div>
+      </aside>
     </article>
     }
   </div>

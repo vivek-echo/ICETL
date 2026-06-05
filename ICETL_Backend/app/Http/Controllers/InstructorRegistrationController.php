@@ -8,6 +8,7 @@ use App\Models\InstructorDocument;
 use App\Models\InstructorLanguage;
 use App\Models\InstructorSkill;
 use App\Models\User;
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -114,6 +115,7 @@ class InstructorRegistrationController extends Controller
                 $user->role = 3;
                 $user->email_verified_at = $user->email_verified_at ?? now();
                 $user->save();
+                $this->assignInstructorCodeIfMissing($user);
 
                 $this->upsertInstructorDraft($user);
                 $instructor = $this->loadInstructorProfile($user->id);
@@ -201,6 +203,7 @@ class InstructorRegistrationController extends Controller
 
                 $this->syncUserProfileStage($user, 1);
                 $user->save();
+                $this->assignInstructorCodeIfMissing($user);
 
                 $instructor->country = $this->sanitizeText($payload['country']);
                 $instructor->preferredLanguage = $this->sanitizeText($payload['preferredLanguage']);
@@ -557,6 +560,7 @@ class InstructorRegistrationController extends Controller
             DB::transaction(function () use ($user, $instructor): void {
                 $this->syncUserProfileStage($user, 5);
                 $user->save();
+                $this->assignInstructorCodeIfMissing($user);
                 $instructor->onboardingCompleted = true;
                 $instructor->onboardingStep = 5;
                 $instructor->approvalStatus = 'pending';
@@ -631,6 +635,7 @@ class InstructorRegistrationController extends Controller
                     $existingInstructor = Instructor::where('userId', $user->id)->first();
                 }
 
+                $this->assignInstructorCodeIfMissing($user);
                 $draft = $this->upsertInstructorDraft($user);
                 $currentStep = $this->normalizeStep((int) ($draft->onboardingStep ?: 1));
                 $flowType = $this->determineFlowType($hadExistingUser, $existingInstructor, $user);
@@ -710,6 +715,8 @@ class InstructorRegistrationController extends Controller
             ];
         }
 
+        $this->assignInstructorCodeIfMissing($user);
+
         return [
             'user' => $user,
             'instructor' => $instructor,
@@ -763,6 +770,21 @@ class InstructorRegistrationController extends Controller
         }
     }
 
+    private function assignInstructorCodeIfMissing(User $user): ?string
+    {
+        $code = EntityCodeService::assignIfMissing(
+            'users',
+            (int) $user->id,
+            EntityCodeService::PREFIX_INSTRUCTOR
+        );
+
+        if ($code !== null) {
+            $user->code = $code;
+        }
+
+        return $code ?? ($user->code ?? null);
+    }
+
     private function upsertInstructorDraft(User $user): Instructor
     {
         $draft = Instructor::firstOrNew(['userId' => $user->id]);
@@ -808,6 +830,7 @@ class InstructorRegistrationController extends Controller
 
         return [
             'id' => $instructor->id,
+            'code' => $instructor->user?->code,
             'userId' => $instructor->userId,
             'dob' => optional($instructor->user?->dob)->format('Y-m-d'),
             'gender' => filled($instructor->user?->gender) ? (string) $instructor->user?->gender : null,
@@ -834,6 +857,7 @@ class InstructorRegistrationController extends Controller
             'documents' => $documents,
             'user' => [
                 'id' => $instructor->user?->id,
+                'code' => $instructor->user?->code,
                 'name' => $instructor->user?->name,
                 'email' => $instructor->user?->email,
                 'phone' => $instructor->user?->phone,
@@ -846,6 +870,7 @@ class InstructorRegistrationController extends Controller
 
     private function buildOnboardingAuthPayload(User $user): array
     {
+        $userCode = $this->assignInstructorCodeIfMissing($user);
         $expirationMinutes = (int) config('sanctum.expiration', 10080);
         $expiresAt = now()->addMinutes($expirationMinutes);
         $token = $user->createToken('instructor_onboarding_token', ['*'], $expiresAt);
@@ -855,6 +880,7 @@ class InstructorRegistrationController extends Controller
             'expiresAt' => $expiresAt->toDateTimeString(),
             'user' => [
                 'id' => $user->id,
+                'code' => $userCode,
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,

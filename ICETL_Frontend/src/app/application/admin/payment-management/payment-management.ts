@@ -47,7 +47,7 @@ export class PaymentManagement implements OnInit {
 
   exportCsv(): void {
     const rows = this.dashboard?.recentTransactions ?? [];
-    const header = ['Order', 'Student', 'Email', 'Amount', 'Status', 'Transaction No', 'Invoice', 'Date'];
+    const header = ['Order', 'Student', 'Email', 'Amount', 'Status', 'Transaction No', 'Invoice', 'Entity Code', 'Entity Title', 'Date'];
     const csv = [
       header.join(','),
       ...rows.map((row) =>
@@ -59,6 +59,8 @@ export class PaymentManagement implements OnInit {
           row.status,
           this.transactionIdentifier(row),
           row.invoiceNumber || '',
+          row.entityCode || '',
+          row.entityTitle || '',
           row.created_at,
         ]
           .map((value) => `"${`${value}`.replace(/"/g, '""')}"`)

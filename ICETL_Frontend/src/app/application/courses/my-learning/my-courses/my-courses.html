@@ -6,7 +6,7 @@
       <p>Resume your enrolled courses, review invoices, and keep your learning library organised in one place.</p>
 
       <div class="learning-hero__actions">
-        <a class="learning-hero__browse" routerLink="/application/courses/manageCourses/browse">
+        <a class="learning-hero__browse" routerLink="/application/courses/myLearning/browse">
           <i class="fa-solid fa-compass"></i>
           Browse Courses
         </a>
@@ -100,7 +100,7 @@
     </div>
     <h2>No purchased courses yet</h2>
     <p>Courses you buy will appear here after payment verification.</p>
-    <a class="learning-empty__action" routerLink="/application/courses/manageCourses/browse">
+    <a class="learning-empty__action" routerLink="/application/courses/myLearning/browse">
       <i class="fa-solid fa-compass"></i>
       Browse Courses
     </a>
@@ -132,6 +132,9 @@
         <span class="learning-card__category">{{ course.categoryName || 'Course' }}</span>
 
         <h2>{{ course.title }}</h2>
+        @if (course.code) {
+        <span class="entity-code-badge">{{ course.code }}</span>
+        }
 
         <div class="learning-card__meta">
           <span>
@@ -144,7 +147,7 @@
           </span>
         </div>
 
-        <p>{{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p>
+        <!-- <p>{{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}</p>
 
         @if (getHighlights(course).length > 0) {
         <ul class="learning-card__points">
@@ -152,7 +155,7 @@
           <li>{{ highlight }}</li>
           }
         </ul>
-        }
+        } -->
 
         <footer class="learning-card__footer">
           <div class="learning-card__progress" aria-label="Course progress">
@@ -175,13 +178,42 @@
         </div>
 
         <div class="learning-card__actions">
+          @if (isAcademicCourse(course)) {
+          @if (hasYoutubeLink(course)) {
+          <a
+            class="learning-card__action learning-card__action--youtube"
+            [href]="getYoutubeUrl(course)"
+            target="_blank"
+            rel="noopener noreferrer">
+            <i class="fa-brands fa-youtube"></i>
+            YouTube View
+          </a>
+          }
+          @if (hasMeetingLink(course)) {
+          <a
+            class="learning-card__action learning-card__action--meet"
+            [href]="getMeetingUrl(course)"
+            target="_blank"
+            rel="noopener noreferrer">
+            <i class="fa-solid fa-video"></i>
+            Open Meet
+          </a>
+          }
+          @if (!hasYoutubeLink(course) && !hasMeetingLink(course)) {
+          <span class="learning-card__action learning-card__action--disabled">
+            <i class="fa-solid fa-link-slash"></i>
+            Session link not available
+          </span>
+          }
+          } @else {
           <a
             class="learning-card__action learning-card__action--primary"
-            [routerLink]="['/application/courses/manageCourses/learn']"
+            [routerLink]="['/application/courses/myLearning/learn']"
             [state]="{ courseId: course.id }">
             <i class="fa-solid fa-play"></i>
             Continue Learning
           </a>
+          }
         </div>
       </div>
     </article>

@@ -1,0 +1,581 @@
+<div class="offline-students">
+ 
+
+  <section class="student-summary" aria-label="Student payment summary">
+    <div class="student-summary__card student-summary__card--next">
+      <i class="feather-calendar"></i>
+      <span>Next Installment</span>
+      <strong>{{ nextDueDate ? formatDate(nextDueDate) : 'N/A' }}</strong>
+      <p>{{ summary.pendingInstallments }} pending schedules</p>
+    </div>
+    <div class="student-summary__card">
+      <i class="feather-users"></i>
+      <span>Total Students</span>
+      <strong>{{ summary.totalStudents }}</strong>
+      <p>{{ summary.totalEnrollments }} enrollments</p>
+    </div>
+    <div class="student-summary__card">
+      <i class="feather-check-circle"></i>
+      <span>Paid Students</span>
+      <strong>{{ summary.paidStudents }}</strong>
+      <p>{{ formatMoney(summary.totalPaid) }} collected</p>
+    </div>
+    <div class="student-summary__card">
+      <i class="feather-credit-card"></i>
+      <span>Balance Due</span>
+      <strong>{{ formatMoney(summary.totalBalance) }}</strong>
+      <p>{{ summary.partialStudents }} partial payments</p>
+    </div>
+    <div class="student-summary__card">
+      <i class="feather-alert-circle"></i>
+      <span>Overdue</span>
+      <strong>{{ summary.overdueInstallments }}</strong>
+      <p>{{ summary.totalCourses }} courses covered</p>
+    </div>
+  </section>
+
+  <div class="student-toolbar">
+    <div class="student-field student-field--search">
+      <label for="offlineStudentSearch">Search</label>
+      <div class="student-control">
+        <i class="feather-search"></i>
+        <input
+          id="offlineStudentSearch"
+          type="text"
+          placeholder="Student, course, invoice, transaction"
+          autocomplete="off"
+          [(ngModel)]="search"
+          (keyup.enter)="onSearch()">
+      </div>
+    </div>
+
+    <div class="student-field student-field--code">
+      <label for="offlineStudentCourseCode">Course Code</label>
+      <div class="student-control">
+        <i class="feather-book-open"></i>
+        <input
+          id="offlineStudentCourseCode"
+          type="text"
+          maxlength="40"
+          placeholder="All codes"
+          autocomplete="off"
+          [(ngModel)]="courseCode"
+          (keyup.enter)="onSearch()">
+      </div>
+    </div>
+
+    <div class="student-field">
+      <label for="offlineStudentPaymentStatus">Payment</label>
+      <div class="student-control student-control--select">
+        <i class="feather-credit-card"></i>
+        <select id="offlineStudentPaymentStatus" [(ngModel)]="paymentStatus" (change)="onFilterChange()">
+          <option value="">All Payments</option>
+          <option value="PAID">Paid</option>
+          <option value="PARTIAL">Partial</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="student-field">
+      <label for="offlineStudentInstallmentStatus">Installment</label>
+      <div class="student-control student-control--select">
+        <i class="feather-clock"></i>
+        <select id="offlineStudentInstallmentStatus" [(ngModel)]="installmentStatus" (change)="onFilterChange()">
+          @for (option of installmentFilters; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+ 
+
+    <div class="student-field student-field--small">
+      <label for="offlineStudentPerPage">Per Page</label>
+      <div class="student-control student-control--select">
+        <i class="feather-list"></i>
+        <select id="offlineStudentPerPage" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="student-toolbar__actions d-flex">
+      <button type="button" class="student-action student-action--primary" (click)="onSearch()" [disabled]="loading">
+        <i class="feather-filter"></i>
+        Apply
+      </button>
+      <button type="button" class="student-action" (click)="clearFilters()" [disabled]="loading">
+        <i class="feather-refresh-cw"></i>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <section class="student-table-shell">
+    @if (loading) {
+    <div class="student-table-loader" aria-label="Loading enrolled students">
+      @for (row of skeletonRows; track row) {
+      <span></span>
+      }
+    </div>
+    }
+
+    @if (!loading && students.length === 0) {
+    <div class="student-empty">
+      <i class="feather-users"></i>
+      <h5>No Students Found</h5>
+      <p>No enrolled students match the selected filters.</p>
+    </div>
+    }
+
+    @if (!loading && students.length > 0) {
+    <div class="student-table-wrap">
+      <table class="student-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Course</th>
+            <th>Next Installment</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (student of students; track trackByStudentId($index, student)) {
+          <tr>
+            <td data-label="Student">
+              <div class="student-person">
+                <span>{{ getInitials(student.studentName) }}</span>
+                <div>
+                  <strong>{{ student.studentName || 'Student' }}</strong>
+                  <small>{{ student.studentEmail }}</small>
+                  @if (student.studentCode) {
+                  <span class="entity-code-badge entity-code-badge--student">{{ student.studentCode }}</span>
+                  }
+                </div>
+              </div>
+            </td>
+            <td data-label="Course">
+              <div class="student-course">
+                <strong>{{ student.courseTitle }}</strong>
+                @if (student.courseCode) {
+                <span class="entity-code-badge">{{ student.courseCode }}</span>
+                }
+                <small>{{ student.categoryName }} | {{ formatDateRange(student) }}</small>
+              </div>
+            </td>
+            <td data-label="Next Installment">
+              <div class="student-due" [class.student-due--overdue]="student.overdueInstallments > 0">
+                <strong>{{ getNextInstallmentLabel(student) }}</strong>
+                <small>{{ student.pendingInstallments }} pending</small>
+              </div>
+            </td>
+            <td data-label="Paid">
+              <strong>{{ formatMoney(student.amountPaid) }}</strong>
+            </td>
+            <td data-label="Balance">
+              <strong>{{ formatMoney(student.amountBalance) }}</strong>
+            </td>
+            <td data-label="Status">
+              <span
+                class="student-badge"
+                [class.student-badge--paid]="student.paymentStatus === 'PAID'"
+                [class.student-badge--partial]="student.paymentStatus === 'PARTIAL'">
+                {{ student.paymentStatus === 'PAID' ? 'Paid' : 'Partial' }}
+              </span>
+            </td>
+            <td data-label="Action">
+              <button type="button" class="student-icon-action" (click)="openPaymentDetails(student)" title="View payment">
+                <i class="feather-eye"></i>
+                <span>View Payment</span>
+              </button>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="student-pager">
+      <p>{{ getPaginationLabel() }}</p>
+      <div class="student-pager__controls">
+        <button type="button" class="student-page-button" (click)="goToPreviousPage()" [disabled]="meta.currentPage <= 1">
+          <i class="feather-chevron-left"></i>
+        </button>
+        <label>
+          <span>Page</span>
+          <input
+            type="number"
+            min="1"
+            [max]="meta.lastPage || 1"
+            [(ngModel)]="pageInput"
+            (keyup.enter)="goToPageInput()">
+        </label>
+        <span>of {{ meta.lastPage || 1 }}</span>
+        <button type="button" class="student-page-button" (click)="goToNextPage()" [disabled]="meta.currentPage >= meta.lastPage">
+          <i class="feather-chevron-right"></i>
+        </button>
+      </div>
+    </footer>
+    }
+  </section>
+
+  @if (paymentModalOpen && selectedStudent) {
+  <div class="student-modal-backdrop" (click)="closePaymentDetails()">
+    <section
+      class="student-payment-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="studentPaymentTitle"
+      (click)="$event.stopPropagation()">
+      <header class="student-payment-modal__header">
+        <div>
+          <span>Payment Details</span>
+          <h3 id="studentPaymentTitle">{{ selectedStudent.studentName }}</h3>
+          <p>{{ selectedStudent.courseTitle }}</p>
+          @if (selectedStudent.studentCode) {
+          <span class="entity-code-badge entity-code-badge--light">{{ selectedStudent.studentCode }}</span>
+          }
+          @if (selectedStudent.courseCode) {
+          <span class="entity-code-badge entity-code-badge--light">{{ selectedStudent.courseCode }}</span>
+          }
+        </div>
+        <button type="button" class="student-close-button" (click)="closePaymentDetails()" [disabled]="savingInstallments">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <div class="student-payment-overview card border-0">
+        <div class="student-payment-grid">
+          <div class="student-metric-card student-metric-card--fee">
+            <span><span class="student-rupee-icon">₹</span> Total Fee</span>
+            <strong>{{ formatMoney(selectedStudent.totalFee) }}</strong>
+          </div>
+          <div class="student-metric-card student-metric-card--paid">
+            <span><i class="feather-check-circle"></i> Paid Amount</span>
+            <strong>{{ formatMoney(selectedStudent.amountPaid) }}</strong>
+          </div>
+          <div class="student-metric-card student-metric-card--balance">
+            <span><i class="feather-credit-card"></i> Balance Amount</span>
+            <strong>{{ formatMoney(selectedStudent.amountBalance) }}</strong>
+          </div>
+          <div class="student-metric-card student-metric-card--next">
+            <span><i class="feather-calendar"></i> Next Due Installment</span>
+            <strong>{{ getNextInstallmentLabel(selectedStudent) }}</strong>
+          </div>
+        </div>
+
+        <div class="student-payment-progress">
+          <div class="student-payment-progress__top">
+            <span>Payment Completion</span>
+            <strong>{{ getPaymentCompletionPercent(selectedStudent) }}%</strong>
+          </div>
+          <div class="progress student-progress" role="progressbar" aria-label="Payment completion"
+            [attr.aria-valuenow]="getPaymentCompletionPercent(selectedStudent)" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" [style.width.%]="getPaymentCompletionPercent(selectedStudent)"></div>
+          </div>
+          <small>{{ formatMoney(selectedStudent.amountPaid) }} collected of {{ formatMoney(selectedStudent.totalFee) }}</small>
+        </div>
+      </div>
+
+      <section class="student-installments">
+        <div class="student-installments__head">
+          <div>
+            <span>Installments</span>
+            <strong>{{ formatMoney(selectedStudent.paidInstallmentAmount || selectedStudent.amountPaid) }} paid / {{ formatMoney(selectedStudent.pendingInstallmentAmount || selectedStudent.amountBalance) }} balance</strong>
+          </div>
+          @if (getNextPendingInstallment(selectedStudent); as nextInstallment) {
+          <span class="student-next-chip">
+            <i class="feather-calendar"></i>
+            {{ ordinalInstallment(nextInstallment.installmentNo) }} due {{ formatDate(nextInstallment.expectedDate) }}
+          </span>
+          } @else {
+          <span class="student-next-chip student-next-chip--complete">
+            <i class="feather-check-circle"></i>
+            Fully Paid
+          </span>
+          }
+        </div>
+
+        @if (selectedStudent.installments.length === 0) {
+        <div class="student-no-schedule">
+          <i class="feather-calendar"></i>
+          <h4>No Installment Schedule</h4>
+          <p>This payment does not have installment rows.</p>
+        </div>
+        }
+
+        @if (selectedStudent.installments.length > 0) {
+        <div class="student-installment-timeline">
+          @for (installment of selectedStudent.installments; track trackByInstallment($index, installment)) {
+          <article
+            class="student-installment-row card"
+            [class.student-installment-row--paid]="getInstallmentStatus(installment) === 'PAID'"
+            [class.student-installment-row--partial]="getInstallmentStatus(installment) === 'PARTIALLY_PAID'"
+            [class.student-installment-row--overdue]="getInstallmentStatus(installment) === 'OVERDUE'"
+            [class.student-installment-row--next]="isNextPendingInstallment(installment)">
+            <div class="student-installment-marker">
+              <span>
+                <i [class]="getInstallmentStatusIcon(installment)"></i>
+              </span>
+            </div>
+
+            <div class="student-installment-content">
+              <div class="student-installment-card-head">
+                <div>
+                  <span class="student-installment-row__number">#{{ installment.installmentNo }}</span>
+                  <strong>{{ ordinalInstallment(installment.installmentNo) }} Installment</strong>
+                  @if (isNextPendingInstallment(installment)) {
+                  <span class="student-next-pill">
+                    <i class="feather-calendar"></i>
+                    Next Due
+                  </span>
+                  }
+                </div>
+                <span class="student-badge badge" [ngClass]="getInstallmentStatusClass(installment)">
+                  {{ getInstallmentStatusLabel(installment) }}
+                </span>
+              </div>
+
+              <div class="student-installment-progress">
+                <div>
+                  <span>{{ formatMoney(getInstallmentPaidAmount(installment)) }} paid</span>
+                  <strong>{{ getInstallmentProgressPercent(installment) }}%</strong>
+                </div>
+                <div class="progress student-progress student-progress--small" role="progressbar" aria-label="Installment progress"
+                  [attr.aria-valuenow]="getInstallmentProgressPercent(installment)" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar" [style.width.%]="getInstallmentProgressPercent(installment)"></div>
+                </div>
+              </div>
+
+              <div class="student-installment-meta">
+                <div>
+                  <span><i class="feather-calendar"></i> Expected Date</span>
+                  <strong>{{ formatDate(installment.expectedDate) }}</strong>
+                </div>
+                <div>
+                  <span><span class="student-rupee-icon">₹</span> Amount</span>
+                  <strong>{{ formatMoney(getInstallmentAmount(installment)) }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-check-circle"></i> Paid Amount</span>
+                  <strong>{{ formatMoney(getInstallmentPaidAmount(installment)) }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-credit-card"></i> Balance</span>
+                  <strong>{{ formatMoney(getInstallmentBalanceAmount(installment)) }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-calendar"></i> Payment Date</span>
+                  <strong>{{ formatDate(getInstallmentPaymentDate(installment)) }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-credit-card"></i> Payment Type</span>
+                  <strong>{{ getPaymentTypeLabel(installment.paymentType || installment.paymentBy) }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-hash"></i> Transaction No</span>
+                  <strong>{{ installment.transactionNo || 'N/A' }}</strong>
+                </div>
+                <div>
+                  <span><i class="feather-file-text"></i> Invoice</span>
+                  <strong>{{ getInstallmentInvoiceUrl(installment) ? (installment.invoiceNumber || 'Generated') : 'N/A' }}</strong>
+                </div>
+              </div>
+
+              @if (installment.remarks) {
+              <p class="student-installment-remarks">{{ installment.remarks }}</p>
+              }
+
+              <div class="student-installment-actions">
+                @if (canPayInstallment(installment)) {
+                <button
+                  type="button"
+                  class="student-action student-action--primary btn btn-primary"
+                  (click)="openInstallmentPayment(installment)"
+                  [disabled]="paymentSubmitting">
+                  <i class="feather-credit-card"></i>
+                  Pay Installment
+                </button>
+                } @else if (isInstallmentPaid(installment)) {
+                <button
+                  type="button"
+                  class="student-action student-action--paid btn"
+                  disabled>
+                  <i class="feather-check-circle"></i>
+                  Paid
+                </button>
+                }
+
+                @if (getInstallmentInvoiceUrl(installment)) {
+                <a
+                  class="student-action student-action--secondary student-invoice-link btn btn-outline-primary"
+                  [href]="getInstallmentInvoiceUrl(installment)"
+                  target="_blank"
+                  rel="noopener">
+                  <i class="feather-file-text"></i>
+                  View Invoice
+                </a>
+                }
+              </div>
+            </div>
+          </article>
+          }
+        </div>
+        }
+      </section>
+
+      <footer class="student-payment-modal__footer">
+        <button type="button" class="student-action" (click)="closePaymentDetails()" [disabled]="paymentSubmitting">
+          Close
+        </button>
+      </footer>
+    </section>
+  </div>
+  }
+
+  @if (payModalOpen && selectedStudent && selectedInstallment) {
+  <div class="student-pay-modal-backdrop" (click)="closeInstallmentPayment()">
+    <section
+      class="student-pay-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="studentPayTitle"
+      (click)="$event.stopPropagation()">
+      <header class="student-payment-modal__header">
+        <div>
+          <span>Collect Installment</span>
+          <h3 id="studentPayTitle">Pay {{ ordinalInstallment(selectedInstallment.installmentNo) }} Installment</h3>
+          <p>{{ selectedStudent.studentName }} | {{ selectedStudent.courseTitle }}</p>
+          @if (selectedStudent.courseCode) {
+          <span class="entity-code-badge entity-code-badge--light">{{ selectedStudent.courseCode }}</span>
+          }
+        </div>
+        <button type="button" class="student-close-button" (click)="closeInstallmentPayment()" [disabled]="paymentSubmitting">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <div class="student-pay-hero">
+        <span class="student-pay-hero__icon">₹</span>
+        <div>
+          <span>Pay Installment</span>
+          <h4>{{ ordinalInstallment(selectedInstallment.installmentNo) }} Installment</h4>
+          <p>{{ selectedStudent.studentName }} | Due {{ formatDate(selectedInstallment.expectedDate) }}</p>
+        </div>
+        <strong>{{ formatMoney(selectedInstallmentPendingAmount) }}</strong>
+      </div>
+
+      <div class="student-pay-summary">
+        <div>
+          <span><i class="feather-user"></i> Student</span>
+          <strong>{{ selectedStudent.studentName }}</strong>
+          <small>{{ selectedStudent.studentEmail }}</small>
+          @if (selectedStudent.studentCode) {
+          <span class="entity-code-badge">{{ selectedStudent.studentCode }}</span>
+          }
+        </div>
+        <div>
+          <span><i class="feather-book-open"></i> Course</span>
+          <strong>{{ selectedStudent.courseTitle }}</strong>
+          @if (selectedStudent.courseCode) {
+          <span class="entity-code-badge">{{ selectedStudent.courseCode }}</span>
+          }
+          <small>{{ selectedStudent.categoryName }}</small>
+        </div>
+        <div>
+          <span><i class="feather-calendar"></i> Due Date</span>
+          <strong>{{ formatDate(selectedInstallment.expectedDate) }}</strong>
+          <small>{{ ordinalInstallment(selectedInstallment.installmentNo) }} installment</small>
+        </div>
+        <div>
+          <span><span class="student-rupee-icon">₹</span> Pending Amount</span>
+          <strong>{{ formatMoney(selectedInstallmentPendingAmount) }}</strong>
+          <small>Installment total {{ formatMoney(getInstallmentAmount(selectedInstallment)) }}</small>
+        </div>
+      </div>
+
+      <form class="student-pay-form" [formGroup]="payForm" (ngSubmit)="submitInstallmentPayment()">
+        <label>
+          <span><i class="feather-calendar"></i> Payment Date</span>
+          <input
+            type="date"
+            formControlName="paymentDate"
+            [class.is-invalid]="getPayFieldError('paymentDate')">
+          @if (getPayFieldError('paymentDate')) {
+          <small>{{ getPayFieldError('paymentDate') }}</small>
+          }
+        </label>
+
+        <label>
+          <span><i class="feather-credit-card"></i> Payment Type</span>
+          <select
+            formControlName="paymentType"
+            (change)="onPayPaymentTypeChange()"
+            [class.is-invalid]="getPayFieldError('paymentType')">
+            @for (option of paymentByOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (getPayFieldError('paymentType')) {
+          <small>{{ getPayFieldError('paymentType') }}</small>
+          }
+        </label>
+
+        <label>
+          <span><span class="student-rupee-icon">₹</span> Amount Paid</span>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            formControlName="amountPaid"
+            [class.is-invalid]="getPayFieldError('amountPaid')">
+          @if (getPayFieldError('amountPaid')) {
+          <small>{{ getPayFieldError('amountPaid') }}</small>
+          }
+        </label>
+
+        @if (shouldShowTransactionField) {
+        <label>
+          <span><i class="feather-hash"></i> Transaction No</span>
+          <input
+            type="text"
+            maxlength="100"
+            placeholder="UPI / cheque / bank reference"
+            formControlName="transactionNo"
+            [class.is-invalid]="getPayFieldError('transactionNo')">
+          @if (getPayFieldError('transactionNo')) {
+          <small>{{ getPayFieldError('transactionNo') }}</small>
+          }
+        </label>
+        }
+
+        <label class="student-pay-form__wide">
+          <span><i class="feather-edit-3"></i> Remarks</span>
+          <textarea rows="3" maxlength="500" formControlName="remarks" placeholder="Optional note"></textarea>
+        </label>
+
+        <footer class="student-payment-modal__footer student-pay-modal__footer">
+          <button type="button" class="student-action" (click)="closeInstallmentPayment()" [disabled]="paymentSubmitting">
+            Cancel
+          </button>
+          <button type="submit" class="student-action student-action--primary" [disabled]="paymentSubmitting">
+            @if (paymentSubmitting) {
+            <i class="feather-loader"></i>
+            Saving
+            } @else {
+            <i class="feather-check-circle"></i>
+            Pay Installment
+            }
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+  }
+</div>

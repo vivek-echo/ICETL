@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -58,13 +59,20 @@ class SeminarController extends Controller
                 'updatedOn' => now(),
             ]);
 
+            $seminarCode = EntityCodeService::assignIfMissing(
+                'seminars',
+                $seminarId,
+                EntityCodeService::PREFIX_SEMINAR
+            );
+
             DB::commit();
 
             return response()->json([
                 'status' => true,
                 'message' => 'Seminar created successfully',
                 'data' => [
-                    'id' => $seminarId
+                    'id' => $seminarId,
+                    'code' => $seminarCode,
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -84,6 +92,64 @@ class SeminarController extends Controller
     public function getAllSeminars(Request $request)
     {
         return $this->getSeminarList($request, false, true);
+    }
+
+    public function getPublicSeminars(Request $request)
+    {
+        if (!Schema::hasTable('seminars')) {
+            return $this->missingTableResponse();
+        }
+
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'perPage' => 'nullable|integer|min:1|max:12',
+            'scheduleStatus' => 'nullable|in:all,upcoming,ongoing',
+            'sortBy' => 'nullable|in:latest,dateAsc,dateDesc',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        try {
+            $query = $this->baseSeminarQuery()
+                ->where('s.status', 1);
+
+            $this->applyPublicActiveScheduleFilter($query);
+
+            $scheduleStatus = (string) $request->input('scheduleStatus', 'all');
+
+            if ($scheduleStatus !== '' && $scheduleStatus !== 'all') {
+                $this->applyPublicScheduleStatusFilter($query, $scheduleStatus);
+            }
+
+            $page = (int) $request->input('page', 1);
+            $perPage = (int) $request->input('perPage', 4);
+            $perPage = min(max($perPage, 1), 12);
+
+            $seminars = $this->applyPublicSort($query, (string) $request->input('sortBy', 'dateAsc'))
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Public seminars fetched successfully',
+                'data' => collect($seminars->items())
+                    ->map(fn($seminar) => $this->formatPublicSeminar($seminar, $request))
+                    ->values(),
+                'meta' => [
+                    'currentPage' => $seminars->currentPage(),
+                    'perPage' => $seminars->perPage(),
+                    'total' => $seminars->total(),
+                    'lastPage' => $seminars->lastPage(),
+                    'from' => $seminars->firstItem(),
+                    'to' => $seminars->lastItem(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching public seminars: ' . $e->getMessage());
+
+            return $this->exceptionResponse($e);
+        }
     }
 
     public function getSeminarById(Request $request)
@@ -191,9 +257,19 @@ class SeminarController extends Controller
                 $this->deleteBannerImage($currentBannerImage);
             }
 
+            $seminarCode = EntityCodeService::assignIfMissing(
+                'seminars',
+                (int) $request->input('id'),
+                EntityCodeService::PREFIX_SEMINAR
+            );
+
             return response()->json([
                 'status' => true,
-                'message' => 'Seminar updated successfully'
+                'message' => 'Seminar updated successfully',
+                'data' => [
+                    'id' => (int) $request->input('id'),
+                    'code' => $seminarCode,
+                ],
             ], 200);
         } catch (\Exception $e) {
             $this->deleteBannerImage($bannerImagePath);
@@ -405,6 +481,7 @@ class SeminarController extends Controller
             ->where('s.deletedFlag', 0)
             ->select(
                 's.id',
+                EntityCodeService::codeSelect('seminars', 's'),
                 's.title',
                 's.topic',
                 's.venue',
@@ -497,6 +574,7 @@ class SeminarController extends Controller
                     ->orWhere('s.description', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.name', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.email', 'LIKE', '%' . $search . '%');
+                EntityCodeService::orWhereCode($subQuery, 'seminars', 's.code', $search);
             });
         }
 
@@ -568,6 +646,49 @@ class SeminarController extends Controller
         }
     }
 
+    private function applyPublicActiveScheduleFilter($query): void
+    {
+        $query->whereDate('s.eventDate', '>=', Carbon::today()->toDateString());
+    }
+
+    private function applyPublicScheduleStatusFilter($query, string $scheduleStatus): void
+    {
+        $today = Carbon::today()->toDateString();
+
+        if ($scheduleStatus === 'ongoing') {
+            $query->whereDate('s.eventDate', '=', $today);
+            return;
+        }
+
+        if ($scheduleStatus === self::SCHEDULE_UPCOMING) {
+            $query->whereDate('s.eventDate', '>', $today);
+        }
+    }
+
+    private function applyPublicSort($query, string $sortBy)
+    {
+        if ($sortBy === 'latest') {
+            return $query->orderBy('s.createdOn', 'DESC')
+                ->orderBy('s.id', 'DESC');
+        }
+
+        if ($sortBy === 'dateDesc') {
+            return $query->orderBy('s.eventDate', 'DESC')
+                ->orderBy('s.startTime', 'DESC')
+                ->orderBy('s.id', 'DESC');
+        }
+
+        $today = Carbon::today()->toDateString();
+
+        return $query->orderByRaw(
+            'CASE WHEN s.eventDate = ? THEN 0 ELSE 1 END',
+            [$today]
+        )
+            ->orderBy('s.eventDate', 'ASC')
+            ->orderBy('s.startTime', 'ASC')
+            ->orderBy('s.id', 'DESC');
+    }
+
     private function prepareTakeawaysForValidation(Request $request): void
     {
         if (!$request->has('takeaways')) {
@@ -617,6 +738,7 @@ class SeminarController extends Controller
 
         return [
             'id' => (int) $seminar->id,
+            'code' => $seminar->code ?? null,
             'type' => 'seminar',
             'title' => (string) $seminar->title,
             'topic' => (string) $seminar->topic,
@@ -645,6 +767,15 @@ class SeminarController extends Controller
         ];
     }
 
+    private function formatPublicSeminar(object $seminar, Request $request): array
+    {
+        $formatted = $this->formatSeminar($seminar, $request);
+
+        $formatted['scheduleStatus'] = $this->getPublicScheduleStatus($formatted['eventDate']);
+
+        return $formatted;
+    }
+
     private function getScheduleStatus(string $eventDate): string
     {
         if ($eventDate && $eventDate < Carbon::today()->toDateString()) {
@@ -652,6 +783,13 @@ class SeminarController extends Controller
         }
 
         return self::SCHEDULE_UPCOMING;
+    }
+
+    private function getPublicScheduleStatus(string $eventDate): string
+    {
+        return $eventDate === Carbon::today()->toDateString()
+            ? 'ongoing'
+            : self::SCHEDULE_UPCOMING;
     }
 
     private function formatTime(?string $value): ?string

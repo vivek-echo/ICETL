@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -8,6 +8,9 @@ export interface PaymentLog {
   orderReference?: string | null;
   invoiceNo: string;
   invoiceId?: number | null;
+  entityType?: string | null;
+  entityCode?: string | null;
+  entityTitle?: string | null;
   totalAmount: number | string;
   currency?: string;
   status: string;
@@ -27,6 +30,10 @@ export interface PaymentLog {
 
 export interface InvoiceItem {
   courseId: number;
+  code?: string | null;
+  entityType?: string | null;
+  entityCode?: string | null;
+  entityTitle?: string | null;
   title: string;
   categoryName: string;
   price: number | string;
@@ -35,6 +42,10 @@ export interface InvoiceItem {
 export interface Invoice {
   invoiceNo: string;
   orderId: number;
+  entityType?: string | null;
+  entityId?: number | null;
+  entityCode?: string | null;
+  entityTitle?: string | null;
   orderReference?: string | null;
   orderDate: string;
   invoiceDate?: string;
@@ -66,6 +77,7 @@ export interface Invoice {
 export interface MyLearningCourse {
   enrollmentId: number;
   id: number;
+  code?: string | null;
   title: string;
   categoryId?: number;
   categoryName?: string | null;
@@ -80,6 +92,9 @@ export interface MyLearningCourse {
   thumbnailUrl?: string | null;
   status: number;
   statusLabel?: string;
+  courseType?: number | string | null;
+  youtubeLiveUrl?: string | null;
+  meetingLink?: string | null;
   enrolledAt: string;
   orderId?: number | null;
   invoiceNo?: string | null;
@@ -122,6 +137,9 @@ export interface AdminPaymentDashboard {
     transactionNo?: string | null;
     paymentDisplayId?: string | null;
     invoiceNumber?: string | null;
+    entityType?: string | null;
+    entityCode?: string | null;
+    entityTitle?: string | null;
   }>;
 }
 
@@ -174,6 +192,13 @@ export class PaymentService {
 
   getInvoiceDownloadUrl(orderId: number): string {
     return `${this.API_URL}/invoice/${orderId}/download`;
+  }
+
+  downloadInvoice(orderId: number): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.API_URL}/invoice/${orderId}/download`, {
+      observe: 'response',
+      responseType: 'blob',
+    });
   }
 
   checkCourseAccess(courseId: number): Observable<{ success: boolean; message: string; hasAccess: boolean }> {

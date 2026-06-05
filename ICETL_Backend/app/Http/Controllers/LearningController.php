@@ -752,6 +752,7 @@ class LearningController extends Controller
         return [
             'enrollmentId' => (int) $enrollment->id,
             'id' => (int) $course->id,
+            'code' => $course->code ?? null,
             'title' => $course->title,
             'categoryId' => (int) $course->categoryId,
             'categoryName' => $course->categoryName ?: 'Uncategorized',

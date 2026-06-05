@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="96" viewBox="0 0 260 96" role="img" aria-label="LTIMindtree logo">
+  <rect width="260" height="96" rx="16" fill="none"/>
+  <path d="M27 48l22-22 22 22-22 22-22-22z" fill="#fb4f14" opacity=".9"/>
+  <path d="M52 48l22-22 22 22-22 22-22-22z" fill="#6d3adf" opacity=".9"/>
+  <text x="105" y="57" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="800">LTIMindtree</text>
+</svg>

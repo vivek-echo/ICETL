@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -58,13 +59,20 @@ class WorkshopController extends Controller
                 'updatedOn' => now(),
             ]);
 
+            $workshopCode = EntityCodeService::assignIfMissing(
+                'workshops',
+                $workshopId,
+                EntityCodeService::PREFIX_WORKSHOP
+            );
+
             DB::commit();
 
             return response()->json([
                 'status' => true,
                 'message' => 'Workshop created successfully',
                 'data' => [
-                    'id' => $workshopId
+                    'id' => $workshopId,
+                    'code' => $workshopCode,
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -84,6 +92,64 @@ class WorkshopController extends Controller
     public function getAllWorkshops(Request $request)
     {
         return $this->getWorkshopList($request, false, true);
+    }
+
+    public function getPublicWorkshops(Request $request)
+    {
+        if (!Schema::hasTable('workshops')) {
+            return $this->missingTableResponse();
+        }
+
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'perPage' => 'nullable|integer|min:1|max:12',
+            'scheduleStatus' => 'nullable|in:all,upcoming,ongoing',
+            'sortBy' => 'nullable|in:latest,dateAsc,dateDesc',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        try {
+            $query = $this->baseWorkshopQuery()
+                ->where('w.status', 1);
+
+            $this->applyPublicActiveScheduleFilter($query);
+
+            $scheduleStatus = (string) $request->input('scheduleStatus', 'all');
+
+            if ($scheduleStatus !== '' && $scheduleStatus !== 'all') {
+                $this->applyPublicScheduleStatusFilter($query, $scheduleStatus);
+            }
+
+            $page = (int) $request->input('page', 1);
+            $perPage = (int) $request->input('perPage', 4);
+            $perPage = min(max($perPage, 1), 12);
+
+            $workshops = $this->applyPublicSort($query, (string) $request->input('sortBy', 'dateAsc'))
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Public workshops fetched successfully',
+                'data' => collect($workshops->items())
+                    ->map(fn($workshop) => $this->formatPublicWorkshop($workshop, $request))
+                    ->values(),
+                'meta' => [
+                    'currentPage' => $workshops->currentPage(),
+                    'perPage' => $workshops->perPage(),
+                    'total' => $workshops->total(),
+                    'lastPage' => $workshops->lastPage(),
+                    'from' => $workshops->firstItem(),
+                    'to' => $workshops->lastItem(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching public workshops: ' . $e->getMessage());
+
+            return $this->exceptionResponse($e);
+        }
     }
 
     public function getWorkshopById(Request $request)
@@ -191,9 +257,19 @@ class WorkshopController extends Controller
                 $this->deleteBannerImage($currentBannerImage);
             }
 
+            $workshopCode = EntityCodeService::assignIfMissing(
+                'workshops',
+                (int) $request->input('id'),
+                EntityCodeService::PREFIX_WORKSHOP
+            );
+
             return response()->json([
                 'status' => true,
-                'message' => 'Workshop updated successfully'
+                'message' => 'Workshop updated successfully',
+                'data' => [
+                    'id' => (int) $request->input('id'),
+                    'code' => $workshopCode,
+                ],
             ], 200);
         } catch (\Exception $e) {
             $this->deleteBannerImage($bannerImagePath);
@@ -405,6 +481,7 @@ class WorkshopController extends Controller
             ->where('w.deletedFlag', 0)
             ->select(
                 'w.id',
+                EntityCodeService::codeSelect('workshops', 'w'),
                 'w.title',
                 'w.topic',
                 'w.venue',
@@ -500,6 +577,7 @@ class WorkshopController extends Controller
                     ->orWhere('w.description', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.name', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.email', 'LIKE', '%' . $search . '%');
+                EntityCodeService::orWhereCode($subQuery, 'workshops', 'w.code', $search);
             });
         }
 
@@ -572,6 +650,54 @@ class WorkshopController extends Controller
         }
     }
 
+    private function applyPublicActiveScheduleFilter($query): void
+    {
+        $today = Carbon::today()->toDateString();
+        $dateExpression = DB::raw('COALESCE(w.endDate, w.startDate)');
+
+        $query->whereDate($dateExpression, '>=', $today);
+    }
+
+    private function applyPublicScheduleStatusFilter($query, string $scheduleStatus): void
+    {
+        $today = Carbon::today()->toDateString();
+        $dateExpression = DB::raw('COALESCE(w.endDate, w.startDate)');
+
+        if ($scheduleStatus === 'ongoing') {
+            $query->whereDate('w.startDate', '<=', $today)
+                ->whereDate($dateExpression, '>=', $today);
+            return;
+        }
+
+        if ($scheduleStatus === self::SCHEDULE_UPCOMING) {
+            $query->whereDate('w.startDate', '>', $today);
+        }
+    }
+
+    private function applyPublicSort($query, string $sortBy)
+    {
+        if ($sortBy === 'latest') {
+            return $query->orderBy('w.createdOn', 'DESC')
+                ->orderBy('w.id', 'DESC');
+        }
+
+        if ($sortBy === 'dateDesc') {
+            return $query->orderBy('w.startDate', 'DESC')
+                ->orderBy('w.startTime', 'DESC')
+                ->orderBy('w.id', 'DESC');
+        }
+
+        $today = Carbon::today()->toDateString();
+
+        return $query->orderByRaw(
+            'CASE WHEN w.startDate <= ? AND COALESCE(w.endDate, w.startDate) >= ? THEN 0 ELSE 1 END',
+            [$today, $today]
+        )
+            ->orderBy('w.startDate', 'ASC')
+            ->orderBy('w.startTime', 'ASC')
+            ->orderBy('w.id', 'DESC');
+    }
+
     private function prepareTakeawaysForValidation(Request $request): void
     {
         if (!$request->has('takeaways')) {
@@ -622,6 +748,7 @@ class WorkshopController extends Controller
 
         return [
             'id' => (int) $workshop->id,
+            'code' => $workshop->code ?? null,
             'type' => 'workshop',
             'title' => (string) $workshop->title,
             'topic' => (string) $workshop->topic,
@@ -650,12 +777,36 @@ class WorkshopController extends Controller
         ];
     }
 
+    private function formatPublicWorkshop(object $workshop, Request $request): array
+    {
+        $formatted = $this->formatWorkshop($workshop, $request);
+
+        $formatted['scheduleStatus'] = $this->getPublicScheduleStatus(
+            $formatted['startDate'],
+            $formatted['endDate']
+        );
+
+        return $formatted;
+    }
+
     private function getScheduleStatus(string $startDate, ?string $endDate): string
     {
         $lastWorkshopDate = $endDate ?: $startDate;
 
         if ($lastWorkshopDate && $lastWorkshopDate < Carbon::today()->toDateString()) {
             return self::SCHEDULE_COMPLETED;
+        }
+
+        return self::SCHEDULE_UPCOMING;
+    }
+
+    private function getPublicScheduleStatus(string $startDate, ?string $endDate): string
+    {
+        $today = Carbon::today()->toDateString();
+        $lastWorkshopDate = $endDate ?: $startDate;
+
+        if ($startDate && $startDate <= $today && $lastWorkshopDate >= $today) {
+            return 'ongoing';
         }
 
         return self::SCHEDULE_UPCOMING;

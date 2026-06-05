@@ -94,18 +94,24 @@
   </div>
 
   @if (loading) {
-  <div class="program-grid program-grid--loading" aria-label="Loading workshops">
+  <div class="program-list program-list--loading" aria-label="Loading workshops">
     @for (loader of skeletonRows; track loader) {
-    <article class="program-card program-card--skeleton">
+    <article class="program-row program-row--skeleton">
       <div class="skeleton-media"></div>
-      <div class="skeleton-line skeleton-line--short"></div>
-      <div class="skeleton-line skeleton-line--title"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-meta">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+      <div class="skeleton-content">
+        <div class="skeleton-line skeleton-line--short"></div>
+        <div class="skeleton-line skeleton-line--title"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-meta">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="skeleton-side">
+        <div class="skeleton-line skeleton-line--short"></div>
+        <div class="skeleton-line"></div>
       </div>
     </article>
     }
@@ -122,10 +128,10 @@
   }
 
   @if (!loading && workshops.length > 0) {
-  <div class="program-grid">
+  <div class="program-list">
     @for (workshop of workshops; track trackByProgramId($index, workshop)) {
-    <article class="program-card">
-      <div class="program-card__banner" [class.program-card__banner--empty]="!workshop.bannerImageUrl">
+    <article class="program-row">
+      <div class="program-row__media" [class.program-row__media--empty]="!workshop.bannerImageUrl">
         @if (workshop.bannerImageUrl) {
         <img [src]="workshop.bannerImageUrl" [alt]="workshop.title + ' banner'"
           (error)="workshop.bannerImageUrl = null">
@@ -134,55 +140,65 @@
         }
       </div>
 
-      <div class="program-card__top">
-        <span class="program-card__status" [class.program-card__status--inactive]="!isActive(workshop)">
-          {{ workshop.statusLabel || (isActive(workshop) ? 'Active' : 'Inactive') }}
-        </span>
-        <span class="program-card__topic">{{ workshop.topic }}</span>
-        <span class="program-card__topic">{{ workshop.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
-      </div>
+      <div class="program-row__main">
+        <div class="program-row__badges">
+          <span class="program-card__status" [class.program-card__status--inactive]="!isActive(workshop)">
+            {{ workshop.statusLabel || (isActive(workshop) ? 'Active' : 'Inactive') }}
+          </span>
+          <span class="program-card__topic">{{ workshop.topic }}</span>
+          <span class="program-card__topic">{{ workshop.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+        </div>
 
-      <h3>{{ workshop.title }}</h3>
-      <p class="program-card__description">{{ workshop.description }}</p>
+        <div class="program-row__title">
+          <h3>{{ workshop.title }}</h3>
+          @if (workshop.code) {
+          <span class="entity-code-badge">{{ workshop.code }}</span>
+          }
+        </div>
 
-      <div class="program-card__meta">
-        <span>
-          <i class="feather-user"></i>
-          {{ workshop.speakerName }}
-        </span>
-        <span>
-          <i class="feather-map-pin"></i>
-          {{ workshop.venue }}
-        </span>
-        <span>
-          <i class="feather-navigation"></i>
-          {{ workshop.city }}
-        </span>
-        <span>
-          <i class="feather-calendar"></i>
-          {{ formatDateRange(workshop) }}
-        </span>
-        <span>
-          <i class="feather-clock"></i>
-          {{ formatTimeRange(workshop) }}
-        </span>
-        <span>
-          <i class="feather-users"></i>
-          {{ workshop.capacity ? (workshop.capacity + ' seats') : 'Open seats' }}
-        </span>
-      </div>
+        <p class="program-row__description">{{ workshop.description }}</p>
 
-      @if (getTakeaways(workshop).length > 0) {
-      <ul class="program-card__takeaways">
-        @for (takeaway of getTakeaways(workshop); track $index) {
-        <li>{{ takeaway }}</li>
+        <div class="program-row__meta">
+          <span>
+            <i class="feather-user"></i>
+            {{ workshop.speakerName }}
+          </span>
+          <span>
+            <i class="feather-map-pin"></i>
+            {{ workshop.venue }}
+          </span>
+          <span>
+            <i class="feather-navigation"></i>
+            {{ workshop.city }}
+          </span>
+          <span>
+            <i class="feather-calendar"></i>
+            {{ formatDateRange(workshop) }}
+          </span>
+          <span>
+            <i class="feather-clock"></i>
+            {{ formatTimeRange(workshop) }}
+          </span>
+          <span>
+            <i class="feather-users"></i>
+            {{ workshop.capacity ? (workshop.capacity + ' seats') : 'Open seats' }}
+          </span>
+        </div>
+
+        @if (getTakeaways(workshop).length > 0) {
+        <ul class="program-row__takeaways">
+          @for (takeaway of getTakeaways(workshop); track $index) {
+          <li>{{ takeaway }}</li>
+          }
+        </ul>
         }
-      </ul>
-      }
+      </div>
 
-      <footer class="program-card__footer">
-        <strong>{{ formatPrice(workshop.price) }}</strong>
-
+      <aside class="program-row__side">
+        <div class="program-row__price">
+          <span>Price</span>
+          <strong>{{ formatPrice(workshop.price) }}</strong>
+        </div>
         <div class="program-card__actions">
           <button type="button" class="program-icon-action" (click)="goToEditWorkshop(workshop)" title="Edit workshop">
             <i class="feather-edit-2"></i>
@@ -194,7 +210,7 @@
             <i class="feather-trash-2"></i>
           </button>
         </div>
-      </footer>
+      </aside>
     </article>
     }
   </div>

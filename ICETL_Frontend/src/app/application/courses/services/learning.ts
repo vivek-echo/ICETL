@@ -14,6 +14,7 @@ export interface LearningApiResponse<T> {
 export interface LearningCourse {
   enrollmentId: number;
   id: number;
+  code?: string | null;
   title: string;
   categoryId?: number;
   categoryName?: string | null;

@@ -74,7 +74,12 @@
             <span>{{ paymentMethodLabel(row) }}</span>
             }
           </td>
-          <td>{{ row.invoiceNumber || 'Not generated' }}</td>
+          <td>
+            <strong>{{ row.invoiceNumber || 'Not generated' }}</strong>
+            @if (row.entityCode) {
+            <span class="entity-code-badge">{{ row.entityCode }}</span>
+            }
+          </td>
           <td>{{ formatDate(row.created_at) }}</td>
         </tr>
         }

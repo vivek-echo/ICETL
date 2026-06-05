@@ -289,68 +289,60 @@
 
 <section class="rbt-callto-action-area mt_dec--half ictel-cta-section">
   <div class="container">
-    <div class="row g-5 align-items-stretch">
-      <div class="col-lg-6 d-flex">
-        <div class="rbt-callto-action callto-action-default bg-color-white rbt-radius shadow-1 ictel-cta-card">
-          <div class="row align-items-center ictel-cta-card__row">
-            <div class="col-lg-12 col-xl-8">
-              <div class="inner ictel-cta-card__content">
-                <div class=" ictel-cta-badge">
-                  <a [routerLink]="courseRoute">Career Focused</a>
-                </div>
-                <h4 class="title ictel-cta-title">Industry-Ready IT Training Programs</h4>
-                <p class="ictel-cta-description">Learn through practical sessions, live projects,
-                  internships, and certification-oriented training
-                  designed for modern technology careers.</p>
-                <ul class="ictel-cta-features">
-                  <li><i class="fas fa-check"></i>Live Projects</li>
-                  <li><i class="fas fa-check"></i>Internship Support</li>
-                  <li><i class="fas fa-check"></i>Certification Programs</li>
-                </ul>
-              </div>
-            </div>
-            <div class="col-lg-12 col-xl-4">
-              <div class="video-popup-wrapper ictel-cta-action">
-                <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="courseRoute">
-                  <span class="icon-reverse-wrapper">
-                    <span class="btn-text">Explore Courses</span>
-                    <span class="btn-icon">
-                      <i class="feather-arrow-right"></i>
-                    </span>
-                  </span>
-                </a>
-              </div>
-            </div>
-          </div>
+    <div class="ictel-cta-layout">
+      <article class="ictel-cta-card ictel-cta-card--primary">
+        <div class="ictel-cta-card__top">
+          <span class="ictel-cta-badge"><i class="feather-target"></i>Career Focused</span>
+          <span class="ictel-cta-pill">3-6 month tracks</span>
         </div>
-      </div>
-      <div class="col-lg-6 d-flex">
-        <div class="rbt-callto-action callto-action-default bg-color-white rbt-radius shadow-1 ictel-cta-card">
-          <div class="row align-items-center ictel-cta-card__row">
-            <div class="col-lg-12">
-              <div class="inner ictel-cta-card__content">
-                <div class=" ictel-cta-badge">
-                  <a [routerLink]="courseRoute">ICTEL Advantage</a>
-                </div>
-                <h4 class="title ictel-cta-title">Practical Learning With Real Experience</h4>
-                <p class="ictel-cta-description">Build technical confidence with expert mentorship,
-                  hands-on projects, internship exposure,
-                  and industry-focused certification programs.</p>
-                <ul class="ictel-cta-features">
-                  <li><i class="fas fa-check"></i>Practical Sessions</li>
-                  <li><i class="fas fa-check"></i>Career Guidance</li>
-                  <li><i class="fas fa-check"></i>Industry Mentorship</li>
-                </ul>
-                <div class="read-more-btn ictel-cta-action">
-                  <a class="rbt-btn rbt-switch-btn btn-gradient btn-sm" [routerLink]="contactRoute">
-                    <span data-text="Contact Us">Contact Us</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
+        <h3>Industry-ready IT training programs</h3>
+        <p>
+          Learn through practical sessions, guided projects, internships, and certification-focused
+          training designed for modern technology careers.
+        </p>
+        <div class="ictel-cta-features">
+          <span><i class="feather-code"></i>Live Projects</span>
+          <span><i class="feather-briefcase"></i>Internship Support</span>
+          <span><i class="feather-award"></i>Certifications</span>
         </div>
-      </div>
+        <div class="ictel-cta-footer">
+          <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="courseRoute">
+            <span class="icon-reverse-wrapper">
+              <span class="btn-text">Explore Courses</span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            </span>
+          </a>
+          <span>Full-stack, cloud, data, AI, and career programs</span>
+        </div>
+      </article>
+
+      <article class="ictel-cta-card ictel-cta-card--secondary">
+        <div class="ictel-cta-card__top">
+          <span class="ictel-cta-badge"><i class="feather-star"></i>ICTEL Advantage</span>
+          <span class="ictel-cta-pill">Mentor led</span>
+        </div>
+        <h3>Practical learning with real experience</h3>
+        <p>
+          Build technical confidence with expert mentorship, hands-on practice, internship
+          exposure, and placement-oriented guidance.
+        </p>
+        <div class="ictel-cta-features">
+          <span><i class="feather-check-circle"></i>Practical Sessions</span>
+          <span><i class="feather-compass"></i>Career Guidance</span>
+          <span><i class="feather-users"></i>Industry Mentors</span>
+        </div>
+        <div class="ictel-cta-footer">
+          <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="contactRoute">
+            <span class="icon-reverse-wrapper">
+              <span class="btn-text">Contact Us</span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            </span>
+          </a>
+          <span>Training support from enrolment to placement prep</span>
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -526,213 +518,162 @@
   </div>
 </section> -->
 
-<section class="rbt-team-area bg-color-white rbt-section-gap">
+<section class="home-programs-section bg-color-white rbt-section-gap">
   <div class="container">
     <div class="row mb--60">
       <div class="col-lg-12">
         <div class="section-title text-center">
-          <span class="subtitle bg-primary-opacity">Our Teacher</span>
-          <h2 class="title">Whose Inspirations You</h2>
+          <span class="subtitle bg-primary-opacity">Live Programs</span>
+          <h2 class="title">Latest Workshops &amp; Seminars</h2>
+          <p class="description mt--15">
+            Join active and upcoming practical sessions led by ICTEL trainers and industry mentors.
+          </p>
         </div>
       </div>
     </div>
-    <div class="row g-5">
-      <div class="col-lg-7">
-        <div class="rbt-team-tab-content tab-content">
-          @if (activeTeacher(); as teacher) {
-          <div class="tab-pane fade active show">
-            <div class="inner">
-              <div class="rbt-team-thumbnail">
-                <div class="thumb">
-                  <img [src]="teacher.image" alt="Testimonial Images" />
-                </div>
-              </div>
-              <div class="rbt-team-details">
-                <div class="author-info">
-                  <h4 class="title">{{ teacher.name }}</h4>
-                  <span class="designation theme-gradient">{{ teacher.designation }}</span>
-                  <span class="team-form">
-                    <i class="feather-map-pin"></i>
-                    <span class="location">{{ teacher.location }}</span>
-                  </span>
-                </div>
-                <p>{{ teacher.description }}</p>
-                <ul class="social-icon social-default mt--20 justify-content-start">
-                  <li>
-                    <a href="https://www.facebook.com/" target="_blank" rel="noreferrer">
-                      <i class="feather-facebook"></i>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://www.twitter.com" target="_blank" rel="noreferrer">
-                      <i class="feather-twitter"></i>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">
-                      <i class="feather-instagram"></i>
-                    </a>
-                  </li>
-                </ul>
-                <ul class="rbt-information-list mt--25">
-                  <li>
-                    <a [href]="'tel:' + teacher.phone"><i class="feather-phone"></i>{{ teacher.phone }}</a>
-                  </li>
-                  <li>
-                    <a [href]="'mailto:' + teacher.email"><i class="feather-mail"></i>{{ teacher.email }}</a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          }
-          <div class="top-circle-shape"></div>
+
+    @if (programsLoading()) {
+    <div class="home-program-grid">
+      @for (item of programSkeletons; track item) {
+      <div class="home-program-card home-program-card--loading">
+        <div class="home-program-card__image"></div>
+        <div class="home-program-card__body">
+          <span></span>
+          <strong></strong>
+          <p></p>
+          <p></p>
         </div>
       </div>
+      }
+    </div>
+    } @else if (homePrograms().length) {
+    <div class="home-program-grid">
+      @for (program of homePrograms(); track program.id) {
+      <article class="home-program-card">
+        <a class="home-program-card__image" [routerLink]="contactRoute">
+          <img [src]="program.image" [alt]="program.title" (error)="onProgramImageError(program)" />
+          <span class="home-program-card__type">{{ getProgramTypeLabel(program) }}</span>
+          <span class="home-program-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+            {{ getProgramStatusLabel(program) }}
+          </span>
+        </a>
+        <div class="home-program-card__body">
+          <span class="home-program-card__topic">{{ program.topic }}</span>
+          <h3><a [routerLink]="contactRoute">{{ program.title }}</a></h3>
+          <p>{{ program.description }}</p>
+          <ul class="home-program-card__meta">
+            <li><i class="feather-calendar"></i>{{ getProgramDateLabel(program) }}</li>
+            <li><i class="feather-clock"></i>{{ getProgramTimeLabel(program) }}</li>
+            <li><i class="feather-map-pin"></i>{{ program.venue }}, {{ program.city }}</li>
+            <li><i class="feather-user"></i>{{ program.speakerName }}</li>
+          </ul>
+          <div class="home-program-card__footer">
+            <span>{{ program.price > 0 ? 'Rs. ' + formatAmount(program.price) : 'Free' }}</span>
+            <a class="rbt-btn-link" [routerLink]="contactRoute">
+              Register Interest<i class="feather-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      </article>
+      }
+    </div>
+    } @else {
+    <div class="home-program-empty">
+      <span class="home-program-empty__icon"><i class="feather-calendar"></i></span>
+      <h3>No upcoming workshops or seminars available right now.</h3>
+      <p>New ICTEL programs will appear here as soon as they are published.</p>
+    </div>
+    }
+  </div>
+</section>
 
-      <div class="col-lg-5">
-        <ul class="rbt-team-tab-thumb nav nav-tabs" role="tablist">
-          @for (teacher of teachers; track teacher.id) {
-          <li>
-            <button type="button" class="team-tab-button" [class.active]="activeTeacherId() === teacher.id"
-              (click)="selectTeacher(teacher.id)">
-              <div class="rbt-team-thumbnail">
-                <div class="thumb">
-                  <img [src]="teacher.image" alt="Testimonial Images" />
-                </div>
-              </div>
-            </button>
-          </li>
-          }
-        </ul>
+<section class="placement-companies-section rbt-section-gap bg-color-extra2">
+  <div class="container">
+    <div class="placement-companies-header">
+      <div class="section-title">
+        <span class="subtitle bg-primary-opacity">Student Placements</span>
+        <h2 class="title">Our Students Placed In Top Companies</h2>
+        <p class="description mt--15">
+          ICTEL learners are building careers across leading IT services, consulting, cloud,
+          engineering, and digital transformation companies.
+        </p>
       </div>
+      <div class="placement-companies-header__action">
+        <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="contactRoute">
+          <span class="icon-reverse-wrapper">
+            <span class="btn-text">Start Your Career</span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+          </span>
+        </a>
+      </div>
+    </div>
+
+    <div class="placement-company-grid">
+      @for (company of placementCompanies; track company.name) {
+      <article class="placement-company-card" [style.--placement-accent]="company.accent">
+        <div class="placement-company-card__logo" [attr.aria-label]="company.name + ' logo'">
+          <img [src]="company.logo" [alt]="company.name + ' logo'" />
+        </div>
+        <div class="placement-company-card__content">
+          <strong>{{ company.name }}</strong>
+          <span>{{ company.sector }}</span>
+        </div>
+      </article>
+      }
+    </div>
+
+    <div class="placement-support-strip">
+      <span><i class="feather-briefcase"></i>Interview preparation</span>
+      <span><i class="feather-code"></i>Live project portfolio</span>
+      <span><i class="feather-award"></i>Certification-focused training</span>
     </div>
   </div>
 </section>
 
-<section class="rbt-rbt-blog-area rbt-section-gap bg-color-extra2">
+<section class="ictel-newsletter-section rbt-section-gap">
   <div class="container">
-    <div class="row g-5 align-items-center mb--30">
-      <div class="col-lg-6 col-md-6 col-12">
-        <div class="section-title">
-          <span class="subtitle bg-pink-opacity">Blog Post</span>
-          <h2 class="title">Post Popular Post.</h2>
+    <div class="ictel-newsletter">
+      <div class="ictel-newsletter__content">
+        <span class="ictel-newsletter__eyebrow">Career Updates</span>
+        <h2>Get ICTEL training, internship, and placement updates</h2>
+        <p>
+          Stay informed about new course batches, live workshops, certification programs,
+          placement preparation sessions, and practical project opportunities.
+        </p>
+        <div class="ictel-newsletter__chips">
+          <span><i class="feather-calendar"></i>New batch alerts</span>
+          <span><i class="feather-briefcase"></i>Placement support</span>
+          <span><i class="feather-code"></i>Live project updates</span>
         </div>
       </div>
-      <div class="col-lg-6 col-md-6 col-12">
-        <div class="read-more-btn text-start text-md-end">
-          <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="courseRoute">
-            <div class="icon-reverse-wrapper">
-              <span class="btn-text">See All Articles</span>
-              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-            </div>
-          </a>
-        </div>
-      </div>
-    </div>
-    <div class="row row--15">
-      <div class="col-lg-6 col-md-12 col-sm-12 col-12 mt--30">
-        <div class="rbt-card variation-02 height-330 rbt-hover">
-          <div class="rbt-card-img">
-            <a [routerLink]="courseRoute">
-              <img [src]="featuredBlog.image" alt="Card image" />
-            </a>
-          </div>
-          <div class="rbt-card-body">
-            <h3 class="rbt-card-title"><a [routerLink]="courseRoute">{{ featuredBlog.title }}</a></h3>
-            <p class="rbt-card-text">{{ featuredBlog.description }}</p>
-            <div class="rbt-card-bottom">
-              <a class="transparent-button" [routerLink]="courseRoute">
-                {{ featuredBlog.buttonLabel }}
-                <i>
-                  <svg width="17" height="12" xmlns="http://www.w3.org/2000/svg">
-                    <g stroke="#27374D" fill="none" fill-rule="evenodd">
-                      <path d="M10.614 0l5.629 5.629-5.63 5.629"></path>
-                      <path stroke-linecap="square" d="M.663 5.572h14.594"></path>
-                    </g>
-                  </svg>
-                </i>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-6 col-md-12 col-sm-12 col-12 mt--30">
-        @for (blog of blogList; track blog.title) {
-        <div class="rbt-card card-list variation-02 rbt-hover" [class.mt--30]="$index > 0">
-          <div class="rbt-card-img">
-            <a [routerLink]="courseRoute">
-              <img [src]="blog.image" alt="Card image" />
-            </a>
-          </div>
-          <div class="rbt-card-body">
-            <h5 class="rbt-card-title"><a [routerLink]="courseRoute">{{ blog.title }}</a></h5>
-            <div class="rbt-card-bottom">
-              <a class="transparent-button" [routerLink]="courseRoute">
-                {{ blog.buttonLabel }}
-                <i>
-                  <svg width="17" height="12" xmlns="http://www.w3.org/2000/svg">
-                    <g stroke="#27374D" fill="none" fill-rule="evenodd">
-                      <path d="M10.614 0l5.629 5.629-5.63 5.629"></path>
-                      <path stroke-linecap="square" d="M.663 5.572h14.594"></path>
-                    </g>
-                  </svg>
-                </i>
-              </a>
-            </div>
-          </div>
-        </div>
-        }
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="rbt-newsletter-area newsletter-style-2 bg-color-primary rbt-section-gap">
-  <div class="container">
-    <div class="row row--15 align-items-center">
-      <div class="col-lg-12">
-        <div class="inner text-center">
-          <div class="section-title text-center">
-            <span class="subtitle bg-white-opacity">Get Latest Histudy Update</span>
-            <h2 class="title color-white"><strong>Subscribe</strong> Our Newsletter</h2>
-            <p class="description color-white mt--20">
-              Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ipsam explicabo sit est
-              eos earum reprehenderit inventore nam autem corrupti rerum!
-            </p>
-          </div>
-          <form class="newsletter-form-1 mt--40" (submit)="handleNewsletterSubmit($event)">
-            <input type="email" placeholder="Enter Your E-Email" />
-            <button type="submit" class="rbt-btn btn-md btn-gradient hover-icon-reverse">
-              <span class="icon-reverse-wrapper">
-                <span class="btn-text">Subscribe</span>
-                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-              </span>
-            </button>
-          </form>
-          <span class="note-text color-white mt--20">No ads, No trails, No commitments</span>
-
-          <div class="row row--15 mt--50 justify-content-center">
-            @for (counter of newsletterCounters; track counter.title) {
-            <div class="col-lg-3 col-md-6 col-sm-6 single-counter" [class]="counter.extraClasses ?? ''">
-              <div class="rbt-counterup rbt-hover-03 style-2 text-color-white">
-                <div class="inner">
-                  <div class="content">
-                    <h3 class="counter color-white">
-                      <span class="odometer" [attr.data-count]="counter.value">00</span>
-                    </h3>
-                    <h5 class="title color-white">{{ counter.title }}</h5>
-                    <span class="subtitle color-white">{{ counter.subtitle }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            }
-          </div>
+      <form class="ictel-newsletter__form" (submit)="handleNewsletterSubmit($event)">
+        <label for="homeNewsletterEmail">Email address</label>
+        <div class="ictel-newsletter__field">
+          <i class="feather-mail"></i>
+          <input id="homeNewsletterEmail" type="email" placeholder="Enter your email" />
         </div>
+        <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse">
+          <span class="icon-reverse-wrapper">
+            <span class="btn-text">Subscribe</span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+          </span>
+        </button>
+        <span class="ictel-newsletter__note">No spam. Only useful ICTEL career updates.</span>
+      </form>
+    </div>
+
+    <div class="ictel-newsletter-stats">
+      @for (counter of newsletterCounters; track counter.title) {
+      <div class="ictel-newsletter-stat" [class]="counter.extraClasses ?? ''">
+        <span class="ictel-newsletter-stat__icon"><i [class]="counter.iconClass"></i></span>
+        <strong>{{ counter.value }}+</strong>
+        <span>{{ counter.title }}</span>
+        <small>{{ counter.subtitle }}</small>
       </div>
+      }
     </div>
   </div>
 </section>

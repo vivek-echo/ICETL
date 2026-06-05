@@ -2,6 +2,11 @@ import { afterNextRender, Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { lastValueFrom, timeout } from 'rxjs';
 import { Course, PublicCourseApiItem } from '../../../application/courses/services/course';
+import {
+  WorkshopItem,
+  WorkshopService,
+} from '../../../application/workshop-seminar/services/workshop';
+import { SeminarItem, SeminarService } from '../../../application/workshop-seminar/services/seminar';
 interface BannerCourse {
   id: string;
   title: string;
@@ -98,17 +103,37 @@ interface Teacher {
   email: string;
 }
 
-interface BlogItem {
-  image: string;
+interface HomeProgram {
+  id: string;
+  type: 'workshop' | 'seminar';
   title: string;
-  description?: string;
-  buttonLabel: string;
+  topic: string;
+  image: string;
+  city: string;
+  venue: string;
+  startDate: string;
+  endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  speakerName: string;
+  capacity: number;
+  price: number;
+  description: string;
+  scheduleStatus: 'upcoming' | 'ongoing' | 'completed';
+}
+
+interface PlacementCompany {
+  name: string;
+  logo: string;
+  sector: string;
+  accent: string;
 }
 
 interface NewsletterCounter {
   value: string;
   title: string;
   subtitle: string;
+  iconClass: string;
   extraClasses?: string;
 }
 
@@ -124,10 +149,20 @@ export class HomeComponent {
   readonly loginRoute = '/login';
   readonly placeholderCourseImage = 'assets/images/course/course-01.png';
   readonly placeholderAuthorImage = 'assets/images/client/avatar-02.png';
-  constructor(private courseService: Course) {
+  readonly placeholderProgramImage = 'assets/images/event/grid-type-02.jpg';
+  readonly homePrograms = signal<HomeProgram[]>([]);
+  readonly programsLoading = signal(false);
+  readonly programSkeletons = [1, 2, 3, 4];
+
+  constructor(
+    private courseService: Course,
+    private workshopService: WorkshopService,
+    private seminarService: SeminarService,
+  ) {
     afterNextRender(() => {
       void this.getCourseCategories();
       void this.getHomeCourses();
+      void this.getHomePrograms();
     });
   }
 
@@ -259,6 +294,131 @@ export class HomeComponent {
 
   onCourseImageError(course: BannerCourse | PopularCourse): void {
     course.image = this.placeholderCourseImage;
+  }
+
+  onProgramImageError(program: HomeProgram): void {
+    program.image = this.placeholderProgramImage;
+  }
+
+  async getHomePrograms(): Promise<void> {
+    this.programsLoading.set(true);
+
+    try {
+      const [workshopResult, seminarResult] = await Promise.allSettled([
+        lastValueFrom(
+          this.workshopService
+            .getPublicWorkshops({
+              page: 1,
+              perPage: 6,
+              sortBy: 'dateAsc',
+            })
+            .pipe(timeout(15000)),
+        ),
+        lastValueFrom(
+          this.seminarService
+            .getPublicSeminars({
+              page: 1,
+              perPage: 6,
+              sortBy: 'dateAsc',
+            })
+            .pipe(timeout(15000)),
+        ),
+      ]);
+
+      const programs: HomeProgram[] = [];
+
+      if (workshopResult.status === 'fulfilled' && workshopResult.value.status) {
+        programs.push(...(workshopResult.value.data ?? []).map((item) => this.toHomeProgram(item)));
+      }
+
+      if (seminarResult.status === 'fulfilled' && seminarResult.value.status) {
+        programs.push(...(seminarResult.value.data ?? []).map((item) => this.toHomeProgram(item)));
+      }
+
+      this.homePrograms.set(programs.sort((first, second) => this.comparePrograms(first, second)).slice(0, 4));
+    } catch (error) {
+      console.error(error);
+      this.homePrograms.set([]);
+    } finally {
+      this.programsLoading.set(false);
+    }
+  }
+
+  getProgramTypeLabel(program: HomeProgram): string {
+    return program.type === 'workshop' ? 'Workshop' : 'Seminar';
+  }
+
+  getProgramStatusLabel(program: HomeProgram): string {
+    return program.scheduleStatus === 'ongoing' ? 'Ongoing' : 'Upcoming';
+  }
+
+  getProgramDateLabel(program: HomeProgram): string {
+    const startDate = this.formatProgramDate(program.startDate);
+    const endDate = program.endDate ? this.formatProgramDate(program.endDate) : '';
+
+    return endDate && endDate !== startDate ? `${startDate} - ${endDate}` : startDate;
+  }
+
+  getProgramTimeLabel(program: HomeProgram): string {
+    if (!program.startTime) {
+      return 'Schedule TBA';
+    }
+
+    return program.endTime ? `${program.startTime} - ${program.endTime}` : program.startTime;
+  }
+
+  private toHomeProgram(program: WorkshopItem | SeminarItem): HomeProgram {
+    return {
+      id: `${program.type}-${program.id}`,
+      type: program.type,
+      title: program.title,
+      topic: program.topic,
+      image: program.bannerImageUrl || this.placeholderProgramImage,
+      city: program.city,
+      venue: program.venue,
+      startDate: program.startDate || program.eventDate,
+      endDate: program.endDate,
+      startTime: program.startTime,
+      endTime: program.endTime,
+      speakerName: program.speakerName,
+      capacity: Number(program.capacity) || 0,
+      price: this.toNumber(program.price),
+      description: program.description,
+      scheduleStatus: program.scheduleStatus,
+    };
+  }
+
+  private comparePrograms(first: HomeProgram, second: HomeProgram): number {
+    const firstStatusRank = first.scheduleStatus === 'ongoing' ? 0 : 1;
+    const secondStatusRank = second.scheduleStatus === 'ongoing' ? 0 : 1;
+
+    if (firstStatusRank !== secondStatusRank) {
+      return firstStatusRank - secondStatusRank;
+    }
+
+    return this.getProgramTimestamp(first) - this.getProgramTimestamp(second);
+  }
+
+  private getProgramTimestamp(program: HomeProgram): number {
+    const date = program.startDate || '';
+    const time = program.startTime || '00:00';
+    const timestamp = Date.parse(`${date}T${time}`);
+
+    return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER;
+  }
+
+  private formatProgramDate(value: string): string {
+    const timestamp = Date.parse(`${value}T00:00:00`);
+
+    if (!Number.isFinite(timestamp)) {
+      return 'Date TBA';
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(timestamp));
   }
 
   private toPopularCourse(course: PublicCourseApiItem): PopularCourse {
@@ -642,28 +802,78 @@ export class HomeComponent {
     },
   ];
 
-  readonly featuredBlog: BlogItem = {
-    image: 'assets/images/blog/blog-card-01.jpg',
-    title: 'React',
-    description: 'It is a long established fact that a reader.',
-    buttonLabel: 'Learn More',
-  };
-
-  readonly blogList: BlogItem[] = [
+  readonly placementCompanies: PlacementCompany[] = [
     {
-      image: 'assets/images/blog/blog-card-02.jpg',
-      title: 'Why Is Education So Famous?',
-      buttonLabel: 'Read Article',
+      name: 'TCS',
+      logo: 'assets/images/placements/tcs.svg',
+      sector: 'IT Services',
+      accent: '#5f259f',
     },
     {
-      image: 'assets/images/blog/blog-card-03.jpg',
-      title: 'Difficult Things About Education.',
-      buttonLabel: 'Read Article',
+      name: 'Wipro',
+      logo: 'assets/images/placements/wipro.svg',
+      sector: 'Technology Consulting',
+      accent: '#6d3adf',
     },
     {
-      image: 'assets/images/blog/blog-card-04.jpg',
-      title: 'Education Is So Famous, But Why?',
-      buttonLabel: 'Read Article',
+      name: 'Deloitte',
+      logo: 'assets/images/placements/deloitte.svg',
+      sector: 'Consulting',
+      accent: '#86bc25',
+    },
+    {
+      name: 'Tech Mahindra',
+      logo: 'assets/images/placements/tech-mahindra.svg',
+      sector: 'Digital Transformation',
+      accent: '#dd1f26',
+    },
+    {
+      name: 'Cognizant',
+      logo: 'assets/images/placements/cognizant.svg',
+      sector: 'Technology Services',
+      accent: '#0033a0',
+    },
+    {
+      name: 'Accenture',
+      logo: 'assets/images/placements/accenture.svg',
+      sector: 'Consulting',
+      accent: '#a100ff',
+    },
+    {
+      name: 'Infosys',
+      logo: 'assets/images/placements/infosys.svg',
+      sector: 'Digital Services',
+      accent: '#007cc3',
+    },
+    {
+      name: 'HCLTech',
+      logo: 'assets/images/placements/hcltech.svg',
+      sector: 'Engineering & Cloud',
+      accent: '#0066b3',
+    },
+    {
+      name: 'Capgemini',
+      logo: 'assets/images/placements/capgemini.svg',
+      sector: 'Consulting & Technology',
+      accent: '#00a3e0',
+    },
+    {
+      name: 'IBM',
+      logo: 'assets/images/placements/ibm.svg',
+      sector: 'Cloud & AI',
+      accent: '#0f62fe',
+    },
+    {
+      name: 'LTIMindtree',
+      logo: 'assets/images/placements/ltimindtree.svg',
+      sector: 'Technology Consulting',
+      accent: '#fb4f14',
+    },
+    {
+      name: 'Mphasis',
+      logo: 'assets/images/placements/mphasis.svg',
+      sector: 'IT Solutions',
+      accent: '#e21b2d',
     },
   ];
 
@@ -671,13 +881,20 @@ export class HomeComponent {
     {
       value: '500',
       title: 'Successfully Trained',
-      subtitle: 'Learners & counting',
+      subtitle: 'Practical project learners',
+      iconClass: 'feather-users',
     },
     {
       value: '100',
-      title: 'Certification Students',
-      subtitle: 'Online Course',
-      extraClasses: 'mt_mobile--30',
+      title: 'Certified Students',
+      subtitle: 'Career-ready credentials',
+      iconClass: 'feather-award',
+    },
+    {
+      value: '12',
+      title: 'Hiring Brands',
+      subtitle: 'Placement-focused exposure',
+      iconClass: 'feather-briefcase',
     },
   ];
 

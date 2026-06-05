@@ -282,7 +282,8 @@ export class AddCourses implements OnInit {
       const response: any = await lastValueFrom(this.courseService.createCourse(formData));
 
       if (response.status) {
-        this.alertHelper.success('Course created successfully!');
+        const courseCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
+        this.alertHelper.success(`Course created successfully!${courseCode}`);
 
         this.courseForm.reset({
           status: 0,

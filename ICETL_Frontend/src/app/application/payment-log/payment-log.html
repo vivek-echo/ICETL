@@ -1,49 +1,74 @@
 <section class="payment-log" aria-labelledby="payment-log-title">
-  <div class="payment-log__header">
-    <div>
+  <header class="payment-log__header">
+    <div class="payment-log__title">
       <span class="payment-log__eyebrow">Billing Center</span>
       <h1 id="payment-log-title">Transaction History</h1>
-      <p>View purchases, payment status, invoices, and refund state.</p>
+      <p>Purchases, payment status, invoices, and refund state in one place.</p>
     </div>
 
-    <button
-      type="button"
-      class="payment-log__refresh"
-      (click)="loadPaymentLogs()"
-      [disabled]="loading"
-      title="Refresh payment log">
-      <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
-      Refresh
-    </button>
-  </div>
+    <div class="payment-log__header-actions">
+      <div class="payment-log__summary" aria-label="Payment summary">
+        <div class="payment-metric">
+          <span>Total Records</span>
+          <strong>{{ total }}</strong>
+        </div>
+        <div class="payment-metric">
+          <span>Page Value</span>
+          <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(pageTotalAmount) }}</strong>
+        </div>
+        <div class="payment-metric">
+          <span>Paid</span>
+          <strong>{{ pagePaidCount }}</strong>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="payment-log__refresh"
+        (click)="loadPaymentLogs()"
+        [disabled]="loading"
+        title="Refresh payment log">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
 
   <div class="payment-filters">
-    <label>
+    <label class="payment-filter payment-filter--search">
       <span>Search</span>
-      <input
-        type="search"
-        [(ngModel)]="search"
-        (keyup.enter)="applyFilters()"
-        placeholder="Invoice, order, or transaction no">
+      <div class="payment-field">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="search"
+          [(ngModel)]="search"
+          (keyup.enter)="applyFilters()"
+          placeholder="Invoice, order, code, or transaction no">
+      </div>
     </label>
 
-    <label>
+    <label class="payment-filter">
       <span>Status</span>
-      <select [(ngModel)]="status" (change)="applyFilters()">
-        @for (option of statusOptions; track option) {
-        <option [value]="option">{{ option === 'all' ? 'All statuses' : option }}</option>
-        }
-      </select>
+      <div class="payment-field payment-field--select">
+        <select [(ngModel)]="status" (change)="applyFilters()">
+          @for (option of statusOptions; track option) {
+          <option [value]="option">{{ option === 'all' ? 'All statuses' : option }}</option>
+          }
+        </select>
+        <i class="fa-solid fa-chevron-down"></i>
+      </div>
     </label>
 
-    <button type="button" class="payment-filter-btn" (click)="applyFilters()">
-      <i class="fa-solid fa-filter"></i>
-      Filter
-    </button>
-    <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
-      <i class="fa-solid fa-rotate-left"></i>
-      Reset
-    </button>
+    <div class="payment-filters__actions">
+      <button type="button" class="payment-filter-btn" (click)="applyFilters()">
+        <i class="fa-solid fa-filter"></i>
+        Filter
+      </button>
+      <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
+        <i class="fa-solid fa-rotate-left"></i>
+        Reset
+      </button>
+    </div>
   </div>
 
   @if (loading) {
@@ -72,42 +97,67 @@
           <th>Amount</th>
           <th>Status</th>
           <th>Transaction No</th>
-          <th></th>
+          <th aria-label="Actions"></th>
         </tr>
       </thead>
       <tbody>
         @for (log of logs; track log.id) {
         <tr>
-          <td>
-            <strong>{{ log.invoiceNo }}</strong>
-            <span>{{ log.orderReference || ('Order #' + log.id) }}</span>
+          <td data-label="Invoice">
+            <div class="payment-invoice-cell">
+              <span class="payment-invoice-cell__icon">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+              </span>
+              <div>
+                <strong>{{ log.invoiceNo }}</strong>
+                <span>{{ log.orderReference || ('Order #' + log.id) }}</span>
+                @if (log.entityCode) {
+                <span class="entity-code-badge">{{ log.entityCode }}</span>
+                }
+              </div>
+            </div>
           </td>
-          <td>{{ formatDate(log.created_at) }}</td>
-          <td>{{ log.courseCount }}</td>
-          <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(log.totalAmount) }}</td>
-          <td>
+          <td data-label="Date">
+            <span class="payment-date">{{ formatDate(log.created_at) }}</span>
+          </td>
+          <td data-label="Courses">
+            <span class="payment-course-count">{{ log.courseCount }}</span>
+            <small>course{{ log.courseCount === 1 ? '' : 's' }}</small>
+          </td>
+          <td data-label="Amount">
+            <strong class="payment-amount"><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(log.totalAmount) }}</strong>
+          </td>
+          <td data-label="Status">
             <span
               class="payment-status"
               [class.payment-status--paid]="log.status === 'paid'"
               [class.payment-status--failed]="log.status === 'failed'"
-              [class.payment-status--cancelled]="log.status === 'cancelled'">
+              [class.payment-status--cancelled]="log.status === 'cancelled'"
+              [class.payment-status--pending]="log.status === 'pending'">
+              <span class="payment-status__dot"></span>
               {{ log.status }}
             </span>
             @if (log.failureReason) {
             <small class="payment-failure-reason">{{ log.failureReason }}</small>
             }
           </td>
-          <td>
-            <strong>{{ paymentIdentifier(log) }}</strong>
-            @if (paymentMethodLabel(log)) {
-            <span>{{ paymentMethodLabel(log) }}</span>
-            }
+          <td data-label="Transaction No">
+            <div class="payment-transaction">
+              <strong>{{ paymentIdentifier(log) }}</strong>
+              @if (paymentMethodLabel(log)) {
+              <span>{{ paymentMethodLabel(log) }}</span>
+              }
+            </div>
           </td>
-          <td>
+          <td data-label="Invoice Action">
             @if (log.status === 'paid') {
-            <button type="button" class="payment-table__action" (click)="viewInvoice(log.id)">
-              <i class="fa-solid fa-file-invoice"></i>
-              View Invoice
+            <button
+              type="button"
+              class="payment-table__action"
+              (click)="viewInvoice(log.id)"
+              [disabled]="invoiceLoadingOrderId === log.id">
+              <i [class]="invoiceLoadingOrderId === log.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-invoice'"></i>
+              {{ invoiceLoadingOrderId === log.id ? 'Opening' : 'View Invoice' }}
             </button>
             } @else {
             <button type="button" class="payment-table__action payment-table__action--disabled" disabled>
@@ -123,13 +173,13 @@
   </div>
 
   <footer class="payment-pagination">
-    <span>{{ total }} transaction{{ total === 1 ? '' : 's' }}</span>
+    <span>Showing {{ resultStart }}-{{ resultEnd }} of {{ total }} transaction{{ total === 1 ? '' : 's' }}</span>
     <div>
-      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">
+      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1" title="Previous page">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
       <strong>{{ currentPage }} / {{ lastPage }}</strong>
-      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage">
+      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage" title="Next page">
         <i class="fa-solid fa-chevron-right"></i>
       </button>
     </div>
@@ -142,9 +192,13 @@
 <section class="invoice-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-title">
   <div class="invoice-card">
     <div class="invoice-card__toolbar">
-      <button type="button" class="invoice-action invoice-action--primary" (click)="downloadInvoicePdf()">
-        <i class="fa-solid fa-file-arrow-down"></i>
-        Download PDF
+      <button
+        type="button"
+        class="invoice-action invoice-action--primary"
+        (click)="downloadInvoicePdf()"
+        [disabled]="downloadingInvoice">
+        <i [class]="downloadingInvoice ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-arrow-down'"></i>
+        {{ downloadingInvoice ? 'Downloading' : 'Download PDF' }}
       </button>
       <button type="button" class="invoice-action" (click)="printInvoice()" aria-label="Print invoice" title="Print">
         <i class="fa-solid fa-print"></i>
@@ -154,45 +208,82 @@
       </button>
     </div>
 
-    <div class="invoice-brand">
-      <div class="invoice-brand__mark">IC</div>
-      <div>
-        <strong>ICETL</strong>
-        <span>Ice Technology Lab</span>
+    <header class="invoice-card__masthead">
+      <div class="invoice-brand">
+        <div class="invoice-brand__mark">IC</div>
+        <div>
+          <strong>{{ selectedInvoice.company?.name || 'ICETL' }}</strong>
+          <span>{{ selectedInvoice.company?.subtitle || 'Ice Technology Lab' }}</span>
+          @if (selectedInvoice.company?.email) {
+          <small>{{ selectedInvoice.company?.email }}</small>
+          }
+        </div>
       </div>
-    </div>
 
-    <div class="invoice-card__header">
-      <div>
-        <h2 id="invoice-title">Invoice</h2>
-        <strong>{{ selectedInvoice.invoiceNo }}</strong>
+      <div class="invoice-card__status-block">
+        <span>Payment Status</span>
+        <strong>{{ selectedInvoice.status }}</strong>
       </div>
-      <span class="payment-status payment-status--paid">{{ selectedInvoice.status }}</span>
+    </header>
+
+    <div class="invoice-card__headline">
+      <div>
+        <span class="invoice-kicker">Payment invoice</span>
+        <h2 id="invoice-title">Invoice</h2>
+        <div class="invoice-number-row">
+          <strong>{{ selectedInvoice.invoiceNo }}</strong>
+          @if (selectedInvoice.entityCode) {
+          <span class="entity-code-badge">{{ selectedInvoice.entityCode }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="invoice-total invoice-total--compact">
+        <span>Total Paid</span>
+        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.totalAmount) }}</strong>
+      </div>
     </div>
 
     <div class="invoice-meta">
-      <div>
-        <span>Billed To</span>
+      <section class="invoice-meta__panel">
+        <span class="invoice-meta__label">Billed To</span>
         <strong>{{ selectedInvoice.customer.name || 'Customer' }}</strong>
         <p>{{ selectedInvoice.customer.email || 'Email not available' }}</p>
-        <p>{{ selectedInvoice.customer.phone || '' }}</p>
-      </div>
-      <div>
-        <span>Order Date</span>
-        <strong>{{ formatDate(selectedInvoice.orderDate) }}</strong>
-        <p>Order Ref: {{ selectedInvoice.orderReference || selectedInvoice.razorpayOrderId || ('Order #' + selectedInvoice.orderId) }}</p>
-        <p>Transaction No: {{ paymentIdentifier(selectedInvoice) }}</p>
-        @if (paymentMethodLabel(selectedInvoice)) {
-        <p>Payment By: {{ paymentMethodLabel(selectedInvoice) }}</p>
+        @if (selectedInvoice.customer.phone) {
+        <p>{{ selectedInvoice.customer.phone }}</p>
         }
-      </div>
+      </section>
+
+      <section class="invoice-meta__panel">
+        <span class="invoice-meta__label">Payment Details</span>
+        <dl class="invoice-detail-list">
+          <div>
+            <dt>Order Date</dt>
+            <dd>{{ formatDate(selectedInvoice.orderDate) }}</dd>
+          </div>
+          <div>
+            <dt>Order Ref</dt>
+            <dd>{{ selectedInvoice.orderReference || selectedInvoice.razorpayOrderId || ('Order #' + selectedInvoice.orderId) }}</dd>
+          </div>
+          <div>
+            <dt>Transaction No</dt>
+            <dd>{{ paymentIdentifier(selectedInvoice) }}</dd>
+          </div>
+          @if (paymentMethodLabel(selectedInvoice)) {
+          <div>
+            <dt>Payment Mode</dt>
+            <dd>{{ paymentMethodLabel(selectedInvoice) }}</dd>
+          </div>
+          }
+        </dl>
+      </section>
     </div>
 
     <div class="invoice-items-wrap">
       <table class="invoice-items">
         <thead>
           <tr>
-            <th>Course</th>
+            <th>Entity</th>
             <th>Category</th>
             <th>Amount</th>
           </tr>
@@ -200,24 +291,39 @@
         <tbody>
           @for (item of selectedInvoice.items; track item.courseId) {
           <tr>
-            <td>{{ item.title }}</td>
-            <td>{{ item.categoryName }}</td>
-            <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}</td>
+            <td>
+              <strong>{{ item.title }}</strong>
+              @if (item.entityCode || item.code) {
+              <span class="entity-code-badge">{{ item.entityCode || item.code }}</span>
+              }
+            </td>
+            <td>
+              <span class="invoice-category">{{ item.categoryName || 'Course' }}</span>
+            </td>
+            <td>
+              <strong class="invoice-item-amount"><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}</strong>
+            </td>
           </tr>
           }
         </tbody>
       </table>
     </div>
 
-    <div class="invoice-total">
-      <span>Total Paid</span>
-      <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.totalAmount) }}</strong>
+    <div class="invoice-summary">
+      <div>
+        <span>Subtotal</span>
+        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.subtotal) }}</strong>
+      </div>
+      <div class="invoice-summary__total">
+        <span>Total Paid</span>
+        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.totalAmount) }}</strong>
+      </div>
     </div>
 
-    <div class="invoice-note">
+    <footer class="invoice-note">
       <i class="fa-solid fa-circle-check"></i>
-      This invoice is generated for a verified payment record.
-    </div>
+      <span>This invoice is generated for a verified payment record.</span>
+    </footer>
   </div>
 </section>
 }

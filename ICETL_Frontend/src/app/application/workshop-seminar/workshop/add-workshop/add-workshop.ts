@@ -421,7 +421,8 @@ export class AddWorkshop implements OnInit {
       const response = await lastValueFrom(request$.pipe(timeout(20000)));
 
       if (response.status) {
-        await this.alertHelper.success(response.message || 'Workshop saved successfully.');
+        const workshopCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
+        await this.alertHelper.success(`${response.message || 'Workshop saved successfully.'}${workshopCode}`);
 
         if (!this.isEditMode) {
           this.resetForm();

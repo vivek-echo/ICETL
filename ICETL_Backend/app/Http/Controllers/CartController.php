@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller
@@ -62,6 +64,25 @@ class CartController extends Controller
                     'status' => false,
                     'message' => 'Course not found or inactive',
                 ], 404);
+            }
+
+            $alreadyEnrolled = Schema::hasTable('enrollments')
+                && DB::table('enrollments')
+                    ->where('userId', (int) $request->user()->id)
+                    ->where('courseId', $courseId)
+                    ->where('deletedFlag', 0)
+                    ->exists();
+
+            if ($alreadyEnrolled) {
+                DB::table('carts')
+                    ->where('user_id', (int) $request->user()->id)
+                    ->where('course_id', $courseId)
+                    ->delete();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You are already enrolled in this course.',
+                ], 409);
             }
 
             DB::table('carts')->insertOrIgnore([
@@ -157,6 +178,7 @@ class CartController extends Controller
             ->select(
                 'cart.id as cartId',
                 'c.id',
+                EntityCodeService::codeSelect('courses', 'c'),
                 'c.title',
                 'c.categoryId',
                 'cc.categoryName as categoryName',
@@ -219,6 +241,7 @@ class CartController extends Controller
             return [
                 'cartId' => (int) $course->cartId,
                 'id' => (int) $course->id,
+                'code' => $course->code ?? null,
                 'title' => $course->title,
                 'categoryName' => $course->categoryName ?: 'Uncategorized',
                 'instructorName' => $instructors->pluck('name')->filter()->join(', '),

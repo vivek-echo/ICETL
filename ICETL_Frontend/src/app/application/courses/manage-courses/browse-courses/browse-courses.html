@@ -172,6 +172,9 @@
 
           <div class="course-card__content">
             <h2>{{ course.title }}</h2>
+            @if (course.code) {
+            <span class="entity-code-badge">{{ course.code }}</span>
+            }
 
             <div class="course-info">
               <span>
@@ -196,9 +199,9 @@
               <span>({{ getStudentCount(course) }})</span>
             </div>
 
-            <p class="course-card__description">
-              {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-            </p>
+              <!-- <p class="course-card__description">
+                {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+              </p> -->
 
             <div class="course-price-row">
               <div class="course-price">
@@ -239,6 +242,9 @@
           
 
             <h4>{{ course.title }}</h4>
+            @if (course.code) {
+            <span class="entity-code-badge entity-code-badge--light">{{ course.code }}</span>
+            }
 
             <div class="course-badges">
               <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>

@@ -1,0 +1,1585 @@
+:host {
+  display: block;
+}
+
+.offline-students {
+  --student-blue: #2563eb;
+  --student-blue-dark: #1d4ed8;
+  --student-purple: #6d5dfc;
+  --student-emerald: #059669;
+  --student-amber: #d97706;
+  --student-rose: #e11d48;
+  --student-ink: #111827;
+  --student-muted: #64748b;
+  --student-border: #e2e8f0;
+  --student-soft: #f7f9fc;
+  --student-surface: #ffffff;
+  color: var(--student-ink);
+  display: grid;
+  gap: 18px;
+}
+
+.offline-students__header {
+  align-items: center;
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  border-left: 4px solid var(--student-blue);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.offline-students__header span,
+.student-summary__card span,
+.student-payment-modal__header span,
+.student-payment-grid span,
+.student-payment-progress span,
+.student-payment-info span,
+.student-installments__head span {
+  color: var(--student-blue-dark);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.offline-students__header h1 {
+  color: var(--student-ink);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 6px 0;
+}
+
+.offline-students__header p,
+.student-summary__card p,
+.student-empty p,
+.student-pager p,
+.student-no-schedule p {
+  color: var(--student-muted);
+  margin: 0;
+}
+
+.student-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.student-summary__card,
+.student-toolbar,
+.student-table-shell,
+.student-payment-overview,
+.student-payment-modal {
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.student-summary__card {
+  min-height: 142px;
+  overflow: hidden;
+  padding: 18px;
+  position: relative;
+}
+
+.student-summary__card::after {
+  background: var(--student-blue);
+  border-radius: 999px;
+  content: '';
+  height: 3px;
+  inset: auto 18px 14px 18px;
+  position: absolute;
+}
+
+.student-summary__card:nth-child(3)::after {
+  background: var(--student-emerald);
+}
+
+.student-summary__card:nth-child(4)::after {
+  background: var(--student-amber);
+}
+
+.student-summary__card:nth-child(5)::after {
+  background: var(--student-rose);
+}
+
+.student-summary__card i {
+  align-items: center;
+  background: #eff6ff;
+  border-radius: 8px;
+  color: var(--student-blue-dark);
+  display: inline-flex;
+  font-size: 18px;
+  height: 38px;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 38px;
+}
+
+.student-summary__card--next i {
+  background: #ecfdf5;
+  color: var(--student-emerald);
+}
+
+.student-summary__card strong {
+  color: var(--student-ink);
+  display: block;
+  font-size: 26px;
+  font-weight: 850;
+  line-height: 1.15;
+  margin: 6px 0;
+}
+
+.student-summary__card p {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-toolbar {
+  align-items: end;
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 1.7fr)
+    minmax(150px, 0.75fr)
+    minmax(165px, 0.85fr)
+    minmax(180px, 0.85fr)
+    minmax(130px, 0.15fr)
+    minmax(212px, auto);
+  gap: 14px;
+  padding: 18px;
+}
+
+.student-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.student-field label,
+.student-pager label span,
+.student-installment-row label span,
+.student-date-field > span,
+.student-installment-payment > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.student-control {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  display: flex;
+  gap: 8px;
+  min-height: 62px;
+  padding: 0 15px;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.student-control:focus-within {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.student-control i {
+  color: var(--student-blue);
+  flex: 0 0 auto;
+  font-size: 17px;
+}
+
+.student-control input,
+.student-control select,
+.student-pager input,
+.student-installment-row input,
+.student-installment-row select,
+.student-installment-payment input,
+.student-installment-payment select,
+.student-calendar select {
+  background: transparent;
+  border: 0;
+  color: var(--student-ink);
+  font: inherit;
+  line-height: 1.25;
+  min-width: 0;
+  outline: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.student-control--select {
+  padding-right: 10px;
+}
+
+.student-control--select select {
+  cursor: pointer;
+  padding-right: 18px;
+}
+
+.student-toolbar__actions {
+  align-items: end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.student-action,
+.student-icon-action,
+.student-page-button,
+.student-close-button,
+.student-row-remove,
+.student-date-trigger,
+.student-date-clear,
+.student-calendar button {
+  align-items: center;
+  border-radius: 8px;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.student-action {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  min-height: 52px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.student-action:hover:not(:disabled),
+.student-icon-action:hover:not(:disabled),
+.student-page-button:hover:not(:disabled),
+.student-row-remove:hover:not(:disabled),
+.student-date-clear:hover:not(:disabled) {
+  border-color: var(--student-blue);
+  color: var(--student-blue-dark);
+  transform: translateY(-1px);
+}
+
+.student-action--primary,
+.student-action--primary:hover:not(:disabled) {
+  background: var(--student-blue);
+  border-color: var(--student-blue);
+  color: #ffffff;
+}
+
+.student-action:disabled,
+.student-icon-action:disabled,
+.student-page-button:disabled,
+.student-close-button:disabled,
+.student-row-remove:disabled,
+.student-date-trigger:disabled,
+.student-date-clear:disabled,
+.student-calendar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.student-table-shell {
+  overflow: hidden;
+}
+
+.student-table-wrap {
+  overflow-x: auto;
+}
+
+.student-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 920px;
+  width: 100%;
+}
+
+.student-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 14px 16px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.student-table td {
+  border-top: 1px solid var(--student-border);
+  color: var(--student-ink);
+  padding: 16px;
+  vertical-align: middle;
+}
+
+.student-table tr:hover td {
+  background: #fbfdff;
+}
+
+.student-person,
+.student-course,
+.student-due {
+  min-width: 0;
+}
+
+.student-person {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.student-person > span {
+  align-items: center;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0369a1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-weight: 850;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.student-person strong,
+.student-course strong,
+.student-due strong {
+  color: var(--student-ink);
+  display: block;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.student-person small,
+.student-course small,
+.student-due small {
+  color: var(--student-muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
+.student-person .entity-code-badge,
+.student-pay-summary .entity-code-badge {
+  margin-top: 6px;
+}
+
+.student-due--overdue strong {
+  color: var(--student-rose);
+}
+
+.student-badge {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  color: #92400e;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.student-badge--paid {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.student-badge--partial {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.student-rupee-icon {
+  align-items: center;
+  color: var(--student-blue);
+  display: inline-flex;
+  font-weight: 950;
+  justify-content: center;
+  line-height: 1;
+}
+
+.student-icon-action {
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  color: var(--student-blue-dark);
+  min-height: 40px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.student-pager {
+  align-items: center;
+  border-top: 1px solid var(--student-border);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.student-pager__controls {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.student-pager label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.student-pager input {
+  background: var(--student-soft);
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  height: 38px;
+  padding: 0 8px;
+  text-align: center;
+  width: 74px;
+}
+
+.student-page-button,
+.student-close-button,
+.student-row-remove,
+.student-date-clear,
+.student-calendar button {
+  background: #ffffff;
+  border: 1px solid var(--student-border);
+  color: #475569;
+  height: 38px;
+  width: 38px;
+}
+
+.student-empty {
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.student-empty i,
+.student-no-schedule i {
+  align-items: center;
+  background: #eff6ff;
+  border-radius: 8px;
+  color: var(--student-blue);
+  display: inline-flex;
+  font-size: 28px;
+  height: 58px;
+  justify-content: center;
+  margin-bottom: 14px;
+  width: 58px;
+}
+
+.student-empty h5,
+.student-no-schedule h4 {
+  color: var(--student-ink);
+  font-weight: 850;
+  margin: 0 0 6px;
+}
+
+.student-table-loader {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.student-table-loader span {
+  animation: studentPulse 1.15s ease-in-out infinite;
+  background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 50%, #eef2f7 100%);
+  background-size: 220% 100%;
+  border-radius: 8px;
+  height: 58px;
+}
+
+.student-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.54);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1050;
+}
+
+.student-payment-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  max-width: 1200px;
+  overflow-y: auto;
+  width: min(1200px, 100%);
+}
+
+.student-payment-modal__header,
+.student-payment-modal__footer {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.student-payment-modal__header {
+  border-bottom: 1px solid var(--student-border);
+}
+
+.student-payment-modal__header h3 {
+  color: var(--student-ink);
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.25;
+  margin: 5px 0;
+}
+
+.student-payment-modal__header p {
+  color: var(--student-muted);
+  margin: 0;
+}
+
+.student-close-button {
+  flex: 0 0 auto;
+}
+
+.student-payment-overview,
+.student-payment-info,
+.student-installments {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.student-payment-overview {
+  box-shadow: none;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.student-payment-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.student-metric-card,
+.student-payment-info > div {
+  background: var(--student-soft);
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.student-metric-card {
+  position: relative;
+}
+
+.student-metric-card::after {
+  background: var(--student-blue);
+  border-radius: 999px;
+  content: '';
+  height: 3px;
+  inset: auto 14px 10px 14px;
+  position: absolute;
+}
+
+.student-metric-card--paid::after {
+  background: var(--student-emerald);
+}
+
+.student-metric-card--balance::after {
+  background: var(--student-amber);
+}
+
+.student-metric-card--next::after {
+  background: var(--student-purple);
+}
+
+.student-metric-card span {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.student-metric-card i,
+.student-installment-meta i,
+.student-pay-summary i,
+.student-pay-form i {
+  color: var(--student-blue);
+}
+
+.student-payment-grid strong,
+.student-payment-info strong,
+.student-installments__head strong {
+  color: var(--student-ink);
+  display: block;
+  font-weight: 850;
+  line-height: 1.35;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.student-payment-progress {
+  background: linear-gradient(135deg, #eef6ff 0%, #f5f3ff 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.student-payment-progress__top,
+.student-installment-progress > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.student-payment-progress__top strong,
+.student-installment-progress strong {
+  color: var(--student-blue-dark);
+  font-weight: 850;
+}
+
+.student-progress {
+  background: #dbeafe;
+  border-radius: 999px;
+  height: 10px;
+  margin: 10px 0 8px;
+  overflow: hidden;
+}
+
+.student-progress .progress-bar {
+  background: linear-gradient(90deg, var(--student-blue) 0%, var(--student-purple) 100%);
+  border-radius: inherit;
+  height: 100%;
+}
+
+.student-payment-progress small {
+  color: var(--student-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-payment-info {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.student-installments {
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  margin-bottom: 18px;
+  margin-top: 16px;
+  overflow: visible;
+  padding: 16px;
+}
+
+.student-installments__head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.student-form-error,
+.student-installment-row small {
+  color: var(--student-rose);
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.student-no-schedule {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.student-no-schedule i {
+  font-size: 22px;
+  height: 48px;
+  width: 48px;
+}
+
+.student-installment-timeline {
+  display: grid;
+  gap: 14px;
+  position: relative;
+}
+
+.student-installment-timeline::before {
+  background: linear-gradient(180deg, #bfdbfe 0%, #ddd6fe 100%);
+  border-radius: 999px;
+  content: '';
+  inset: 10px auto 10px 22px;
+  position: absolute;
+  width: 2px;
+}
+
+.student-installment-row {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  padding: 14px;
+  position: relative;
+}
+
+.student-installment-row--paid {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.student-installment-row--overdue {
+  border-color: #fecdd3;
+}
+
+.student-installment-row--next {
+  border-color: #93c5fd;
+  box-shadow: 0 18px 38px rgba(37, 99, 235, 0.14);
+}
+
+.student-installment-marker {
+  position: relative;
+  z-index: 1;
+}
+
+.student-installment-marker span {
+  align-items: center;
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: var(--student-blue-dark);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.student-installment-row--paid .student-installment-marker span {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.student-installment-row--partial .student-installment-marker span {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.student-installment-row--overdue .student-installment-marker span {
+  background: #ffe4e6;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.student-installment-content {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.student-installment-row__number {
+  align-items: center;
+  background: #eef6ff;
+  border-radius: 8px;
+  color: var(--student-blue-dark);
+  display: inline-flex;
+  font-weight: 850;
+  height: 38px;
+  justify-content: center;
+  width: 44px;
+}
+
+.student-next-chip,
+.student-next-pill {
+  align-items: center;
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: var(--student-blue-dark);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 7px;
+  padding: 8px 10px;
+}
+
+.student-next-chip--complete {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.student-next-pill {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: var(--student-purple);
+  padding: 6px 9px;
+}
+
+.student-installment-row label,
+.student-installment-payment label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.student-installment-row input,
+.student-installment-row select,
+.student-installment-payment input,
+.student-installment-payment select {
+  background: var(--student-soft);
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.student-installment-row input:focus,
+.student-installment-row select:focus,
+.student-installment-payment input:focus,
+.student-installment-payment select:focus,
+.student-date-trigger:focus {
+  border-color: var(--student-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.student-installment-row input.is-invalid,
+.student-installment-payment input.is-invalid,
+.student-installment-payment select.is-invalid,
+.student-date-trigger.is-invalid {
+  border-color: var(--student-rose);
+}
+
+.student-date-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  position: relative;
+}
+
+.student-date-field strong {
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  display: flex;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.student-date-trigger {
+  background: var(--student-soft);
+  border: 1px solid var(--student-border);
+  color: var(--student-ink);
+  min-height: 40px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.student-date-trigger span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-date-trigger .is-placeholder {
+  color: #94a3b8;
+}
+
+.student-date-clear {
+  height: 30px;
+  position: absolute;
+  right: 42px;
+  top: 31px;
+  width: 30px;
+}
+
+.student-row-remove {
+  color: #be123c;
+  height: 40px;
+  width: 40px;
+}
+
+.student-installment-payment {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.student-installment-payment--pending {
+  align-self: stretch;
+}
+
+.student-installment-payment--pending strong {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: var(--student-muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.student-payment-proof-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(104px, 0.72fr) minmax(130px, 1fr);
+}
+
+.student-installment-row--partial {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.student-installment-card-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.student-installment-card-head > div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.student-installment-card-head strong {
+  color: var(--student-ink);
+  font-weight: 850;
+}
+
+.student-installment-progress {
+  background: #f8fafc;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.student-installment-progress span {
+  color: var(--student-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-progress--small {
+  height: 7px;
+  margin: 8px 0 0;
+}
+
+.student-installment-meta,
+.student-pay-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.student-installment-meta > div,
+.student-pay-summary > div {
+  background: #f8fafc;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.student-installment-meta span,
+.student-pay-summary span,
+.student-pay-form label span {
+  align-items: center;
+  color: #475569;
+  display: flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 6px;
+  letter-spacing: 0;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.student-installment-meta strong,
+.student-pay-summary strong {
+  color: var(--student-ink);
+  display: block;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.student-pay-summary small {
+  color: var(--student-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.student-badge--pending {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.student-badge--partially-paid {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.student-badge--overdue {
+  background: #ffe4e6;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.student-invoice-link {
+  align-items: center;
+  display: inline-flex;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.student-action--secondary,
+.student-action--secondary:hover:not(:disabled) {
+  background: #eef6ff;
+  border-color: #bfdbfe;
+  color: var(--student-blue-dark);
+}
+
+.student-action--paid,
+.student-action--paid:disabled {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+  opacity: 1;
+}
+
+.student-installment-remarks {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.student-installment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.student-pay-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1060;
+}
+
+.student-pay-modal {
+  background: #ffffff;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  box-shadow: 0 24px 58px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  max-width: 1040px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: min(1040px, 100%);
+}
+
+.student-pay-hero {
+  align-items: center;
+  background: linear-gradient(135deg, #eef6ff 0%, #f5f3ff 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  margin: 18px 20px 0;
+  padding: 16px;
+}
+
+.student-pay-hero__icon {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: var(--student-blue-dark);
+  display: inline-flex;
+  font-size: 24px;
+  font-weight: 950;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.student-pay-hero span:not(.student-pay-hero__icon) {
+  color: var(--student-blue-dark);
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.student-pay-hero h4 {
+  color: var(--student-ink);
+  font-size: 20px;
+  font-weight: 850;
+  margin: 4px 0;
+}
+
+.student-pay-hero p {
+  color: var(--student-muted);
+  margin: 0;
+}
+
+.student-pay-hero > strong {
+  color: var(--student-blue-dark);
+  font-size: 24px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.student-pay-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 14px 20px 0;
+}
+
+.student-pay-form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 18px 20px 0;
+}
+
+.student-pay-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.student-pay-form input,
+.student-pay-form select,
+.student-pay-form textarea {
+  background: var(--student-soft);
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  color: var(--student-ink);
+  font: inherit;
+  min-height: 42px;
+  outline: 0;
+  padding: 0 11px;
+  width: 100%;
+}
+
+.student-pay-form textarea {
+  min-height: 84px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.student-pay-form input:focus,
+.student-pay-form select:focus,
+.student-pay-form textarea:focus {
+  border-color: var(--student-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.student-pay-form input.is-invalid,
+.student-pay-form select.is-invalid {
+  border-color: var(--student-rose);
+}
+
+.student-pay-form small {
+  color: var(--student-rose);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-pay-form__wide,
+.student-pay-modal__footer {
+  grid-column: 1 / -1;
+}
+
+.student-pay-modal__footer {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 16px 0 0;
+}
+
+.student-calendar {
+  background: #ffffff;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+  left: 0;
+  padding: 12px;
+  position: absolute;
+  top: calc(100% + 8px);
+  width: 322px;
+  z-index: 20;
+}
+
+.student-calendar__nav {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.student-calendar__nav > div {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(88px, 0.7fr);
+}
+
+.student-calendar select {
+  background: #f8fafc;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 8px;
+}
+
+.student-calendar__weekdays,
+.student-calendar__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.student-calendar__weekdays span {
+  color: var(--student-muted);
+  font-size: 11px;
+  font-weight: 850;
+  padding: 6px 0;
+  text-align: center;
+}
+
+.student-calendar__days {
+  gap: 4px;
+}
+
+.student-calendar__days button {
+  border-color: transparent;
+  font-size: 13px;
+  height: 34px;
+  width: 100%;
+}
+
+.student-calendar__days button.is-muted {
+  color: #94a3b8;
+}
+
+.student-calendar__days button.is-today {
+  border-color: #93c5fd;
+}
+
+.student-calendar__days button.is-selected {
+  background: var(--student-blue);
+  border-color: var(--student-blue);
+  color: #ffffff;
+}
+
+.student-payment-modal__footer {
+  border-top: 1px solid var(--student-border);
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.feather-loader {
+  animation: studentSpin 1s linear infinite;
+}
+
+@keyframes studentPulse {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: -220% 50%;
+  }
+}
+
+@keyframes studentSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1320px) {
+  .student-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .student-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .student-field--search {
+    grid-column: span 2;
+  }
+
+  .student-toolbar__actions {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 980px) {
+  .student-summary,
+  .student-payment-grid,
+  .student-payment-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-field--search {
+    grid-column: span 2;
+  }
+
+  .student-toolbar__actions {
+    grid-column: span 2;
+  }
+
+  .student-installment-row {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .student-installment-meta,
+  .student-pay-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .offline-students__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .offline-students__header h1 {
+    font-size: 22px;
+  }
+
+  .student-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .student-field--search,
+  .student-toolbar__actions {
+    grid-column: auto;
+  }
+
+  .student-summary,
+  .student-payment-grid,
+  .student-payment-info,
+  .student-installment-meta,
+  .student-pay-summary,
+  .student-pay-form {
+    grid-template-columns: 1fr;
+  }
+
+  .student-toolbar__actions {
+    flex-basis: 100%;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .student-toolbar__actions,
+  .student-payment-modal__footer {
+    flex-direction: column;
+  }
+
+  .student-action {
+    width: 100%;
+  }
+
+  .student-table {
+    min-width: 0;
+  }
+
+  .student-table thead {
+    display: none;
+  }
+
+  .student-table,
+  .student-table tbody,
+  .student-table tr,
+  .student-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .student-table tr {
+    border-top: 1px solid var(--student-border);
+    padding: 12px 0;
+  }
+
+  .student-table td {
+    align-items: flex-start;
+    border: 0;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 9px 14px;
+  }
+
+  .student-table td::before {
+    color: #64748b;
+    content: attr(data-label);
+    flex: 0 0 110px;
+    font-size: 12px;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .student-person,
+  .student-course,
+  .student-due {
+    flex: 1 1 auto;
+    text-align: right;
+  }
+
+  .student-person {
+    justify-content: flex-end;
+  }
+
+  .student-pager {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-pager__controls {
+    justify-content: space-between;
+  }
+
+  .student-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .student-payment-modal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .student-payment-info,
+  .student-payment-overview,
+  .student-installments,
+  .student-pay-hero,
+  .student-pay-summary {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .student-installment-timeline::before {
+    display: none;
+  }
+
+  .student-installment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .student-date-field {
+    grid-column: auto;
+  }
+
+  .student-installment-card-head,
+  .student-installment-card-head > div,
+  .student-installment-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-pay-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .student-pay-modal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .student-pay-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .student-pay-hero > strong {
+    white-space: normal;
+  }
+
+  .student-pay-form {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .student-payment-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-row-remove {
+    width: 100%;
+  }
+
+  .student-calendar {
+    max-width: calc(100vw - 56px);
+    width: 100%;
+  }
+}

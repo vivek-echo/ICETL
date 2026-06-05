@@ -93,18 +93,24 @@
   </div>
 
   @if (loading) {
-  <div class="program-grid program-grid--loading" aria-label="Loading seminars">
+  <div class="program-list program-list--loading" aria-label="Loading seminars">
     @for (loader of skeletonRows; track loader) {
-    <article class="program-card program-card--skeleton">
+    <article class="program-row program-row--skeleton">
       <div class="skeleton-media"></div>
-      <div class="skeleton-line skeleton-line--short"></div>
-      <div class="skeleton-line skeleton-line--title"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-meta">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+      <div class="skeleton-content">
+        <div class="skeleton-line skeleton-line--short"></div>
+        <div class="skeleton-line skeleton-line--title"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-meta">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="skeleton-side">
+        <div class="skeleton-line skeleton-line--short"></div>
+        <div class="skeleton-line"></div>
       </div>
     </article>
     }
@@ -121,10 +127,10 @@
   }
 
   @if (!loading && seminars.length > 0) {
-  <div class="program-grid">
+  <div class="program-list">
     @for (seminar of seminars; track trackByProgramId($index, seminar)) {
-    <article class="program-card">
-      <div class="program-card__banner" [class.program-card__banner--empty]="!seminar.bannerImageUrl">
+    <article class="program-row">
+      <div class="program-row__media" [class.program-row__media--empty]="!seminar.bannerImageUrl">
         @if (seminar.bannerImageUrl) {
         <img [src]="seminar.bannerImageUrl" [alt]="seminar.title + ' banner'"
           (error)="seminar.bannerImageUrl = null">
@@ -133,55 +139,65 @@
         }
       </div>
 
-      <div class="program-card__top">
-        <span class="program-card__status" [class.program-card__status--inactive]="!isActive(seminar)">
-          {{ seminar.statusLabel || (isActive(seminar) ? 'Active' : 'Inactive') }}
-        </span>
-        <span class="program-card__topic">{{ seminar.topic }}</span>
-        <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
-      </div>
+      <div class="program-row__main">
+        <div class="program-row__badges">
+          <span class="program-card__status" [class.program-card__status--inactive]="!isActive(seminar)">
+            {{ seminar.statusLabel || (isActive(seminar) ? 'Active' : 'Inactive') }}
+          </span>
+          <span class="program-card__topic">{{ seminar.topic }}</span>
+          <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+        </div>
 
-      <h3>{{ seminar.title }}</h3>
-      <p class="program-card__description">{{ seminar.description }}</p>
+        <div class="program-row__title">
+          <h3>{{ seminar.title }}</h3>
+          @if (seminar.code) {
+          <span class="entity-code-badge">{{ seminar.code }}</span>
+          }
+        </div>
 
-      <div class="program-card__meta">
-        <span>
-          <i class="feather-user"></i>
-          {{ seminar.speakerName }}
-        </span>
-        <span>
-          <i class="feather-map-pin"></i>
-          {{ seminar.venue }}
-        </span>
-        <span>
-          <i class="feather-navigation"></i>
-          {{ seminar.city }}
-        </span>
-        <span>
-          <i class="feather-calendar"></i>
-          {{ formatDate(seminar.eventDate) }}
-        </span>
-        <span>
-          <i class="feather-clock"></i>
-          {{ formatTimeRange(seminar) }}
-        </span>
-        <span>
-          <i class="feather-users"></i>
-          {{ seminar.capacity }} seats
-        </span>
-      </div>
+        <p class="program-row__description">{{ seminar.description }}</p>
 
-      @if (getTakeaways(seminar).length > 0) {
-      <ul class="program-card__takeaways">
-        @for (takeaway of getTakeaways(seminar); track $index) {
-        <li>{{ takeaway }}</li>
+        <div class="program-row__meta">
+          <span>
+            <i class="feather-user"></i>
+            {{ seminar.speakerName }}
+          </span>
+          <span>
+            <i class="feather-map-pin"></i>
+            {{ seminar.venue }}
+          </span>
+          <span>
+            <i class="feather-navigation"></i>
+            {{ seminar.city }}
+          </span>
+          <span>
+            <i class="feather-calendar"></i>
+            {{ formatDate(seminar.eventDate) }}
+          </span>
+          <span>
+            <i class="feather-clock"></i>
+            {{ formatTimeRange(seminar) }}
+          </span>
+          <span>
+            <i class="feather-users"></i>
+            {{ seminar.capacity ? (seminar.capacity + ' seats') : 'Open seats' }}
+          </span>
+        </div>
+
+        @if (getTakeaways(seminar).length > 0) {
+        <ul class="program-row__takeaways">
+          @for (takeaway of getTakeaways(seminar); track $index) {
+          <li>{{ takeaway }}</li>
+          }
+        </ul>
         }
-      </ul>
-      }
+      </div>
 
-      <footer class="program-card__footer">
-        <strong>{{ formatPrice(seminar.price) }}</strong>
-
+      <aside class="program-row__side">
+        <div class="program-row__price">
+          <span>Price</span>
+          <strong>{{ formatPrice(seminar.price) }}</strong>
+        </div>
         <div class="program-card__actions">
           <button type="button" class="program-icon-action" (click)="goToEditSeminar(seminar)" title="Edit seminar">
             <i class="feather-edit-2"></i>
@@ -193,7 +209,7 @@
             <i class="feather-trash-2"></i>
           </button>
         </div>
-      </footer>
+      </aside>
     </article>
     }
   </div>

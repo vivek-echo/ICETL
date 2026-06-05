@@ -1,5 +1,5 @@
 <div class="course-browser">
-  <header class="course-management-hero">
+  <!-- <header class="course-management-hero">
     <div class="course-management-hero__content">
       <span class="course-management-hero__eyebrow">Course Management</span>
       <h1>View Courses</h1>
@@ -22,9 +22,9 @@
       <strong>{{ metrics[0].value || meta.total || courses.length }}</strong>
       <p>{{ metrics[1].value || 0 }} active / {{ metrics[2].value || 0 }} inactive</p>
     </aside>
-  </header>
+  </header> -->
 
-  <section class="course-summary" aria-label="Course management summary">
+  <!-- <section class="course-summary" aria-label="Course management summary">
     @for (metric of metrics; track metric.label) {
     <div>
       <i [class]="metric.icon"></i>
@@ -40,15 +40,11 @@
       <strong>{{ categories.length }}</strong>
       <p>{{ selectedCategoryLabel }}</p>
     </div>
-  </section>
+  </section> -->
 
   <!-- TOOLBAR -->
   <div class="course-toolbar">
-    <div class="course-toolbar__heading">
-      <h2>Filter Courses</h2>
-      <p>Use search, status, category, and sorting controls to manage the catalog quickly.</p>
-    </div>
-
+    
     <div class="rbt-form-group">
       <label>Search Course</label>
       <div class="course-field">
@@ -135,8 +131,26 @@
   </div>
 
   @if (loading) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
+  <div class="course-list course-list--loading" aria-label="Loading courses">
+    @for (loader of skeletonRows; track loader) {
+    <article class="course-row course-row--skeleton">
+      <div class="course-skeleton-media"></div>
+      <div class="course-skeleton-content">
+        <div class="course-skeleton-line course-skeleton-line--short"></div>
+        <div class="course-skeleton-line course-skeleton-line--title"></div>
+        <div class="course-skeleton-line"></div>
+        <div class="course-skeleton-meta">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="course-skeleton-side">
+        <div class="course-skeleton-line course-skeleton-line--short"></div>
+        <div class="course-skeleton-line"></div>
+      </div>
+    </article>
+    }
   </div>
   }
 
@@ -150,191 +164,94 @@
 
   <!-- COURSES -->
   @if (!loading && courses.length > 0) {
-  <div class="row g-4">
-
+  <div class="course-list">
     @for (course of courses; track trackByCourseId($index, course)) {
-
-    <div class="col-xl-3 col-md-6 col-12">
-
-      <div class="course-card">
-
-        <!-- IMAGE -->
-        <div class="course-card__image">
-
-          <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
-
-          @if (getDiscount(course)) {
-          <span class="discount-badge">
-            {{ getDiscount(course) }}
-          </span>
-          }
-
-          <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
-            {{ course.statusLabel }}
-          </span>
-
-
-        </div>
-
-        <!-- BODY -->
-        <div class="course-card__body">
-
-          <!-- RATING -->
-          <div class="course-rating">
-            <span>
-              <strong>Added On: </strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
-            </span>
-          </div>
-
-
-          <!-- TITLE -->
-          <h5>
-            {{ course.title }}
-          </h5>
-
-          <!-- META -->
-          <div class="course-meta">
-
-
-            <span>
-
-              <i class="feather-grid"></i>
-
-              {{ course.categoryName }}
-
-            </span>
-
-            <span>
-
-              <i class="feather-clock"></i>
-
-              {{ getDurationLabel(course) }}
-
-            </span>
-
-          </div>
-
-          <p class="course-card__description">
-            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-          </p>
-
-          <div class="course-badges">
-            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
-            <span class="bestseller-badge">Bestseller</span>
-          </div>
-          <!-- INSTRUCTOR -->
-          <div class="course-instructor">
-            <div class="instructor-avatar">
-              {{ getInstructorInitial(course) }}
-            </div>
-
-            <span>
-
-              By
-
-              <strong>
-                {{ course.instructorName || 'Instructor' }}
-              </strong>
-
-              <!-- In
-
-              {{ course.categoryName }} -->
-
-            </span>
-
-          </div>
-
-        </div>
-
-        <!-- FOOTER -->
-        <div class="course-card__footer">
-
-          <div class="course-price">
-
-            <strong>
-              {{ formatPrice(course.price) }}
-            </strong>
-
-            @if (course.oldPrice) {
-            <span>{{ formatPrice(course.oldPrice) }}</span>
-            }
-
-          </div>
-
-          <div class="course-actions">
-
-            <!-- Curriculum Button -->
-            <button type="button" class="action-btn action-btn--curriculum" (click)="goToCurriculum(course)"
-              title="Manage Curriculum">
-
-              <i class="feather-list"></i>
-
-            </button>
-
-            <!-- Existing Edit Button -->
-            <button type="button" class="action-btn" (click)="openEditModal(course)" title="Edit Course">
-
-              <i class="feather-edit-2"></i>
-
-            </button>
-
-          </div>
-
-        </div>
-
-        <aside class="course-preview" aria-hidden="true">
-          <div class="course-preview__top">
-            <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
-              {{ course.statusLabel }}
-            </span>
-            <span class="course-preview__date">
-              {{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
-            </span>
-          </div>
-
-          <h4>{{ course.title }}</h4>
-
-          <div class="course-badges">
-            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
-            <span class="bestseller-badge">Bestseller</span>
-          </div>
-
-          <div class="course-preview__meta-grid">
-            <span><i class="feather-clock"></i>{{ getDurationLabel(course) }}</span>
-            <span><i class="feather-grid"></i>{{ course.categoryName || 'Course' }}</span>
-            <span><i class="feather-users"></i>{{ course.instructorName || 'Instructor' }}</span>
-          </div>
-
-          <p class="course-description">
-            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-          </p>
-
-          <div class="course-preview__creator">
-            <div class="instructor-avatar">{{ getInstructorInitial(course) }}</div>
-            <span>
-              Instructor
-              <strong>{{ course.instructorName || 'Instructor' }}</strong>
-            </span>
-          </div>
-
-          @if (getCourseHighlights(course, 3).length > 0) {
-          <div class="course-preview__learn">
-            <h5>What You'll Learn</h5>
-            <ul class="course-preview__points">
-              @for (highlight of getCourseHighlights(course, 3); track $index) {
-              <li>{{ highlight }}</li>
-              }
-            </ul>
-          </div>
-          }
-        </aside>
-
+    <article class="course-row">
+      <div class="course-row__media">
+        <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+        @if (getDiscount(course)) {
+        <span class="discount-badge">{{ getDiscount(course) }}</span>
+        }
+        <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+          {{ course.statusLabel }}
+        </span>
       </div>
 
-    </div>
+      <div class="course-row__main">
+        <div class="course-row__eyebrow">
+          <i class="feather-calendar"></i>
+          Added On: {{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
+        </div>
 
+        <div class="course-row__title">
+          <h5>{{ course.title }}</h5>
+          @if (course.code) {
+          <span class="entity-code-badge">{{ course.code }}</span>
+          }
+        </div>
+
+        <p class="course-row__description">
+          {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+        </p>
+
+        <div class="course-row__meta">
+          <span>
+            <i class="feather-grid"></i>
+            {{ course.categoryName }}
+          </span>
+          <span>
+            <i class="feather-users"></i>
+            {{ course.instructorName || 'Instructor' }}
+          </span>
+          <span>
+            <i class="feather-clock"></i>
+            {{ getDurationLabel(course) }}
+          </span>
+        </div>
+
+        <div class="course-badges">
+          <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+          <span class="bestseller-badge">Bestseller</span>
+        </div>
+
+        @if (getCourseHighlights(course, 3).length > 0) {
+        <ul class="course-row__highlights">
+          @for (highlight of getCourseHighlights(course, 3); track $index) {
+          <li>{{ highlight }}</li>
+          }
+        </ul>
+        }
+      </div>
+
+      <aside class="course-row__side">
+        <div class="course-instructor">
+          <div class="instructor-avatar">{{ getInstructorInitial(course) }}</div>
+          <span>
+            By
+            <strong>{{ course.instructorName || 'Instructor' }}</strong>
+          </span>
+        </div>
+
+        <div class="course-row__price">
+          <span>Price</span>
+          <strong>{{ formatPrice(course.price) }}</strong>
+          @if (course.oldPrice) {
+          <small>{{ formatPrice(course.oldPrice) }}</small>
+          }
+        </div>
+
+        <div class="course-actions">
+          <button type="button" class="action-btn action-btn--curriculum" (click)="goToCurriculum(course)"
+            title="Manage Curriculum">
+            <i class="feather-list"></i>
+          </button>
+          <button type="button" class="action-btn" (click)="openEditModal(course)" title="Edit Course">
+            <i class="feather-edit-2"></i>
+          </button>
+        </div>
+      </aside>
+    </article>
     }
-
   </div>
   }
 
@@ -427,8 +344,8 @@
             <label>Instructor</label>
             <div class="instructor-select" [class.is-open]="isEditInstructorPickerOpen"
               (click)="keepEditInstructorPickerOpen($event)">
-              <button type="button" class="instructor-select__trigger" data-validation-control="editCourseInstructor" (click)="toggleEditInstructorPicker()"
-                [attr.aria-expanded]="isEditInstructorPickerOpen">
+              <button type="button" class="instructor-select__trigger" data-validation-control="editCourseInstructor"
+                (click)="toggleEditInstructorPicker()" [attr.aria-expanded]="isEditInstructorPickerOpen">
                 <span>{{ editInstructorPickerLabel }}</span>
                 <i class="fa-solid fa-chevron-down"></i>
               </button>

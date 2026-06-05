@@ -458,7 +458,7 @@
 .learning-card__actions {
   display: grid;
   gap: 10px;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 16px;
 }
 
@@ -480,6 +480,27 @@
 .learning-card__action--primary {
   background: #2f57ef;
   color: #ffffff;
+}
+
+.learning-card__actions .learning-card__action:only-child {
+  grid-column: 1 / -1;
+}
+
+.learning-card__action--youtube {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.learning-card__action--meet {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.learning-card__action--disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+  grid-column: 1 / -1;
 }
 
 .learning-card__status {

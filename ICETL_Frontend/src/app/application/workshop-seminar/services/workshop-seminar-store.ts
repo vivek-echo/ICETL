@@ -24,6 +24,7 @@ export interface WorkshopSeminarPayload {
 
 export interface WorkshopSeminarItem extends WorkshopSeminarPayload {
   id: number;
+  code?: string | null;
   startDate: string;
   endDate: string | null;
   capacity: number;
@@ -144,6 +145,7 @@ export class WorkshopSeminarStore {
   private normalizeItem(value: Partial<WorkshopSeminarItem>): WorkshopSeminarItem {
     return {
       id: Number(value.id) || Date.now(),
+      code: value.code ? `${value.code}`.trim() : null,
       type: value.type === 'seminar' ? 'seminar' : 'workshop',
       title: `${value.title || ''}`.trim(),
       topic: `${value.topic || ''}`.trim(),

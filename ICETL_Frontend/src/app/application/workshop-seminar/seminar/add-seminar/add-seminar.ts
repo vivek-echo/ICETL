@@ -396,7 +396,8 @@ export class AddSeminar implements OnInit {
       const response = await lastValueFrom(request$.pipe(timeout(20000)));
 
       if (response.status) {
-        await this.alertHelper.success(response.message || 'Seminar saved successfully.');
+        const seminarCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
+        await this.alertHelper.success(`${response.message || 'Seminar saved successfully.'}${seminarCode}`);
 
         if (!this.isEditMode) {
           this.resetForm();

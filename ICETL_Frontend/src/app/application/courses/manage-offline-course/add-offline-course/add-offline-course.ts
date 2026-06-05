@@ -529,8 +529,9 @@ export class AddOfflineCourse implements OnInit {
       );
 
       if (response.status) {
+        const courseCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
         await this.alertHelper.success(
-          response.message || 'Offline course added successfully!',
+          `${response.message || 'Offline course added successfully!'}${courseCode}`,
         );
         this.resetForm();
         void this.router.navigate(['/application/courses/manageOfflineCourses/viewMyOfflineCourses']);

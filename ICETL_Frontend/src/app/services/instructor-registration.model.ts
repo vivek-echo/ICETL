@@ -14,6 +14,7 @@ export interface InstructorRegistrationResponse<T = unknown> {
 
 export interface InstructorOnboardingUser {
   id: number;
+  code?: string | null;
   name: string;
   email: string;
   phone?: string | null;
@@ -38,6 +39,7 @@ export interface InstructorDocumentRecord {
 
 export interface InstructorProfileUser {
   id: number;
+  code?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -48,6 +50,7 @@ export interface InstructorProfileUser {
 
 export interface InstructorProfile {
   id: number;
+  code?: string | null;
   userId: number;
   dob?: string | null;
   gender?: string | null;

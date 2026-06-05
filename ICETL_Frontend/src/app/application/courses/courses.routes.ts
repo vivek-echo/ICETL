@@ -243,6 +243,15 @@ export const coursesRoutes: Routes = [
             data: { offlineCourseScope: 'all' },
             title: 'View All Offline Courses | ICETL',
           },
+          {
+            path: 'enrolledStudents',
+            loadComponent: () =>
+              import(
+                './manage-offline-course/offline-course-students/offline-course-students'
+              ).then((m) => m.OfflineCourseStudents),
+            data: { offlineCourseScope: 'all' },
+            title: 'Enrolled Students | ICETL',
+          },
         ],
       },
     ],

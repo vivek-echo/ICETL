@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 
-export type SeminarScheduleStatus = 'upcoming' | 'completed';
+export type SeminarScheduleStatus = 'upcoming' | 'ongoing' | 'completed';
 export type SeminarScheduleFilter = '' | 'all' | SeminarScheduleStatus;
 export type SeminarSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
 
@@ -28,6 +28,7 @@ export interface SeminarPayload {
 
 export interface SeminarItem extends SeminarPayload {
   id: number;
+  code?: string | null;
   type: 'seminar';
   bannerImage?: string | null;
   bannerImageUrl?: string | null;
@@ -54,6 +55,7 @@ export interface SeminarSummary {
   activeSeminars: number;
   inactiveSeminars: number;
   upcomingSeminars: number;
+  ongoingSeminars?: number;
   completedSeminars: number;
 }
 
@@ -76,6 +78,7 @@ export interface SeminarMutationResponse {
   message: string;
   data?: {
     id: number;
+    code?: string | null;
   };
 }
 
@@ -84,6 +87,7 @@ export interface SeminarMutationResponse {
 })
 export class SeminarService {
   private readonly API_URL = environment.apiUrl;
+  private readonly PRE_LOGIN_API_URL = environment.preLoginApi;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -102,6 +106,14 @@ export class SeminarService {
   getAllSeminars(payload: Record<string, unknown> = {}): Observable<SeminarListResponse> {
     return this.http.post<SeminarListResponse>(
       `${this.API_URL}/getAllSeminars`,
+      payload,
+      this.listRequestOptions(),
+    );
+  }
+
+  getPublicSeminars(payload: Record<string, unknown> = {}): Observable<SeminarListResponse> {
+    return this.http.post<SeminarListResponse>(
+      `${this.PRE_LOGIN_API_URL}/getPublicSeminars`,
       payload,
       this.listRequestOptions(),
     );

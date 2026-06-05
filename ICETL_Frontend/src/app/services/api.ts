@@ -12,6 +12,7 @@ export interface LoginRequest {
 
 export interface LoginUser {
   id: number;
+  code?: string | null;
   name: string;
   email?: string;
   phone?: string;

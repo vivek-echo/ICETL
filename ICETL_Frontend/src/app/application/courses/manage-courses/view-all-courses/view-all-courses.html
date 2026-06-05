@@ -139,8 +139,26 @@
   </div>
 
   @if (loading) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
+  <div class="course-list course-list--loading" aria-label="Loading courses">
+    @for (loader of skeletonRows; track loader) {
+    <article class="course-row course-row--skeleton">
+      <div class="course-skeleton-media"></div>
+      <div class="course-skeleton-content">
+        <div class="course-skeleton-line course-skeleton-line--short"></div>
+        <div class="course-skeleton-line course-skeleton-line--title"></div>
+        <div class="course-skeleton-line"></div>
+        <div class="course-skeleton-meta">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="course-skeleton-side">
+        <div class="course-skeleton-line course-skeleton-line--short"></div>
+        <div class="course-skeleton-line"></div>
+      </div>
+    </article>
+    }
   </div>
   }
 
@@ -153,134 +171,86 @@
   }
 
   @if (!loading && courses.length > 0) {
-  <div class="row g-4">
+  <div class="course-list">
     @for (course of courses; track trackByCourseId($index, course)) {
-    <div class="col-xl-3 col-md-6 col-12">
-      <div class="course-card">
-        <div class="course-card__image">
-          <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
-
-          @if (getDiscount(course)) {
-          <span class="discount-badge">
-            {{ getDiscount(course) }}
-          </span>
-          }
-
-          <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
-            {{ course.statusLabel }}
-          </span>
-        </div>
-
-        <div class="course-card__body">
-          <div class="course-rating">
-            <span>
-              <strong>Added On: </strong>{{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
-            </span>
-          </div>
-
-          <h5>{{ course.title }}</h5>
-
-          <div class="course-meta">
-            <span>
-              <i class="feather-grid"></i>
-              {{ course.categoryName }}
-            </span>
-
-            <span>
-              <i class="feather-users"></i>
-              {{ course.instructorName || 'Instructor' }}
-            </span>
-
-            <span>
-              <i class="feather-clock"></i>
-              {{ getDurationLabel(course) }}
-            </span>
-          </div>
-
-          <p class="course-card__description">
-            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-          </p>
-
-          <div class="course-badges">
-            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
-            <span class="bestseller-badge">Bestseller</span>
-          </div>
-
-        
-
-          <div class="course-instructor">
-            <div class="instructor-avatar">
-              {{ getCreatorInitial(course) }}
-            </div>
-
-            <span>
-              Added by
-              <strong>{{ course.createdByName }}</strong>
-              @if (course.createdByEmail) {
-              <small>{{ course.createdByEmail }}</small>
-              }
-            </span>
-          </div>
-        </div>
-
-        <div class="course-card__footer">
-          <div class="course-price">
-            <strong>{{ formatPrice(course.price) }}</strong>
-
-            @if (course.oldPrice) {
-            <span>{{ formatPrice(course.oldPrice) }}</span>
-            }
-          </div>
-        </div>
-
-        <aside class="course-preview" aria-hidden="true">
-          <div class="course-preview__top">
-            <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
-              {{ course.statusLabel }}
-            </span>
-            <span class="course-preview__date">
-              {{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
-            </span>
-          </div>
-
-          <h4>{{ course.title }}</h4>
-
-          <div class="course-badges">
-            <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
-            <span class="bestseller-badge">Bestseller</span>
-          </div>
-
-          <div class="course-preview__meta-grid">
-            <span><i class="feather-clock"></i>{{ getDurationLabel(course) }}</span>
-            <span><i class="feather-grid"></i>{{ course.categoryName || 'Course' }}</span>
-            <span><i class="feather-users"></i>{{ course.instructorName || 'Instructor' }}</span>
-          </div>
-
-          <p class="course-description">
-            {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
-          </p>
-
-          <div class="course-preview__creator">
-            <div class="instructor-avatar">{{ getCreatorInitial(course) }}</div>
-            <span>
-              Added by
-              <strong>{{ course.createdByName || 'User' }}</strong>
-            </span>
-          </div>
-
-          @if (getCourseHighlights(course, 3).length > 0) {
-          <div class="course-preview__learn">
-            <h5>What You'll Learn</h5>
-            <ul class="course-preview__points">
-              @for (highlight of getCourseHighlights(course, 3); track $index) {
-              <li>{{ highlight }}</li>
-              }
-            </ul>
-          </div>
-          }
-        </aside>
+    <article class="course-row">
+      <div class="course-row__media">
+        <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
+        @if (getDiscount(course)) {
+        <span class="discount-badge">{{ getDiscount(course) }}</span>
+        }
+        <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+          {{ course.statusLabel }}
+        </span>
       </div>
-    </div>
+
+      <div class="course-row__main">
+        <div class="course-row__eyebrow">
+          <i class="feather-calendar"></i>
+          Added On: {{ course.createdOn ? (course.createdOn | date:'mediumDate') : 'N/A' }}
+        </div>
+
+        <div class="course-row__title">
+          <h5>{{ course.title }}</h5>
+          @if (course.code) {
+          <span class="entity-code-badge">{{ course.code }}</span>
+          }
+        </div>
+
+        <p class="course-row__description">
+          {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
+        </p>
+
+        <div class="course-row__meta">
+          <span>
+            <i class="feather-grid"></i>
+            {{ course.categoryName }}
+          </span>
+          <span>
+            <i class="feather-users"></i>
+            {{ course.instructorName || 'Instructor' }}
+          </span>
+          <span>
+            <i class="feather-clock"></i>
+            {{ getDurationLabel(course) }}
+          </span>
+        </div>
+
+        <div class="course-badges">
+          <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
+          <span class="bestseller-badge">Bestseller</span>
+        </div>
+
+        @if (getCourseHighlights(course, 3).length > 0) {
+        <ul class="course-row__highlights">
+          @for (highlight of getCourseHighlights(course, 3); track $index) {
+          <li>{{ highlight }}</li>
+          }
+        </ul>
+        }
+      </div>
+
+      <aside class="course-row__side">
+        <div class="course-row__price">
+          <span>Price</span>
+          <strong>{{ formatPrice(course.price) }}</strong>
+          @if (course.oldPrice) {
+          <small>{{ formatPrice(course.oldPrice) }}</small>
+          }
+        </div>
+
+        <div class="course-instructor">
+          <div class="instructor-avatar">{{ getCreatorInitial(course) }}</div>
+          <span>
+            Added by
+            <strong>{{ course.createdByName || 'User' }}</strong>
+            @if (course.createdByEmail) {
+            <small>{{ course.createdByEmail }}</small>
+            }
+          </span>
+        </div>
+      </aside>
+    </article>
     }
   </div>
   }

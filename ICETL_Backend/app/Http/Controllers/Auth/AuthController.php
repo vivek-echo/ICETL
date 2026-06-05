@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\InstructorDocument;
 use App\Models\User;
+use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -541,15 +542,21 @@ class AuthController extends Controller
             ], 409);
         }
 
-        $user = User::create([
-            'name' => trim((string) $request->name),
-            'email' => $email,
-            'phone' => $request->phone,
-            'dob' => $request->dob,
-            'gender' => $request->gender,
-            'role' => 2,
-            'userType' => 1,
-        ]);
+        $user = DB::transaction(function () use ($request, $email): User {
+            $user = User::create([
+                'name' => trim((string) $request->name),
+                'email' => $email,
+                'phone' => $request->phone,
+                'dob' => $request->dob,
+                'gender' => $request->gender,
+                'role' => 2,
+                'userType' => 1,
+            ]);
+
+            $this->assignUserCodeIfMissing($user, 2);
+
+            return $user;
+        });
 
         $tokenData = $this->issueToken($user);
 
@@ -595,6 +602,7 @@ class AuthController extends Controller
     {
         try {
             $roleId = (int) $user->role;
+            $userCode = $this->assignUserCodeIfMissing($user, $roleId);
 
             $roleMeta = DB::table('roles as r')
                 ->leftJoin('role_menu_permissions as rmp', function ($join): void {
@@ -667,6 +675,7 @@ class AuthController extends Controller
                 'expires_at' => $tokenPayload['expires_at'],
                 'user' => [
                     'id' => Crypt::encryptString($user->id),
+                    'code' => $userCode,
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone ?? $user->mobile ?? null,
@@ -694,6 +703,28 @@ class AuthController extends Controller
 
             throw $e;
         }
+    }
+
+    private function assignUserCodeIfMissing(User $user, ?int $roleId = null): ?string
+    {
+        $roleId = $roleId ?? (int) $user->role;
+        $prefix = match ($roleId) {
+            2 => EntityCodeService::PREFIX_LEARNER,
+            3 => EntityCodeService::PREFIX_INSTRUCTOR,
+            default => null,
+        };
+
+        if ($prefix === null) {
+            return $user->code ?? null;
+        }
+
+        $code = EntityCodeService::assignIfMissing('users', (int) $user->id, $prefix);
+
+        if ($code !== null) {
+            $user->code = $code;
+        }
+
+        return $code ?? ($user->code ?? null);
     }
 
     private function extractMenuSerialization(array $permissionPayload): array

@@ -22,6 +22,7 @@ interface InstructorOption {
 
 interface CourseItem {
   id: number;
+  code?: string | null;
   title: string;
   categoryId: number | string;
   categoryName: string;
@@ -87,6 +88,7 @@ interface EditCourseForm {
 export class ViewCourses implements OnInit, OnDestroy {
   readonly placeholderImage = 'assets/images/course/course-01.png';
   readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
+  readonly skeletonRows = [1, 2, 3, 4];
   readonly sortOptions: Array<{ value: CourseSortOption; label: string }> = [
     { value: 'newest', label: 'Newest' },
     { value: 'popular', label: 'Popular' },

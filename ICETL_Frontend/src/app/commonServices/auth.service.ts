@@ -76,6 +76,7 @@ export interface LoginData {
   expires_at?: string;
   user: {
     id: number;
+    code?: string | null;
     name: string;
     email: string;
     phone?: string | null;

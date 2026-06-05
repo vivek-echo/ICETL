@@ -8,6 +8,7 @@ import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 export interface CourseCartItem {
   cartId?: number;
   id: number;
+  code?: string | null;
   title: string;
   categoryName: string;
   instructorName: string;
