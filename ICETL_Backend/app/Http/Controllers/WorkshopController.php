@@ -102,7 +102,23 @@ class WorkshopController extends Controller
 
         $validator = Validator::make($request->all(), [
             'page' => 'nullable|integer|min:1',
-            'perPage' => 'nullable|integer|min:1|max:12',
+            'perPage' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value === null || $value === '' || $value === 'all') {
+                        return;
+                    }
+
+                    if (
+                        !filter_var($value, FILTER_VALIDATE_INT)
+                        || !in_array((int) $value, [10, 20, 50, 100], true)
+                    ) {
+                        $fail('The per page value must be 10, 20, 50, 100, or all.');
+                    }
+                },
+            ],
+            'search' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
             'scheduleStatus' => 'nullable|in:all,upcoming,ongoing',
             'sortBy' => 'nullable|in:latest,dateAsc,dateDesc',
         ]);
@@ -116,6 +132,7 @@ class WorkshopController extends Controller
                 ->where('w.status', 1);
 
             $this->applyPublicActiveScheduleFilter($query);
+            $this->applyPublicFilters($query, $request);
 
             $scheduleStatus = (string) $request->input('scheduleStatus', 'all');
 
@@ -123,9 +140,12 @@ class WorkshopController extends Controller
                 $this->applyPublicScheduleStatusFilter($query, $scheduleStatus);
             }
 
-            $page = (int) $request->input('page', 1);
-            $perPage = (int) $request->input('perPage', 4);
-            $perPage = min(max($perPage, 1), 12);
+            $isAllPageSize = $request->input('perPage') === 'all';
+            $filteredTotal = (clone $query)->count();
+            $page = $isAllPageSize ? 1 : (int) $request->input('page', 1);
+            $perPage = $isAllPageSize
+                ? max($filteredTotal, 1)
+                : (int) $request->input('perPage', 10);
 
             $workshops = $this->applyPublicSort($query, (string) $request->input('sortBy', 'dateAsc'))
                 ->paginate($perPage, ['*'], 'page', $page);
@@ -138,7 +158,7 @@ class WorkshopController extends Controller
                     ->values(),
                 'meta' => [
                     'currentPage' => $workshops->currentPage(),
-                    'perPage' => $workshops->perPage(),
+                    'perPage' => $isAllPageSize ? 'all' : $workshops->perPage(),
                     'total' => $workshops->total(),
                     'lastPage' => $workshops->lastPage(),
                     'from' => $workshops->firstItem(),
@@ -656,6 +676,27 @@ class WorkshopController extends Controller
         $dateExpression = DB::raw('COALESCE(w.endDate, w.startDate)');
 
         $query->whereDate($dateExpression, '>=', $today);
+    }
+
+    private function applyPublicFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('w.title', 'LIKE', '%' . $search . '%')
+                    ->orWhere('w.topic', 'LIKE', '%' . $search . '%')
+                    ->orWhere('w.venue', 'LIKE', '%' . $search . '%')
+                    ->orWhere('w.city', 'LIKE', '%' . $search . '%')
+                    ->orWhere('w.speakerName', 'LIKE', '%' . $search . '%')
+                    ->orWhere('w.description', 'LIKE', '%' . $search . '%');
+                EntityCodeService::orWhereCode($subQuery, 'workshops', 'w.code', $search);
+            });
+        }
+
+        if ($request->filled('city')) {
+            $query->where('w.city', 'LIKE', '%' . trim((string) $request->input('city')) . '%');
+        }
     }
 
     private function applyPublicScheduleStatusFilter($query, string $scheduleStatus): void

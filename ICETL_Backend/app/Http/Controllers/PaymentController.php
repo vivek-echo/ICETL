@@ -168,6 +168,175 @@ class PaymentController extends Controller
         }
     }
 
+    public function programCheckoutInit(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'entityType' => 'required|string|in:workshop,seminar',
+            'entityId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        $userId = (int) $request->user()->id;
+        $entityType = $this->normalizeProgramEntityType($request->input('entityType'));
+        $entityId = (int) $request->input('entityId');
+        $entityLabel = $this->programEntityLabel($entityType);
+        $entityTable = $this->programEntityTable($entityType);
+
+        $requiredTables = ['orders', 'payments', 'order_items', 'payment_logs', 'invoices', $entityTable];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn (string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        try {
+            $program = $this->getProgramForCheckout($entityType, $entityId);
+
+            if (!$program) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "{$entityLabel} is invalid, inactive, or no longer available for purchase.",
+                ], 422);
+            }
+
+            if ($this->hasSuccessfulProgramPurchase($userId, $entityLabel, $entityId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "You have already purchased this {$entityLabel}.",
+                ], 409);
+            }
+
+            $subtotal = round((float) $program->price, 2);
+            $taxAmount = round($subtotal * self::TAX_PERCENT / 100, 2);
+            $totalAmount = round($subtotal + $taxAmount, 2);
+
+            if ($totalAmount <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "{$entityLabel} checkout amount must be greater than zero.",
+                ], 422);
+            }
+
+            $api = $this->razorpay();
+            $razorpayOrder = null;
+            $programPayload = $this->programResponsePayload($program, $entityType, $entityLabel);
+
+            DB::beginTransaction();
+
+            DB::table('orders')
+                ->where('userId', $userId)
+                ->where('status', 'pending')
+                ->where('deletedFlag', 0)
+                ->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+            $orderId = DB::table('orders')->insertGetId([
+                'userId' => $userId,
+                'orderReference' => $this->reference('ORD'),
+                'subtotalAmount' => $subtotal,
+                'taxAmount' => $taxAmount,
+                'totalAmount' => $totalAmount,
+                'currency' => self::CURRENCY,
+                'status' => 'pending',
+                'expiresAt' => now()->addMinutes(30),
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('order_items')->insert($this->filterExistingColumns('order_items', [
+                'orderId' => $orderId,
+                'courseId' => 0,
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'entityCode' => $programPayload['code'],
+                'entityTitle' => $programPayload['title'],
+                'price' => $subtotal,
+                'taxAmount' => $taxAmount,
+                'totalAmount' => $totalAmount,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+
+            $razorpayOrder = $api->order->create([
+                'receipt' => strtolower($entityType) . '_' . $orderId,
+                'amount' => (int) round($totalAmount * 100),
+                'currency' => self::CURRENCY,
+                'notes' => [
+                    'local_order_id' => (string) $orderId,
+                    'user_id' => (string) $userId,
+                    'entity_type' => $entityType,
+                    'entity_id' => (string) $entityId,
+                ],
+            ]);
+
+            DB::table('orders')->where('id', $orderId)->update([
+                'razorpayOrderId' => $razorpayOrder['id'],
+                'updated_at' => now(),
+            ]);
+
+            $order = DB::table('orders')->where('id', $orderId)->first();
+
+            $this->logPaymentEvent($request, 'checkout.program_order_created', [
+                'userId' => $userId,
+                'orderId' => $orderId,
+                'status' => 'pending',
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'entityCode' => $programPayload['code'],
+                'entityTitle' => $programPayload['title'],
+                'requestPayload' => ['entityType' => $entityType, 'entityId' => $entityId],
+                'responsePayload' => [
+                    'razorpayOrderId' => $razorpayOrder['id'],
+                    'amount' => $totalAmount,
+                    'program' => $programPayload,
+                ],
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$entityLabel} checkout initialized successfully.",
+                'orderId' => (int) $order->id,
+                'orderReference' => $order->orderReference,
+                'razorpayOrderId' => $razorpayOrder['id'],
+                'razorpayKey' => config('services.razorpay.key', env('RAZORPAY_KEY')),
+                'currency' => self::CURRENCY,
+                'subtotalAmount' => $subtotal,
+                'taxAmount' => $taxAmount,
+                'totalAmount' => $totalAmount,
+                'amountInPaise' => (int) round($totalAmount * 100),
+                'program' => $programPayload,
+            ]);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Program checkout initialization failed', ['error' => $e->getMessage()]);
+            $this->logPaymentEvent($request, 'checkout.program_failed', [
+                'userId' => $userId,
+                'status' => 'failed',
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'requestPayload' => ['entityType' => $entityType, 'entityId' => $entityId],
+                'errorStack' => $e,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Unable to initialize {$entityLabel} checkout. Please try again.",
+            ], 500);
+        }
+    }
+
     public function verifyPayment(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -283,8 +452,9 @@ class PaymentController extends Controller
                 ->where('deletedFlag', 0)
                 ->lockForUpdate()
                 ->get();
+            $courseItems = $this->courseOrderItems($orderItems);
 
-            foreach ($orderItems as $item) {
+            foreach ($courseItems as $item) {
                 DB::table('enrollments')->updateOrInsert(
                     ['userId' => $userId, 'courseId' => $item->courseId, 'deletedFlag' => 0],
                     [
@@ -302,12 +472,17 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::table('carts')
-                ->where('user_id', $userId)
-                ->whereIn('course_id', $orderItems->pluck('courseId')->all())
-                ->delete();
+            $courseIds = $courseItems->pluck('courseId')->all();
+            if (!empty($courseIds)) {
+                DB::table('carts')
+                    ->where('user_id', $userId)
+                    ->whereIn('course_id', $courseIds)
+                    ->delete();
+            }
 
             $invoice = $this->createOrFetchInvoice((int) $order->id, $paymentId, $userId);
+            $verifiedEntityType = $invoice['entityType'] ?? null;
+            $verifiedEntityLabel = $verifiedEntityType ?: 'Courses';
 
             $this->logPaymentEvent($request, 'payment.verified', [
                 'userId' => $userId,
@@ -319,14 +494,18 @@ class PaymentController extends Controller
                 'entityCode' => $invoice['entityCode'] ?? null,
                 'entityTitle' => $invoice['entityTitle'] ?? null,
                 'requestPayload' => $request->only(['orderId', 'razorpay_payment_id', 'razorpay_order_id']),
-                'verificationResult' => ['signature' => 'valid', 'enrollments' => $orderItems->count()],
+                'verificationResult' => [
+                    'signature' => 'valid',
+                    'enrollments' => $courseItems->count(),
+                    'items' => $orderItems->count(),
+                ],
             ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment verified successfully. Your courses are unlocked.',
+                'message' => "Payment verified successfully. {$verifiedEntityLabel} purchase is complete.",
                 'payment_id' => $request->input('razorpay_payment_id'),
                 'invoice' => $invoice,
             ]);
@@ -381,6 +560,7 @@ class PaymentController extends Controller
             if ($order->status !== 'paid') {
                 $status = $request->input('status') === 'cancelled' ? 'cancelled' : 'failed';
                 $reason = $request->input('reason') ?: ($status === 'cancelled' ? 'Payment window closed.' : 'Payment failed.');
+                $entity = $this->orderEntitySummary((int) $order->id);
 
                 DB::table('orders')->where('id', $order->id)->update([
                     'status' => $status,
@@ -413,6 +593,10 @@ class PaymentController extends Controller
                     'userId' => $userId,
                     'orderId' => (int) $order->id,
                     'status' => $status,
+                    'entityType' => $entity['entityType'] ?? null,
+                    'entityId' => $entity['entityId'] ?? null,
+                    'entityCode' => $entity['entityCode'] ?? null,
+                    'entityTitle' => $entity['entityTitle'] ?? null,
                     'requestPayload' => $request->all(),
                     'verificationResult' => ['recorded' => true],
                 ]);
@@ -574,6 +758,7 @@ class PaymentController extends Controller
             Schema::hasColumn('invoices', 'entityType') ? 'i.entityType' : DB::raw('NULL as entityType'),
             Schema::hasColumn('invoices', 'entityCode') ? 'i.entityCode' : DB::raw('NULL as entityCode'),
             Schema::hasColumn('invoices', 'entityTitle') ? 'i.entityTitle' : DB::raw('NULL as entityTitle'),
+            'i.invoiceData',
             'i.paymentReference as invoicePaymentReference',
             'i.id as invoiceId',
         ];
@@ -617,44 +802,45 @@ class PaymentController extends Controller
             ? collect()
             : DB::table('order_items')->whereIn('orderId', $orderIds)->where('deletedFlag', 0)->select('orderId', DB::raw('COUNT(*) as total'))->groupBy('orderId')->pluck('total', 'orderId');
 
-        $data = collect($page->items())->map(fn ($order) => [
-            'id' => (int) $order->id,
-            'orderReference' => $order->orderReference,
-            'invoiceNo' => $order->invoiceNumber ?: 'INV-' . date('Y') . '-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
-            'invoiceId' => $order->invoiceId ? (int) $order->invoiceId : null,
-            'totalAmount' => $order->totalAmount,
-            'currency' => $order->currency ?: self::CURRENCY,
-            'status' => $order->status,
-            'paymentStatus' => $order->paymentStatus,
-            'razorpayOrderId' => $order->razorpayOrderId,
-            'razorpayPaymentId' => $order->razorpayPaymentId,
-            'paymentReference' => $order->paymentReference,
-            'paymentMethod' => $this->paymentMethodLabel(
+        $data = collect($page->items())->map(function ($order) use ($courseCounts) {
+            $invoiceEntity = $this->invoiceEntityFromJson($order->invoiceData ?? null);
+            $paymentMethod = $this->paymentMethodLabel(
                 $order->paymentMethod,
                 $order->offlinePaymentBy,
                 $order->razorpayPaymentId
-            ),
-            'paymentBy' => $this->paymentMethodLabel(
-                $order->paymentMethod,
-                $order->offlinePaymentBy,
-                $order->razorpayPaymentId
-            ),
-            'transactionNo' => $order->offlineTransactionNo,
-            'paymentDisplayId' => $this->paymentDisplayId(
-                $order->razorpayPaymentId,
-                $order->offlineTransactionNo,
-                $order->invoicePaymentReference,
-                $order->paymentReference,
-                $order->offlineReferenceNo
-            ),
-            'entityType' => $order->offlineEntityType ?? $order->entityType ?? null,
-            'entityCode' => $order->offlineEntityCode ?? $order->entityCode ?? null,
-            'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? null,
-            'failureReason' => $order->failureReason,
-            'created_at' => $order->created_at,
-            'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
-            'refundStatus' => $order->paymentStatus === 'refunded' ? 'refunded' : null,
-        ])->values();
+            );
+
+            return [
+                'id' => (int) $order->id,
+                'orderReference' => $order->orderReference,
+                'invoiceNo' => $order->invoiceNumber ?: 'INV-' . date('Y') . '-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
+                'invoiceId' => $order->invoiceId ? (int) $order->invoiceId : null,
+                'totalAmount' => $order->totalAmount,
+                'currency' => $order->currency ?: self::CURRENCY,
+                'status' => $order->status,
+                'paymentStatus' => $order->paymentStatus,
+                'razorpayOrderId' => $order->razorpayOrderId,
+                'razorpayPaymentId' => $order->razorpayPaymentId,
+                'paymentReference' => $order->paymentReference,
+                'paymentMethod' => $paymentMethod,
+                'paymentBy' => $paymentMethod,
+                'transactionNo' => $order->offlineTransactionNo,
+                'paymentDisplayId' => $this->paymentDisplayId(
+                    $order->razorpayPaymentId,
+                    $order->offlineTransactionNo,
+                    $order->invoicePaymentReference,
+                    $order->paymentReference,
+                    $order->offlineReferenceNo
+                ),
+                'entityType' => $order->offlineEntityType ?? $order->entityType ?? ($invoiceEntity['entityType'] ?? null),
+                'entityCode' => $order->offlineEntityCode ?? $order->entityCode ?? ($invoiceEntity['entityCode'] ?? null),
+                'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null),
+                'failureReason' => $order->failureReason,
+                'created_at' => $order->created_at,
+                'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
+                'refundStatus' => $order->paymentStatus === 'refunded' ? 'refunded' : null,
+            ];
+        })->values();
 
         return response()->json([
             'success' => true,
@@ -774,6 +960,137 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function myPrograms(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'nullable|string|in:all,workshop,seminar',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        $userId = (int) $request->user()->id;
+        $programType = strtolower(trim((string) $request->query('type', 'all')));
+        $entityLabels = match ($programType) {
+            'workshop' => ['Workshop'],
+            'seminar' => ['Seminar'],
+            default => ['Workshop', 'Seminar'],
+        };
+
+        $requiredTables = ['orders', 'payments', 'order_items', 'invoices', 'workshops', 'seminars'];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn (string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        if (
+            !Schema::hasColumn('order_items', 'entityType')
+            || !Schema::hasColumn('order_items', 'entityId')
+        ) {
+            return response()->json([
+                'success' => true,
+                'message' => 'My programs fetched successfully.',
+                'data' => [],
+            ]);
+        }
+
+        $rows = DB::table('order_items as oi')
+            ->join('orders as o', function ($join) {
+                $join->on('o.id', '=', 'oi.orderId')
+                    ->where('o.status', 'paid')
+                    ->where('o.deletedFlag', 0);
+            })
+            ->leftJoin('payments as p', function ($join) {
+                $join->on('p.orderId', '=', 'o.id')
+                    ->where('p.status', 'success')
+                    ->where('p.deletedFlag', 0);
+            })
+            ->leftJoin('invoices as i', function ($join) {
+                $join->on('i.orderId', '=', 'o.id')
+                    ->where('i.deletedFlag', 0);
+            })
+            ->leftJoin('workshops as w', function ($join) {
+                $join->on('w.id', '=', 'oi.entityId')
+                    ->where('oi.entityType', 'Workshop')
+                    ->where('w.deletedFlag', 0);
+            })
+            ->leftJoin('seminars as s', function ($join) {
+                $join->on('s.id', '=', 'oi.entityId')
+                    ->where('oi.entityType', 'Seminar')
+                    ->where('s.deletedFlag', 0);
+            })
+            ->where('o.userId', $userId)
+            ->where('oi.deletedFlag', 0)
+            ->whereIn('oi.entityType', $entityLabels)
+            ->whereNotNull('oi.entityId')
+            ->select(
+                'oi.id as purchaseItemId',
+                'oi.orderId',
+                'oi.entityType',
+                'oi.entityId',
+                Schema::hasColumn('order_items', 'entityCode') ? 'oi.entityCode' : DB::raw('NULL as entityCode'),
+                Schema::hasColumn('order_items', 'entityTitle') ? 'oi.entityTitle' : DB::raw('NULL as entityTitle'),
+                'oi.price as itemPrice',
+                'oi.totalAmount as itemTotalAmount',
+                'o.orderReference',
+                'o.totalAmount as orderTotalAmount',
+                'o.razorpayOrderId',
+                'o.created_at as enrolledAt',
+                'p.razorpayPaymentId',
+                'p.paymentReference',
+                'i.invoiceNumber',
+                'i.paymentReference as invoicePaymentReference',
+                'w.title as workshopTitle',
+                'w.topic as workshopTopic',
+                'w.venue as workshopVenue',
+                'w.city as workshopCity',
+                'w.startDate as workshopStartDate',
+                'w.endDate as workshopEndDate',
+                'w.startTime as workshopStartTime',
+                'w.endTime as workshopEndTime',
+                'w.speakerName as workshopSpeakerName',
+                'w.capacity as workshopCapacity',
+                'w.price as workshopPrice',
+                'w.description as workshopDescription',
+                'w.takeaways as workshopTakeaways',
+                'w.bannerImage as workshopBannerImage',
+                'w.status as workshopStatus',
+                's.title as seminarTitle',
+                's.topic as seminarTopic',
+                's.venue as seminarVenue',
+                's.city as seminarCity',
+                's.eventDate as seminarEventDate',
+                's.startTime as seminarStartTime',
+                's.endTime as seminarEndTime',
+                's.speakerName as seminarSpeakerName',
+                's.capacity as seminarCapacity',
+                's.price as seminarPrice',
+                's.description as seminarDescription',
+                's.takeaways as seminarTakeaways',
+                's.bannerImage as seminarBannerImage',
+                's.status as seminarStatus'
+            )
+            ->orderByDesc('o.id')
+            ->orderByDesc('oi.id')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'My programs fetched successfully.',
+            'data' => $rows
+                ->map(fn ($row) => $this->formatMyProgram($row, $request))
+                ->values(),
+        ]);
+    }
+
     public function invoice(Request $request, int $orderId)
     {
         $invoice = $this->buildInvoice($orderId, (int) $request->user()->id, $this->isAdmin($request));
@@ -858,6 +1175,7 @@ class PaymentController extends Controller
             Schema::hasColumn('invoices', 'entityType') ? 'i.entityType' : DB::raw('NULL as entityType'),
             Schema::hasColumn('invoices', 'entityCode') ? 'i.entityCode' : DB::raw('NULL as entityCode'),
             Schema::hasColumn('invoices', 'entityTitle') ? 'i.entityTitle' : DB::raw('NULL as entityTitle'),
+            'i.invoiceData',
             'i.paymentReference as invoicePaymentReference',
         ];
 
@@ -870,6 +1188,7 @@ class PaymentController extends Controller
             ->limit(20)
             ->get()
             ->map(function ($row) {
+                $invoiceEntity = $this->invoiceEntityFromJson($row->invoiceData ?? null);
                 $paymentMethod = $this->paymentMethodLabel(
                     $row->paymentMethod,
                     $row->offlinePaymentBy,
@@ -886,9 +1205,10 @@ class PaymentController extends Controller
                     $row->paymentReference,
                     $row->offlineReferenceNo
                 );
-                $row->entityType = $row->offlineEntityType ?? $row->entityType ?? null;
-                $row->entityCode = $row->offlineEntityCode ?? $row->entityCode ?? null;
-                $row->entityTitle = $row->offlineEntityTitle ?? $row->entityTitle ?? null;
+                $row->entityType = $row->offlineEntityType ?? $row->entityType ?? ($invoiceEntity['entityType'] ?? null);
+                $row->entityCode = $row->offlineEntityCode ?? $row->entityCode ?? ($invoiceEntity['entityCode'] ?? null);
+                $row->entityTitle = $row->offlineEntityTitle ?? $row->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null);
+                unset($row->invoiceData);
 
                 return $row;
             });
@@ -1078,36 +1398,84 @@ class PaymentController extends Controller
             return null;
         }
 
+        $orderEntity = $this->orderEntitySummary($orderId);
+        $itemSelects = [
+            'oi.courseId',
+            'oi.price',
+            'oi.taxAmount',
+            'oi.totalAmount',
+            'c.title as courseTitle',
+            'c.courseType',
+            EntityCodeService::codeSelect('courses', 'c'),
+            'cc.categoryName',
+        ];
+
         $items = DB::table('order_items as oi')
-            ->join('courses as c', 'c.id', '=', 'oi.courseId')
+            ->leftJoin('courses as c', 'c.id', '=', 'oi.courseId')
             ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
             ->where('oi.orderId', $orderId)
             ->where('oi.deletedFlag', 0)
-            ->select(
-                'oi.courseId',
-                'oi.price',
-                'oi.taxAmount',
-                'oi.totalAmount',
-                'c.title',
-                'c.courseType',
-                EntityCodeService::codeSelect('courses', 'c'),
-                'cc.categoryName'
-            )
+            ->select(...array_merge($itemSelects, $this->orderItemEntitySelects()))
             ->get()
-            ->map(fn ($item) => [
-                'courseId' => (int) $item->courseId,
-                'title' => $item->title,
-                'code' => $item->code ?? null,
-                'entityType' => ((int) ($item->courseType ?? 1)) === 2 ? 'Academic Course' : 'Main Course',
-                'entityCode' => $item->code ?? null,
-                'entityTitle' => $item->title,
-                'categoryName' => $item->categoryName ?: 'Course',
-                'price' => $item->price,
-                'taxAmount' => $item->taxAmount ?? 0,
-                'totalAmount' => $item->totalAmount ?? $item->price,
-            ])
+            ->map(function ($item) use ($orderEntity) {
+                $courseId = (int) ($item->courseId ?? 0);
+                $hasCourse = $courseId > 0 && !empty($item->courseTitle);
+
+                if ($hasCourse) {
+                    $entityType = ((int) ($item->courseType ?? 1)) === 2 ? 'Academic Course' : 'Main Course';
+
+                    return [
+                        'courseId' => $courseId,
+                        'entityId' => $courseId,
+                        'title' => $item->courseTitle,
+                        'code' => $item->code ?? null,
+                        'entityType' => $entityType,
+                        'entityCode' => $item->code ?? null,
+                        'entityTitle' => $item->courseTitle,
+                        'categoryName' => $item->categoryName ?: 'Course',
+                        'price' => $item->price,
+                        'taxAmount' => $item->taxAmount ?? 0,
+                        'totalAmount' => $item->totalAmount ?? $item->price,
+                    ];
+                }
+
+                $entityType = $item->itemEntityType ?? ($orderEntity['entityType'] ?? 'Program');
+                $entityId = (int) ($item->itemEntityId ?? ($orderEntity['entityId'] ?? 0));
+                $entityTitle = $item->itemEntityTitle ?? ($orderEntity['entityTitle'] ?? 'Program Purchase');
+                $entityCode = $item->itemEntityCode ?? ($orderEntity['entityCode'] ?? null);
+
+                return [
+                    'courseId' => $courseId,
+                    'entityId' => $entityId ?: null,
+                    'title' => $entityTitle,
+                    'code' => $entityCode,
+                    'entityType' => $entityType,
+                    'entityCode' => $entityCode,
+                    'entityTitle' => $entityTitle,
+                    'categoryName' => $entityType,
+                    'price' => $item->price,
+                    'taxAmount' => $item->taxAmount ?? 0,
+                    'totalAmount' => $item->totalAmount ?? $item->price,
+                ];
+            })
             ->values()
             ->all();
+
+        if (empty($items) && $orderEntity) {
+            $items = [[
+                'courseId' => 0,
+                'entityId' => $orderEntity['entityId'] ?? null,
+                'title' => $orderEntity['entityTitle'] ?? 'Program Purchase',
+                'code' => $orderEntity['entityCode'] ?? null,
+                'entityType' => $orderEntity['entityType'] ?? 'Program',
+                'entityCode' => $orderEntity['entityCode'] ?? null,
+                'entityTitle' => $orderEntity['entityTitle'] ?? 'Program Purchase',
+                'categoryName' => $orderEntity['entityType'] ?? 'Program',
+                'price' => $order->subtotalAmount ?? $order->totalAmount,
+                'taxAmount' => $order->taxAmount ?? 0,
+                'totalAmount' => $order->totalAmount,
+            ]];
+        }
 
         $firstItem = $items[0] ?? null;
         $singleItemInvoice = count($items) === 1;
@@ -1150,7 +1518,7 @@ class PaymentController extends Controller
             ],
             'items' => $items,
             'entityType' => $singleItemInvoice ? ($firstItem['entityType'] ?? null) : 'Course Bundle',
-            'entityId' => $singleItemInvoice ? ($firstItem['courseId'] ?? null) : null,
+            'entityId' => $singleItemInvoice ? ($firstItem['entityId'] ?? $firstItem['courseId'] ?? null) : null,
             'entityCode' => $singleItemInvoice ? ($firstItem['entityCode'] ?? null) : null,
             'entityTitle' => $singleItemInvoice ? ($firstItem['entityTitle'] ?? null) : count($items) . ' Courses',
             'subtotal' => (float) ($order->subtotalAmount ?? array_sum(array_map(fn ($item) => (float) $item['price'], $items))),
@@ -1231,13 +1599,380 @@ class PaymentController extends Controller
             DB::table('orders')->where('id', $order->id)->update(['status' => 'failed', 'updated_at' => now()]);
         }
 
+        $entity = $order ? $this->orderEntitySummary((int) $order->id) : null;
+
         $this->logPaymentEvent($request, 'payment.signature_failed', [
             'userId' => $userId,
             'orderId' => $order->id ?? null,
             'status' => 'failed',
+            'entityType' => $entity['entityType'] ?? null,
+            'entityId' => $entity['entityId'] ?? null,
+            'entityCode' => $entity['entityCode'] ?? null,
+            'entityTitle' => $entity['entityTitle'] ?? null,
             'requestPayload' => $request->all(),
             'verificationResult' => ['signature' => 'invalid', 'reason' => $reason],
         ]);
+    }
+
+    private function normalizeProgramEntityType(mixed $value): string
+    {
+        return strtolower(trim((string) $value)) === 'seminar' ? 'seminar' : 'workshop';
+    }
+
+    private function programEntityLabel(string $entityType): string
+    {
+        return $entityType === 'seminar' ? 'Seminar' : 'Workshop';
+    }
+
+    private function programEntityTable(string $entityType): string
+    {
+        return $entityType === 'seminar' ? 'seminars' : 'workshops';
+    }
+
+    private function getProgramForCheckout(string $entityType, int $entityId): ?object
+    {
+        $today = now()->toDateString();
+
+        if ($entityType === 'seminar') {
+            return DB::table('seminars as s')
+                ->where('s.id', $entityId)
+                ->where('s.status', 1)
+                ->where('s.deletedFlag', 0)
+                ->where('s.eventDate', '>=', $today)
+                ->select(
+                    's.id',
+                    EntityCodeService::codeSelect('seminars', 's'),
+                    's.title',
+                    's.topic',
+                    's.venue',
+                    's.city',
+                    's.eventDate',
+                    DB::raw('NULL as endDate'),
+                    's.startTime',
+                    's.endTime',
+                    's.speakerName',
+                    's.price'
+                )
+                ->first();
+        }
+
+        return DB::table('workshops as w')
+            ->where('w.id', $entityId)
+            ->where('w.status', 1)
+            ->where('w.deletedFlag', 0)
+            ->whereRaw('COALESCE(w.endDate, w.startDate) >= ?', [$today])
+            ->select(
+                'w.id',
+                EntityCodeService::codeSelect('workshops', 'w'),
+                'w.title',
+                'w.topic',
+                'w.venue',
+                'w.city',
+                'w.startDate as eventDate',
+                'w.endDate',
+                'w.startTime',
+                'w.endTime',
+                'w.speakerName',
+                'w.price'
+            )
+            ->first();
+    }
+
+    private function programResponsePayload(object $program, string $entityType, string $entityLabel): array
+    {
+        return [
+            'id' => (int) $program->id,
+            'entityType' => $entityType,
+            'entityLabel' => $entityLabel,
+            'code' => $program->code ?? null,
+            'title' => (string) $program->title,
+            'topic' => (string) ($program->topic ?? ''),
+            'venue' => (string) ($program->venue ?? ''),
+            'city' => (string) ($program->city ?? ''),
+            'eventDate' => $program->eventDate ?? null,
+            'endDate' => $program->endDate ?? null,
+            'startTime' => $program->startTime ?? null,
+            'endTime' => $program->endTime ?? null,
+            'speakerName' => (string) ($program->speakerName ?? ''),
+            'price' => (float) ($program->price ?? 0),
+        ];
+    }
+
+    private function formatMyProgram(object $row, Request $request): array
+    {
+        $programType = $this->normalizeProgramEntityType($row->entityType ?? '');
+        $isSeminar = $programType === 'seminar';
+        $entityLabel = $this->programEntityLabel($programType);
+        $title = $isSeminar ? ($row->seminarTitle ?? null) : ($row->workshopTitle ?? null);
+        $topic = $isSeminar ? ($row->seminarTopic ?? null) : ($row->workshopTopic ?? null);
+        $venue = $isSeminar ? ($row->seminarVenue ?? null) : ($row->workshopVenue ?? null);
+        $city = $isSeminar ? ($row->seminarCity ?? null) : ($row->workshopCity ?? null);
+        $startDate = $isSeminar ? ($row->seminarEventDate ?? null) : ($row->workshopStartDate ?? null);
+        $endDate = $isSeminar ? null : ($row->workshopEndDate ?? null);
+        $startTime = $isSeminar ? ($row->seminarStartTime ?? null) : ($row->workshopStartTime ?? null);
+        $endTime = $isSeminar ? ($row->seminarEndTime ?? null) : ($row->workshopEndTime ?? null);
+        $speakerName = $isSeminar ? ($row->seminarSpeakerName ?? null) : ($row->workshopSpeakerName ?? null);
+        $capacity = $isSeminar ? ($row->seminarCapacity ?? null) : ($row->workshopCapacity ?? null);
+        $price = $isSeminar ? ($row->seminarPrice ?? null) : ($row->workshopPrice ?? null);
+        $description = $isSeminar ? ($row->seminarDescription ?? null) : ($row->workshopDescription ?? null);
+        $takeaways = $isSeminar ? ($row->seminarTakeaways ?? null) : ($row->workshopTakeaways ?? null);
+        $bannerImage = $isSeminar ? ($row->seminarBannerImage ?? null) : ($row->workshopBannerImage ?? null);
+        $status = (int) ($isSeminar ? ($row->seminarStatus ?? 0) : ($row->workshopStatus ?? 0));
+
+        return [
+            'purchaseId' => (int) $row->purchaseItemId,
+            'id' => (int) $row->entityId,
+            'type' => $programType,
+            'entityType' => $entityLabel,
+            'code' => $row->entityCode ?? null,
+            'title' => (string) ($title ?: ($row->entityTitle ?? $entityLabel)),
+            'topic' => (string) ($topic ?? ''),
+            'venue' => (string) ($venue ?? ''),
+            'city' => (string) ($city ?? ''),
+            'eventDate' => $startDate ? (string) $startDate : '',
+            'startDate' => $startDate ? (string) $startDate : '',
+            'endDate' => $endDate ? (string) $endDate : null,
+            'startTime' => $this->formatProgramTime($startTime ?? null),
+            'endTime' => $this->formatProgramTime($endTime ?? null),
+            'speakerName' => (string) ($speakerName ?? ''),
+            'capacity' => (int) ($capacity ?? 0),
+            'price' => is_numeric($price) ? (float) $price : (float) ($row->itemPrice ?? 0),
+            'totalAmount' => (float) ($row->orderTotalAmount ?? $row->itemTotalAmount ?? 0),
+            'description' => (string) ($description ?? ''),
+            'takeaways' => $this->decodeProgramTakeaways($takeaways ?? null),
+            'bannerImage' => $bannerImage ? (string) $bannerImage : null,
+            'bannerImageUrl' => $bannerImage ? $this->privateFileUrl($request, (string) $bannerImage) : null,
+            'status' => $status,
+            'statusLabel' => $status === 1 ? 'Active' : 'Inactive',
+            'scheduleStatus' => $this->programScheduleStatus(
+                $programType,
+                $startDate ? (string) $startDate : '',
+                $endDate ? (string) $endDate : null
+            ),
+            'enrolledAt' => $row->enrolledAt,
+            'orderId' => (int) $row->orderId,
+            'orderReference' => $row->orderReference,
+            'invoiceNo' => $row->invoiceNumber,
+            'razorpayOrderId' => $row->razorpayOrderId,
+            'razorpayPaymentId' => $row->razorpayPaymentId,
+            'paymentReference' => $row->paymentReference,
+            'paymentDisplayId' => $this->paymentDisplayId(
+                $row->razorpayPaymentId,
+                $row->invoicePaymentReference,
+                $row->paymentReference
+            ),
+        ];
+    }
+
+    private function programScheduleStatus(string $programType, string $startDate, ?string $endDate): string
+    {
+        if ($startDate === '') {
+            return 'upcoming';
+        }
+
+        $today = now()->toDateString();
+        $lastDate = $programType === 'seminar' ? $startDate : ($endDate ?: $startDate);
+
+        if ($lastDate < $today) {
+            return 'completed';
+        }
+
+        if ($startDate <= $today && $lastDate >= $today) {
+            return 'ongoing';
+        }
+
+        return 'upcoming';
+    }
+
+    private function formatProgramTime(?string $value): ?string
+    {
+        $time = trim((string) ($value ?? ''));
+
+        return $time === '' ? null : substr($time, 0, 5);
+    }
+
+    private function decodeProgramTakeaways(?string $takeaways): array
+    {
+        if (!$takeaways) {
+            return [];
+        }
+
+        $decoded = json_decode($takeaways, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return collect($decoded)
+            ->filter(fn ($item) => is_string($item) || is_numeric($item))
+            ->map(fn ($item) => trim((string) $item))
+            ->filter(fn ($item) => $item !== '')
+            ->values()
+            ->all();
+    }
+
+    private function hasSuccessfulProgramPurchase(int $userId, string $entityLabel, int $entityId): bool
+    {
+        if (
+            Schema::hasTable('invoices')
+            && Schema::hasColumn('invoices', 'entityType')
+            && Schema::hasColumn('invoices', 'entityId')
+        ) {
+            $invoiceMatch = DB::table('invoices as i')
+                ->join('orders as o', 'o.id', '=', 'i.orderId')
+                ->where('i.userId', $userId)
+                ->where('i.entityType', $entityLabel)
+                ->where('i.entityId', $entityId)
+                ->where('i.deletedFlag', 0)
+                ->where('o.status', 'paid')
+                ->where('o.deletedFlag', 0)
+                ->exists();
+
+            if ($invoiceMatch) {
+                return true;
+            }
+        }
+
+        if (
+            Schema::hasTable('payment_logs')
+            && Schema::hasColumn('payment_logs', 'entityType')
+            && Schema::hasColumn('payment_logs', 'entityId')
+        ) {
+            return DB::table('payment_logs')
+                ->where('userId', $userId)
+                ->where('entityType', $entityLabel)
+                ->where('entityId', $entityId)
+                ->where('eventType', 'payment.verified')
+                ->where('status', 'success')
+                ->where('deletedFlag', 0)
+                ->exists();
+        }
+
+        return false;
+    }
+
+    private function courseOrderItems($orderItems)
+    {
+        return collect($orderItems)
+            ->filter(fn ($item) => (int) ($item->courseId ?? 0) > 0)
+            ->values();
+    }
+
+    private function orderItemEntitySelects(): array
+    {
+        return [
+            Schema::hasColumn('order_items', 'entityType') ? 'oi.entityType as itemEntityType' : DB::raw('NULL as itemEntityType'),
+            Schema::hasColumn('order_items', 'entityId') ? 'oi.entityId as itemEntityId' : DB::raw('NULL as itemEntityId'),
+            Schema::hasColumn('order_items', 'entityCode') ? 'oi.entityCode as itemEntityCode' : DB::raw('NULL as itemEntityCode'),
+            Schema::hasColumn('order_items', 'entityTitle') ? 'oi.entityTitle as itemEntityTitle' : DB::raw('NULL as itemEntityTitle'),
+        ];
+    }
+
+    private function orderEntitySummary(int $orderId): ?array
+    {
+        if (
+            Schema::hasTable('order_items')
+            && Schema::hasColumn('order_items', 'entityType')
+            && Schema::hasColumn('order_items', 'entityId')
+        ) {
+            $item = DB::table('order_items')
+                ->where('orderId', $orderId)
+                ->where('deletedFlag', 0)
+                ->whereNotNull('entityType')
+                ->select(
+                    'entityType',
+                    'entityId',
+                    Schema::hasColumn('order_items', 'entityCode') ? 'entityCode' : DB::raw('NULL as entityCode'),
+                    Schema::hasColumn('order_items', 'entityTitle') ? 'entityTitle' : DB::raw('NULL as entityTitle')
+                )
+                ->first();
+
+            if ($item) {
+                return [
+                    'entityType' => $item->entityType,
+                    'entityId' => $item->entityId ? (int) $item->entityId : null,
+                    'entityCode' => $item->entityCode ?? null,
+                    'entityTitle' => $item->entityTitle ?? null,
+                ];
+            }
+        }
+
+        if (
+            Schema::hasTable('invoices')
+            && Schema::hasColumn('invoices', 'entityType')
+            && Schema::hasColumn('invoices', 'entityId')
+        ) {
+            $invoice = DB::table('invoices')
+                ->where('orderId', $orderId)
+                ->where('deletedFlag', 0)
+                ->select(
+                    'entityType',
+                    'entityId',
+                    Schema::hasColumn('invoices', 'entityCode') ? 'entityCode' : DB::raw('NULL as entityCode'),
+                    Schema::hasColumn('invoices', 'entityTitle') ? 'entityTitle' : DB::raw('NULL as entityTitle')
+                )
+                ->first();
+
+            if ($invoice && $invoice->entityType) {
+                return [
+                    'entityType' => $invoice->entityType,
+                    'entityId' => $invoice->entityId ? (int) $invoice->entityId : null,
+                    'entityCode' => $invoice->entityCode ?? null,
+                    'entityTitle' => $invoice->entityTitle ?? null,
+                ];
+            }
+        }
+
+        return $this->programEntityFromCheckoutLog($orderId);
+    }
+
+    private function programEntityFromCheckoutLog(int $orderId): ?array
+    {
+        if (!Schema::hasTable('payment_logs')) {
+            return null;
+        }
+
+        $log = DB::table('payment_logs')
+            ->where('orderId', $orderId)
+            ->where('eventType', 'checkout.program_order_created')
+            ->where('deletedFlag', 0)
+            ->orderByDesc('id')
+            ->first(['requestPayload', 'responsePayload']);
+
+        if (!$log) {
+            return null;
+        }
+
+        $responsePayload = json_decode($log->responsePayload ?? '', true);
+        $requestPayload = json_decode($log->requestPayload ?? '', true);
+        $program = is_array($responsePayload) ? ($responsePayload['program'] ?? []) : [];
+        $entityType = $this->normalizeProgramEntityType($program['entityType'] ?? ($requestPayload['entityType'] ?? 'workshop'));
+
+        return [
+            'entityType' => $program['entityLabel'] ?? $this->programEntityLabel($entityType),
+            'entityId' => isset($program['id']) ? (int) $program['id'] : (isset($requestPayload['entityId']) ? (int) $requestPayload['entityId'] : null),
+            'entityCode' => $program['code'] ?? null,
+            'entityTitle' => $program['title'] ?? null,
+        ];
+    }
+
+    private function invoiceEntityFromJson(?string $invoiceData): ?array
+    {
+        if (!$invoiceData) {
+            return null;
+        }
+
+        $payload = json_decode($invoiceData, true);
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        return [
+            'entityType' => $payload['entityType'] ?? null,
+            'entityId' => $payload['entityId'] ?? null,
+            'entityCode' => $payload['entityCode'] ?? null,
+            'entityTitle' => $payload['entityTitle'] ?? null,
+        ];
     }
 
     private function razorpay(): Api

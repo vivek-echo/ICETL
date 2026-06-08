@@ -137,6 +137,24 @@ export const coursesRoutes: Routes = [
             title: 'Browse Academic Courses | ICETL',
           },
           {
+            path: 'browseWorkshop',
+            data: { programType: 'workshop', authOnly: true },
+            loadComponent: () =>
+              import('./manage-courses/program-browse/program-browse').then(
+                (m) => m.ProgramBrowseComponent,
+              ),
+            title: 'Browse Workshop | ICETL',
+          },
+          {
+            path: 'browseSeminars',
+            data: { programType: 'seminar', authOnly: true },
+            loadComponent: () =>
+              import('./manage-courses/program-browse/program-browse').then(
+                (m) => m.ProgramBrowseComponent,
+              ),
+            title: 'Browse Seminars | ICETL',
+          },
+          {
             path: 'curriculum',
             loadComponent: () =>
               import('./manage-courses/add-course-curriculum/add-course-curriculum').then((m) => m.AddCourseCurriculum),

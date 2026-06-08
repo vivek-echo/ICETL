@@ -1,0 +1,362 @@
+<section class="program-browse" [class.program-browse--seminar]="programType === 'seminar'">
+  <!-- <section class="program-browse__hero">
+    <div class="container-fluid">
+      <div class="program-browse__hero-grid">
+        <div class="program-browse__intro">
+          <span class="program-browse__eyebrow">{{ pageEyebrow }}</span>
+          <h1>Browse {{ pluralLabel }}</h1>
+          <p>{{ pageDescription }}</p>
+          <div class="program-browse__actions">
+            <button type="button" class="rbt-btn btn-gradient hover-icon-reverse" (click)="onSearch()">
+              <span class="icon-reverse-wrapper">
+                <span class="btn-text">View {{ pluralLabel }}</span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              </span>
+            </button>
+            <a class="rbt-btn btn-border" [routerLink]="alternateRoute">{{ alternateLabel }}</a>
+          </div>
+        </div>
+
+        <div class="program-browse__stats" aria-label="Catalog summary">
+          <div>
+            <span>Available</span>
+            <strong>{{ meta.total }}</strong>
+          </div>
+          <div>
+            <span>Showing</span>
+            <strong>{{ programs.length }}</strong>
+          </div>
+          <div>
+            <span>Timeline</span>
+            <strong>{{ timeline === 'all' ? 'Current' : timeline }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section> -->
+
+  <section class="program-browse__filters">
+    <div class="container-fluid">
+      <div class="program-filter-bar">
+        <label class="program-field program-field--search">
+          <span>Search</span>
+          <div>
+            <i class="feather-search"></i>
+            <input
+              type="search"
+              placeholder="Title, topic, speaker"
+              [(ngModel)]="search"
+              (keyup.enter)="onSearch()">
+          </div>
+        </label>
+
+        <label class="program-field">
+          <span>City</span>
+          <div>
+            <i class="feather-map-pin"></i>
+            <input
+              type="text"
+              placeholder="Any city"
+              [(ngModel)]="city"
+              (keyup.enter)="onSearch()">
+          </div>
+        </label>
+
+        <label class="program-field">
+          <span>Sort</span>
+          <div>
+            <i class="feather-sliders"></i>
+            <select [(ngModel)]="sortBy" (change)="onFilterChange()">
+              @for (option of sortOptions; track option.value) {
+              <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+        </label>
+
+        <label class="program-field">
+          <span>Per Page</span>
+          <div>
+            <i class="feather-list"></i>
+            <select [(ngModel)]="meta.perPage" (change)="onFilterChange()">
+              @for (option of perPageOptions; track option) {
+              <option [ngValue]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+        </label>
+
+        <div class="program-filter-bar__buttons">
+          <button type="button" class="program-browse-btn program-browse-btn--primary" (click)="onSearch()">
+            <i class="feather-filter"></i>
+            Apply
+          </button>
+          <button type="button" class="program-browse-btn" (click)="clearFilters()">
+            <i class="feather-refresh-cw"></i>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="program-timeline-tabs" aria-label="Timeline filter">
+        @for (option of timelineOptions; track option.value) {
+        <button
+          type="button"
+          [class.is-active]="timeline === option.value"
+          (click)="selectTimeline(option.value)">
+          {{ option.label }}
+        </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="program-browse__grid-section bg-color-extra2">
+    <div class="container-fluid">
+      <div class="program-browse__list-head">
+        <div>
+          <span>{{ getPaginationLabel() }}</span>
+          <h2>Active {{ pluralLabel }}</h2>
+        </div>
+        <div class="program-browse__list-actions">
+          <div class="program-view-toggle" aria-label="Display mode">
+            @for (mode of viewModeOptions; track mode.value) {
+            <button
+              type="button"
+              [class.is-active]="viewMode === mode.value"
+              [attr.aria-pressed]="viewMode === mode.value"
+              [title]="mode.label"
+              (click)="selectViewMode(mode.value)">
+              <i [class]="mode.icon"></i>
+              <span>{{ mode.label }}</span>
+            </button>
+            }
+          </div>
+          <a class="program-browse__payment-link" routerLink="/application/paymentLog">
+            Payment Log
+            <i class="feather-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+
+      @if (message) {
+      <div class="program-message">
+        <i class="feather-info"></i>
+        {{ message }}
+      </div>
+      }
+
+      @if (loading && viewMode === 'grid') {
+      <div class="program-grid">
+        @for (loader of skeletonRows; track loader) {
+        <article class="program-card program-card--loading">
+          <div class="program-card__image"></div>
+          <div class="program-card__body">
+            <span></span>
+            <strong></strong>
+            <p></p>
+            <p></p>
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      @if (loading && viewMode === 'list') {
+      <div class="program-list">
+        @for (loader of skeletonRows; track loader) {
+        <article class="program-list-row program-list-row--loading">
+          <div class="program-list-row__image"></div>
+          <div class="program-list-row__content">
+            <span></span>
+            <strong></strong>
+            <p></p>
+            <div></div>
+          </div>
+          <div class="program-list-row__aside">
+            <span></span>
+            <strong></strong>
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      @if (!loading && programs.length === 0) {
+      <div class="program-empty-state">
+        <i class="feather-calendar"></i>
+        <h3>No {{ pluralLabelLower }} found</h3>
+        <p>New active {{ pluralLabelLower }} will appear here once published.</p>
+      </div>
+      }
+
+      @if (!loading && programs.length > 0 && viewMode === 'grid') {
+      <div class="program-grid">
+        @for (program of programs; track trackByProgramId($index, program)) {
+        <article class="program-card">
+          <div class="program-card__image">
+            <img
+              [src]="programImage(program)"
+              [alt]="program.title"
+              loading="lazy"
+              decoding="async"
+              (error)="onProgramImageError(program)">
+            <span class="program-card__type">{{ singularLabel }}</span>
+            <span class="program-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+              {{ getScheduleLabel(program) }}
+            </span>
+          </div>
+
+          <div class="program-card__body">
+            <div class="program-card__topline">
+              <span>{{ program.topic }}</span>
+              @if (program.code) {
+              <small>{{ program.code }}</small>
+              }
+            </div>
+
+            <h3>{{ program.title }}</h3>
+            <p>{{ program.description }}</p>
+
+            <div class="program-card__meta">
+              <span><i class="feather-calendar"></i>{{ getDateRange(program) }}</span>
+              <span><i class="feather-clock"></i>{{ getTimeRange(program) }}</span>
+              <span><i class="feather-map-pin"></i>{{ program.venue }}, {{ program.city }}</span>
+              <span><i class="feather-user"></i>{{ program.speakerName }}</span>
+            </div>
+
+            @if (getTakeaways(program).length > 0) {
+            <ul class="program-card__takeaways">
+              @for (takeaway of getTakeaways(program); track $index) {
+              <li>{{ takeaway }}</li>
+              }
+            </ul>
+            }
+
+            <div class="program-card__footer">
+              <div class="program-card__price">
+                <span>Price</span>
+                <strong>{{ formatPrice(program.price) }}</strong>
+              </div>
+              @if (isProgramEnrolled(program)) {
+              <span class="program-enrolled-badge">
+                <i class="feather-check-circle"></i>
+                Enrolled
+              </span>
+              } @else {
+              <button
+                type="button"
+                class="program-buy-button"
+                [disabled]="processingProgramId === program.id"
+                (click)="buyProgram(program)">
+                <i [class]="processingProgramId === program.id ? 'fa-solid fa-spinner fa-spin' : 'feather-credit-card'"></i>
+                {{ processingProgramId === program.id ? 'Opening' : 'Buy Now' }}
+              </button>
+              }
+            </div>
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      @if (!loading && programs.length > 0 && viewMode === 'list') {
+      <div class="program-list">
+        @for (program of programs; track trackByProgramId($index, program)) {
+        <article class="program-list-row">
+          <div class="program-list-row__image">
+            <img
+              [src]="programImage(program)"
+              [alt]="program.title"
+              loading="lazy"
+              decoding="async"
+              (error)="onProgramImageError(program)">
+            <span [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+              {{ getScheduleLabel(program) }}
+            </span>
+          </div>
+
+          <div class="program-list-row__content">
+            <div class="program-list-row__topline">
+              <span>{{ singularLabel }}</span>
+              <strong>{{ program.topic }}</strong>
+              @if (program.code) {
+              <small>{{ program.code }}</small>
+              }
+            </div>
+
+            <h3>{{ program.title }}</h3>
+            <p>{{ program.description }}</p>
+
+            <div class="program-list-row__meta">
+              <span><i class="feather-calendar"></i>{{ getDateRange(program) }}</span>
+              <span><i class="feather-clock"></i>{{ getTimeRange(program) }}</span>
+              <span><i class="feather-map-pin"></i>{{ program.venue }}, {{ program.city }}</span>
+              <span><i class="feather-user"></i>{{ program.speakerName }}</span>
+            </div>
+
+            @if (getTakeaways(program, 2).length > 0) {
+            <ul class="program-list-row__takeaways">
+              @for (takeaway of getTakeaways(program, 2); track $index) {
+              <li>{{ takeaway }}</li>
+              }
+            </ul>
+            }
+          </div>
+
+          <div class="program-list-row__aside">
+            <div class="program-card__price">
+              <span>Price</span>
+              <strong>{{ formatPrice(program.price) }}</strong>
+            </div>
+            @if (isProgramEnrolled(program)) {
+            <span class="program-enrolled-badge">
+              <i class="feather-check-circle"></i>
+              Enrolled
+            </span>
+            } @else {
+            <button
+              type="button"
+              class="program-buy-button"
+              [disabled]="processingProgramId === program.id"
+              (click)="buyProgram(program)">
+              <i [class]="processingProgramId === program.id ? 'fa-solid fa-spinner fa-spin' : 'feather-credit-card'"></i>
+              {{ processingProgramId === program.id ? 'Opening' : 'Buy Now' }}
+            </button>
+            }
+          </div>
+        </article>
+        }
+      </div>
+      }
+
+      @if (!loading && meta.total > 0) {
+      <div class="program-pager">
+        <p>{{ getPaginationLabel() }}</p>
+        <div>
+          <button type="button" [disabled]="meta.currentPage <= 1" (click)="goToPreviousPage()">
+            <i class="feather-chevron-left"></i>
+            Previous
+          </button>
+          <label>
+            <span>Page</span>
+            <input
+              type="number"
+              min="1"
+              [max]="meta.lastPage"
+              [(ngModel)]="pageInput"
+              (keyup.enter)="goToPageInput()"
+              (blur)="goToPageInput()">
+            <span>of {{ meta.lastPage }}</span>
+          </label>
+          <button type="button" [disabled]="meta.currentPage >= meta.lastPage" (click)="goToNextPage()">
+            Next
+            <i class="feather-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+      }
+    </div>
+  </section>
+</section>

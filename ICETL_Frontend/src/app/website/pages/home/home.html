@@ -528,6 +528,10 @@
           <p class="description mt--15">
             Join active and upcoming practical sessions led by ICTEL trainers and industry mentors.
           </p>
+          <div class="home-programs-section__actions">
+            <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseWorkshop">Browse Workshops</a>
+            <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseSeminars">Browse Seminars</a>
+          </div>
         </div>
       </div>
     </div>
@@ -550,7 +554,7 @@
     <div class="home-program-grid">
       @for (program of homePrograms(); track program.id) {
       <article class="home-program-card">
-        <a class="home-program-card__image" [routerLink]="contactRoute">
+        <a class="home-program-card__image" [routerLink]="getProgramRoute(program)">
           <img [src]="program.image" [alt]="program.title" (error)="onProgramImageError(program)" />
           <span class="home-program-card__type">{{ getProgramTypeLabel(program) }}</span>
           <span class="home-program-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
@@ -559,7 +563,7 @@
         </a>
         <div class="home-program-card__body">
           <span class="home-program-card__topic">{{ program.topic }}</span>
-          <h3><a [routerLink]="contactRoute">{{ program.title }}</a></h3>
+          <h3><a [routerLink]="getProgramRoute(program)">{{ program.title }}</a></h3>
           <p>{{ program.description }}</p>
           <ul class="home-program-card__meta">
             <li><i class="feather-calendar"></i>{{ getProgramDateLabel(program) }}</li>
@@ -569,8 +573,8 @@
           </ul>
           <div class="home-program-card__footer">
             <span>{{ program.price > 0 ? 'Rs. ' + formatAmount(program.price) : 'Free' }}</span>
-            <a class="rbt-btn-link" [routerLink]="contactRoute">
-              Register Interest<i class="feather-arrow-right"></i>
+            <a class="rbt-btn-link" [routerLink]="getProgramRoute(program)">
+              Buy Now<i class="feather-arrow-right"></i>
             </a>
           </div>
         </div>

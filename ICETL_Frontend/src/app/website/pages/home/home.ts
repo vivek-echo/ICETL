@@ -348,6 +348,12 @@ export class HomeComponent {
     return program.type === 'workshop' ? 'Workshop' : 'Seminar';
   }
 
+  getProgramRoute(program: HomeProgram): string {
+    return program.type === 'workshop'
+      ? '/application/courses/manageCourses/browseWorkshop'
+      : '/application/courses/manageCourses/browseSeminars';
+  }
+
   getProgramStatusLabel(program: HomeProgram): string {
     return program.scheduleStatus === 'ongoing' ? 'Ongoing' : 'Upcoming';
   }

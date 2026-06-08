@@ -103,6 +103,44 @@ export interface MyLearningCourse {
   lastWatchedAt?: string | null;
 }
 
+export type MyProgramType = 'workshop' | 'seminar';
+
+export interface MyProgram {
+  purchaseId: number;
+  id: number;
+  type: MyProgramType;
+  entityType: string;
+  code?: string | null;
+  title: string;
+  topic?: string | null;
+  venue?: string | null;
+  city?: string | null;
+  eventDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  speakerName?: string | null;
+  capacity?: number | string | null;
+  price?: number | string | null;
+  totalAmount?: number | string | null;
+  description?: string | null;
+  takeaways?: string[];
+  bannerImage?: string | null;
+  bannerImageUrl?: string | null;
+  status: number;
+  statusLabel?: string | null;
+  scheduleStatus: 'upcoming' | 'ongoing' | 'completed';
+  enrolledAt: string;
+  orderId?: number | null;
+  orderReference?: string | null;
+  invoiceNo?: string | null;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
+  paymentReference?: string | null;
+  paymentDisplayId?: string | null;
+}
+
 export interface PaginatedResponse<T> {
   success: boolean;
   message: string;
@@ -155,6 +193,16 @@ export class PaymentService {
       payload
     );
   }
+
+  programCheckoutInit(payload: {
+    entityType: 'workshop' | 'seminar';
+    entityId: number;
+  }): Observable<any> {
+    return this.http.post(
+      `${this.API_URL}/programCheckoutInit`,
+      payload
+    );
+  }
   
   verifyPayment(payload: any): Observable<any> {
     return this.http.post(
@@ -181,6 +229,15 @@ export class PaymentService {
   getMyLearning(): Observable<{ success: boolean; message: string; data: MyLearningCourse[] }> {
     return this.http.get<{ success: boolean; message: string; data: MyLearningCourse[] }>(
       `${this.API_URL}/myLearning`,
+    );
+  }
+
+  getMyPrograms(type?: MyProgramType): Observable<{ success: boolean; message: string; data: MyProgram[] }> {
+    return this.http.get<{ success: boolean; message: string; data: MyProgram[] }>(
+      `${this.API_URL}/myPrograms`,
+      {
+        params: type ? { type } : {},
+      },
     );
   }
 

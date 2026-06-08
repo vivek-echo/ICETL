@@ -102,7 +102,23 @@ class SeminarController extends Controller
 
         $validator = Validator::make($request->all(), [
             'page' => 'nullable|integer|min:1',
-            'perPage' => 'nullable|integer|min:1|max:12',
+            'perPage' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value === null || $value === '' || $value === 'all') {
+                        return;
+                    }
+
+                    if (
+                        !filter_var($value, FILTER_VALIDATE_INT)
+                        || !in_array((int) $value, [10, 20, 50, 100], true)
+                    ) {
+                        $fail('The per page value must be 10, 20, 50, 100, or all.');
+                    }
+                },
+            ],
+            'search' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
             'scheduleStatus' => 'nullable|in:all,upcoming,ongoing',
             'sortBy' => 'nullable|in:latest,dateAsc,dateDesc',
         ]);
@@ -116,6 +132,7 @@ class SeminarController extends Controller
                 ->where('s.status', 1);
 
             $this->applyPublicActiveScheduleFilter($query);
+            $this->applyPublicFilters($query, $request);
 
             $scheduleStatus = (string) $request->input('scheduleStatus', 'all');
 
@@ -123,9 +140,12 @@ class SeminarController extends Controller
                 $this->applyPublicScheduleStatusFilter($query, $scheduleStatus);
             }
 
-            $page = (int) $request->input('page', 1);
-            $perPage = (int) $request->input('perPage', 4);
-            $perPage = min(max($perPage, 1), 12);
+            $isAllPageSize = $request->input('perPage') === 'all';
+            $filteredTotal = (clone $query)->count();
+            $page = $isAllPageSize ? 1 : (int) $request->input('page', 1);
+            $perPage = $isAllPageSize
+                ? max($filteredTotal, 1)
+                : (int) $request->input('perPage', 10);
 
             $seminars = $this->applyPublicSort($query, (string) $request->input('sortBy', 'dateAsc'))
                 ->paginate($perPage, ['*'], 'page', $page);
@@ -138,7 +158,7 @@ class SeminarController extends Controller
                     ->values(),
                 'meta' => [
                     'currentPage' => $seminars->currentPage(),
-                    'perPage' => $seminars->perPage(),
+                    'perPage' => $isAllPageSize ? 'all' : $seminars->perPage(),
                     'total' => $seminars->total(),
                     'lastPage' => $seminars->lastPage(),
                     'from' => $seminars->firstItem(),
@@ -649,6 +669,27 @@ class SeminarController extends Controller
     private function applyPublicActiveScheduleFilter($query): void
     {
         $query->whereDate('s.eventDate', '>=', Carbon::today()->toDateString());
+    }
+
+    private function applyPublicFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('s.title', 'LIKE', '%' . $search . '%')
+                    ->orWhere('s.topic', 'LIKE', '%' . $search . '%')
+                    ->orWhere('s.venue', 'LIKE', '%' . $search . '%')
+                    ->orWhere('s.city', 'LIKE', '%' . $search . '%')
+                    ->orWhere('s.speakerName', 'LIKE', '%' . $search . '%')
+                    ->orWhere('s.description', 'LIKE', '%' . $search . '%');
+                EntityCodeService::orWhereCode($subQuery, 'seminars', 's.code', $search);
+            });
+        }
+
+        if ($request->filled('city')) {
+            $query->where('s.city', 'LIKE', '%' . trim((string) $request->input('city')) . '%');
+        }
     }
 
     private function applyPublicScheduleStatusFilter($query, string $scheduleStatus): void

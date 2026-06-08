@@ -573,6 +573,20 @@
   color: #5b6475;
 }
 
+.home-programs-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.home-programs-section__actions .rbt-btn {
+  min-height: 44px;
+  border-radius: 8px;
+  justify-content: center;
+}
+
 .home-program-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -1,1 +1,171 @@
-<p>my-workshop works!</p>
+<section class="my-program-library my-program-library--workshop" aria-labelledby="my-program-title">
+  <header class="program-library-head">
+    <div>
+      <span class="program-library-head__eyebrow">My Learning</span>
+      <h1 id="my-program-title">My {{ pluralLabel }}</h1>
+      <p>{{ programs.length }} enrolled {{ programs.length === 1 ? singularLabel.toLowerCase() : pluralLabel.toLowerCase() }}</p>
+    </div>
+
+    <div class="program-library-head__actions">
+      <a class="program-library-btn program-library-btn--light" [routerLink]="browseRoute">
+        <i class="feather-compass"></i>
+        Browse {{ pluralLabel }}
+      </a>
+      <button type="button" class="program-library-btn" (click)="loadPrograms()" [disabled]="loading">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'feather-refresh-cw'"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <section class="program-library-summary" aria-label="Program summary">
+    <div>
+      <i class="feather-book-open"></i>
+      <span>Total Enrolled</span>
+      <strong>{{ programs.length }}</strong>
+    </div>
+    <div>
+      <i class="feather-calendar"></i>
+      <span>Current</span>
+      <strong>{{ activeProgramsCount }}</strong>
+    </div>
+    <div>
+      <i class="feather-check-circle"></i>
+      <span>Completed</span>
+      <strong>{{ completedProgramsCount }}</strong>
+    </div>
+  </section>
+
+  <div class="program-library-toolbar">
+    <label>
+      <span>Search</span>
+      <div>
+        <i class="feather-search"></i>
+        <input type="search" [(ngModel)]="search" placeholder="Title, topic, speaker, city">
+      </div>
+    </label>
+
+    <label>
+      <span>Schedule</span>
+      <div>
+        <i class="feather-filter"></i>
+        <select [(ngModel)]="scheduleFilter">
+          <option value="all">All</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </label>
+  </div>
+
+  @if (loading) {
+  <div class="program-library-grid" aria-label="Loading enrolled programs">
+    @for (loader of skeletonRows; track loader) {
+    <article class="program-library-card program-library-card--skeleton">
+      <span class="program-skeleton program-skeleton--image"></span>
+      <div>
+        <span class="program-skeleton program-skeleton--pill"></span>
+        <span class="program-skeleton program-skeleton--line program-skeleton--wide"></span>
+        <span class="program-skeleton program-skeleton--line"></span>
+        <span class="program-skeleton program-skeleton--button"></span>
+      </div>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && programs.length === 0) {
+  <section class="program-library-empty">
+    <i class="feather-calendar"></i>
+    <h2>No enrolled {{ pluralLabel.toLowerCase() }} yet</h2>
+    <p>{{ pluralLabel }} you buy will appear here after payment verification.</p>
+    <a class="program-library-btn program-library-btn--primary" [routerLink]="browseRoute">
+      <i class="feather-compass"></i>
+      Browse {{ pluralLabel }}
+    </a>
+  </section>
+  }
+
+  @if (!loading && programs.length > 0 && filteredPrograms.length === 0) {
+  <section class="program-library-empty">
+    <i class="feather-search"></i>
+    <h2>No matching {{ pluralLabel.toLowerCase() }}</h2>
+    <p>Try a different search term or schedule filter.</p>
+  </section>
+  }
+
+  @if (!loading && filteredPrograms.length > 0) {
+  <div class="program-library-grid">
+    @for (program of filteredPrograms; track trackByProgramId($index, program)) {
+    <article class="program-library-card">
+      <div class="program-library-card__media">
+        <img
+          [src]="programImage(program)"
+          [alt]="program.title"
+          loading="lazy"
+          decoding="async"
+          (error)="onProgramImageError(program)">
+        <span class="program-library-card__status" [class.is-completed]="program.scheduleStatus === 'completed'">
+          {{ getScheduleLabel(program) }}
+        </span>
+      </div>
+
+      <div class="program-library-card__body">
+        <div class="program-library-card__topline">
+          <span>{{ singularLabel }}</span>
+          @if (program.code) {
+          <small>{{ program.code }}</small>
+          }
+        </div>
+
+        <h2>{{ program.title }}</h2>
+        <p>{{ program.description || 'Instructor-led program from ICETL.' }}</p>
+
+        <div class="program-library-card__meta">
+          <span><i class="feather-bookmark"></i>{{ program.topic || 'Program' }}</span>
+          <span><i class="feather-calendar"></i>{{ getDateRange(program) }}</span>
+          <span><i class="feather-clock"></i>{{ getTimeRange(program) }}</span>
+          <span><i class="feather-map-pin"></i>{{ program.venue || 'Venue TBA' }}, {{ program.city || 'City TBA' }}</span>
+          <span><i class="feather-user"></i>{{ program.speakerName || 'Speaker TBA' }}</span>
+        </div>
+
+        @if (getTakeaways(program).length > 0) {
+        <ul class="program-library-card__takeaways">
+          @for (takeaway of getTakeaways(program); track $index) {
+          <li>{{ takeaway }}</li>
+          }
+        </ul>
+        }
+
+        <footer class="program-library-card__footer">
+          <div>
+            <span>Paid</span>
+            <strong>{{ formatAmount(program.totalAmount || program.price) }}</strong>
+          </div>
+          <span class="program-library-enrolled">
+            <i class="feather-check-circle"></i>
+            Enrolled
+          </span>
+        </footer>
+
+        <div class="program-library-card__details">
+          <span><i class="feather-calendar"></i>Enrolled {{ formatDate(program.enrolledAt) || 'N/A' }}</span>
+          @if (program.invoiceNo) {
+          <span><i class="fa-solid fa-receipt"></i>{{ program.invoiceNo }}</span>
+          }
+          @if (program.paymentDisplayId) {
+          <span><i class="feather-credit-card"></i>{{ program.paymentDisplayId }}</span>
+          }
+        </div>
+
+        <a class="program-library-card__payment" routerLink="/application/paymentLog">
+          <i class="feather-file-text"></i>
+          Payment Log
+        </a>
+      </div>
+    </article>
+    }
+  </div>
+  }
+</section>

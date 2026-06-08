@@ -117,10 +117,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //payment routes
     Route::post('/cartCheckoutInit', [PaymentController::class, 'cartCheckoutInit']);
+    Route::post('/programCheckoutInit', [PaymentController::class, 'programCheckoutInit']);
     Route::post('/verifyPayment', [PaymentController::class, 'verifyPayment']);
     Route::post('/paymentFailure', [PaymentController::class, 'paymentFailure']);
     Route::get('/paymentLogs', [PaymentController::class, 'paymentLogs']);
     Route::get('/myLearning', [PaymentController::class, 'myLearning']);
+    Route::get('/myPrograms', [PaymentController::class, 'myPrograms']);
     Route::get('/invoice/{orderId}', [PaymentController::class, 'invoice']);
     Route::get('/invoice/{orderId}/download', [PaymentController::class, 'downloadInvoice']);
     Route::get('/course-access/{courseId}', [PaymentController::class, 'checkCourseAccess']);

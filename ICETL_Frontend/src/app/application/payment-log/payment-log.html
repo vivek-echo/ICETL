@@ -82,7 +82,7 @@
   <div class="payment-log__empty">
     <i class="fa-solid fa-receipt"></i>
     <h2>No payments yet</h2>
-    <p>Your completed course purchases will appear here.</p>
+    <p>Your completed purchases will appear here.</p>
   </div>
   }
 
@@ -93,7 +93,7 @@
         <tr>
           <th>Invoice</th>
           <th>Date</th>
-          <th>Courses</th>
+          <th>Items</th>
           <th>Amount</th>
           <th>Status</th>
           <th>Transaction No</th>
@@ -110,9 +110,12 @@
               </span>
               <div>
                 <strong>{{ log.invoiceNo }}</strong>
-                <span>{{ log.orderReference || ('Order #' + log.id) }}</span>
+                <span>{{ log.entityTitle || log.orderReference || ('Order #' + log.id) }}</span>
                 @if (log.entityCode) {
                 <span class="entity-code-badge">{{ log.entityCode }}</span>
+                }
+                @if (log.entityTitle && log.orderReference) {
+                <span>{{ log.orderReference }}</span>
                 }
               </div>
             </div>
@@ -120,9 +123,9 @@
           <td data-label="Date">
             <span class="payment-date">{{ formatDate(log.created_at) }}</span>
           </td>
-          <td data-label="Courses">
+          <td data-label="Items">
             <span class="payment-course-count">{{ log.courseCount }}</span>
-            <small>course{{ log.courseCount === 1 ? '' : 's' }}</small>
+            <small>item{{ log.courseCount === 1 ? '' : 's' }}</small>
           </td>
           <td data-label="Amount">
             <strong class="payment-amount"><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(log.totalAmount) }}</strong>

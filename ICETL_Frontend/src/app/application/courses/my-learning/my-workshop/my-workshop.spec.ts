@@ -1,4 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
+import { PaymentService } from '../../services/payment';
 
 import { MyWorkshop } from './my-workshop';
 
@@ -8,7 +12,22 @@ describe('MyWorkshop', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MyWorkshop]
+      imports: [MyWorkshop],
+      providers: [
+        provideRouter([]),
+        {
+          provide: PaymentService,
+          useValue: {
+            getMyPrograms: () => of({ success: true, message: '', data: [] }),
+          },
+        },
+        {
+          provide: AlertHelperService,
+          useValue: {
+            error: () => Promise.resolve(),
+          },
+        },
+      ],
     })
     .compileComponents();
 
