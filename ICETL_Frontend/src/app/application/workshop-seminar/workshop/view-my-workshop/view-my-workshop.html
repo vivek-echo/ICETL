@@ -146,7 +146,7 @@
             {{ workshop.statusLabel || (isActive(workshop) ? 'Active' : 'Inactive') }}
           </span>
           <span class="program-card__topic">{{ workshop.topic }}</span>
-          <span class="program-card__topic">{{ workshop.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+          <span class="program-card__topic">{{ getScheduleLabel(workshop.scheduleStatus) }}</span>
         </div>
 
         <div class="program-row__title">
@@ -200,13 +200,28 @@
           <strong>{{ formatPrice(workshop.price) }}</strong>
         </div>
         <div class="program-card__actions">
-          <button type="button" class="program-icon-action" (click)="goToEditWorkshop(workshop)" title="Edit workshop">
+          <button
+            type="button"
+            class="program-icon-action"
+            (click)="openEditWorkshop(workshop)"
+            [disabled]="isOngoing(workshop)"
+            [title]="isOngoing(workshop) ? 'Ongoing workshop cannot be edited' : 'Edit workshop'">
             <i class="feather-edit-2"></i>
           </button>
-          <button type="button" class="program-icon-action" (click)="toggleStatus(workshop)" title="Toggle status">
+          <button
+            type="button"
+            class="program-icon-action"
+            (click)="toggleStatus(workshop)"
+            [disabled]="isOngoing(workshop)"
+            [title]="isOngoing(workshop) ? 'Ongoing workshop status cannot be changed' : 'Toggle status'">
             <i class="feather-power"></i>
           </button>
-          <button type="button" class="program-icon-action program-icon-action--danger" (click)="deleteWorkshop(workshop)" title="Delete workshop">
+          <button
+            type="button"
+            class="program-icon-action program-icon-action--danger"
+            (click)="deleteWorkshop(workshop)"
+            [disabled]="isOngoing(workshop)"
+            [title]="isOngoing(workshop) ? 'Ongoing workshop cannot be deleted' : 'Delete workshop'">
             <i class="feather-trash-2"></i>
           </button>
         </div>
@@ -243,6 +258,29 @@
         <i class="feather-chevron-right"></i>
       </button>
     </div>
+  </div>
+  }
+
+  @if (editingWorkshop) {
+  <div class="program-edit-modal" role="dialog" aria-modal="true" aria-labelledby="workshopEditTitle" (click)="closeEditWorkshop()">
+    <section class="program-edit-modal__panel" (click)="$event.stopPropagation()">
+      <header class="program-edit-modal__header">
+        <div>
+          <span>Workshop</span>
+          <h2 id="workshopEditTitle">Edit Workshop</h2>
+        </div>
+        <button type="button" class="program-edit-modal__close" aria-label="Close edit modal" (click)="closeEditWorkshop()">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <app-add-workshop
+        [modalMode]="true"
+        [editWorkshop]="editingWorkshop"
+        (saved)="onWorkshopSaved()"
+        (closed)="closeEditWorkshop()">
+      </app-add-workshop>
+    </section>
   </div>
   }
 </div>

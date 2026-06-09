@@ -6,6 +6,7 @@ import {
   WorkshopItem,
   WorkshopPaginationMeta,
   WorkshopScheduleFilter,
+  WorkshopScheduleStatus,
   WorkshopService,
   WorkshopSortOption,
   WorkshopSummary,
@@ -29,6 +30,7 @@ export class ViewAllWorkshop implements OnInit {
   ];
   readonly scheduleFilters: Array<{ value: WorkshopScheduleFilter; label: string }> = [
     { value: '', label: 'All Timeline' },
+    { value: 'ongoing', label: 'Ongoing' },
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'completed', label: 'Completed' },
   ];
@@ -154,6 +156,14 @@ export class ViewAllWorkshop implements OnInit {
     return Number(workshop.status) === 1;
   }
 
+  getScheduleLabel(scheduleStatus: WorkshopScheduleStatus): string {
+    if (scheduleStatus === 'ongoing') {
+      return 'Ongoing';
+    }
+
+    return scheduleStatus === 'completed' ? 'Completed' : 'Upcoming';
+  }
+
   getCreatorInitial(workshop: WorkshopItem): string {
     return workshop.createdByName?.trim()?.charAt(0)?.toUpperCase() || 'U';
   }
@@ -242,10 +252,16 @@ export class ViewAllWorkshop implements OnInit {
         price: Number.isFinite(Number(workshop.price)) ? Number(workshop.price) : 0,
         status,
         statusLabel: workshop.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
-        scheduleStatus: workshop.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        scheduleStatus: this.normalizeScheduleStatus(workshop.scheduleStatus),
         takeaways: Array.isArray(workshop.takeaways) ? workshop.takeaways : [],
       };
     });
+  }
+
+  private normalizeScheduleStatus(scheduleStatus: WorkshopItem['scheduleStatus']): WorkshopScheduleStatus {
+    return scheduleStatus === 'ongoing' || scheduleStatus === 'completed'
+      ? scheduleStatus
+      : 'upcoming';
   }
 
   private createDefaultMeta(): WorkshopPaginationMeta {
@@ -265,6 +281,7 @@ export class ViewAllWorkshop implements OnInit {
       activeWorkshops: 0,
       inactiveWorkshops: 0,
       upcomingWorkshops: 0,
+      ongoingWorkshops: 0,
       completedWorkshops: 0,
     };
   }

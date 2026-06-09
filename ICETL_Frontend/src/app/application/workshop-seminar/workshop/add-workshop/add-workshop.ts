@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -36,7 +36,7 @@ interface CalendarDay {
   styleUrl: './add-workshop.scss',
 })
 export class AddWorkshop implements OnInit {
-  readonly viewRoute = '/application/workshopSeminar/workshop/view';
+  readonly viewRoute = '/application/workshopSeminar/workshop/viewMyWorkshop';
   readonly currentYear = new Date().getFullYear();
   readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
   readonly calendarMonths = [
@@ -65,10 +65,36 @@ export class AddWorkshop implements OnInit {
   };
   selectedBannerImage: File | null = null;
   bannerPreviewUrl: string | null = null;
+  @Input() modalMode = false;
+  @Output() saved = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
   private readonly maxBannerImageSize = 4 * 1024 * 1024;
   private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
   private existingBannerImageUrl: string | null = null;
+  private inputEditMode = false;
   private workshopId: number | null = null;
+
+  @Input() set editWorkshop(value: WorkshopItem | null | undefined) {
+    if (!value?.id) {
+      return;
+    }
+
+    this.inputEditMode = true;
+    this.workshopId = value.id;
+    this.loading = false;
+    this.patchWorkshopForm(value);
+    this.cdr.markForCheck();
+  }
+
+  @Input() set editWorkshopId(value: number | null | undefined) {
+    const nextId = Number(value);
+
+    if (Number.isFinite(nextId) && nextId > 0 && nextId !== this.workshopId) {
+      this.inputEditMode = true;
+      this.workshopId = nextId;
+      void this.loadWorkshop();
+    }
+  }
 
   constructor(
     private readonly fb: FormBuilder,
@@ -78,6 +104,7 @@ export class AddWorkshop implements OnInit {
     private readonly formValidationService: FormValidationService,
     private readonly alertHelper: AlertHelperService,
     private readonly el: ElementRef,
+    private readonly cdr: ChangeDetectorRef,
   ) {
     this.itemForm = this.fb.group(
       {
@@ -356,6 +383,12 @@ export class AddWorkshop implements OnInit {
     this.formMessage = '';
   }
 
+  closeModal(): void {
+    if (this.modalMode) {
+      this.closed.emit();
+    }
+  }
+
   onBannerImageChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
@@ -424,6 +457,11 @@ export class AddWorkshop implements OnInit {
         const workshopCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
         await this.alertHelper.success(`${response.message || 'Workshop saved successfully.'}${workshopCode}`);
 
+        if (this.modalMode) {
+          this.saved.emit();
+          return;
+        }
+
         if (!this.isEditMode) {
           this.resetForm();
         }
@@ -443,6 +481,7 @@ export class AddWorkshop implements OnInit {
     }
 
     this.loading = true;
+    this.cdr.markForCheck();
 
     try {
       const response = await lastValueFrom(
@@ -453,14 +492,24 @@ export class AddWorkshop implements OnInit {
         this.patchWorkshopForm(response.data);
       } else {
         await this.alertHelper.error(response.message || 'Unable to load workshop.');
-        void this.router.navigate([this.viewRoute]);
+        this.handleLoadFailure();
       }
     } catch (error: any) {
       await this.alertHelper.error(this.extractErrorMessage(error));
-      void this.router.navigate([this.viewRoute]);
+      this.handleLoadFailure();
     } finally {
       this.loading = false;
+      this.cdr.markForCheck();
     }
+  }
+
+  private handleLoadFailure(): void {
+    if (this.modalMode || this.inputEditMode) {
+      this.closed.emit();
+      return;
+    }
+
+    void this.router.navigate([this.viewRoute]);
   }
 
   private patchWorkshopForm(workshop: WorkshopItem): void {
@@ -483,7 +532,8 @@ export class AddWorkshop implements OnInit {
     this.existingBannerImageUrl = workshop.bannerImageUrl || null;
     this.setBannerPreviewUrl(this.existingBannerImageUrl);
     this.takeaways.clear();
-    const takeaways = workshop.takeaways.length ? workshop.takeaways : [''];
+    const workshopTakeaways = Array.isArray(workshop.takeaways) ? workshop.takeaways : [];
+    const takeaways = workshopTakeaways.length ? workshopTakeaways : [''];
     takeaways.forEach((takeaway) => this.takeaways.push(this.fb.control(takeaway)));
     this.syncCalendarView('startDate');
     this.syncCalendarView('endDate');

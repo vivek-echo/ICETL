@@ -22,6 +22,12 @@
     </div>
     <div>
       <i class="feather-calendar"></i>
+      <span>Ongoing</span>
+      <strong>{{ summary.ongoingSeminars || 0 }}</strong>
+      <p>Running now</p>
+    </div>
+    <div>
+      <i class="feather-calendar"></i>
       <span>Upcoming</span>
       <strong>{{ summary.upcomingSeminars }}</strong>
       <p>Scheduled ahead</p>
@@ -177,7 +183,7 @@
             {{ seminar.statusLabel }}
           </span>
           <span class="program-card__topic">{{ seminar.topic }}</span>
-          <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+          <span class="program-card__topic">{{ getScheduleLabel(seminar.scheduleStatus) }}</span>
         </div>
 
         <div class="program-row__title">

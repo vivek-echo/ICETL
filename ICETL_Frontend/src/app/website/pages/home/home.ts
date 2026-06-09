@@ -152,6 +152,7 @@ export class HomeComponent {
   readonly placeholderProgramImage = 'assets/images/event/grid-type-02.jpg';
   readonly homePrograms = signal<HomeProgram[]>([]);
   readonly programsLoading = signal(false);
+  readonly selectedHomeProgram = signal<HomeProgram | null>(null);
   readonly programSkeletons = [1, 2, 3, 4];
 
   constructor(
@@ -307,18 +308,16 @@ export class HomeComponent {
       const [workshopResult, seminarResult] = await Promise.allSettled([
         lastValueFrom(
           this.workshopService
-            .getPublicWorkshops({
+            .getPreLoginWorkshops({
               page: 1,
-              perPage: 6,
               sortBy: 'dateAsc',
             })
             .pipe(timeout(15000)),
         ),
         lastValueFrom(
           this.seminarService
-            .getPublicSeminars({
+            .getPreLoginSeminars({
               page: 1,
-              perPage: 6,
               sortBy: 'dateAsc',
             })
             .pipe(timeout(15000)),
@@ -371,6 +370,14 @@ export class HomeComponent {
     }
 
     return program.endTime ? `${program.startTime} - ${program.endTime}` : program.startTime;
+  }
+
+  openProgramDetails(program: HomeProgram): void {
+    this.selectedHomeProgram.set(program);
+  }
+
+  closeProgramDetails(): void {
+    this.selectedHomeProgram.set(null);
   }
 
   private toHomeProgram(program: WorkshopItem | SeminarItem): HomeProgram {

@@ -520,65 +520,124 @@
 
 <section class="home-programs-section bg-color-white rbt-section-gap">
   <div class="container">
-    <div class="row mb--60">
-      <div class="col-lg-12">
-        <div class="section-title text-center">
-          <span class="subtitle bg-primary-opacity">Live Programs</span>
-          <h2 class="title">Latest Workshops &amp; Seminars</h2>
-          <p class="description mt--15">
-            Join active and upcoming practical sessions led by ICTEL trainers and industry mentors.
-          </p>
-          <div class="home-programs-section__actions">
-            <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseWorkshop">Browse Workshops</a>
-            <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseSeminars">Browse Seminars</a>
-          </div>
-        </div>
+    <div class="home-programs-header">
+      <div class="section-title">
+        <span class="subtitle bg-primary-opacity">Live Programs</span>
+        <h2 class="title">Latest Workshops &amp; Seminars</h2>
+        <p class="description mt--15">
+          Join active and upcoming practical sessions led by ICTEL trainers and industry mentors.
+        </p>
+      </div>
+      <div class="home-programs-section__actions">
+        <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseWorkshop">
+          Workshops<i class="feather-arrow-right"></i>
+        </a>
+        <a class="rbt-btn btn-border" routerLink="/application/courses/manageCourses/browseSeminars">
+          Seminars<i class="feather-arrow-right"></i>
+        </a>
       </div>
     </div>
 
     @if (programsLoading()) {
-    <div class="home-program-grid">
+    <div class="home-program-showcase home-program-showcase--loading">
       @for (item of programSkeletons; track item) {
-      <div class="home-program-card home-program-card--loading">
-        <div class="home-program-card__image"></div>
-        <div class="home-program-card__body">
+      <div class="home-program-list-card home-program-list-card--loading">
+        <div class="home-program-list-card__image"></div>
+        <div class="home-program-list-card__body">
           <span></span>
           <strong></strong>
-          <p></p>
           <p></p>
         </div>
       </div>
       }
     </div>
     } @else if (homePrograms().length) {
-    <div class="home-program-grid">
-      @for (program of homePrograms(); track program.id) {
-      <article class="home-program-card">
-        <a class="home-program-card__image" [routerLink]="getProgramRoute(program)">
-          <img [src]="program.image" [alt]="program.title" (error)="onProgramImageError(program)" />
-          <span class="home-program-card__type">{{ getProgramTypeLabel(program) }}</span>
-          <span class="home-program-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
-            {{ getProgramStatusLabel(program) }}
+    <div class="home-program-showcase" [class.home-program-showcase--single]="homePrograms().length === 1">
+      @if (homePrograms()[0]; as featuredProgram) {
+      <article class="home-program-feature">
+        <button type="button" class="home-program-feature__media" (click)="openProgramDetails(featuredProgram)">
+          <img [src]="featuredProgram.image" [alt]="featuredProgram.title"
+            (error)="onProgramImageError(featuredProgram)" />
+          <span class="home-program-feature__type">{{ getProgramTypeLabel(featuredProgram) }}</span>
+          <span class="home-program-feature__status" [class.is-ongoing]="featuredProgram.scheduleStatus === 'ongoing'">
+            {{ getProgramStatusLabel(featuredProgram) }}
           </span>
-        </a>
-        <div class="home-program-card__body">
-          <span class="home-program-card__topic">{{ program.topic }}</span>
-          <h3><a [routerLink]="getProgramRoute(program)">{{ program.title }}</a></h3>
-          <p>{{ program.description }}</p>
-          <ul class="home-program-card__meta">
-            <li><i class="feather-calendar"></i>{{ getProgramDateLabel(program) }}</li>
-            <li><i class="feather-clock"></i>{{ getProgramTimeLabel(program) }}</li>
-            <li><i class="feather-map-pin"></i>{{ program.venue }}, {{ program.city }}</li>
-            <li><i class="feather-user"></i>{{ program.speakerName }}</li>
-          </ul>
-          <div class="home-program-card__footer">
-            <span>{{ program.price > 0 ? 'Rs. ' + formatAmount(program.price) : 'Free' }}</span>
-            <a class="rbt-btn-link" [routerLink]="getProgramRoute(program)">
-              Buy Now<i class="feather-arrow-right"></i>
+        </button>
+        <div class="home-program-feature__body">
+          <span class="home-program-feature__topic">{{ featuredProgram.topic }}</span>
+          <h3>
+            <button type="button" (click)="openProgramDetails(featuredProgram)">
+              {{ featuredProgram.title }}
+            </button>
+          </h3>
+          <p>{{ featuredProgram.description }}</p>
+          <div class="home-program-feature__meta">
+            <span><i class="feather-calendar"></i>{{ getProgramDateLabel(featuredProgram) }}</span>
+            <span><i class="feather-clock"></i>{{ getProgramTimeLabel(featuredProgram) }}</span>
+            <span><i class="feather-map-pin"></i>{{ featuredProgram.venue }}, {{ featuredProgram.city }}</span>
+          </div>
+          <div class="home-program-feature__footer">
+            <div>
+              <span>Starting fee</span>
+              <strong>{{ featuredProgram.price > 0 ? 'Rs. ' + formatAmount(featuredProgram.price) : 'Free' }}</strong>
+            </div>
+
+            <!-- <button type="button" class="rbt-btn btn-gradient hover-icon-reverse" (click)="openProgramDetails(featuredProgram)">
+              <span class="icon-reverse-wrapper">
+                <span class="btn-text">View Details</span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              </span>
+            </button> -->
+          </div>
+          <div class="home-program-feature__actions  d-flex justify-content-end">
+            <a class="rbt-btn btn-gradient hover-icon-reverse" (click)="openProgramDetails(featuredProgram)">
+              <span class="icon-reverse-wrapper">
+                <span class="btn-text">View Details</span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+                <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              </span>
             </a>
           </div>
         </div>
       </article>
+      }
+
+      @if (homePrograms().length > 1) {
+      <div class="home-program-agenda">
+        @for (program of homePrograms().slice(1); track program.id) {
+        <article class="home-program-list-card">
+          <button type="button" class="home-program-list-card__image" (click)="openProgramDetails(program)">
+            <img [src]="program.image" [alt]="program.title" (error)="onProgramImageError(program)" />
+            <span>{{ getProgramTypeLabel(program) }}</span>
+          </button>
+          <div class="home-program-list-card__body">
+            <div class="home-program-list-card__top">
+              <span class="home-program-list-card__topic">{{ program.topic }}</span>
+              <span class="home-program-list-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+                {{ getProgramStatusLabel(program) }}
+              </span>
+            </div>
+            <h3>
+              <button type="button" (click)="openProgramDetails(program)">
+                {{ program.title }}
+              </button>
+            </h3>
+            <div class="home-program-list-card__meta">
+              <span><i class="feather-calendar"></i>{{ getProgramDateLabel(program) }}</span>
+              <span><i class="feather-clock"></i>{{ getProgramTimeLabel(program) }}</span>
+              <span><i class="feather-map-pin"></i>{{ program.city }}</span>
+            </div>
+          </div>
+          <div class="home-program-list-card__side">
+            <strong>{{ program.price > 0 ? 'Rs. ' + formatAmount(program.price) : 'Free' }}</strong>
+            <button type="button" class="rbt-btn-link" (click)="openProgramDetails(program)">
+              Details<i class="feather-arrow-right"></i>
+            </button>
+          </div>
+        </article>
+        }
+      </div>
       }
     </div>
     } @else {
@@ -590,6 +649,56 @@
     }
   </div>
 </section>
+
+@if (selectedHomeProgram(); as detailProgram) {
+<div class="home-program-modal" role="dialog" aria-modal="true" aria-labelledby="homeProgramModalTitle"
+  (click)="closeProgramDetails()">
+  <section class="home-program-modal__panel" (click)="$event.stopPropagation()">
+    <button type="button" class="home-program-modal__close" aria-label="Close details modal"
+      (click)="closeProgramDetails()">
+      <i class="feather-x"></i>
+    </button>
+
+    <div class="home-program-modal__media">
+      <img [src]="detailProgram.image" [alt]="detailProgram.title" (error)="onProgramImageError(detailProgram)" />
+      <span>{{ getProgramTypeLabel(detailProgram) }}</span>
+      <strong [class.is-ongoing]="detailProgram.scheduleStatus === 'ongoing'">
+        {{ getProgramStatusLabel(detailProgram) }}
+      </strong>
+    </div>
+
+    <div class="home-program-modal__content">
+      <span class="home-program-modal__topic">{{ detailProgram.topic }}</span>
+      <h3 id="homeProgramModalTitle">{{ detailProgram.title }}</h3>
+      <p>{{ detailProgram.description }}</p>
+
+      <div class="home-program-modal__meta">
+        <span><i class="feather-calendar"></i>{{ getProgramDateLabel(detailProgram) }}</span>
+        <span><i class="feather-clock"></i>{{ getProgramTimeLabel(detailProgram) }}</span>
+        <span><i class="feather-map-pin"></i>{{ detailProgram.venue }}, {{ detailProgram.city }}</span>
+        <span><i class="feather-user"></i>{{ detailProgram.speakerName }}</span>
+        <span><i class="feather-users"></i>{{ detailProgram.capacity ? detailProgram.capacity + ' seats' : 'Open seats'
+          }}</span>
+      </div>
+
+      <footer class="home-program-modal__footer">
+        <div>
+          <span>Program fee</span>
+          <strong>{{ detailProgram.price > 0 ? 'Rs. ' + formatAmount(detailProgram.price) : 'Free' }}</strong>
+        </div>
+        <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="getProgramRoute(detailProgram)"
+          (click)="closeProgramDetails()">
+          <span class="icon-reverse-wrapper">
+            <span class="btn-text">View Program</span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+          </span>
+        </a>
+      </footer>
+    </div>
+  </section>
+</div>
+}
 
 <section class="placement-companies-section rbt-section-gap bg-color-extra2">
   <div class="container">

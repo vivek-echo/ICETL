@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 class WorkshopController extends Controller
 {
     private const SCHEDULE_UPCOMING = 'upcoming';
+    private const SCHEDULE_ONGOING = 'ongoing';
     private const SCHEDULE_COMPLETED = 'completed';
 
     public function createWorkshop(Request $request)
@@ -261,6 +262,13 @@ class WorkshopController extends Controller
                 ], 404);
             }
 
+            if ($this->getScheduleStatus((string) ($workshop->startDate ?? ''), $workshop->endDate ? (string) $workshop->endDate : null) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing workshops cannot be edited.'
+                ], 422);
+            }
+
             $bannerImagePath = $this->storeBannerImage($request);
             $currentBannerImage = $workshop->bannerImage ?? null;
 
@@ -321,6 +329,26 @@ class WorkshopController extends Controller
         }
 
         try {
+            $workshop = DB::table('workshops')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$workshop) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Workshop not found'
+                ], 404);
+            }
+
+            if ($this->getScheduleStatus((string) ($workshop->startDate ?? ''), $workshop->endDate ? (string) $workshop->endDate : null) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing workshops cannot be activated or deactivated.'
+                ], 422);
+            }
+
             $updated = DB::table('workshops')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
@@ -369,6 +397,26 @@ class WorkshopController extends Controller
         }
 
         try {
+            $workshop = DB::table('workshops')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$workshop) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Workshop not found'
+                ], 404);
+            }
+
+            if ($this->getScheduleStatus((string) ($workshop->startDate ?? ''), $workshop->endDate ? (string) $workshop->endDate : null) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing workshops cannot be deleted.'
+                ], 422);
+            }
+
             $updated = DB::table('workshops')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
@@ -422,7 +470,7 @@ class WorkshopController extends Controller
             'search' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
             'status' => 'nullable|in:0,1',
-            'scheduleStatus' => 'nullable|in:all,upcoming,completed',
+            'scheduleStatus' => 'nullable|in:all,upcoming,ongoing,completed',
             'sortBy' => 'nullable|in:newest,oldest,dateAsc,dateDesc',
         ]);
 
@@ -641,9 +689,11 @@ class WorkshopController extends Controller
     private function buildSummary($summaryQuery): array
     {
         $upcomingQuery = clone $summaryQuery;
+        $ongoingQuery = clone $summaryQuery;
         $completedQuery = clone $summaryQuery;
 
         $this->applyScheduleStatusFilter($upcomingQuery, self::SCHEDULE_UPCOMING);
+        $this->applyScheduleStatusFilter($ongoingQuery, self::SCHEDULE_ONGOING);
         $this->applyScheduleStatusFilter($completedQuery, self::SCHEDULE_COMPLETED);
 
         return [
@@ -651,6 +701,7 @@ class WorkshopController extends Controller
             'activeWorkshops' => (clone $summaryQuery)->where('w.status', 1)->count(),
             'inactiveWorkshops' => (clone $summaryQuery)->where('w.status', 0)->count(),
             'upcomingWorkshops' => $upcomingQuery->count(),
+            'ongoingWorkshops' => $ongoingQuery->count(),
             'completedWorkshops' => $completedQuery->count(),
         ];
     }
@@ -660,8 +711,14 @@ class WorkshopController extends Controller
         $today = Carbon::today()->toDateString();
         $dateExpression = DB::raw('COALESCE(w.endDate, w.startDate)');
 
+        if ($scheduleStatus === self::SCHEDULE_ONGOING) {
+            $query->whereDate('w.startDate', '<=', $today)
+                ->whereDate($dateExpression, '>=', $today);
+            return;
+        }
+
         if ($scheduleStatus === self::SCHEDULE_UPCOMING) {
-            $query->whereDate($dateExpression, '>=', $today);
+            $query->whereDate('w.startDate', '>', $today);
             return;
         }
 
@@ -836,6 +893,10 @@ class WorkshopController extends Controller
 
         if ($lastWorkshopDate && $lastWorkshopDate < Carbon::today()->toDateString()) {
             return self::SCHEDULE_COMPLETED;
+        }
+
+        if ($startDate && $startDate <= Carbon::today()->toDateString()) {
+            return self::SCHEDULE_ONGOING;
         }
 
         return self::SCHEDULE_UPCOMING;

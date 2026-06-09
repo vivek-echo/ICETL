@@ -6,6 +6,7 @@ import {
   SeminarItem,
   SeminarPaginationMeta,
   SeminarScheduleFilter,
+  SeminarScheduleStatus,
   SeminarService,
   SeminarSortOption,
   SeminarSummary,
@@ -29,6 +30,7 @@ export class ViewAllSeminar implements OnInit {
   ];
   readonly scheduleFilters: Array<{ value: SeminarScheduleFilter; label: string }> = [
     { value: '', label: 'All Timeline' },
+    { value: 'ongoing', label: 'Ongoing' },
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'completed', label: 'Completed' },
   ];
@@ -154,6 +156,14 @@ export class ViewAllSeminar implements OnInit {
     return Number(seminar.status) === 1;
   }
 
+  getScheduleLabel(scheduleStatus: SeminarScheduleStatus): string {
+    if (scheduleStatus === 'ongoing') {
+      return 'Ongoing';
+    }
+
+    return scheduleStatus === 'completed' ? 'Completed' : 'Upcoming';
+  }
+
   getCreatorInitial(seminar: SeminarItem): string {
     return seminar.createdByName?.trim()?.charAt(0)?.toUpperCase() || 'U';
   }
@@ -249,10 +259,16 @@ export class ViewAllSeminar implements OnInit {
         price: Number.isFinite(Number(seminar.price)) ? Number(seminar.price) : 0,
         status,
         statusLabel: seminar.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
-        scheduleStatus: seminar.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        scheduleStatus: this.normalizeScheduleStatus(seminar.scheduleStatus),
         takeaways: Array.isArray(seminar.takeaways) ? seminar.takeaways : [],
       };
     });
+  }
+
+  private normalizeScheduleStatus(scheduleStatus: SeminarItem['scheduleStatus']): SeminarScheduleStatus {
+    return scheduleStatus === 'ongoing' || scheduleStatus === 'completed'
+      ? scheduleStatus
+      : 'upcoming';
   }
 
   private createDefaultMeta(): SeminarPaginationMeta {
@@ -272,6 +288,7 @@ export class ViewAllSeminar implements OnInit {
       activeSeminars: 0,
       inactiveSeminars: 0,
       upcomingSeminars: 0,
+      ongoingSeminars: 0,
       completedSeminars: 0,
     };
   }

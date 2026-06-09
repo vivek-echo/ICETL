@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -34,7 +34,7 @@ interface CalendarDay {
   styleUrl: './add-seminar.scss',
 })
 export class AddSeminar implements OnInit {
-  readonly viewRoute = '/application/workshopSeminar/seminar/view';
+  readonly viewRoute = '/application/workshopSeminar/seminar/viewMySeminar';
   readonly currentYear = new Date().getFullYear();
   readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
   readonly calendarMonths = [
@@ -60,10 +60,36 @@ export class AddSeminar implements OnInit {
   eventCalendarView = this.defaultCalendarView();
   selectedBannerImage: File | null = null;
   bannerPreviewUrl: string | null = null;
+  @Input() modalMode = false;
+  @Output() saved = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
   private readonly maxBannerImageSize = 4 * 1024 * 1024;
   private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
   private existingBannerImageUrl: string | null = null;
+  private inputEditMode = false;
   private seminarId: number | null = null;
+
+  @Input() set editSeminar(value: SeminarItem | null | undefined) {
+    if (!value?.id) {
+      return;
+    }
+
+    this.inputEditMode = true;
+    this.seminarId = value.id;
+    this.loading = false;
+    this.patchSeminarForm(value);
+    this.cdr.markForCheck();
+  }
+
+  @Input() set editSeminarId(value: number | null | undefined) {
+    const nextId = Number(value);
+
+    if (Number.isFinite(nextId) && nextId > 0 && nextId !== this.seminarId) {
+      this.inputEditMode = true;
+      this.seminarId = nextId;
+      void this.loadSeminar();
+    }
+  }
 
   constructor(
     private readonly fb: FormBuilder,
@@ -73,6 +99,7 @@ export class AddSeminar implements OnInit {
     private readonly formValidationService: FormValidationService,
     private readonly alertHelper: AlertHelperService,
     private readonly el: ElementRef,
+    private readonly cdr: ChangeDetectorRef,
   ) {
     this.itemForm = this.fb.group(
       {
@@ -331,6 +358,12 @@ export class AddSeminar implements OnInit {
     this.formMessage = '';
   }
 
+  closeModal(): void {
+    if (this.modalMode) {
+      this.closed.emit();
+    }
+  }
+
   onBannerImageChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
@@ -399,6 +432,11 @@ export class AddSeminar implements OnInit {
         const seminarCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
         await this.alertHelper.success(`${response.message || 'Seminar saved successfully.'}${seminarCode}`);
 
+        if (this.modalMode) {
+          this.saved.emit();
+          return;
+        }
+
         if (!this.isEditMode) {
           this.resetForm();
         }
@@ -418,6 +456,7 @@ export class AddSeminar implements OnInit {
     }
 
     this.loading = true;
+    this.cdr.markForCheck();
 
     try {
       const response = await lastValueFrom(
@@ -428,14 +467,24 @@ export class AddSeminar implements OnInit {
         this.patchSeminarForm(response.data);
       } else {
         await this.alertHelper.error(response.message || 'Unable to load seminar.');
-        void this.router.navigate([this.viewRoute]);
+        this.handleLoadFailure();
       }
     } catch (error: any) {
       await this.alertHelper.error(this.extractErrorMessage(error));
-      void this.router.navigate([this.viewRoute]);
+      this.handleLoadFailure();
     } finally {
       this.loading = false;
+      this.cdr.markForCheck();
     }
+  }
+
+  private handleLoadFailure(): void {
+    if (this.modalMode || this.inputEditMode) {
+      this.closed.emit();
+      return;
+    }
+
+    void this.router.navigate([this.viewRoute]);
   }
 
   private patchSeminarForm(seminar: SeminarItem): void {
@@ -458,7 +507,8 @@ export class AddSeminar implements OnInit {
     this.existingBannerImageUrl = seminar.bannerImageUrl || null;
     this.setBannerPreviewUrl(this.existingBannerImageUrl);
     this.takeaways.clear();
-    const takeaways = seminar.takeaways.length ? seminar.takeaways : [''];
+    const seminarTakeaways = Array.isArray(seminar.takeaways) ? seminar.takeaways : [];
+    const takeaways = seminarTakeaways.length ? seminarTakeaways : [''];
     takeaways.forEach((takeaway) => this.takeaways.push(this.fb.control(takeaway)));
     this.syncEventCalendarView();
   }

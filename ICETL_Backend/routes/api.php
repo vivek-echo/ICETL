@@ -14,6 +14,7 @@ use App\Http\Controllers\LearningController;
 use App\Http\Controllers\WorkshopController;
 use App\Http\Controllers\SeminarController;
 use App\Http\Controllers\ContactEnquiryController;
+use App\Http\Controllers\CertificateController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -143,6 +144,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/getContactEnquiries', [ContactEnquiryController::class, 'index']);
     Route::get('/contact-enquiries/unread-count', [ContactEnquiryController::class, 'unreadCount']);
     Route::post('/contact-enquiries/mark-read', [ContactEnquiryController::class, 'markRead']);
+
+    Route::post('/certificates/generate', [CertificateController::class, 'generate']);
 });
 
 Route::post('/razorpay/webhook', [PaymentController::class, 'webhook']);

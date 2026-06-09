@@ -7,16 +7,18 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import {
   WorkshopItem,
   WorkshopPaginationMeta,
+  WorkshopScheduleStatus,
   WorkshopScheduleFilter,
   WorkshopService,
   WorkshopSortOption,
   WorkshopSummary,
 } from '../../services/workshop';
+import { AddWorkshop } from '../add-workshop/add-workshop';
 
 @Component({
   selector: 'app-view-my-workshop',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AddWorkshop],
   templateUrl: './view-my-workshop.html',
   styleUrl: './view-my-workshop.scss',
 })
@@ -32,6 +34,7 @@ export class ViewMyWorkshop implements OnInit {
   ];
   readonly scheduleFilters: Array<{ value: WorkshopScheduleFilter; label: string }> = [
     { value: '', label: 'All Timeline' },
+    { value: 'ongoing', label: 'Ongoing' },
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'completed', label: 'Completed' },
   ];
@@ -44,6 +47,7 @@ export class ViewMyWorkshop implements OnInit {
   scheduleStatus: WorkshopScheduleFilter = '';
   sortBy: WorkshopSortOption = 'newest';
   pageInput = 1;
+  editingWorkshop: WorkshopItem | null = null;
   meta: WorkshopPaginationMeta = this.createDefaultMeta();
   summary: WorkshopSummary = this.createDefaultSummary();
 
@@ -158,11 +162,30 @@ export class ViewMyWorkshop implements OnInit {
     void this.router.navigate([this.addRoute]);
   }
 
-  goToEditWorkshop(workshop: WorkshopItem): void {
-    void this.router.navigate(['/application/workshopSeminar/workshop/edit', workshop.id]);
+  openEditWorkshop(workshop: WorkshopItem): void {
+    if (this.isOngoing(workshop)) {
+      return;
+    }
+
+    this.editingWorkshop = workshop;
+    this.cdr.markForCheck();
+  }
+
+  closeEditWorkshop(): void {
+    this.editingWorkshop = null;
+    this.cdr.markForCheck();
+  }
+
+  async onWorkshopSaved(): Promise<void> {
+    this.closeEditWorkshop();
+    await this.loadWorkshops(this.meta.currentPage);
   }
 
   async deleteWorkshop(workshop: WorkshopItem): Promise<void> {
+    if (this.isOngoing(workshop)) {
+      return;
+    }
+
     const confirmed = await this.alertHelper.confirm(
       `Do you want to delete "${workshop.title}"?`,
       'Delete Workshop',
@@ -190,6 +213,10 @@ export class ViewMyWorkshop implements OnInit {
   }
 
   async toggleStatus(workshop: WorkshopItem): Promise<void> {
+    if (this.isOngoing(workshop)) {
+      return;
+    }
+
     const nextStatus = this.isActive(workshop) ? 0 : 1;
     const confirmed = await this.alertHelper.confirm(
       `Do you want to mark this workshop as ${nextStatus === 1 ? 'active' : 'inactive'}?`,
@@ -224,6 +251,18 @@ export class ViewMyWorkshop implements OnInit {
 
   isActive(workshop: WorkshopItem): boolean {
     return Number(workshop.status) === 1;
+  }
+
+  isOngoing(workshop: WorkshopItem): boolean {
+    return workshop.scheduleStatus === 'ongoing';
+  }
+
+  getScheduleLabel(scheduleStatus: WorkshopScheduleStatus): string {
+    if (scheduleStatus === 'ongoing') {
+      return 'Ongoing';
+    }
+
+    return scheduleStatus === 'completed' ? 'Completed' : 'Upcoming';
   }
 
   formatPrice(value: number): string {
@@ -332,10 +371,16 @@ export class ViewMyWorkshop implements OnInit {
         price: Number.isFinite(Number(workshop.price)) ? Number(workshop.price) : 0,
         status,
         statusLabel: workshop.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
-        scheduleStatus: workshop.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        scheduleStatus: this.normalizeScheduleStatus(workshop.scheduleStatus),
         takeaways: Array.isArray(workshop.takeaways) ? workshop.takeaways : [],
       };
     });
+  }
+
+  private normalizeScheduleStatus(scheduleStatus: WorkshopItem['scheduleStatus']): WorkshopScheduleStatus {
+    return scheduleStatus === 'ongoing' || scheduleStatus === 'completed'
+      ? scheduleStatus
+      : 'upcoming';
   }
 
   private createDefaultMeta(): WorkshopPaginationMeta {
@@ -355,6 +400,7 @@ export class ViewMyWorkshop implements OnInit {
       activeWorkshops: 0,
       inactiveWorkshops: 0,
       upcomingWorkshops: 0,
+      ongoingWorkshops: 0,
       completedWorkshops: 0,
     };
   }

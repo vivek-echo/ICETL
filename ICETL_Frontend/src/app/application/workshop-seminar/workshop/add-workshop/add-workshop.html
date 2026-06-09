@@ -343,8 +343,8 @@
     </section>
 
     <div class="program-form__actions">
-      <button type="button" class="rbt-btn btn-border" (click)="resetForm()" [disabled]="saving">
-        Reset
+      <button type="button" class="rbt-btn btn-border" (click)="modalMode ? closeModal() : resetForm()" [disabled]="saving">
+        {{ modalMode ? 'Cancel' : 'Reset' }}
       </button>
       <button type="submit" class="rbt-btn btn-gradient" [disabled]="saving">
         {{ saving ? 'Saving...' : submitLabel }}

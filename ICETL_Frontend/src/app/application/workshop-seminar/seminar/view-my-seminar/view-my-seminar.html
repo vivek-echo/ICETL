@@ -145,7 +145,7 @@
             {{ seminar.statusLabel || (isActive(seminar) ? 'Active' : 'Inactive') }}
           </span>
           <span class="program-card__topic">{{ seminar.topic }}</span>
-          <span class="program-card__topic">{{ seminar.scheduleStatus === 'completed' ? 'Completed' : 'Upcoming' }}</span>
+          <span class="program-card__topic">{{ getScheduleLabel(seminar.scheduleStatus) }}</span>
         </div>
 
         <div class="program-row__title">
@@ -199,13 +199,28 @@
           <strong>{{ formatPrice(seminar.price) }}</strong>
         </div>
         <div class="program-card__actions">
-          <button type="button" class="program-icon-action" (click)="goToEditSeminar(seminar)" title="Edit seminar">
+          <button
+            type="button"
+            class="program-icon-action"
+            (click)="openEditSeminar(seminar)"
+            [disabled]="isOngoing(seminar)"
+            [title]="isOngoing(seminar) ? 'Ongoing seminar cannot be edited' : 'Edit seminar'">
             <i class="feather-edit-2"></i>
           </button>
-          <button type="button" class="program-icon-action" (click)="toggleStatus(seminar)" title="Toggle status">
+          <button
+            type="button"
+            class="program-icon-action"
+            (click)="toggleStatus(seminar)"
+            [disabled]="isOngoing(seminar)"
+            [title]="isOngoing(seminar) ? 'Ongoing seminar status cannot be changed' : 'Toggle status'">
             <i class="feather-power"></i>
           </button>
-          <button type="button" class="program-icon-action program-icon-action--danger" (click)="deleteSeminar(seminar)" title="Delete seminar">
+          <button
+            type="button"
+            class="program-icon-action program-icon-action--danger"
+            (click)="deleteSeminar(seminar)"
+            [disabled]="isOngoing(seminar)"
+            [title]="isOngoing(seminar) ? 'Ongoing seminar cannot be deleted' : 'Delete seminar'">
             <i class="feather-trash-2"></i>
           </button>
         </div>
@@ -242,6 +257,29 @@
         <i class="feather-chevron-right"></i>
       </button>
     </div>
+  </div>
+  }
+
+  @if (editingSeminar) {
+  <div class="program-edit-modal" role="dialog" aria-modal="true" aria-labelledby="seminarEditTitle" (click)="closeEditSeminar()">
+    <section class="program-edit-modal__panel" (click)="$event.stopPropagation()">
+      <header class="program-edit-modal__header">
+        <div>
+          <span>Seminar</span>
+          <h2 id="seminarEditTitle">Edit Seminar</h2>
+        </div>
+        <button type="button" class="program-edit-modal__close" aria-label="Close edit modal" (click)="closeEditSeminar()">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <app-add-seminar
+        [modalMode]="true"
+        [editSeminar]="editingSeminar"
+        (saved)="onSeminarSaved()"
+        (closed)="closeEditSeminar()">
+      </app-add-seminar>
+    </section>
   </div>
   }
 </div>

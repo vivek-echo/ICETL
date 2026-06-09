@@ -60,13 +60,16 @@
   </div>
 
   @if (loading) {
-  <div class="program-library-grid" aria-label="Loading enrolled programs">
+  <div class="program-library-list" aria-label="Loading enrolled programs">
     @for (loader of skeletonRows; track loader) {
-    <article class="program-library-card program-library-card--skeleton">
+    <article class="program-library-row program-library-row--skeleton">
       <span class="program-skeleton program-skeleton--image"></span>
       <div>
         <span class="program-skeleton program-skeleton--pill"></span>
         <span class="program-skeleton program-skeleton--line program-skeleton--wide"></span>
+        <span class="program-skeleton program-skeleton--line"></span>
+      </div>
+      <div>
         <span class="program-skeleton program-skeleton--line"></span>
         <span class="program-skeleton program-skeleton--button"></span>
       </div>
@@ -96,24 +99,30 @@
   }
 
   @if (!loading && filteredPrograms.length > 0) {
-  <div class="program-library-grid">
+  <div class="program-library-list">
     @for (program of filteredPrograms; track trackByProgramId($index, program)) {
-    <article class="program-library-card">
-      <div class="program-library-card__media">
+    <article class="program-library-row">
+      <div class="program-library-row__media">
         <img
           [src]="programImage(program)"
           [alt]="program.title"
           loading="lazy"
           decoding="async"
           (error)="onProgramImageError(program)">
-        <span class="program-library-card__status" [class.is-completed]="program.scheduleStatus === 'completed'">
+        <span
+          class="program-library-row__status"
+          [class.is-ongoing]="program.scheduleStatus === 'ongoing'"
+          [class.is-completed]="program.scheduleStatus === 'completed'">
           {{ getScheduleLabel(program) }}
         </span>
       </div>
 
-      <div class="program-library-card__body">
-        <div class="program-library-card__topline">
+      <div class="program-library-row__main">
+        <div class="program-library-row__topline">
           <span>{{ singularLabel }}</span>
+          @if (program.topic) {
+          <small>{{ program.topic }}</small>
+          }
           @if (program.code) {
           <small>{{ program.code }}</small>
           }
@@ -122,8 +131,7 @@
         <h2>{{ program.title }}</h2>
         <p>{{ program.description || 'Instructor-led program from ICETL.' }}</p>
 
-        <div class="program-library-card__meta">
-          <span><i class="feather-bookmark"></i>{{ program.topic || 'Program' }}</span>
+        <div class="program-library-row__meta">
           <span><i class="feather-calendar"></i>{{ getDateRange(program) }}</span>
           <span><i class="feather-clock"></i>{{ getTimeRange(program) }}</span>
           <span><i class="feather-map-pin"></i>{{ program.venue || 'Venue TBA' }}, {{ program.city || 'City TBA' }}</span>
@@ -131,25 +139,25 @@
         </div>
 
         @if (getTakeaways(program).length > 0) {
-        <ul class="program-library-card__takeaways">
+        <ul class="program-library-row__takeaways">
           @for (takeaway of getTakeaways(program); track $index) {
           <li>{{ takeaway }}</li>
           }
         </ul>
         }
+      </div>
 
-        <footer class="program-library-card__footer">
-          <div>
-            <span>Paid</span>
-            <strong>{{ formatAmount(program.totalAmount || program.price) }}</strong>
-          </div>
-          <span class="program-library-enrolled">
-            <i class="feather-check-circle"></i>
-            Enrolled
-          </span>
-        </footer>
+      <aside class="program-library-row__panel">
+        <div class="program-library-row__payment">
+          <span>Paid</span>
+          <strong>{{ formatAmount(program.totalAmount || program.price) }}</strong>
+        </div>
+        <span class="program-library-enrolled">
+          <i class="feather-check-circle"></i>
+          Enrolled
+        </span>
 
-        <div class="program-library-card__details">
+        <div class="program-library-row__details">
           <span><i class="feather-calendar"></i>Enrolled {{ formatDate(program.enrolledAt) || 'N/A' }}</span>
           @if (program.invoiceNo) {
           <span><i class="fa-solid fa-receipt"></i>{{ program.invoiceNo }}</span>
@@ -159,11 +167,11 @@
           }
         </div>
 
-        <a class="program-library-card__payment" routerLink="/application/paymentLog">
+        <a class="program-library-row__action" routerLink="/application/paymentLog">
           <i class="feather-file-text"></i>
           Payment Log
         </a>
-      </div>
+      </aside>
     </article>
     }
   </div>

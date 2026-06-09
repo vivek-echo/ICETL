@@ -7,6 +7,8 @@ import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 export type WorkshopScheduleStatus = 'upcoming' | 'ongoing' | 'completed';
 export type WorkshopScheduleFilter = '' | 'all' | WorkshopScheduleStatus;
 export type WorkshopSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
+const PRE_LOGIN_ALLOWED_PAGE_SIZES = new Set<unknown>([10, 20, 50, 100, 'all']);
+const PRE_LOGIN_DEFAULT_PAGE_SIZE = 10;
 
 export interface WorkshopPayload {
   title: string;
@@ -119,6 +121,10 @@ export class WorkshopService {
     );
   }
 
+  getPreLoginWorkshops(payload: Record<string, unknown> = {}): Observable<WorkshopListResponse> {
+    return this.getPublicWorkshops(this.normalizePreLoginPayload(payload));
+  }
+
   getWorkshopById(payload: { id: number }): Observable<WorkshopDetailResponse> {
     return this.http.post<WorkshopDetailResponse>(`${this.API_URL}/getWorkshopById`, payload);
   }
@@ -141,6 +147,22 @@ export class WorkshopService {
   private listRequestOptions(): { context: HttpContext } {
     return {
       context: new HttpContext().set(SKIP_SPINNER, true),
+    };
+  }
+
+  private normalizePreLoginPayload(payload: Record<string, unknown>): Record<string, unknown> {
+    const rawPerPage = payload['perPage'];
+    const numericPerPage =
+      typeof rawPerPage === 'string' && rawPerPage !== 'all' && rawPerPage.trim() !== ''
+        ? Number(rawPerPage)
+        : rawPerPage;
+
+    return {
+      page: 1,
+      ...payload,
+      perPage: PRE_LOGIN_ALLOWED_PAGE_SIZES.has(numericPerPage)
+        ? numericPerPage
+        : PRE_LOGIN_DEFAULT_PAGE_SIZE,
     };
   }
 }

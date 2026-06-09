@@ -8,15 +8,17 @@ import {
   SeminarItem,
   SeminarPaginationMeta,
   SeminarScheduleFilter,
+  SeminarScheduleStatus,
   SeminarService,
   SeminarSortOption,
   SeminarSummary,
 } from '../../services/seminar';
+import { AddSeminar } from '../add-seminar/add-seminar';
 
 @Component({
   selector: 'app-view-my-seminar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AddSeminar],
   templateUrl: './view-my-seminar.html',
   styleUrl: './view-my-seminar.scss',
 })
@@ -32,6 +34,7 @@ export class ViewMySeminar implements OnInit {
   ];
   readonly scheduleFilters: Array<{ value: SeminarScheduleFilter; label: string }> = [
     { value: '', label: 'All Timeline' },
+    { value: 'ongoing', label: 'Ongoing' },
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'completed', label: 'Completed' },
   ];
@@ -44,6 +47,7 @@ export class ViewMySeminar implements OnInit {
   scheduleStatus: SeminarScheduleFilter = '';
   sortBy: SeminarSortOption = 'newest';
   pageInput = 1;
+  editingSeminar: SeminarItem | null = null;
   meta: SeminarPaginationMeta = this.createDefaultMeta();
   summary: SeminarSummary = this.createDefaultSummary();
 
@@ -155,11 +159,30 @@ export class ViewMySeminar implements OnInit {
     void this.router.navigate([this.addRoute]);
   }
 
-  goToEditSeminar(seminar: SeminarItem): void {
-    void this.router.navigate(['/application/workshopSeminar/seminar/edit', seminar.id]);
+  openEditSeminar(seminar: SeminarItem): void {
+    if (this.isOngoing(seminar)) {
+      return;
+    }
+
+    this.editingSeminar = seminar;
+    this.cdr.markForCheck();
+  }
+
+  closeEditSeminar(): void {
+    this.editingSeminar = null;
+    this.cdr.markForCheck();
+  }
+
+  async onSeminarSaved(): Promise<void> {
+    this.closeEditSeminar();
+    await this.loadSeminars(this.meta.currentPage);
   }
 
   async deleteSeminar(seminar: SeminarItem): Promise<void> {
+    if (this.isOngoing(seminar)) {
+      return;
+    }
+
     const confirmed = await this.alertHelper.confirm(
       `Do you want to delete "${seminar.title}"?`,
       'Delete Seminar',
@@ -187,6 +210,10 @@ export class ViewMySeminar implements OnInit {
   }
 
   async toggleStatus(seminar: SeminarItem): Promise<void> {
+    if (this.isOngoing(seminar)) {
+      return;
+    }
+
     const nextStatus = this.isActive(seminar) ? 0 : 1;
     const confirmed = await this.alertHelper.confirm(
       `Do you want to mark this seminar as ${nextStatus === 1 ? 'active' : 'inactive'}?`,
@@ -221,6 +248,18 @@ export class ViewMySeminar implements OnInit {
 
   isActive(seminar: SeminarItem): boolean {
     return Number(seminar.status) === 1;
+  }
+
+  isOngoing(seminar: SeminarItem): boolean {
+    return seminar.scheduleStatus === 'ongoing';
+  }
+
+  getScheduleLabel(scheduleStatus: SeminarScheduleStatus): string {
+    if (scheduleStatus === 'ongoing') {
+      return 'Ongoing';
+    }
+
+    return scheduleStatus === 'completed' ? 'Completed' : 'Upcoming';
   }
 
   formatPrice(value: number): string {
@@ -314,10 +353,16 @@ export class ViewMySeminar implements OnInit {
         price: Number.isFinite(Number(seminar.price)) ? Number(seminar.price) : 0,
         status,
         statusLabel: seminar.statusLabel || (status === 1 ? 'Active' : 'Inactive'),
-        scheduleStatus: seminar.scheduleStatus === 'completed' ? 'completed' : 'upcoming',
+        scheduleStatus: this.normalizeScheduleStatus(seminar.scheduleStatus),
         takeaways: Array.isArray(seminar.takeaways) ? seminar.takeaways : [],
       };
     });
+  }
+
+  private normalizeScheduleStatus(scheduleStatus: SeminarItem['scheduleStatus']): SeminarScheduleStatus {
+    return scheduleStatus === 'ongoing' || scheduleStatus === 'completed'
+      ? scheduleStatus
+      : 'upcoming';
   }
 
   private createDefaultMeta(): SeminarPaginationMeta {
@@ -337,6 +382,7 @@ export class ViewMySeminar implements OnInit {
       activeSeminars: 0,
       inactiveSeminars: 0,
       upcomingSeminars: 0,
+      ongoingSeminars: 0,
       completedSeminars: 0,
     };
   }

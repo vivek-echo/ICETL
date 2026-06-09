@@ -972,10 +972,10 @@ class PaymentController extends Controller
 
         $userId = (int) $request->user()->id;
         $programType = strtolower(trim((string) $request->query('type', 'all')));
-        $entityLabels = match ($programType) {
-            'workshop' => ['Workshop'],
-            'seminar' => ['Seminar'],
-            default => ['Workshop', 'Seminar'],
+        $programTypes = match ($programType) {
+            'workshop' => ['workshop'],
+            'seminar' => ['seminar'],
+            default => ['workshop', 'seminar'],
         };
 
         $requiredTables = ['orders', 'payments', 'order_items', 'invoices', 'workshops', 'seminars'];
@@ -991,16 +991,18 @@ class PaymentController extends Controller
             ], 500);
         }
 
-        if (
-            !Schema::hasColumn('order_items', 'entityType')
-            || !Schema::hasColumn('order_items', 'entityId')
-        ) {
-            return response()->json([
-                'success' => true,
-                'message' => 'My programs fetched successfully.',
-                'data' => [],
-            ]);
-        }
+        $hasOrderItemEntityType = Schema::hasColumn('order_items', 'entityType');
+        $hasOrderItemEntityId = Schema::hasColumn('order_items', 'entityId');
+        $hasInvoiceEntityType = Schema::hasColumn('invoices', 'entityType');
+        $hasInvoiceEntityId = Schema::hasColumn('invoices', 'entityId');
+        $effectiveTypeSql = $this->programEntityTypeCoalesceSql(array_filter([
+            $hasOrderItemEntityType ? 'oi.entityType' : null,
+            $hasInvoiceEntityType ? 'i.entityType' : null,
+        ]));
+        $effectiveIdSql = $this->programEntityIdCoalesceSql(array_filter([
+            $hasOrderItemEntityId ? 'oi.entityId' : null,
+            $hasInvoiceEntityId ? 'i.entityId' : null,
+        ]));
 
         $rows = DB::table('order_items as oi')
             ->join('orders as o', function ($join) {
@@ -1017,25 +1019,34 @@ class PaymentController extends Controller
                 $join->on('i.orderId', '=', 'o.id')
                     ->where('i.deletedFlag', 0);
             })
-            ->leftJoin('workshops as w', function ($join) {
-                $join->on('w.id', '=', 'oi.entityId')
-                    ->where('oi.entityType', 'Workshop')
+            ->leftJoin('workshops as w', function ($join) use ($effectiveIdSql, $effectiveTypeSql) {
+                $join->whereRaw("w.id = {$effectiveIdSql}")
+                    ->whereRaw("{$effectiveTypeSql} = ?", ['workshop'])
                     ->where('w.deletedFlag', 0);
             })
-            ->leftJoin('seminars as s', function ($join) {
-                $join->on('s.id', '=', 'oi.entityId')
-                    ->where('oi.entityType', 'Seminar')
+            ->leftJoin('seminars as s', function ($join) use ($effectiveIdSql, $effectiveTypeSql) {
+                $join->whereRaw("s.id = {$effectiveIdSql}")
+                    ->whereRaw("{$effectiveTypeSql} = ?", ['seminar'])
                     ->where('s.deletedFlag', 0);
             })
             ->where('o.userId', $userId)
             ->where('oi.deletedFlag', 0)
-            ->whereIn('oi.entityType', $entityLabels)
-            ->whereNotNull('oi.entityId')
+            ->where(function ($query) use ($effectiveTypeSql, $programTypes) {
+                $query->whereIn(DB::raw($effectiveTypeSql), $programTypes)
+                    ->orWhere(function ($legacyQuery) {
+                        $legacyQuery->where(function ($courseQuery) {
+                            $courseQuery->whereNull('oi.courseId')
+                                ->orWhere('oi.courseId', 0);
+                        });
+                    });
+            })
             ->select(
                 'oi.id as purchaseItemId',
                 'oi.orderId',
-                'oi.entityType',
-                'oi.entityId',
+                DB::raw("{$effectiveTypeSql} as normalizedEntityType"),
+                DB::raw("{$effectiveIdSql} as normalizedEntityId"),
+                $hasOrderItemEntityType ? 'oi.entityType' : DB::raw('NULL as entityType'),
+                $hasOrderItemEntityId ? 'oi.entityId' : DB::raw('NULL as entityId'),
                 Schema::hasColumn('order_items', 'entityCode') ? 'oi.entityCode' : DB::raw('NULL as entityCode'),
                 Schema::hasColumn('order_items', 'entityTitle') ? 'oi.entityTitle' : DB::raw('NULL as entityTitle'),
                 'oi.price as itemPrice',
@@ -1047,6 +1058,7 @@ class PaymentController extends Controller
                 'p.razorpayPaymentId',
                 'p.paymentReference',
                 'i.invoiceNumber',
+                'i.invoiceData',
                 'i.paymentReference as invoicePaymentReference',
                 'w.title as workshopTitle',
                 'w.topic as workshopTopic',
@@ -1087,6 +1099,7 @@ class PaymentController extends Controller
             'message' => 'My programs fetched successfully.',
             'data' => $rows
                 ->map(fn ($row) => $this->formatMyProgram($row, $request))
+                ->filter(fn (array $program) => in_array($program['type'], $programTypes, true) && (int) $program['id'] > 0)
                 ->values(),
         ]);
     }
@@ -1616,7 +1629,49 @@ class PaymentController extends Controller
 
     private function normalizeProgramEntityType(mixed $value): string
     {
-        return strtolower(trim((string) $value)) === 'seminar' ? 'seminar' : 'workshop';
+        return $this->resolveProgramEntityType($value) ?? 'workshop';
+    }
+
+    private function resolveProgramEntityType(mixed $value): ?string
+    {
+        $normalized = strtolower(trim((string) $value));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_contains($normalized, 'seminar')) {
+            return 'seminar';
+        }
+
+        if (str_contains($normalized, 'workshop')) {
+            return 'workshop';
+        }
+
+        return null;
+    }
+
+    private function programEntityTypeSql(string $column): string
+    {
+        return "CASE
+            WHEN LOWER(TRIM({$column})) LIKE '%seminar%' THEN 'seminar'
+            WHEN LOWER(TRIM({$column})) LIKE '%workshop%' THEN 'workshop'
+            ELSE NULL
+        END";
+    }
+
+    private function programEntityTypeCoalesceSql(array $columns): string
+    {
+        $expressions = array_map(fn (string $column): string => $this->programEntityTypeSql($column), $columns);
+
+        return empty($expressions) ? 'NULL' : 'COALESCE(' . implode(', ', $expressions) . ')';
+    }
+
+    private function programEntityIdCoalesceSql(array $columns): string
+    {
+        $expressions = array_map(fn (string $column): string => "NULLIF({$column}, 0)", $columns);
+
+        return empty($expressions) ? 'NULL' : 'COALESCE(' . implode(', ', $expressions) . ')';
     }
 
     private function programEntityLabel(string $entityType): string
@@ -1700,32 +1755,41 @@ class PaymentController extends Controller
 
     private function formatMyProgram(object $row, Request $request): array
     {
-        $programType = $this->normalizeProgramEntityType($row->entityType ?? '');
+        $invoiceEntity = $this->invoiceEntityFromJson($row->invoiceData ?? null);
+        $programType = $this->resolveProgramEntityType($row->normalizedEntityType ?? null)
+            ?? $this->resolveProgramEntityType($row->entityType ?? null)
+            ?? $this->resolveProgramEntityType($invoiceEntity['entityType'] ?? null)
+            ?? 'workshop';
         $isSeminar = $programType === 'seminar';
         $entityLabel = $this->programEntityLabel($programType);
-        $title = $isSeminar ? ($row->seminarTitle ?? null) : ($row->workshopTitle ?? null);
-        $topic = $isSeminar ? ($row->seminarTopic ?? null) : ($row->workshopTopic ?? null);
-        $venue = $isSeminar ? ($row->seminarVenue ?? null) : ($row->workshopVenue ?? null);
-        $city = $isSeminar ? ($row->seminarCity ?? null) : ($row->workshopCity ?? null);
-        $startDate = $isSeminar ? ($row->seminarEventDate ?? null) : ($row->workshopStartDate ?? null);
-        $endDate = $isSeminar ? null : ($row->workshopEndDate ?? null);
-        $startTime = $isSeminar ? ($row->seminarStartTime ?? null) : ($row->workshopStartTime ?? null);
-        $endTime = $isSeminar ? ($row->seminarEndTime ?? null) : ($row->workshopEndTime ?? null);
-        $speakerName = $isSeminar ? ($row->seminarSpeakerName ?? null) : ($row->workshopSpeakerName ?? null);
-        $capacity = $isSeminar ? ($row->seminarCapacity ?? null) : ($row->workshopCapacity ?? null);
-        $price = $isSeminar ? ($row->seminarPrice ?? null) : ($row->workshopPrice ?? null);
-        $description = $isSeminar ? ($row->seminarDescription ?? null) : ($row->workshopDescription ?? null);
-        $takeaways = $isSeminar ? ($row->seminarTakeaways ?? null) : ($row->workshopTakeaways ?? null);
-        $bannerImage = $isSeminar ? ($row->seminarBannerImage ?? null) : ($row->workshopBannerImage ?? null);
-        $status = (int) ($isSeminar ? ($row->seminarStatus ?? 0) : ($row->workshopStatus ?? 0));
+        $entityId = (int) ($row->normalizedEntityId ?? $row->entityId ?? ($invoiceEntity['entityId'] ?? 0));
+        $joinedTitle = $isSeminar ? ($row->seminarTitle ?? null) : ($row->workshopTitle ?? null);
+        $details = (!$joinedTitle && $entityId > 0) ? $this->myProgramDetails($programType, $entityId) : null;
+        $title = $joinedTitle ?? ($details->title ?? null);
+        $topic = ($isSeminar ? ($row->seminarTopic ?? null) : ($row->workshopTopic ?? null)) ?? ($details->topic ?? null);
+        $venue = ($isSeminar ? ($row->seminarVenue ?? null) : ($row->workshopVenue ?? null)) ?? ($details->venue ?? null);
+        $city = ($isSeminar ? ($row->seminarCity ?? null) : ($row->workshopCity ?? null)) ?? ($details->city ?? null);
+        $startDate = ($isSeminar ? ($row->seminarEventDate ?? null) : ($row->workshopStartDate ?? null)) ?? ($details->startDate ?? null);
+        $endDate = ($isSeminar ? null : ($row->workshopEndDate ?? null)) ?? ($details->endDate ?? null);
+        $startTime = ($isSeminar ? ($row->seminarStartTime ?? null) : ($row->workshopStartTime ?? null)) ?? ($details->startTime ?? null);
+        $endTime = ($isSeminar ? ($row->seminarEndTime ?? null) : ($row->workshopEndTime ?? null)) ?? ($details->endTime ?? null);
+        $speakerName = ($isSeminar ? ($row->seminarSpeakerName ?? null) : ($row->workshopSpeakerName ?? null)) ?? ($details->speakerName ?? null);
+        $capacity = ($isSeminar ? ($row->seminarCapacity ?? null) : ($row->workshopCapacity ?? null)) ?? ($details->capacity ?? null);
+        $price = ($isSeminar ? ($row->seminarPrice ?? null) : ($row->workshopPrice ?? null)) ?? ($details->price ?? null);
+        $description = ($isSeminar ? ($row->seminarDescription ?? null) : ($row->workshopDescription ?? null)) ?? ($details->description ?? null);
+        $takeaways = ($isSeminar ? ($row->seminarTakeaways ?? null) : ($row->workshopTakeaways ?? null)) ?? ($details->takeaways ?? null);
+        $bannerImage = ($isSeminar ? ($row->seminarBannerImage ?? null) : ($row->workshopBannerImage ?? null)) ?? ($details->bannerImage ?? null);
+        $status = (int) (($isSeminar ? ($row->seminarStatus ?? null) : ($row->workshopStatus ?? null)) ?? ($details->status ?? 0));
+        $entityCode = $row->entityCode ?? ($invoiceEntity['entityCode'] ?? ($details->code ?? null));
+        $entityTitle = $row->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null);
 
         return [
             'purchaseId' => (int) $row->purchaseItemId,
-            'id' => (int) $row->entityId,
+            'id' => $entityId,
             'type' => $programType,
             'entityType' => $entityLabel,
-            'code' => $row->entityCode ?? null,
-            'title' => (string) ($title ?: ($row->entityTitle ?? $entityLabel)),
+            'code' => $entityCode,
+            'title' => (string) ($title ?: ($entityTitle ?? $entityLabel)),
             'topic' => (string) ($topic ?? ''),
             'venue' => (string) ($venue ?? ''),
             'city' => (string) ($city ?? ''),
@@ -1762,6 +1826,61 @@ class PaymentController extends Controller
                 $row->paymentReference
             ),
         ];
+    }
+
+    private function myProgramDetails(string $programType, int $entityId): ?object
+    {
+        if ($entityId <= 0) {
+            return null;
+        }
+
+        if ($programType === 'seminar') {
+            return DB::table('seminars as s')
+                ->where('s.id', $entityId)
+                ->where('s.deletedFlag', 0)
+                ->select(
+                    EntityCodeService::codeSelect('seminars', 's'),
+                    's.title',
+                    's.topic',
+                    's.venue',
+                    's.city',
+                    's.eventDate as startDate',
+                    DB::raw('NULL as endDate'),
+                    's.startTime',
+                    's.endTime',
+                    's.speakerName',
+                    's.capacity',
+                    's.price',
+                    's.description',
+                    's.takeaways',
+                    's.bannerImage',
+                    's.status'
+                )
+                ->first();
+        }
+
+        return DB::table('workshops as w')
+            ->where('w.id', $entityId)
+            ->where('w.deletedFlag', 0)
+            ->select(
+                EntityCodeService::codeSelect('workshops', 'w'),
+                'w.title',
+                'w.topic',
+                'w.venue',
+                'w.city',
+                'w.startDate',
+                'w.endDate',
+                'w.startTime',
+                'w.endTime',
+                'w.speakerName',
+                'w.capacity',
+                'w.price',
+                'w.description',
+                'w.takeaways',
+                'w.bannerImage',
+                'w.status'
+            )
+            ->first();
     }
 
     private function programScheduleStatus(string $programType, string $startDate, ?string $endDate): string
@@ -1813,6 +1932,8 @@ class PaymentController extends Controller
 
     private function hasSuccessfulProgramPurchase(int $userId, string $entityLabel, int $entityId): bool
     {
+        $entityType = $this->normalizeProgramEntityType($entityLabel);
+
         if (
             Schema::hasTable('invoices')
             && Schema::hasColumn('invoices', 'entityType')
@@ -1821,7 +1942,7 @@ class PaymentController extends Controller
             $invoiceMatch = DB::table('invoices as i')
                 ->join('orders as o', 'o.id', '=', 'i.orderId')
                 ->where('i.userId', $userId)
-                ->where('i.entityType', $entityLabel)
+                ->whereIn(DB::raw($this->programEntityTypeSql('i.entityType')), [$entityType])
                 ->where('i.entityId', $entityId)
                 ->where('i.deletedFlag', 0)
                 ->where('o.status', 'paid')
@@ -1840,7 +1961,7 @@ class PaymentController extends Controller
         ) {
             return DB::table('payment_logs')
                 ->where('userId', $userId)
-                ->where('entityType', $entityLabel)
+                ->whereIn(DB::raw($this->programEntityTypeSql('entityType')), [$entityType])
                 ->where('entityId', $entityId)
                 ->where('eventType', 'payment.verified')
                 ->where('status', 'success')
@@ -1967,11 +2088,16 @@ class PaymentController extends Controller
             return null;
         }
 
+        $firstItem = null;
+        if (isset($payload['items']) && is_array($payload['items']) && isset($payload['items'][0]) && is_array($payload['items'][0])) {
+            $firstItem = $payload['items'][0];
+        }
+
         return [
-            'entityType' => $payload['entityType'] ?? null,
-            'entityId' => $payload['entityId'] ?? null,
-            'entityCode' => $payload['entityCode'] ?? null,
-            'entityTitle' => $payload['entityTitle'] ?? null,
+            'entityType' => $payload['entityType'] ?? ($firstItem['entityType'] ?? null),
+            'entityId' => $payload['entityId'] ?? ($firstItem['entityId'] ?? null),
+            'entityCode' => $payload['entityCode'] ?? ($firstItem['entityCode'] ?? ($firstItem['code'] ?? null)),
+            'entityTitle' => $payload['entityTitle'] ?? ($firstItem['entityTitle'] ?? ($firstItem['title'] ?? null)),
         ];
     }
 

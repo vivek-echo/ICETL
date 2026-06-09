@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyLearningCourse, PaymentService } from '../../services/payment';
-
+import { CertificateService } from '../../services/certificate.service';
 @Component({
   selector: 'app-my-courses',
   imports: [CommonModule, RouterLink, FormsModule],
@@ -28,10 +28,55 @@ export class MyCourses implements OnInit {
     private readonly paymentService: PaymentService,
     private readonly alertHelper: AlertHelperService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly certificateService: CertificateService,
   ) {}
 
   ngOnInit(): void {
     void this.loadMyLearning();
+  }
+
+  certificateLoadingId: number | null = null;
+
+  canDownloadCourseCertificate(course: any): boolean {
+    const progress = Number(course?.progressPercent || 0);
+    // return progress >= 75;
+    return true
+  }
+
+  downloadCourseCertificate(courseId: number): void {
+    if (!courseId || this.certificateLoadingId === courseId) {
+      return;
+    }
+
+    this.certificateLoadingId = courseId;
+
+    const payload = {
+      moduleType: 'COURSE',
+      moduleId: courseId,
+    };
+
+    this.certificateService.generateCertificate(payload).subscribe({
+      next: (res: any) => {
+        this.certificateLoadingId = null;
+
+        const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+
+        if (downloadUrl) {
+          window.open(downloadUrl, '_blank');
+          return;
+        }
+
+        // alert('Certificate generated, but download link not found.');
+      },
+      error: (error) => {
+        this.certificateLoadingId = null;
+
+        const message =
+          error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
+
+        // alert(message);
+      },
+    });
   }
 
   async loadMyLearning(): Promise<void> {
@@ -40,7 +85,7 @@ export class MyCourses implements OnInit {
 
     try {
       const response = await lastValueFrom(this.paymentService.getMyLearning());
-      this.courses = response.success ? response.data ?? [] : [];
+      this.courses = response.success ? (response.data ?? []) : [];
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch your purchased courses',
@@ -158,5 +203,4 @@ export class MyCourses implements OnInit {
 
     return /^https?:\/\//i.test(url) ? url : `https://${url}`;
   }
-
 }

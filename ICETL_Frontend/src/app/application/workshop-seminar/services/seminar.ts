@@ -7,6 +7,8 @@ import { SKIP_SPINNER } from '../../../commonServices/spinner/spinner.tokens';
 export type SeminarScheduleStatus = 'upcoming' | 'ongoing' | 'completed';
 export type SeminarScheduleFilter = '' | 'all' | SeminarScheduleStatus;
 export type SeminarSortOption = 'newest' | 'oldest' | 'dateAsc' | 'dateDesc';
+const PRE_LOGIN_ALLOWED_PAGE_SIZES = new Set<unknown>([10, 20, 50, 100, 'all']);
+const PRE_LOGIN_DEFAULT_PAGE_SIZE = 10;
 
 export interface SeminarPayload {
   title: string;
@@ -119,6 +121,10 @@ export class SeminarService {
     );
   }
 
+  getPreLoginSeminars(payload: Record<string, unknown> = {}): Observable<SeminarListResponse> {
+    return this.getPublicSeminars(this.normalizePreLoginPayload(payload));
+  }
+
   getSeminarById(payload: { id: number }): Observable<SeminarDetailResponse> {
     return this.http.post<SeminarDetailResponse>(`${this.API_URL}/getSeminarById`, payload);
   }
@@ -141,6 +147,22 @@ export class SeminarService {
   private listRequestOptions(): { context: HttpContext } {
     return {
       context: new HttpContext().set(SKIP_SPINNER, true),
+    };
+  }
+
+  private normalizePreLoginPayload(payload: Record<string, unknown>): Record<string, unknown> {
+    const rawPerPage = payload['perPage'];
+    const numericPerPage =
+      typeof rawPerPage === 'string' && rawPerPage !== 'all' && rawPerPage.trim() !== ''
+        ? Number(rawPerPage)
+        : rawPerPage;
+
+    return {
+      page: 1,
+      ...payload,
+      perPage: PRE_LOGIN_ALLOWED_PAGE_SIZES.has(numericPerPage)
+        ? numericPerPage
+        : PRE_LOGIN_DEFAULT_PAGE_SIZE,
     };
   }
 }

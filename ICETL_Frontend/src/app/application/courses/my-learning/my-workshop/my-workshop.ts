@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
-
+import { CertificateService } from '../../services/certificate.service';
 @Component({
   selector: 'app-my-workshop',
   imports: [CommonModule, FormsModule, RouterLink],
@@ -19,7 +19,7 @@ export class MyWorkshop implements OnInit {
   readonly browseRoute = '/application/courses/manageCourses/browseWorkshop';
   readonly placeholderImage = 'assets/images/event/grid-type-02.jpg';
   readonly skeletonRows = Array.from({ length: 6 }, (_, index) => index);
-
+  certificateLoading = false;
   programs: MyProgram[] = [];
   loading = false;
   search = '';
@@ -34,6 +34,7 @@ export class MyWorkshop implements OnInit {
   constructor(
     private readonly paymentService: PaymentService,
     private readonly alertHelper: AlertHelperService,
+    private readonly certificateService: CertificateService,
     private readonly cdr: ChangeDetectorRef,
   ) {}
 
@@ -41,13 +42,47 @@ export class MyWorkshop implements OnInit {
     void this.loadPrograms();
   }
 
+  downloadWorkshopCertificate(workshopId: number): void {
+  if (!workshopId || this.certificateLoading) {
+    return;
+  }
+
+  this.certificateLoading = true;
+
+  const payload = {
+    moduleType: 'WORKSHOP',
+    moduleId: workshopId,
+  };
+
+  this.certificateService.generateCertificate(payload).subscribe({
+    next: (res: any) => {
+      this.certificateLoading = false;
+
+      if (res?.downloadUrl) {
+        window.open(res.downloadUrl, '_blank');
+        return;
+      }
+
+      if (res?.data?.downloadUrl) {
+        window.open(res.data.downloadUrl, '_blank');
+        return;
+      }
+
+      // alert('Certificate generated, but download link not found.');
+    },
+    error: (error) => {
+      this.certificateLoading = false;
+    },
+  });
+}
+
   async loadPrograms(): Promise<void> {
     this.loading = true;
     this.cdr.detectChanges();
 
     try {
       const response = await lastValueFrom(this.paymentService.getMyPrograms(this.programType));
-      this.programs = response.success ? response.data ?? [] : [];
+      this.programs = response.success ? (response.data ?? []) : [];
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || `Unable to fetch your enrolled ${this.pluralLabel.toLowerCase()}.`,
@@ -87,7 +122,9 @@ export class MyWorkshop implements OnInit {
       return 'Time TBA';
     }
 
-    return program.endTime ? `${program.startTime} - ${program.endTime}` : program.startTime || 'Time TBA';
+    return program.endTime
+      ? `${program.startTime} - ${program.endTime}`
+      : program.startTime || 'Time TBA';
   }
 
   getScheduleLabel(program: MyProgram): string {
@@ -160,5 +197,4 @@ export class MyWorkshop implements OnInit {
   get completedProgramsCount(): number {
     return this.programs.filter((program) => program.scheduleStatus === 'completed').length;
   }
-
 }

@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 class SeminarController extends Controller
 {
     private const SCHEDULE_UPCOMING = 'upcoming';
+    private const SCHEDULE_ONGOING = 'ongoing';
     private const SCHEDULE_COMPLETED = 'completed';
 
     public function createSeminar(Request $request)
@@ -261,6 +262,13 @@ class SeminarController extends Controller
                 ], 404);
             }
 
+            if ($this->getScheduleStatus((string) ($seminar->eventDate ?? '')) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing seminars cannot be edited.'
+                ], 422);
+            }
+
             $bannerImagePath = $this->storeBannerImage($request);
             $currentBannerImage = $seminar->bannerImage ?? null;
 
@@ -321,6 +329,26 @@ class SeminarController extends Controller
         }
 
         try {
+            $seminar = DB::table('seminars')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$seminar) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Seminar not found'
+                ], 404);
+            }
+
+            if ($this->getScheduleStatus((string) ($seminar->eventDate ?? '')) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing seminars cannot be activated or deactivated.'
+                ], 422);
+            }
+
             $updated = DB::table('seminars')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
@@ -369,6 +397,26 @@ class SeminarController extends Controller
         }
 
         try {
+            $seminar = DB::table('seminars')
+                ->where('id', (int) $request->input('id'))
+                ->where('createdBy', (int) $user->id)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (!$seminar) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Seminar not found'
+                ], 404);
+            }
+
+            if ($this->getScheduleStatus((string) ($seminar->eventDate ?? '')) === self::SCHEDULE_ONGOING) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ongoing seminars cannot be deleted.'
+                ], 422);
+            }
+
             $updated = DB::table('seminars')
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
@@ -422,7 +470,7 @@ class SeminarController extends Controller
             'search' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
             'status' => 'nullable|in:0,1',
-            'scheduleStatus' => 'nullable|in:all,upcoming,completed',
+            'scheduleStatus' => 'nullable|in:all,upcoming,ongoing,completed',
             'sortBy' => 'nullable|in:newest,oldest,dateAsc,dateDesc',
         ]);
 
@@ -638,9 +686,11 @@ class SeminarController extends Controller
     private function buildSummary($summaryQuery): array
     {
         $upcomingQuery = clone $summaryQuery;
+        $ongoingQuery = clone $summaryQuery;
         $completedQuery = clone $summaryQuery;
 
         $this->applyScheduleStatusFilter($upcomingQuery, self::SCHEDULE_UPCOMING);
+        $this->applyScheduleStatusFilter($ongoingQuery, self::SCHEDULE_ONGOING);
         $this->applyScheduleStatusFilter($completedQuery, self::SCHEDULE_COMPLETED);
 
         return [
@@ -648,6 +698,7 @@ class SeminarController extends Controller
             'activeSeminars' => (clone $summaryQuery)->where('s.status', 1)->count(),
             'inactiveSeminars' => (clone $summaryQuery)->where('s.status', 0)->count(),
             'upcomingSeminars' => $upcomingQuery->count(),
+            'ongoingSeminars' => $ongoingQuery->count(),
             'completedSeminars' => $completedQuery->count(),
         ];
     }
@@ -656,8 +707,13 @@ class SeminarController extends Controller
     {
         $today = Carbon::today()->toDateString();
 
+        if ($scheduleStatus === self::SCHEDULE_ONGOING) {
+            $query->whereDate('s.eventDate', '=', $today);
+            return;
+        }
+
         if ($scheduleStatus === self::SCHEDULE_UPCOMING) {
-            $query->whereDate('s.eventDate', '>=', $today);
+            $query->whereDate('s.eventDate', '>', $today);
             return;
         }
 
@@ -821,6 +877,10 @@ class SeminarController extends Controller
     {
         if ($eventDate && $eventDate < Carbon::today()->toDateString()) {
             return self::SCHEDULE_COMPLETED;
+        }
+
+        if ($eventDate === Carbon::today()->toDateString()) {
+            return self::SCHEDULE_ONGOING;
         }
 
         return self::SCHEDULE_UPCOMING;
