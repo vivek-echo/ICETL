@@ -888,6 +888,8 @@ class PaymentController extends Controller
                 'c.thumbnail',
                 'c.status',
                 'c.courseType',
+                'c.startDate',
+                'c.endDate',
                 'c.youtubeLiveUrl',
                 'c.meetingLink',
                 'o.razorpayOrderId',
@@ -950,6 +952,8 @@ class PaymentController extends Controller
                 'orderId' => $course->orderId ? (int) $course->orderId : null,
                 'invoiceNo' => $course->invoiceNumber,
                 'razorpayOrderId' => $course->razorpayOrderId,
+                'startDate' => $course->startDate,
+                'endDate' => $course->endDate,
             ];
         })->values();
 

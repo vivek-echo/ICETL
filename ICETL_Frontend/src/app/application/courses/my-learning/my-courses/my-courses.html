@@ -180,7 +180,7 @@
           <a class="learning-card__action learning-card__action--youtube" [href]="getYoutubeUrl(course)" target="_blank"
             rel="noopener noreferrer">
             <i class="fa-brands fa-youtube"></i>
-            YouTube View
+            YouTube
           </a>
           }
 
@@ -192,6 +192,7 @@
           </a>
           }
 
+
           @if (!hasYoutubeLink(course) && !hasMeetingLink(course)) {
           <span class="learning-card__action learning-card__action--disabled">
             <i class="fa-solid fa-link-slash"></i>
@@ -202,22 +203,23 @@
           <a class="learning-card__action learning-card__action--primary"
             [routerLink]="['/application/courses/myLearning/learn']" [state]="{ courseId: course.id }">
             <i class="fa-solid fa-play"></i>
-            Continue Learning
+            Continue
           </a>
+
+
+          }
 
           @if (canDownloadCourseCertificate(course)) {
           <a class="learning-card__action learning-card__action--certificate" href="javascript:void(0)"
-            [class.learning-card__action--disabled]="certificateLoadingId === course.id"
-            (click)="downloadCourseCertificate(course.id)">
-            <i [class]="certificateLoadingId === course.id ? 'fa-solid fa-spinner fa-spin' : 'feather-file-text'"></i>
-            {{ certificateLoadingId === course.id ? 'Generating...' : ' Certificate' }}
+            [class.learning-card__action--disabled]="certificateLoading" (click)="downloadCourseCertificate(course.id ,course.courseType)">
+            
+            Certificate
           </a>
           } @else {
           <span class="learning-card__certificate-lock">
             <i class="fa-solid fa-lock"></i>
             Complete 75% to unlock certificate
           </span>
-          }
           }
         </div>
 

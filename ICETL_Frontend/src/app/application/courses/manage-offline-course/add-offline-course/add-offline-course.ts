@@ -88,9 +88,9 @@ export class AddOfflineCourse implements OnInit {
   ) {
     this.courseForm = this.fb.group(
       {
-        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(120)]],
+        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(50)]],
         categoryId: ['', Validators.required],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
+        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
         city: ['', FormValidationRules.requiredName()],
         startDate: ['', Validators.required],
         endDate: [''],

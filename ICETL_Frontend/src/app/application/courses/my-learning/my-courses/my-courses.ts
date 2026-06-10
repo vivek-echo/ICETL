@@ -6,6 +6,7 @@ import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyLearningCourse, PaymentService } from '../../services/payment';
 import { CertificateService } from '../../services/certificate.service';
+import { NgxSpinnerService } from 'ngx-spinner';
 @Component({
   selector: 'app-my-courses',
   imports: [CommonModule, RouterLink, FormsModule],
@@ -29,54 +30,66 @@ export class MyCourses implements OnInit {
     private readonly alertHelper: AlertHelperService,
     private readonly cdr: ChangeDetectorRef,
     private readonly certificateService: CertificateService,
+    private readonly spinner: NgxSpinnerService,
   ) {}
 
   ngOnInit(): void {
     void this.loadMyLearning();
   }
 
-  certificateLoadingId: number | null = null;
+  certificateLoading: boolean = false;
 
   canDownloadCourseCertificate(course: any): boolean {
     const progress = Number(course?.progressPercent || 0);
     // return progress >= 75;
-    return true
+    return true;
   }
 
-  downloadCourseCertificate(courseId: number): void {
-    if (!courseId || this.certificateLoadingId === courseId) {
+  async downloadCourseCertificate(courseId: number, courseType: any): Promise<void> {
+    if (!courseId || this.certificateLoading) {
       return;
     }
 
-    this.certificateLoadingId = courseId;
-
     const payload = {
-      moduleType: 'COURSE',
+      moduleType: courseType == 1 ? 'COURSE' : 'ACADEMIC_COURSE',
       moduleId: courseId,
     };
 
-    this.certificateService.generateCertificate(payload).subscribe({
-      next: (res: any) => {
-        this.certificateLoadingId = null;
+    this.spinner.show();
+    this.certificateLoading = true;
 
-        const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+    try {
+      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
 
-        if (downloadUrl) {
-          window.open(downloadUrl, '_blank');
-          return;
-        }
+      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
 
-        // alert('Certificate generated, but download link not found.');
-      },
-      error: (error) => {
-        this.certificateLoadingId = null;
+      if (!downloadUrl) {
+        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
+        return;
+      }
 
-        const message =
-          error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
+      /**
+       * Important:
+       * Reset loading BEFORE opening new tab.
+       * Otherwise browser focus change can delay Angular UI update.
+       */
+      this.certificateLoading = false;
+      this.spinner.hide();
+      this.cdr.detectChanges();
 
-        // alert(message);
-      },
-    });
+      setTimeout(() => {
+        window.open(downloadUrl, '_blank');
+      }, 0);
+    } catch (error: any) {
+      const message =
+        error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
+
+      // Swal.fire('Error', message, 'error');
+    } finally {
+      this.certificateLoading = false;
+      this.spinner.hide();
+      this.cdr.detectChanges();
+    }
   }
 
   async loadMyLearning(): Promise<void> {

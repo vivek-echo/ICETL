@@ -13,7 +13,72 @@ use App\Http\Controllers\AdminConsole\AdminConsoleController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+use Barryvdh\DomPDF\Facade\Pdf;
 
+Route::get('/view', function () {
+    $certificate = (object) [
+        'enrollmentId'    => 'LR_2026_4',
+        'studentId'       => 'ICETL-001',
+        'gender'          => '1',
+        'studentName'     => 'Vivek Kumar Jha',
+        'durationText'    => '1 weeks',
+        'grade'           => 'A',
+        'moduleTitle'     => 'Full Stack Web Development with Angular and Laravel',
+        'courseCategory'  => 'Finance and Accounting',
+        'issueDate'       => '2026-06-10',
+        'certificateNo'   => 'ICETL-C-2026-000001',
+    ];
+
+    $pdf = Pdf::loadView('certificates.course', [
+        'certificate' => $certificate,
+        'isPdf' => true,
+    ])->setPaper('a4', 'portrait');
+
+    return $pdf->stream('ICETL-C-2026-000001.pdf');
+});
+Route::get('/workshop-certificate', function () {
+    $startDate = '2026-06-15';
+    $endDate = '2026-06-16';
+
+    $start = strtotime($startDate);
+    $end = strtotime($endDate);
+
+    $days = $start && $end
+        ? max(1, ceil(($end - $start) / (24 * 60 * 60)) + 1)
+        : null;
+
+    $durationText = $days
+        ? $days . ' ' . ($days > 1 ? 'Days' : 'Day')
+        : '';
+
+    $certificate = (object) [
+        'certificateNo' => 'ICETL-WK-2026-000001',
+        'studentName' => 'Vivek',
+        'studentId' => 'LR_2026_4',
+        'workshopTitle' => 'Modern Web Development with Angular & Laravel',
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+        'workshopDate' => $startDate,
+        'issuedOn' => now()->format('Y-m-d'),
+        'durationText' => $durationText,
+        'gender' => 1,
+        'venue' => 'ICETL Training Hall asdsa asdcsad asdcsad zxcdsadc xcsdac, Patna',
+    ];
+
+    $pdf = Pdf::loadView('certificates.workshop', [
+        'certificate' => $certificate,
+        'isPdf' => true,
+    ])
+        ->setPaper('a4', 'portrait')
+        ->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'defaultFont' => 'DejaVu Serif',
+            'dpi' => 96,
+        ]);
+
+    return $pdf->stream('workshop-certificate-preview.pdf');
+});
 Route::get('/', function () {
     return redirect('adminConsoleLoginView');
 });
@@ -25,7 +90,7 @@ Route::POST('/adminLogout', [AdminConsoleController::class, 'adminLogout'])->nam
 Route::prefix('console')->middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', function () {
-        
+
         return view('adminConsole.dashboard');
     });
 

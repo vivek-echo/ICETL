@@ -22,6 +22,8 @@ class Certificate extends Model
         'durationText',
         'courseCategory',
         'grade',
+        'gender',
+        'venue',
         'score',
         'issueDate',
         'completionDate',
@@ -33,5 +35,7 @@ class Certificate extends Model
         'createdOn',
         'updatedOn',
         'deletedFlag',
+        'startDate',
+        'endDate',
     ];
 }

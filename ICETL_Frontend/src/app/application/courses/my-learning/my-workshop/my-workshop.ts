@@ -6,6 +6,7 @@ import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
 import { CertificateService } from '../../services/certificate.service';
+import { NgxSpinnerService } from 'ngx-spinner';
 @Component({
   selector: 'app-my-workshop',
   imports: [CommonModule, FormsModule, RouterLink],
@@ -36,45 +37,66 @@ export class MyWorkshop implements OnInit {
     private readonly alertHelper: AlertHelperService,
     private readonly certificateService: CertificateService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly spinner: NgxSpinnerService,
   ) {}
 
   ngOnInit(): void {
     void this.loadPrograms();
   }
 
-  downloadWorkshopCertificate(workshopId: number): void {
-  if (!workshopId || this.certificateLoading) {
-    return;
+
+  // canDownloadWorkshopCertificate(course: any): boolean {
+  //   const progress = Number(course?.progressPercent || 0);
+  //   // return progress >= 75;
+  //   return true;
+  // }
+
+  async downloadWorkshopCertificate(courseId: number, courseType: any): Promise<void> {
+    if (!courseId || this.certificateLoading) {
+      return;
+    }
+
+    const payload = {
+      moduleType:  'WORKSHOP',
+      moduleId: courseId,
+    };
+
+    this.spinner.show();
+    this.certificateLoading = true;
+
+    try {
+      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
+
+      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+
+      if (!downloadUrl) {
+        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
+        return;
+      }
+
+      /**
+       * Important:
+       * Reset loading BEFORE opening new tab.
+       * Otherwise browser focus change can delay Angular UI update.
+       */
+      this.certificateLoading = false;
+      this.spinner.hide();
+      this.cdr.detectChanges();
+
+      setTimeout(() => {
+        window.open(downloadUrl, '_blank');
+      }, 0);
+    } catch (error: any) {
+      const message =
+        error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
+
+      // Swal.fire('Error', message, 'error');
+    } finally {
+      this.certificateLoading = false;
+      this.spinner.hide();
+      this.cdr.detectChanges();
+    }
   }
-
-  this.certificateLoading = true;
-
-  const payload = {
-    moduleType: 'WORKSHOP',
-    moduleId: workshopId,
-  };
-
-  this.certificateService.generateCertificate(payload).subscribe({
-    next: (res: any) => {
-      this.certificateLoading = false;
-
-      if (res?.downloadUrl) {
-        window.open(res.downloadUrl, '_blank');
-        return;
-      }
-
-      if (res?.data?.downloadUrl) {
-        window.open(res.data.downloadUrl, '_blank');
-        return;
-      }
-
-      // alert('Certificate generated, but download link not found.');
-    },
-    error: (error) => {
-      this.certificateLoading = false;
-    },
-  });
-}
 
   async loadPrograms(): Promise<void> {
     this.loading = true;

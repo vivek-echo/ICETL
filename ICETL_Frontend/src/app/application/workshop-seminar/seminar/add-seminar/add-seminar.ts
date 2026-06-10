@@ -103,10 +103,10 @@ export class AddSeminar implements OnInit {
   ) {
     this.itemForm = this.fb.group(
       {
-        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(120)]],
-        topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
+        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(48)]],
+        topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
+        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
+        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(48)]],
         eventDate: ['', Validators.required],
         startTime: ['', Validators.required],
         endTime: [''],

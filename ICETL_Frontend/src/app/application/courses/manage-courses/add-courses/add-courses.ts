@@ -50,7 +50,7 @@ export class AddCourses implements OnInit {
     private alertHelper: AlertHelperService,
   ) {
     this.courseForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
+      title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(50)]],
       category: ['', Validators.required],
       instructor: [[], Validators.required],
       duration: [1, [Validators.required, Validators.min(1)]],

@@ -22,7 +22,7 @@ class CertificateController extends Controller
             'moduleId' => 'required|integer|min:1',
         ]);
         $user = $requestData['userProfile'] ?? null;
-    $userid = Crypt::decryptstring($user['id']);
+        $userid = Crypt::decryptstring($user['id']);
 
         $moduleType = $request->moduleType;
         $moduleId = (int) $request->moduleId;
@@ -61,10 +61,9 @@ class CertificateController extends Controller
             $certificateNo = $this->generateCertificateNo($moduleType);
             $verificationCode = Str::uuid()->toString();
             $verificationUrl = url('/verify-certificate/' . $certificateNo);
-
             $certificate = Certificate::create([
                 'certificateNo' => $certificateNo,
-                'userId' => $userid ,
+                'userId' => $userid,
                 'moduleType' => $moduleType,
                 'moduleId' => $moduleId,
                 'enrollmentId' =>  null, // learner code
@@ -75,7 +74,9 @@ class CertificateController extends Controller
                 'moduleTitle' => $moduleDetails['title'],
                 'durationText' => $moduleDetails['durationText'] ?? null,
                 'courseCategory' => $moduleDetails['courseCategory'] ?? null,
-
+                'endDate' => $moduleDetails['endDate'] ?? null,
+                'startDate' => $moduleDetails['startDate'] ?? null,
+                'venue' => $moduleDetails['venue'] ?? null,
                 'grade' => 'A',
                 'score' => null,
 
@@ -167,6 +168,8 @@ class CertificateController extends Controller
                 'courseCode' => $course->code ?? null,
                 'title' => $course->title,
                 'durationText' => $course->duration . ' ' . ($course->durationUnit == 1 ? 'weeks' : 'months'),
+                'startDate' => $course->startDate,
+                'endDate' => $course->endDate,
             ];
         }
 
@@ -181,13 +184,19 @@ class CertificateController extends Controller
             }
 
             return [
-                'title' => $workshop->title ?? $workshop->workshopTitle ?? $workshop->name ?? 'Workshop',
-                'durationText' => $workshop->duration ?? $workshop->durationText ?? null,
+                'title' => $workshop->title,
+                'venue' => $workshop->venue ?? null,
+                'startDate' => $workshop->startDate,
+                'endDate' => $workshop->endDate,
+                'durationText' => $this->getDurationText(
+                    $workshop->startDate,
+                    $workshop->endDate
+                )
             ];
         }
 
         if ($moduleType === 'ACADEMIC_COURSE') {
-            $academicCourse = DB::table('academic_courses')
+            $academicCourse = DB::table('courses')
                 ->where('id', $moduleId)
                 ->where('deletedFlag', 0)
                 ->first();
@@ -197,8 +206,28 @@ class CertificateController extends Controller
             }
 
             return [
-                'title' => $academicCourse->title ?? $academicCourse->courseTitle ?? $academicCourse->name ?? 'Academic Course',
-                'durationText' => $academicCourse->duration ?? $academicCourse->durationText ?? null,
+                'courseCategory' => $academicCourse->categoryId
+                    ? DB::table('coursecategories')->where('id', $academicCourse->categoryId)->value('categoryName')
+                    : null,
+
+                'courseCode' => $academicCourse->code ?? null,
+
+                'title' => $academicCourse->title,
+                'startDate' => $academicCourse->startDate,
+                'endDate' => $academicCourse->endDate,
+
+                'durationText' => $academicCourse->startDate && $academicCourse->endDate
+                    ? date('d M Y', strtotime($academicCourse->startDate))
+                    . ' - '
+                    . date('d M Y', strtotime($academicCourse->endDate))
+                    . ' ('
+                    . $this->getDurationText(
+                        $academicCourse->startDate,
+                        $academicCourse->endDate
+                    )
+                    . ')'
+                    : null,
+
             ];
         }
 
@@ -219,6 +248,41 @@ class CertificateController extends Controller
         }
 
         return null;
+    }
+
+    private function getDurationText($startDate, $endDate): ?string
+    {
+        if (!$startDate || !$endDate) {
+            return null;
+        }
+
+        $start = strtotime($startDate);
+        $end = strtotime($endDate);
+
+        if (!$start || !$end || $end < $start) {
+            return null;
+        }
+
+        // Inclusive days: 15 Jun to 16 Jun = 2 days
+        $days = floor(($end - $start) / (24 * 60 * 60)) + 1;
+
+        if ($days < 7) {
+            return $days . ' ' . ($days > 1 ? 'days' : 'day');
+        }
+
+        if ($days < 30) {
+            $weeks = ceil($days / 7);
+            return $weeks . ' ' . ($weeks > 1 ? 'weeks' : 'week');
+        }
+
+        if ($days < 365) {
+            $months = ceil($days / 30);
+            return $months . ' ' . ($months > 1 ? 'months' : 'month');
+        }
+
+        $years = round($days / 365, 1);
+
+        return $years . ' ' . ($years > 1 ? 'years' : 'year');
     }
 
     private function generateCertificateNo(string $moduleType): string
@@ -286,9 +350,26 @@ class CertificateController extends Controller
         $fileName = $certificate->certificateNo . '.pdf';
         $storagePath = $folder . '/' . $fileName;
 
-        $pdf = Pdf::loadView('certificates.default', [
+        if (Storage::disk('private')->exists($storagePath)) {
+            Storage::disk('private')->delete($storagePath);
+        }
+        if ($certificate->moduleType === 'WORKSHOP') {
+            $view = 'certificates.workshop';
+        } else {
+            $view = 'certificates.course';
+        }
+        $pdf = Pdf::loadView($view, [
             'certificate' => $certificate,
-        ])->setPaper('a4', 'portrait');
+            'isPdf' => true,
+        ])
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'DejaVu Serif',
+                'dpi' => 96,
+                'chroot' => public_path(),
+            ]);
 
         Storage::disk('private')->put($storagePath, $pdf->output());
 

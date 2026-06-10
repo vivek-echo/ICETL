@@ -128,7 +128,7 @@
         </div>
 
         <a class="program-library-row__action" href="javascript:void(0)" [class.is-disabled]="certificateLoading"
-          (click)="downloadWorkshopCertificate(program.id)">
+          (click)="downloadWorkshopCertificate(program.id,'WORKSHOP')">
           <i class="feather-file-text"></i>
           <span *ngIf="!certificateLoading">Download Certificate</span>
           <span *ngIf="certificateLoading">Generating...</span>
