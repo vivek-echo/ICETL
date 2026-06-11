@@ -65,7 +65,7 @@ Route::get('/workshop-certificate', function () {
         'venue' => 'ICETL Training Hall asdsa asdcsad asdcsad zxcdsadc xcsdac, Patna',
     ];
 
-    $pdf = Pdf::loadView('certificates.workshop', [
+    $pdf = Pdf::loadView('certificates.seminar', [
         'certificate' => $certificate,
         'isPdf' => true,
     ])

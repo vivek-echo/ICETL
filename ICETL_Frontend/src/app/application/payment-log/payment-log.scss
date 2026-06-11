@@ -664,6 +664,7 @@
   align-items: center;
   background: #ffffff;
   border-radius: 8px;
+  box-sizing: border-box;
   color: var(--billing-accent);
   display: inline-flex;
   flex: 0 0 auto;
@@ -671,6 +672,8 @@
   font-weight: 950;
   height: 48px;
   justify-content: center;
+  object-fit: contain;
+  padding: 4px;
   width: 48px;
 }
 

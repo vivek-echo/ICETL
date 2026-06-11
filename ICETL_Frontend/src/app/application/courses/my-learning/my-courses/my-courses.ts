@@ -38,6 +38,7 @@ export class MyCourses implements OnInit {
   }
 
   certificateLoading: boolean = false;
+  certificateLoadingCourseId: number | null = null;
 
   canDownloadCourseCertificate(course: any): boolean {
     const progress = Number(course?.progressPercent || 0);
@@ -45,18 +46,25 @@ export class MyCourses implements OnInit {
     return true;
   }
 
+  isCertificateGenerating(courseId: number): boolean {
+    return this.certificateLoadingCourseId === courseId;
+  }
+
   async downloadCourseCertificate(courseId: number, courseType: any): Promise<void> {
     if (!courseId || this.certificateLoading) {
       return;
     }
 
+    const moduleType = courseType == 1 ? 'COURSE' : 'ACADEMIC_COURSE';
+
     const payload = {
-      moduleType: courseType == 1 ? 'COURSE' : 'ACADEMIC_COURSE',
+      moduleType: moduleType,
       moduleId: courseId,
     };
 
     this.spinner.show();
     this.certificateLoading = true;
+    this.certificateLoadingCourseId = courseId;
 
     try {
       const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
@@ -69,17 +77,36 @@ export class MyCourses implements OnInit {
       }
 
       /**
-       * Important:
-       * Reset loading BEFORE opening new tab.
-       * Otherwise browser focus change can delay Angular UI update.
+       * Fetch PDF as Blob and force download
        */
-      this.certificateLoading = false;
-      this.spinner.hide();
-      this.cdr.detectChanges();
+      const fileResponse: any = await lastValueFrom(
+        this.certificateService.downloadCertificateFile(downloadUrl),
+      );
 
-      setTimeout(() => {
-        window.open(downloadUrl, '_blank');
-      }, 0);
+      const blob = fileResponse.body;
+
+      if (!blob) {
+        // Swal.fire('Error', 'Certificate file not found.', 'error');
+        return;
+      }
+
+      const fileName =
+        moduleType === 'COURSE'
+          ? `course-certificate-${courseId}.pdf`
+          : `academic-course-certificate-${courseId}.pdf`;
+
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+
+      document.body.appendChild(anchor);
+      anchor.click();
+
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error: any) {
       const message =
         error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
@@ -87,6 +114,7 @@ export class MyCourses implements OnInit {
       // Swal.fire('Error', message, 'error');
     } finally {
       this.certificateLoading = false;
+      this.certificateLoadingCourseId = null;
       this.spinner.hide();
       this.cdr.detectChanges();
     }

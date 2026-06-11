@@ -213,7 +213,7 @@
 
     <header class="invoice-card__masthead">
       <div class="invoice-brand">
-        <div class="invoice-brand__mark">IC</div>
+        <img class="invoice-brand__mark" [src]="invoiceLogoPath" alt="ICETL logo" />
         <div>
           <strong>{{ selectedInvoice.company?.name || 'ICETL' }}</strong>
           <span>{{ selectedInvoice.company?.subtitle || 'Ice Technology Lab' }}</span>

@@ -1,0 +1,202 @@
+<div class="program-students program-students--workshop">
+  <section class="student-summary" aria-label="Workshop enrolled students summary">
+    <div class="student-summary__item">
+      <span>Enrollments</span>
+      <strong>{{ summary.totalEnrollments || meta.total }}</strong>
+    </div>
+    <div class="student-summary__item">
+      <span>Students</span>
+      <strong>{{ summary.totalStudents }}</strong>
+    </div>
+    <div class="student-summary__item">
+      <span>Total Paid</span>
+      <strong>{{ formatAmount(summary.totalPaid) }}</strong>
+    </div>
+  </section>
+
+  <div class="student-toolbar">
+    <div class="rbt-form-group student-toolbar__field student-toolbar__field--search">
+      <label for="workshopStudentSearch">Search</label>
+      <div class="student-field">
+        <i class="feather-search"></i>
+        <input id="workshopStudentSearch" type="text" autocomplete="off" placeholder="Student, workshop, invoice"
+          [(ngModel)]="search" (keyup.enter)="onSearch()">
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentCode">Workshop Code</label>
+      <div class="student-field">
+        <i class="feather-hash"></i>
+        <input id="workshopStudentCode" type="text" autocomplete="off" placeholder="WS_2026_..."
+          [(ngModel)]="programCode" (keyup.enter)="onSearch()">
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentStatus">Status</label>
+      <div class="student-field">
+        <i class="feather-activity"></i>
+        <select id="workshopStudentStatus" [(ngModel)]="status" (change)="onFilterChange()">
+          <option value="">All Status</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentTimeline">Timeline</label>
+      <div class="student-field">
+        <i class="feather-calendar"></i>
+        <select id="workshopStudentTimeline" [(ngModel)]="scheduleStatus" (change)="onFilterChange()">
+          @for (option of scheduleFilters; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentPayment">Payment</label>
+      <div class="student-field">
+        <i class="feather-credit-card"></i>
+        <select id="workshopStudentPayment" [(ngModel)]="paymentMode" (change)="onFilterChange()">
+          <option value="">All Modes</option>
+          <option value="CASH">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="NETBANKING">Netbanking</option>
+          <option value="RAZORPAY">Razorpay</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentSort">Sort</label>
+      <div class="student-field">
+        <i class="feather-sliders"></i>
+        <select id="workshopStudentSort" [(ngModel)]="sortBy" (change)="onFilterChange()">
+          @for (option of sortOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="rbt-form-group student-toolbar__field">
+      <label for="workshopStudentPerPage">Per Page</label>
+      <div class="student-field">
+        <i class="feather-list"></i>
+        <select id="workshopStudentPerPage" [(ngModel)]="meta.perPage" (change)="onFilterChange()">
+          @for (option of perPageOptions; track option) {
+          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="student-toolbar__actions">
+      <button type="button" class="student-action student-action--primary" (click)="onSearch()" [disabled]="loading">
+        <i class="feather-filter"></i>
+        Apply
+      </button>
+      <button type="button" class="student-action" (click)="clearFilters()" [disabled]="loading">
+        <i class="feather-refresh-cw"></i>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="student-loading">
+    @for (row of skeletonRows; track row) {
+    <div class="student-skeleton"></div>
+    }
+  </div>
+  }
+
+  @if (!loading && students.length === 0) {
+  <div class="student-empty">
+    <i class="feather-users"></i>
+    <h5>No Enrolled Students Found</h5>
+    <p>No workshop enrollments match the selected filters.</p>
+  </div>
+  }
+
+  @if (!loading && students.length > 0) {
+  <div class="student-list">
+    @for (student of students; track trackByStudent($index, student)) {
+    <article class="student-row">
+      <section class="student-row__person">
+        <span class="student-kicker">Student</span>
+        <h3>{{ student.studentName }}</h3>
+        <p>{{ student.studentEmail }}</p>
+        <div class="student-meta">
+          @if (student.studentCode) {
+          <span><i class="feather-user-check"></i>{{ student.studentCode }}</span>
+          }
+          @if (student.studentPhone) {
+          <span><i class="feather-phone"></i>{{ student.studentPhone }}</span>
+          }
+          <span><i class="feather-calendar"></i>{{ formatDate(student.enrolledAt) }}</span>
+        </div>
+      </section>
+
+      <section class="student-row__program">
+        <span class="student-kicker">Workshop</span>
+        <h4>{{ student.programTitle }}</h4>
+        <p>{{ student.programTopic }}</p>
+        <div class="student-badges">
+          @if (student.programCode) {
+          <span><i class="feather-hash"></i>{{ student.programCode }}</span>
+          }
+          <span><i class="feather-activity"></i>{{ student.programStatusLabel }}</span>
+          <span><i class="feather-calendar"></i>{{ student.scheduleStatus }}</span>
+          <span><i class="feather-map-pin"></i>{{ student.programCity || student.programVenue }}</span>
+          <span><i class="feather-clock"></i>{{ formatDateRange(student) }} · {{ formatTimeRange(student) }}</span>
+        </div>
+      </section>
+
+      <aside class="student-row__payment">
+        <div class="student-payment-card">
+          <span class="student-kicker">Payment</span>
+          <strong>{{ formatAmount(student.amountPaid) }}</strong>
+          <p>{{ student.paymentMode || 'N/A' }}</p>
+          <div class="student-meta">
+            @if (student.invoiceNo) {
+            <span><i class="feather-file-text"></i>{{ student.invoiceNo }}</span>
+            }
+            @if (student.paymentReference) {
+            <span><i class="feather-credit-card"></i>{{ student.paymentReference }}</span>
+            }
+          </div>
+        </div>
+      </aside>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && meta.total > 0) {
+  <div class="student-pager">
+    <p>{{ getPaginationLabel() }}</p>
+    <div class="student-pager__controls">
+      <button type="button" class="student-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+        <i class="feather-chevron-left"></i>
+        Previous
+      </button>
+      <div class="student-pager__jump">
+        <span>Page</span>
+        <input type="number" min="1" [max]="meta.lastPage" [(ngModel)]="pageInput"
+          (keyup.enter)="goToPageInput()" (blur)="goToPageInput()">
+        <span>of {{ meta.lastPage }}</span>
+      </div>
+      <button type="button" class="student-action student-action--primary"
+        [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+        Next
+        <i class="feather-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  }
+</div>

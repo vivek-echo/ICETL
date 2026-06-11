@@ -84,6 +84,65 @@ export interface WorkshopMutationResponse {
   };
 }
 
+export interface WorkshopEnrollmentPayload {
+  workshopId: number;
+  name: string;
+  email: string;
+  dob: string;
+  gender: number;
+  paymentBy: 'CASH' | 'UPI' | 'NETBANKING';
+  transactionNo?: string | null;
+  totalFee: number;
+}
+
+export interface WorkshopEnrolledStudent {
+  id: number;
+  orderId: number;
+  studentId: number;
+  studentCode?: string | null;
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string | null;
+  studentDob?: string | null;
+  studentGender?: number | null;
+  programType: 'workshop';
+  programId: number;
+  programCode?: string | null;
+  programTitle: string;
+  programTopic: string;
+  programVenue: string;
+  programCity: string;
+  programStartDate?: string | null;
+  programEndDate?: string | null;
+  programStartTime?: string | null;
+  programEndTime?: string | null;
+  programSpeakerName: string;
+  programCapacity: number;
+  programStatus: number;
+  programStatusLabel: string;
+  scheduleStatus: WorkshopScheduleStatus;
+  invoiceNo?: string | null;
+  orderReference?: string | null;
+  paymentReference?: string | null;
+  paymentMode?: string | null;
+  amountPaid: number | string;
+  enrolledAt?: string | null;
+}
+
+export interface WorkshopEnrolledStudentSummary {
+  totalEnrollments: number;
+  totalStudents: number;
+  totalPaid: number;
+}
+
+export interface WorkshopEnrolledStudentListResponse {
+  status: boolean;
+  message: string;
+  data: WorkshopEnrolledStudent[];
+  summary?: WorkshopEnrolledStudentSummary;
+  meta?: WorkshopPaginationMeta;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -142,6 +201,18 @@ export class WorkshopService {
 
   deleteWorkshop(payload: { id: number }): Observable<WorkshopMutationResponse> {
     return this.http.post<WorkshopMutationResponse>(`${this.API_URL}/deleteWorkshop`, payload);
+  }
+
+  enrollStudent(payload: WorkshopEnrollmentPayload): Observable<WorkshopMutationResponse> {
+    return this.http.post<WorkshopMutationResponse>(`${this.API_URL}/workshops/enroll-student`, payload);
+  }
+
+  getEnrolledStudents(payload: Record<string, unknown> = {}): Observable<WorkshopEnrolledStudentListResponse> {
+    return this.http.post<WorkshopEnrolledStudentListResponse>(
+      `${this.API_URL}/workshops/enrolled-students`,
+      payload,
+      this.listRequestOptions(),
+    );
   }
 
   private listRequestOptions(): { context: HttpContext } {

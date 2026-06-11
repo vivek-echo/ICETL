@@ -11,6 +11,29 @@ import {
   SeminarSortOption,
   SeminarSummary,
 } from '../../services/seminar';
+import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
+
+type ProgramPaymentMode = 'CASH' | 'UPI' | 'NETBANKING';
+
+interface SeminarEnrollmentForm {
+  name: string;
+  email: string;
+  dob: string;
+  gender: number | null;
+  paymentBy: ProgramPaymentMode;
+  transactionNo: string;
+  totalFee: number;
+}
+
+interface CalendarDay {
+  date: Date;
+  day: number;
+  iso: string;
+  isCurrentMonth: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  isDisabled: boolean;
+}
 
 @Component({
   selector: 'app-view-all-seminar',
@@ -22,6 +45,22 @@ import {
 export class ViewAllSeminar implements OnInit {
   readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
   readonly skeletonRows = [1, 2, 3, 4];
+  readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  readonly calendarMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  readonly dobCalendarYearOptions = this.buildDobCalendarYearOptions();
   readonly sortOptions: Array<{ value: SeminarSortOption; label: string }> = [
     { value: 'newest', label: 'Newest Added' },
     { value: 'oldest', label: 'Oldest Added' },
@@ -45,11 +84,19 @@ export class ViewAllSeminar implements OnInit {
   pageInput = 1;
   meta: SeminarPaginationMeta = this.createDefaultMeta();
   summary: SeminarSummary = this.createDefaultSummary();
+  selectedEnrollmentSeminar: SeminarItem | null = null;
+  enrollmentForm: SeminarEnrollmentForm = this.createEnrollmentForm();
+  enrollmentErrors: Record<string, string> = {};
+  enrollmentTouched: Record<string, boolean> = {};
+  enrollmentSaving = false;
+  isDobCalendarOpen = false;
+  dobCalendarView = this.defaultDobCalendarView();
 
   private requestSerial = 0;
 
   constructor(
     private readonly seminarService: SeminarService,
+    private readonly alertHelper: AlertHelperService,
     private readonly cdr: ChangeDetectorRef,
   ) {}
 
@@ -154,6 +201,186 @@ export class ViewAllSeminar implements OnInit {
 
   isActive(seminar: SeminarItem): boolean {
     return Number(seminar.status) === 1;
+  }
+
+  canEnroll(seminar: SeminarItem): boolean {
+    return this.isActive(seminar) && seminar.scheduleStatus !== 'completed';
+  }
+
+  openEnrollment(seminar: SeminarItem): void {
+    this.selectedEnrollmentSeminar = seminar;
+    this.enrollmentForm = this.createEnrollmentForm(seminar);
+    this.enrollmentErrors = {};
+    this.enrollmentTouched = {};
+    this.enrollmentSaving = false;
+    this.isDobCalendarOpen = false;
+    this.dobCalendarView = this.defaultDobCalendarView();
+    this.cdr.markForCheck();
+  }
+
+  closeEnrollment(): void {
+    if (this.enrollmentSaving) {
+      return;
+    }
+
+    this.selectedEnrollmentSeminar = null;
+    this.enrollmentErrors = {};
+    this.enrollmentTouched = {};
+    this.isDobCalendarOpen = false;
+  }
+
+  onEnrollmentPaymentModeChange(): void {
+    this.markEnrollmentFieldTouched('paymentBy');
+
+    if (this.enrollmentForm.paymentBy === 'CASH') {
+      this.enrollmentForm.transactionNo = '';
+      delete this.enrollmentErrors['transactionNo'];
+    }
+  }
+
+  onEnrollmentFieldChange(field: keyof SeminarEnrollmentForm): void {
+    this.markEnrollmentFieldTouched(field);
+  }
+
+  markEnrollmentFieldTouched(field: string): void {
+    this.enrollmentTouched[field] = true;
+    this.enrollmentErrors = this.validateEnrollmentForm();
+  }
+
+  shouldShowEnrollmentError(field: string): boolean {
+    return Boolean(this.enrollmentTouched[field] && this.enrollmentErrors[field]);
+  }
+
+  toggleDobCalendar(event: Event): void {
+    event.stopPropagation();
+    this.isDobCalendarOpen = !this.isDobCalendarOpen;
+    this.dobCalendarView = this.enrollmentForm.dob
+      ? this.parseIsoDate(this.enrollmentForm.dob) || this.defaultDobCalendarView()
+      : this.dobCalendarView;
+  }
+
+  keepDobCalendarOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
+  changeDobCalendarMonth(direction: number): void {
+    this.dobCalendarView = new Date(
+      this.dobCalendarView.getFullYear(),
+      this.dobCalendarView.getMonth() + direction,
+      1,
+    );
+  }
+
+  setDobCalendarMonth(event: Event): void {
+    const month = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(this.dobCalendarView.getFullYear(), month, 1);
+  }
+
+  setDobCalendarYear(event: Event): void {
+    const year = Number((event.target as HTMLSelectElement).value);
+    this.dobCalendarView = new Date(year, this.dobCalendarView.getMonth(), 1);
+  }
+
+  getDobCalendarDays(): CalendarDay[] {
+    const firstOfMonth = new Date(this.dobCalendarView.getFullYear(), this.dobCalendarView.getMonth(), 1);
+    const startDate = new Date(firstOfMonth);
+    startDate.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      const iso = this.toIsoDate(date);
+
+      return {
+        date,
+        day: date.getDate(),
+        iso,
+        isCurrentMonth: date.getMonth() === this.dobCalendarView.getMonth(),
+        isSelected: iso === this.enrollmentForm.dob,
+        isToday: iso === this.toIsoDate(new Date()),
+        isDisabled: date > this.todayAtMidnight(),
+      };
+    });
+  }
+
+  selectDobDate(day: CalendarDay): void {
+    if (day.isDisabled) {
+      return;
+    }
+
+    this.enrollmentForm.dob = day.iso;
+    this.markEnrollmentFieldTouched('dob');
+    this.isDobCalendarOpen = false;
+  }
+
+  clearDobDate(event?: Event): void {
+    event?.stopPropagation();
+    this.enrollmentForm.dob = '';
+    this.markEnrollmentFieldTouched('dob');
+    this.isDobCalendarOpen = false;
+  }
+
+  formatDobDisplay(): string {
+    return this.enrollmentForm.dob ? this.formatDate(this.enrollmentForm.dob) : 'Select date of birth';
+  }
+
+  async submitEnrollment(): Promise<void> {
+    if (!this.selectedEnrollmentSeminar || this.enrollmentSaving) {
+      return;
+    }
+
+    const errors = this.validateEnrollmentForm();
+    this.enrollmentErrors = errors;
+    this.enrollmentTouched = {
+      name: true,
+      email: true,
+      dob: true,
+      gender: true,
+      paymentBy: true,
+      transactionNo: true,
+    };
+
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    this.enrollmentSaving = true;
+
+    try {
+      const response = await lastValueFrom(
+        this.seminarService.enrollStudent({
+          seminarId: this.selectedEnrollmentSeminar.id,
+          name: this.enrollmentForm.name.trim(),
+          email: this.enrollmentForm.email.trim().toLowerCase(),
+          dob: this.enrollmentForm.dob,
+          gender: Number(this.enrollmentForm.gender),
+          paymentBy: this.enrollmentForm.paymentBy,
+          transactionNo: this.enrollmentForm.transactionNo.trim() || null,
+          totalFee: this.enrollmentForm.totalFee,
+        }).pipe(timeout(15000)),
+      );
+
+      if (response.status) {
+        await this.alertHelper.success(response.message || 'Student enrolled successfully.');
+        this.selectedEnrollmentSeminar = null;
+        this.enrollmentErrors = {};
+        this.enrollmentTouched = {};
+        return;
+      }
+
+      this.enrollmentErrors = {
+        form: response.message || 'Unable to enroll student.',
+      };
+    } catch (error: unknown) {
+      this.enrollmentErrors = this.extractEnrollmentErrors(error);
+    } finally {
+      this.enrollmentSaving = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  getEnrollmentError(field: string): string {
+    return this.enrollmentErrors[field] || '';
   }
 
   getScheduleLabel(scheduleStatus: SeminarScheduleStatus): string {
@@ -291,5 +518,111 @@ export class ViewAllSeminar implements OnInit {
       ongoingSeminars: 0,
       completedSeminars: 0,
     };
+  }
+
+  private createEnrollmentForm(seminar?: SeminarItem): SeminarEnrollmentForm {
+    return {
+      name: '',
+      email: '',
+      dob: '',
+      gender: null,
+      paymentBy: 'CASH',
+      transactionNo: '',
+      totalFee: this.toMoney(seminar?.price ?? 0),
+    };
+  }
+
+  private validateEnrollmentForm(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (this.enrollmentForm.name.trim().length < 2) {
+      errors['name'] = 'Student name is required.';
+    }
+
+    if (!emailPattern.test(this.enrollmentForm.email.trim())) {
+      errors['email'] = 'Valid email is required.';
+    }
+
+    const dobDate = this.parseIsoDate(this.enrollmentForm.dob);
+
+    if (!this.enrollmentForm.dob) {
+      errors['dob'] = 'Date of birth is required.';
+    } else if (!dobDate) {
+      errors['dob'] = 'Select a valid date of birth.';
+    } else if (dobDate > this.todayAtMidnight()) {
+      errors['dob'] = 'Date of birth cannot be in the future.';
+    }
+
+    if (![1, 2].includes(Number(this.enrollmentForm.gender))) {
+      errors['gender'] = 'Gender is required.';
+    }
+
+    if (this.enrollmentForm.paymentBy !== 'CASH' && !this.enrollmentForm.transactionNo.trim()) {
+      errors['transactionNo'] = 'Transaction no is required for UPI and Netbanking payments.';
+    }
+
+    return errors;
+  }
+
+  private extractEnrollmentErrors(error: unknown): Record<string, string> {
+    const response = (error as { error?: { message?: string; errors?: Record<string, string[]> } })?.error;
+    const fieldErrors = response?.errors || {};
+    const errors: Record<string, string> = {};
+
+    Object.keys(fieldErrors).forEach((field) => {
+      errors[field] = fieldErrors[field]?.[0] || 'Invalid value.';
+    });
+
+    if (Object.keys(errors).length === 0) {
+      errors['form'] = response?.message || 'Unable to enroll student.';
+    }
+
+    return errors;
+  }
+
+  private toMoney(value: unknown): number {
+    const amount = Number(value);
+
+    return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+  }
+
+  private buildDobCalendarYearOptions(): number[] {
+    const currentYear = new Date().getFullYear();
+
+    return Array.from({ length: 91 }, (_, index) => currentYear - index);
+  }
+
+  private defaultDobCalendarView(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear() - 18, today.getMonth(), 1);
+  }
+
+  private parseIsoDate(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+      ? date
+      : null;
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private todayAtMidnight(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
   }
 }

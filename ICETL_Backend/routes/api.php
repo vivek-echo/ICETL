@@ -75,6 +75,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/getWorkshopById', [WorkshopController::class, 'getWorkshopById']);
     Route::post('/updateWorkshop', [WorkshopController::class, 'updateWorkshop']);
     Route::post('/updateWorkshopStatus', [WorkshopController::class, 'updateWorkshopStatus']);
+    Route::post('/workshops/enroll-student', [PaymentController::class, 'enrollWorkshopStudent']);
+    Route::post('/workshops/enrolled-students', [PaymentController::class, 'workshopEnrolledStudents']);
     Route::post('/deleteWorkshop', [WorkshopController::class, 'deleteWorkshop']);
 
     // seminar routes
@@ -84,6 +86,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/getSeminarById', [SeminarController::class, 'getSeminarById']);
     Route::post('/updateSeminar', [SeminarController::class, 'updateSeminar']);
     Route::post('/updateSeminarStatus', [SeminarController::class, 'updateSeminarStatus']);
+    Route::post('/seminars/enroll-student', [PaymentController::class, 'enrollSeminarStudent']);
+    Route::post('/seminars/enrolled-students', [PaymentController::class, 'seminarEnrolledStudents']);
     Route::post('/deleteSeminar', [SeminarController::class, 'deleteSeminar']);
 
     // curriculum section routes
@@ -146,8 +150,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/contact-enquiries/mark-read', [ContactEnquiryController::class, 'markRead']);
 
     Route::post('/certificates/generate', [CertificateController::class, 'generate']);
-});
 
+    
+});
+Route::get('/certificates/download/{certificateNo}', [CertificateController::class, 'download']);
 Route::post('/razorpay/webhook', [PaymentController::class, 'webhook']);
 
 Route::get('/user-profile/image/{type}/{filename}', [UserProfileController::class, 'image'])

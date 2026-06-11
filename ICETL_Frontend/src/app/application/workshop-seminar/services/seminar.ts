@@ -84,6 +84,65 @@ export interface SeminarMutationResponse {
   };
 }
 
+export interface SeminarEnrollmentPayload {
+  seminarId: number;
+  name: string;
+  email: string;
+  dob: string;
+  gender: number;
+  paymentBy: 'CASH' | 'UPI' | 'NETBANKING';
+  transactionNo?: string | null;
+  totalFee: number;
+}
+
+export interface SeminarEnrolledStudent {
+  id: number;
+  orderId: number;
+  studentId: number;
+  studentCode?: string | null;
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string | null;
+  studentDob?: string | null;
+  studentGender?: number | null;
+  programType: 'seminar';
+  programId: number;
+  programCode?: string | null;
+  programTitle: string;
+  programTopic: string;
+  programVenue: string;
+  programCity: string;
+  programStartDate?: string | null;
+  programEndDate?: string | null;
+  programStartTime?: string | null;
+  programEndTime?: string | null;
+  programSpeakerName: string;
+  programCapacity: number;
+  programStatus: number;
+  programStatusLabel: string;
+  scheduleStatus: SeminarScheduleStatus;
+  invoiceNo?: string | null;
+  orderReference?: string | null;
+  paymentReference?: string | null;
+  paymentMode?: string | null;
+  amountPaid: number | string;
+  enrolledAt?: string | null;
+}
+
+export interface SeminarEnrolledStudentSummary {
+  totalEnrollments: number;
+  totalStudents: number;
+  totalPaid: number;
+}
+
+export interface SeminarEnrolledStudentListResponse {
+  status: boolean;
+  message: string;
+  data: SeminarEnrolledStudent[];
+  summary?: SeminarEnrolledStudentSummary;
+  meta?: SeminarPaginationMeta;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -142,6 +201,18 @@ export class SeminarService {
 
   deleteSeminar(payload: { id: number }): Observable<SeminarMutationResponse> {
     return this.http.post<SeminarMutationResponse>(`${this.API_URL}/deleteSeminar`, payload);
+  }
+
+  enrollStudent(payload: SeminarEnrollmentPayload): Observable<SeminarMutationResponse> {
+    return this.http.post<SeminarMutationResponse>(`${this.API_URL}/seminars/enroll-student`, payload);
+  }
+
+  getEnrolledStudents(payload: Record<string, unknown> = {}): Observable<SeminarEnrolledStudentListResponse> {
+    return this.http.post<SeminarEnrolledStudentListResponse>(
+      `${this.API_URL}/seminars/enrolled-students`,
+      payload,
+      this.listRequestOptions(),
+    );
   }
 
   private listRequestOptions(): { context: HttpContext } {

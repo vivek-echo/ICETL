@@ -78,15 +78,20 @@ class AuthController extends Controller
         Cache::put("otp_attempts_{$email}", 0, now()->addMinutes(5));
         Cache::put("otp_lock_{$email}", true, now()->addSeconds(30));
 
-        if (!app()->isLocal()) {
+        if (!$this->shouldExposeOtpWithoutMail()) {
             $this->sendOtpMail($email, $otp);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'OTP sent successfully',
-            'otp' => app()->isLocal() ? $otp : null,
+            'otp' => $this->shouldExposeOtpWithoutMail() ? $otp : null,
         ]);
+    }
+
+    private function shouldExposeOtpWithoutMail(): bool
+    {
+        return app()->environment(['local', 'staging']);
     }
 
     //////////////////////////////////////////////////////////////

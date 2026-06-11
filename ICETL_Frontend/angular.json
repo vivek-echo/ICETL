@@ -71,6 +71,25 @@
               },
               "outputHashing": "all"
             },
+            "staging": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.staging.ts"
+                }
+              ],
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": {
+                  "inline": false
+                }
+              },
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "sourceMap": true,
@@ -84,6 +103,9 @@
           "configurations": {
             "production": {
               "buildTarget": "ICETL_Frontend:build:production"
+            },
+            "staging": {
+              "buildTarget": "ICETL_Frontend:build:staging"
             },
             "development": {
               "buildTarget": "ICETL_Frontend:build:development"

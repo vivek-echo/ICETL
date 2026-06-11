@@ -5,7 +5,8 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
-
+import { NgxSpinnerService } from 'ngx-spinner';
+import { CertificateService } from '../../services/certificate.service';
 @Component({
   selector: 'app-my-seminar',
   imports: [CommonModule, FormsModule, RouterLink],
@@ -30,15 +31,80 @@ export class MySeminar implements OnInit {
     currency: 'INR',
     maximumFractionDigits: 0,
   });
-
+  certificateLoading = false;
   constructor(
     private readonly paymentService: PaymentService,
     private readonly alertHelper: AlertHelperService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly spinner: NgxSpinnerService,
+    private readonly certificateService: CertificateService,
   ) {}
 
   ngOnInit(): void {
     void this.loadPrograms();
+  }
+
+  async downloadWorkshopCertificate(courseId: number, courseType: any): Promise<void> {
+    if (!courseId || this.certificateLoading) {
+      return;
+    }
+
+    const payload = {
+      moduleType: 'SEMINAR',
+      moduleId: courseId,
+    };
+
+    this.spinner.show();
+    this.certificateLoading = true;
+
+    try {
+      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
+
+      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+
+      if (!downloadUrl) {
+        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
+        return;
+      }
+
+      /**
+       * Fetch PDF as Blob and force browser download
+       */
+      const fileResponse: any = await lastValueFrom(
+        this.certificateService.downloadCertificateFile(downloadUrl),
+      );
+
+      const blob = fileResponse.body;
+
+      if (!blob) {
+        // Swal.fire('Error', 'Certificate file not found.', 'error');
+        return;
+      }
+
+      const fileName = `seminar-certificate-${courseId}.pdf`;
+
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+
+      document.body.appendChild(anchor);
+      anchor.click();
+
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error: any) {
+      const message =
+        error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
+
+      // Swal.fire('Error', message, 'error');
+    } finally {
+      this.certificateLoading = false;
+      this.spinner.hide();
+      this.cdr.detectChanges();
+    }
   }
 
   async loadPrograms(): Promise<void> {
@@ -47,7 +113,7 @@ export class MySeminar implements OnInit {
 
     try {
       const response = await lastValueFrom(this.paymentService.getMyPrograms(this.programType));
-      this.programs = response.success ? response.data ?? [] : [];
+      this.programs = response.success ? (response.data ?? []) : [];
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || `Unable to fetch your enrolled ${this.pluralLabel.toLowerCase()}.`,
@@ -87,7 +153,9 @@ export class MySeminar implements OnInit {
       return 'Time TBA';
     }
 
-    return program.endTime ? `${program.startTime} - ${program.endTime}` : program.startTime || 'Time TBA';
+    return program.endTime
+      ? `${program.startTime} - ${program.endTime}`
+      : program.startTime || 'Time TBA';
   }
 
   getScheduleLabel(program: MyProgram): string {
@@ -160,5 +228,4 @@ export class MySeminar implements OnInit {
   get completedProgramsCount(): number {
     return this.programs.filter((program) => program.scheduleStatus === 'completed').length;
   }
-
 }

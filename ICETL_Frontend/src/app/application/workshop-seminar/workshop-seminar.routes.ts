@@ -97,6 +97,15 @@ export const workshopSeminarRoutes: Routes = [
               ),
             title: 'All Workshops | ICETL',
           },
+          {
+            path: 'enrolledStudentsWorkshop',
+            data: { authOnly: true },
+            loadComponent: () =>
+              import('./workshop/enrolled-students/enrolled-workshop-students').then(
+                (m) => m.EnrolledWorkshopStudents,
+              ),
+            title: 'All Workshops | ICETL',
+          },
         ],
       },
       {
@@ -134,6 +143,15 @@ export const workshopSeminarRoutes: Routes = [
             loadComponent: () =>
               import('./seminar/view-all-seminar/view-all-seminar').then(
                 (m) => m.ViewAllSeminar,
+              ),
+            title: 'All Seminars | ICETL',
+          },
+          {
+            path: 'enrolledStudentsSeminar',
+            data: { authOnly: true },
+            loadComponent: () =>
+              import('./seminar/enrolled-students/enrolled-seminar-students').then(
+                (m) => m.EnrolledSeminarStudents,
               ),
             title: 'All Seminars | ICETL',
           },

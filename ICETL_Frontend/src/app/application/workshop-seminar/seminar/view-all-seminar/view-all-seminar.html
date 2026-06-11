@@ -243,6 +243,11 @@
             <strong>{{ seminar.createdByName }}</strong>
           </span>
         </div>
+        <button type="button" class="program-action program-action--primary program-row__enroll"
+          (click)="openEnrollment(seminar)" [disabled]="!canEnroll(seminar)">
+          <i class="feather-user-plus"></i>
+          Enroll Student
+        </button>
       </aside>
     </article>
     }
@@ -275,6 +280,179 @@
         Next
         <i class="feather-chevron-right"></i>
       </button>
+    </div>
+  </div>
+  }
+
+  @if (selectedEnrollmentSeminar) {
+  <div class="program-enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="seminarEnrollmentTitle">
+    <div class="program-enrollment-modal__panel">
+      <header class="program-enrollment-modal__header">
+        <div>
+          <span>Manual Seminar Enrollment</span>
+          <h2 id="seminarEnrollmentTitle">Enroll Student</h2>
+          <p>{{ selectedEnrollmentSeminar.title }}</p>
+        </div>
+        <button type="button" class="program-edit-modal__close" (click)="closeEnrollment()"
+          [disabled]="enrollmentSaving" aria-label="Close enrollment form">
+          <i class="feather-x"></i>
+        </button>
+      </header>
+
+      <form class="program-enrollment-form" (ngSubmit)="submitEnrollment()" #seminarEnrollmentForm="ngForm">
+        <section class="program-enrollment-summary">
+          <div>
+            <span>Seminar Code</span>
+            <strong>{{ selectedEnrollmentSeminar.code || 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>Schedule</span>
+            <strong>{{ formatDate(selectedEnrollmentSeminar.eventDate) }}</strong>
+          </div>
+          <div>
+            <span>Total Fee</span>
+            <strong>{{ formatPrice(enrollmentForm.totalFee) }}</strong>
+          </div>
+        </section>
+
+        @if (getEnrollmentError('form')) {
+        <div class="program-enrollment-alert">{{ getEnrollmentError('form') }}</div>
+        }
+
+        <div class="program-enrollment-grid">
+          <div class="rbt-form-group">
+            <label for="seminarEnrollName">Student Name</label>
+            <input id="seminarEnrollName" name="seminarEnrollName" type="text" autocomplete="name"
+              [(ngModel)]="enrollmentForm.name" (ngModelChange)="onEnrollmentFieldChange('name')"
+              (blur)="markEnrollmentFieldTouched('name')" [class.is-invalid]="shouldShowEnrollmentError('name')">
+            @if (shouldShowEnrollmentError('name')) {
+            <small>{{ getEnrollmentError('name') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="seminarEnrollEmail">Email</label>
+            <input id="seminarEnrollEmail" name="seminarEnrollEmail" type="email" autocomplete="email"
+              [(ngModel)]="enrollmentForm.email" (ngModelChange)="onEnrollmentFieldChange('email')"
+              (blur)="markEnrollmentFieldTouched('email')" [class.is-invalid]="shouldShowEnrollmentError('email')">
+            @if (shouldShowEnrollmentError('email')) {
+            <small>{{ getEnrollmentError('email') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group program-dob-field" [class.is-calendar-open]="isDobCalendarOpen">
+            <label for="seminarEnrollDob">Date of Birth</label>
+            <input id="seminarEnrollDob" name="seminarEnrollDob" type="hidden" [(ngModel)]="enrollmentForm.dob">
+            <button type="button" class="program-date-trigger"
+              [class.is-invalid]="shouldShowEnrollmentError('dob')"
+              [attr.aria-expanded]="isDobCalendarOpen"
+              (click)="toggleDobCalendar($event)"
+              (blur)="markEnrollmentFieldTouched('dob')">
+              <span [class.is-placeholder]="!enrollmentForm.dob">{{ formatDobDisplay() }}</span>
+              <i class="feather-calendar"></i>
+            </button>
+            @if (isDobCalendarOpen) {
+            <div class="premium-calendar program-dob-calendar" (click)="keepDobCalendarOpen($event)">
+              <div class="premium-calendar__header">
+                <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                  (click)="changeDobCalendarMonth(-1)">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="premium-calendar__selects">
+                  <select aria-label="Birth month" [value]="dobCalendarView.getMonth()"
+                    (change)="setDobCalendarMonth($event)">
+                    @for (month of calendarMonths; track month; let monthIndex = $index) {
+                    <option [value]="monthIndex">{{ month }}</option>
+                    }
+                  </select>
+                  <select aria-label="Birth year" [value]="dobCalendarView.getFullYear()"
+                    (change)="setDobCalendarYear($event)">
+                    @for (year of dobCalendarYearOptions; track year) {
+                    <option [value]="year">{{ year }}</option>
+                    }
+                  </select>
+                </div>
+                <button type="button" class="premium-calendar__nav" aria-label="Next month"
+                  (click)="changeDobCalendarMonth(1)">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <div class="premium-calendar__weekdays">
+                @for (weekday of calendarWeekdays; track weekday) {
+                <span>{{ weekday }}</span>
+                }
+              </div>
+
+              <div class="premium-calendar__grid">
+                @for (day of getDobCalendarDays(); track day.iso) {
+                <button type="button" class="premium-calendar__day" [class.is-muted]="!day.isCurrentMonth"
+                  [class.is-selected]="day.isSelected" [class.is-today]="day.isToday" [disabled]="day.isDisabled"
+                  (click)="selectDobDate(day)">
+                  {{ day.day }}
+                </button>
+                }
+              </div>
+
+              <div class="premium-calendar__footer">
+                <button type="button" (click)="clearDobDate($event)">Clear</button>
+                <span>Future dates disabled</span>
+              </div>
+            </div>
+            }
+            @if (shouldShowEnrollmentError('dob')) {
+            <small>{{ getEnrollmentError('dob') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="seminarEnrollGender">Gender</label>
+            <select id="seminarEnrollGender" name="seminarEnrollGender" [(ngModel)]="enrollmentForm.gender"
+              (ngModelChange)="onEnrollmentFieldChange('gender')" (blur)="markEnrollmentFieldTouched('gender')"
+              [class.is-invalid]="shouldShowEnrollmentError('gender')">
+              <option [ngValue]="null">Select Gender</option>
+              <option [ngValue]="1">Male</option>
+              <option [ngValue]="2">Female</option>
+            </select>
+            @if (shouldShowEnrollmentError('gender')) {
+            <small>{{ getEnrollmentError('gender') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="seminarEnrollPaymentBy">Payment By</label>
+            <select id="seminarEnrollPaymentBy" name="seminarEnrollPaymentBy"
+              [(ngModel)]="enrollmentForm.paymentBy" (ngModelChange)="onEnrollmentPaymentModeChange()"
+              (blur)="markEnrollmentFieldTouched('paymentBy')">
+              <option value="CASH">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="NETBANKING">Netbanking</option>
+            </select>
+          </div>
+
+          <div class="rbt-form-group">
+            <label for="seminarEnrollTransactionNo">Transaction No</label>
+            <input id="seminarEnrollTransactionNo" name="seminarEnrollTransactionNo" type="text"
+              [disabled]="enrollmentForm.paymentBy === 'CASH'" [(ngModel)]="enrollmentForm.transactionNo"
+              (ngModelChange)="onEnrollmentFieldChange('transactionNo')"
+              (blur)="markEnrollmentFieldTouched('transactionNo')"
+              [class.is-invalid]="shouldShowEnrollmentError('transactionNo')">
+            @if (shouldShowEnrollmentError('transactionNo')) {
+            <small>{{ getEnrollmentError('transactionNo') }}</small>
+            }
+          </div>
+        </div>
+
+        <footer class="program-enrollment-modal__footer">
+          <button type="button" class="program-action" (click)="closeEnrollment()" [disabled]="enrollmentSaving">
+            Cancel
+          </button>
+          <button type="submit" class="program-action program-action--primary" [disabled]="enrollmentSaving">
+            <i class="feather-user-plus"></i>
+            {{ enrollmentSaving ? 'Enrolling...' : 'Enroll Student' }}
+          </button>
+        </footer>
+      </form>
     </div>
   </div>
   }

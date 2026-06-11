@@ -44,7 +44,6 @@ export class MyWorkshop implements OnInit {
     void this.loadPrograms();
   }
 
-
   // canDownloadWorkshopCertificate(course: any): boolean {
   //   const progress = Number(course?.progressPercent || 0);
   //   // return progress >= 75;
@@ -57,7 +56,7 @@ export class MyWorkshop implements OnInit {
     }
 
     const payload = {
-      moduleType:  'WORKSHOP',
+      moduleType: 'WORKSHOP',
       moduleId: courseId,
     };
 
@@ -70,22 +69,33 @@ export class MyWorkshop implements OnInit {
       const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
 
       if (!downloadUrl) {
-        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
         return;
       }
 
-      /**
-       * Important:
-       * Reset loading BEFORE opening new tab.
-       * Otherwise browser focus change can delay Angular UI update.
-       */
-      this.certificateLoading = false;
-      this.spinner.hide();
-      this.cdr.detectChanges();
+      const fileResponse = await lastValueFrom(
+        this.certificateService.downloadCertificateFile(downloadUrl),
+      );
 
-      setTimeout(() => {
-        window.open(downloadUrl, '_blank');
-      }, 0);
+      const blob = fileResponse.body;
+
+      if (!blob) {
+        return;
+      }
+
+      const fileName = `workshop-certificate-${courseId}.pdf`;
+
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+
+      document.body.appendChild(anchor);
+      anchor.click();
+
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error: any) {
       const message =
         error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
@@ -97,6 +107,7 @@ export class MyWorkshop implements OnInit {
       this.cdr.detectChanges();
     }
   }
+  
 
   async loadPrograms(): Promise<void> {
     this.loading = true;

@@ -105,7 +105,7 @@ export class Login implements OnDestroy {
   ) {
     if (environment.production === false) {
       this.loginForm = this.fb.group({
-        emailId: ['vivekjha0151@gmail.com', [Validators.required, Validators.email]],
+        emailId: ['', [Validators.required, Validators.email]],
       });
     } else {
       this.loginForm = this.fb.group({
@@ -562,7 +562,7 @@ export class Login implements OnDestroy {
   }
 
   private applyOtpFromResponse(response?: Partial<SendOtpResponse> | null): void {
-    if (environment.production) {
+    if (!environment.otpAutoFillEnabled) {
       return;
     }
 

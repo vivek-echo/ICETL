@@ -241,9 +241,15 @@ class CertificateController extends Controller
                 return null;
             }
 
-            return [
-                'title' => $seminar->title ?? $seminar->seminarTitle ?? $seminar->name ?? 'Seminar',
-                'durationText' => $seminar->duration ?? $seminar->durationText ?? null,
+           return [
+                'title' => $seminar->title,
+                'venue' => $seminar->venue ?? null,
+                'startDate' => $seminar->startDate,
+                'endDate' => $seminar->endDate,
+                'durationText' => $this->getDurationText(
+                    $seminar->startDate,
+                    $seminar->endDate
+                )
             ];
         }
 
@@ -376,12 +382,44 @@ class CertificateController extends Controller
         return $storagePath;
     }
 
-    private function getCertificateDownloadUrl(Certificate $certificate): ?string
-    {
-        if (!$certificate->certificatePdfPath) {
-            return null;
-        }
-
-        return asset('storage/' . $certificate->certificatePdfPath);
+   private function getCertificateDownloadUrl(Certificate $certificate): ?string
+{
+    if (!$certificate->certificatePdfPath) {
+        return null;
     }
+
+    return url('/api/certificates/download/' . $certificate->certificateNo);
+}
+
+    public function download(string $certificateNo)
+{
+    $certificate = Certificate::where('certificateNo', $certificateNo)
+        ->where('deletedFlag', 0)
+        ->where('status', 1)
+        ->first();
+
+    if (!$certificate || !$certificate->certificatePdfPath) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Certificate not found.',
+        ], 404);
+    }
+
+    if (!Storage::disk('private')->exists($certificate->certificatePdfPath)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Certificate file not found.',
+        ], 404);
+    }
+
+    $filePath = Storage::disk('private')->path($certificate->certificatePdfPath);
+
+    $fileName = $certificate->certificateNo . '.pdf';
+
+    return response()->download($filePath, $fileName, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+    ]);
+}
 }

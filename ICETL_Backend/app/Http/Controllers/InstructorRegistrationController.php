@@ -654,7 +654,7 @@ class InstructorRegistrationController extends Controller
                 Cache::put($this->otpLockCacheKey($email), true, now()->addSeconds(self::OTP_RESEND_THROTTLE_SECONDS));
                 Cache::put($this->flowTypeCacheKey($email), $flowType, now()->addMinutes(10));
 
-                if (!app()->isLocal()) {
+                if (!$this->shouldExposeOtpWithoutMail()) {
                     $this->sendInstructorOtpMail($email, $otp);
                 }
 
@@ -665,7 +665,7 @@ class InstructorRegistrationController extends Controller
                     'currentStep' => $currentStep,
                     'expiresIn' => self::OTP_EXPIRY_MINUTES * 60,
                     'resendAvailableIn' => self::OTP_RESEND_THROTTLE_SECONDS,
-                    'otp' => app()->isLocal() ? $otp : null,
+                    'otp' => $this->shouldExposeOtpWithoutMail() ? $otp : null,
                 ];
             });
 
@@ -742,6 +742,11 @@ class InstructorRegistrationController extends Controller
     private function flowTypeCacheKey(string $email): string
     {
         return 'instructor_otp_flow_' . strtolower(trim($email));
+    }
+
+    private function shouldExposeOtpWithoutMail(): bool
+    {
+        return app()->environment(['local', 'staging']);
     }
 
     private function clearOtpCache(string $email): void

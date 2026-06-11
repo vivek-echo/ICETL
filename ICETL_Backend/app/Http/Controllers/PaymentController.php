@@ -60,7 +60,7 @@ class PaymentController extends Controller
                 ], 409);
             }
 
-            $subtotal = round((float) $courses->sum(fn ($course) => (float) $course->price), 2);
+            $subtotal = round((float) $courses->sum(fn($course) => (float) $course->price), 2);
             $taxAmount = round($subtotal * self::TAX_PERCENT / 100, 2);
             $totalAmount = round($subtotal + $taxAmount, 2);
 
@@ -97,7 +97,7 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $orderItems = $courses->map(fn ($course) => [
+            $orderItems = $courses->map(fn($course) => [
                 'orderId' => $orderId,
                 'courseId' => (int) $course->id,
                 'price' => (float) $course->price,
@@ -188,7 +188,7 @@ class PaymentController extends Controller
         $requiredTables = ['orders', 'payments', 'order_items', 'payment_logs', 'invoices', $entityTable];
         $missingTables = array_values(array_filter(
             $requiredTables,
-            fn (string $table): bool => !Schema::hasTable($table)
+            fn(string $table): bool => !Schema::hasTable($table)
         ));
 
         if (!empty($missingTables)) {
@@ -333,6 +333,309 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Unable to initialize {$entityLabel} checkout. Please try again.",
+            ], 500);
+        }
+    }
+
+    public function enrollWorkshopStudent(Request $request)
+    {
+        return $this->manualProgramEnrollment($request, 'workshop');
+    }
+
+    public function enrollSeminarStudent(Request $request)
+    {
+        return $this->manualProgramEnrollment($request, 'seminar');
+    }
+
+    private function manualProgramEnrollment(Request $request, string $entityType)
+    {
+        $request->merge([
+            'paymentBy' => strtoupper(trim((string) $request->input('paymentBy', ''))),
+        ]);
+
+        $idField = $entityType === 'seminar' ? 'seminarId' : 'workshopId';
+        $entityLabel = $this->programEntityLabel($entityType);
+        $entityTable = $this->programEntityTable($entityType);
+
+        $validator = Validator::make($request->all(), [
+            $idField => 'required|integer|min:1',
+            'name' => ['required', 'string', 'min:2', 'max:150'],
+            'email' => ['required', 'email', 'max:191'],
+            'dob' => 'required|date|before_or_equal:today',
+            'gender' => 'required|in:1,2',
+            'paymentBy' => 'required|in:CASH,UPI,NETBANKING',
+            'transactionNo' => 'nullable|string|max:100',
+            'totalFee' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (!$this->isAdmin($request)) {
+            return response()->json([
+                'status' => false,
+                'message' => "Only admins can manually enroll {$entityLabel} students.",
+            ], 403);
+        }
+
+        $requiredTables = ['users', 'orders', 'payments', 'order_items', 'payment_logs', 'invoices', $entityTable];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn(string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        $entityId = (int) $request->input($idField);
+        $totalFee = round((float) $request->input('totalFee'), 2);
+        $paymentBy = (string) $request->input('paymentBy');
+        $transactionNo = trim((string) $request->input('transactionNo', '')) ?: null;
+
+        if ($paymentBy !== 'CASH' && !$transactionNo) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'transactionNo' => ['Transaction no is required for UPI and Netbanking payments.'],
+                ],
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $program = $this->getProgramForCheckout($entityType, $entityId);
+
+            if (!$program) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => "{$entityLabel} is invalid, inactive, or no longer available for enrollment.",
+                ], 404);
+            }
+
+            $programPayload = $this->programResponsePayload($program, $entityType, $entityLabel);
+            $programFee = round((float) ($program->price ?? 0), 2);
+
+            if (abs($programFee - $totalFee) > 0.01) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => "Total fee does not match the selected {$entityLabel} fee.",
+                    'errors' => [
+                        'totalFee' => ["Total fee does not match the selected {$entityLabel} fee."],
+                    ],
+                ], 422);
+            }
+
+            $email = strtolower(trim((string) $request->input('email')));
+            $student = DB::table('users')
+                ->where('email', $email)
+                ->where('userType', 1)
+                ->where('role', 2)
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            $studentId = $student
+                ? (int) $student->id
+                : DB::table('users')->insertGetId($this->filterExistingColumns('users', [
+                    'name' => trim((string) $request->input('name')),
+                    'email' => $email,
+                    'dob' => $request->input('dob'),
+                    'gender' => (int) $request->input('gender'),
+                    'userType' => 1,
+                    'role' => 2,
+                    'status' => 1,
+                    'deletedFlag' => 0,
+                    'createdOn' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+
+            EntityCodeService::assignIfMissing('users', $studentId, EntityCodeService::PREFIX_LEARNER);
+
+            if ($this->hasSuccessfulProgramPurchase($studentId, $entityLabel, $entityId)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => "Student is already enrolled in this {$entityLabel}.",
+                ], 409);
+            }
+
+            $paymentReference = $this->reference('MANPAY');
+            $orderReference = $this->reference('MANORD');
+
+            $orderId = DB::table('orders')->insertGetId([
+                'userId' => $studentId,
+                'orderReference' => $orderReference,
+                'subtotalAmount' => $totalFee,
+                'taxAmount' => 0,
+                'totalAmount' => $totalFee,
+                'currency' => self::CURRENCY,
+                'status' => 'paid',
+                'razorpayOrderId' => null,
+                'expiresAt' => null,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('order_items')->insert($this->filterExistingColumns('order_items', [
+                'orderId' => $orderId,
+                'courseId' => 0,
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'entityCode' => $programPayload['code'],
+                'entityTitle' => $programPayload['title'],
+                'price' => $totalFee,
+                'taxAmount' => 0,
+                'totalAmount' => $totalFee,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+
+            $paymentId = DB::table('payments')->insertGetId([
+                'orderId' => $orderId,
+                'userId' => $studentId,
+                'paymentReference' => $paymentReference,
+                'razorpayPaymentId' => null,
+                'razorpayOrderId' => null,
+                'razorpaySignature' => null,
+                'amount' => $totalFee,
+                'taxAmount' => 0,
+                'totalAmount' => $totalFee,
+                'currency' => self::CURRENCY,
+                'paymentMethod' => $paymentBy,
+                'status' => 'success',
+                'failureReason' => null,
+                'paidAt' => $totalFee > 0 ? now() : null,
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $invoiceData = $this->manualProgramInvoiceData(
+                $orderId,
+                $programPayload,
+                $entityId,
+                $entityLabel,
+                $student ?: (object) [
+                    'name' => trim((string) $request->input('name')),
+                    'email' => $email,
+                ],
+                $orderReference,
+                $paymentReference,
+                $paymentBy,
+                $transactionNo,
+                $totalFee
+            );
+
+            $invoiceId = DB::table('invoices')->insertGetId($this->filterExistingColumns('invoices', [
+                'userId' => $studentId,
+                'orderId' => $orderId,
+                'paymentId' => $paymentId,
+                'invoiceNumber' => 'INV-' . date('Y') . '-PENDING',
+                'invoiceDate' => now()->toDateString(),
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'entityCode' => $programPayload['code'],
+                'entityTitle' => $programPayload['title'],
+                'customerName' => $invoiceData['customer']['name'],
+                'customerEmail' => $invoiceData['customer']['email'],
+                'customerPhone' => $invoiceData['customer']['phone'],
+                'subtotal' => $totalFee,
+                'tax' => 0,
+                'grandTotal' => $totalFee,
+                'currency' => self::CURRENCY,
+                'paymentReference' => $transactionNo ?: $paymentReference,
+                'invoiceData' => json_encode($invoiceData),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+
+            $invoiceNumber = 'INV-' . date('Y') . '-' . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
+            $invoiceData['invoiceNo'] = $invoiceNumber;
+
+            DB::table('invoices')->where('id', $invoiceId)->update($this->filterExistingColumns('invoices', [
+                'invoiceNumber' => $invoiceNumber,
+                'invoiceData' => json_encode($invoiceData),
+                'updated_at' => now(),
+            ]));
+
+            DB::table('payment_logs')->insert($this->filterExistingColumns('payment_logs', [
+                'userId' => $studentId,
+                'orderId' => $orderId,
+                'paymentId' => $paymentId,
+                'eventType' => 'program.manual_enrollment',
+                'gateway' => 'manual',
+                'status' => 'success',
+                'entityType' => $entityLabel,
+                'entityId' => $entityId,
+                'entityCode' => $programPayload['code'],
+                'entityTitle' => $programPayload['title'],
+                'amountPaid' => $totalFee,
+                'amount' => $totalFee,
+                'paymentMode' => $paymentBy,
+                'paymentBy' => $paymentBy,
+                'paymentType' => 'FULL',
+                'paymentStatus' => 'PAID',
+                'invoiceNumber' => $invoiceNumber,
+                'referenceNo' => $paymentReference,
+                'transactionNo' => $transactionNo,
+                'createdBy' => (int) ($request->user()->id ?? 0),
+                'paymentFor' => $entityLabel,
+                'remarks' => "Manual {$entityLabel} enrollment",
+                'requestPayload' => json_encode($request->except(['password'])),
+                'responsePayload' => json_encode([
+                    'orderId' => $orderId,
+                    'paymentId' => $paymentId,
+                    'invoiceId' => $invoiceId,
+                    'invoiceNumber' => $invoiceNumber,
+                ]),
+                'ipAddress' => $request->ip(),
+                'browserInfo' => substr((string) $request->userAgent(), 0, 500),
+                'deletedFlag' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => "Student enrolled in {$entityLabel} successfully.",
+                'data' => [
+                    'studentId' => $studentId,
+                    'orderId' => $orderId,
+                    'paymentId' => $paymentId,
+                    'invoiceId' => $invoiceId,
+                    'invoiceNumber' => $invoiceNumber,
+                    'program' => $programPayload,
+                ],
+            ], 200);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error("Manual {$entityLabel} enrollment failed", ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => false,
+                'message' => "Unable to enroll student in {$entityLabel}.",
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -898,29 +1201,29 @@ class PaymentController extends Controller
             ->orderByDesc('e.id')
             ->get();
 
-        $courseIds = $courses->pluck('id')->map(fn ($id) => (int) $id)->unique()->values();
+        $courseIds = $courses->pluck('id')->map(fn($id) => (int) $id)->unique()->values();
         $courseInstructorMap = $courseIds->isEmpty()
             ? collect()
             : DB::table('courseinstructors as ci')
-                ->leftJoin('users as u', 'u.id', '=', 'ci.instructorId')
-                ->whereIn('ci.courseId', $courseIds)
-                ->select('ci.courseId', 'ci.instructorId', 'u.name')
-                ->orderBy('ci.id')
-                ->get()
-                ->groupBy('courseId');
+            ->leftJoin('users as u', 'u.id', '=', 'ci.instructorId')
+            ->whereIn('ci.courseId', $courseIds)
+            ->select('ci.courseId', 'ci.instructorId', 'u.name')
+            ->orderBy('ci.id')
+            ->get()
+            ->groupBy('courseId');
 
-        $fallbackInstructorIds = $courses->flatMap(fn ($course) => $this->normalizeInstructorIds($course->instructorIds ?? []))->unique()->values();
+        $fallbackInstructorIds = $courses->flatMap(fn($course) => $this->normalizeInstructorIds($course->instructorIds ?? []))->unique()->values();
         $fallbackInstructors = $fallbackInstructorIds->isEmpty() ? collect() : DB::table('users')->whereIn('id', $fallbackInstructorIds)->pluck('name', 'id');
 
         $data = $courses->map(function ($course) use ($request, $courseInstructorMap, $fallbackInstructors) {
-            $relationInstructors = collect($courseInstructorMap->get($course->id, []))->map(fn ($instructor) => [
+            $relationInstructors = collect($courseInstructorMap->get($course->id, []))->map(fn($instructor) => [
                 'id' => (int) $instructor->instructorId,
                 'name' => (string) ($instructor->name ?? 'Instructor'),
             ]);
 
             $instructors = $relationInstructors->isNotEmpty()
                 ? $relationInstructors
-                : collect($this->normalizeInstructorIds($course->instructorIds ?? []))->map(fn ($id) => [
+                : collect($this->normalizeInstructorIds($course->instructorIds ?? []))->map(fn($id) => [
                     'id' => (int) $id,
                     'name' => (string) ($fallbackInstructors[(int) $id] ?? 'Instructor'),
                 ]);
@@ -985,7 +1288,7 @@ class PaymentController extends Controller
         $requiredTables = ['orders', 'payments', 'order_items', 'invoices', 'workshops', 'seminars'];
         $missingTables = array_values(array_filter(
             $requiredTables,
-            fn (string $table): bool => !Schema::hasTable($table)
+            fn(string $table): bool => !Schema::hasTable($table)
         ));
 
         if (!empty($missingTables)) {
@@ -1102,14 +1405,398 @@ class PaymentController extends Controller
             'success' => true,
             'message' => 'My programs fetched successfully.',
             'data' => $rows
-                ->map(fn ($row) => $this->formatMyProgram($row, $request))
-                ->filter(fn (array $program) => in_array($program['type'], $programTypes, true) && (int) $program['id'] > 0)
+                ->map(fn($row) => $this->formatMyProgram($row, $request))
+                ->filter(fn(array $program) => in_array($program['type'], $programTypes, true) && (int) $program['id'] > 0)
                 ->values(),
         ]);
     }
 
-    public function invoice(Request $request, int $orderId)
+    public function workshopEnrolledStudents(Request $request)
     {
+        return $this->programEnrolledStudents($request, 'workshop');
+    }
+
+    public function seminarEnrolledStudents(Request $request)
+    {
+        return $this->programEnrolledStudents($request, 'seminar');
+    }
+
+    private function programEnrolledStudents(Request $request, string $programType)
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'perPage' => 'nullable',
+            'search' => 'nullable|string|max:120',
+            'programId' => 'nullable|integer|min:1',
+            'programCode' => 'nullable|string|max:60',
+            'status' => 'nullable|string|in:,all,0,1',
+            'scheduleStatus' => 'nullable|string|in:,all,upcoming,ongoing,completed',
+            'paymentMode' => 'nullable|string|max:40',
+            'sortBy' => 'nullable|string|in:newest,oldest,studentAsc,studentDesc,programAsc,programDesc,amountAsc,amountDesc',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        $programType = $this->normalizeProgramEntityType($programType) ?? 'workshop';
+        $programTable = $this->programEntityTable($programType);
+        $programLabel = $this->programEntityLabel($programType);
+
+        $requiredTables = ['orders', 'order_items', 'users', 'payments', 'invoices', $programTable];
+
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            fn(string $table): bool => !Schema::hasTable($table)
+        ));
+
+        if (!empty($missingTables)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Payment tables are missing: ' . implode(', ', $missingTables),
+            ], 500);
+        }
+
+        $page = max(1, (int) $request->input('page', 1));
+        $rawPerPage = $request->input('perPage', 10);
+        $isAllPageSize = $rawPerPage === 'all';
+        $perPage = $isAllPageSize ? 100000 : min(max((int) $rawPerPage, 1), 100);
+
+        $search = trim((string) $request->input('search', ''));
+        $programCode = trim((string) $request->input('programCode', ''));
+        $status = trim((string) $request->input('status', ''));
+        $scheduleStatus = trim((string) $request->input('scheduleStatus', 'all'));
+        $paymentMode = strtoupper(trim((string) $request->input('paymentMode', '')));
+        $sortBy = (string) $request->input('sortBy', 'newest');
+        $programId = (int) $request->input('programId', 0);
+
+        $hasOrderItemEntityType = Schema::hasColumn('order_items', 'entityType');
+        $hasOrderItemEntityId = Schema::hasColumn('order_items', 'entityId');
+
+        $hasOrderItemCourseId = Schema::hasColumn('order_items', 'courseId');
+
+        $hasInvoiceEntityType = Schema::hasColumn('invoices', 'entityType');
+        $hasInvoiceEntityId = Schema::hasColumn('invoices', 'entityId');
+        $hasInvoiceCourseId = Schema::hasColumn('invoices', 'courseId');
+
+        $hasProgramCode = Schema::hasColumn($programTable, 'code');
+        $hasProgramTopic = Schema::hasColumn($programTable, 'topic');
+        $hasProgramVenue = Schema::hasColumn($programTable, 'venue');
+        $hasProgramCity = Schema::hasColumn($programTable, 'city');
+        $hasProgramStartDate = Schema::hasColumn($programTable, 'startDate');
+        $hasProgramEndDate = Schema::hasColumn($programTable, 'endDate');
+        $hasProgramEventDate = Schema::hasColumn($programTable, 'eventDate');
+        $hasProgramStartTime = Schema::hasColumn($programTable, 'startTime');
+        $hasProgramEndTime = Schema::hasColumn($programTable, 'endTime');
+        $hasProgramSpeakerName = Schema::hasColumn($programTable, 'speakerName');
+        $hasProgramCapacity = Schema::hasColumn($programTable, 'capacity');
+        $hasProgramStatus = Schema::hasColumn($programTable, 'status');
+
+        $hasStudentCode = Schema::hasColumn('users', 'code');
+        $hasStudentDob = Schema::hasColumn('users', 'dob');
+        $hasStudentGender = Schema::hasColumn('users', 'gender');
+
+        /*
+    |--------------------------------------------------------------------------
+    | Build effective entity type SQL
+    |--------------------------------------------------------------------------
+    | Your current order_items table does NOT have moduleId/moduleType.
+    | So we use invoices.entityType/entityId and fallback to courseId only for ID.
+    */
+
+        $normalizeEntityTypeSql = static function (string $column): string {
+            return "
+            CASE
+                WHEN LOWER(TRIM({$column})) LIKE '%seminar%' THEN 'seminar'
+                WHEN LOWER(TRIM({$column})) LIKE '%workshop%' THEN 'workshop'
+                WHEN LOWER(TRIM({$column})) LIKE '%academic%' THEN 'academic_course'
+                WHEN LOWER(TRIM({$column})) LIKE '%course%' THEN 'course'
+                ELSE LOWER(TRIM({$column}))
+            END
+        ";
+        };
+
+        $typeSqlParts = [];
+
+        if ($hasOrderItemEntityType) {
+            $typeSqlParts[] = $normalizeEntityTypeSql('oi.entityType');
+        }
+
+        if ($hasInvoiceEntityType) {
+            $typeSqlParts[] = $normalizeEntityTypeSql('i.entityType');
+        }
+
+        $effectiveTypeSql = !empty($typeSqlParts)
+            ? 'COALESCE(' . implode(', ', $typeSqlParts) . ')'
+            : 'NULL';
+
+        /*
+    |--------------------------------------------------------------------------
+    | Build effective entity ID SQL
+    |--------------------------------------------------------------------------
+    | Priority:
+    | 1. order_items.entityId if added later
+    | 2. invoices.entityId currently available
+    | 3. invoices.courseId fallback
+    | 4. order_items.courseId fallback
+    */
+
+        $idSqlParts = [];
+
+        if ($hasOrderItemEntityId) {
+            $idSqlParts[] = 'NULLIF(oi.entityId, 0)';
+        }
+
+        if ($hasInvoiceEntityId) {
+            $idSqlParts[] = 'NULLIF(i.entityId, 0)';
+        }
+
+        if ($hasInvoiceCourseId) {
+            $idSqlParts[] = 'NULLIF(i.courseId, 0)';
+        }
+
+        if ($hasOrderItemCourseId) {
+            $idSqlParts[] = 'NULLIF(oi.courseId, 0)';
+        }
+
+        $effectiveIdSql = !empty($idSqlParts)
+            ? 'COALESCE(' . implode(', ', $idSqlParts) . ')'
+            : 'NULL';
+
+        /*
+    |--------------------------------------------------------------------------
+    | Program date columns
+    |--------------------------------------------------------------------------
+    | Your workshops table has startDate/endDate.
+    | If seminar also uses workshops table, this prevents eventDate error.
+    */
+
+        if ($programType === 'seminar' && $hasProgramEventDate) {
+            $startDateColumn = 'program.eventDate';
+            $endDateColumn = 'program.eventDate';
+        } else {
+            $startDateColumn = $hasProgramStartDate ? 'program.startDate' : 'NULL';
+
+            if ($hasProgramEndDate && $hasProgramStartDate) {
+                $endDateColumn = 'COALESCE(program.endDate, program.startDate)';
+            } elseif ($hasProgramEndDate) {
+                $endDateColumn = 'program.endDate';
+            } elseif ($hasProgramStartDate) {
+                $endDateColumn = 'program.startDate';
+            } else {
+                $endDateColumn = 'NULL';
+            }
+        }
+
+        $query = DB::table('order_items as oi')
+            ->join('orders as o', function ($join) {
+                $join->on('o.id', '=', 'oi.orderId')
+                    ->where('o.status', 'paid')
+                    ->where('o.deletedFlag', 0);
+            })
+            ->join('users as student', function ($join) {
+                $join->on('student.id', '=', 'o.userId')
+                    ->where('student.deletedFlag', 0);
+            })
+            ->leftJoin('invoices as i', function ($join) {
+                $join->on('i.orderId', '=', 'o.id')
+                    ->where('i.deletedFlag', 0);
+            })
+            ->leftJoin('payments as p', function ($join) {
+                $join->on('p.orderId', '=', 'o.id')
+                    ->where('p.status', 'success')
+                    ->where('p.deletedFlag', 0);
+            })
+            ->join($programTable . ' as program', function ($join) use ($programType, $effectiveIdSql, $effectiveTypeSql) {
+                $join->on('program.id', '=', DB::raw($effectiveIdSql))
+                    ->whereRaw("({$effectiveTypeSql}) = ?", [$programType])
+                    ->where('program.deletedFlag', 0);
+            })
+            ->where('oi.deletedFlag', 0);
+
+        if ($programId > 0) {
+            $query->where('program.id', $programId);
+        }
+
+        if ($programCode !== '') {
+            if ($hasProgramCode) {
+                $query->where('program.code', 'like', "%{$programCode}%");
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($status !== '' && $status !== 'all') {
+            if ($hasProgramStatus) {
+                $query->where('program.status', (int) $status);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($scheduleStatus !== '' && $scheduleStatus !== 'all') {
+            if ($startDateColumn === 'NULL' || $endDateColumn === 'NULL') {
+                $query->whereRaw('1 = 0');
+            } else {
+                $today = now()->toDateString();
+
+                if ($scheduleStatus === 'upcoming') {
+                    $query->whereDate(DB::raw($startDateColumn), '>', $today);
+                } elseif ($scheduleStatus === 'completed') {
+                    $query->whereDate(DB::raw($endDateColumn), '<', $today);
+                } else {
+                    $query->whereDate(DB::raw($startDateColumn), '<=', $today)
+                        ->whereDate(DB::raw($endDateColumn), '>=', $today);
+                }
+            }
+        }
+
+        if ($paymentMode !== '' && $paymentMode !== 'ALL') {
+            if ($paymentMode === 'RAZORPAY') {
+                $query->whereNotNull('p.razorpayPaymentId');
+            } else {
+                $query->whereRaw('UPPER(COALESCE(p.paymentMethod, "")) = ?', [$paymentMode]);
+            }
+        }
+
+        if ($search !== '') {
+            $query->where(function ($subQuery) use (
+                $search,
+                $hasProgramCode,
+                $hasProgramTopic,
+                $hasStudentCode
+            ) {
+                $subQuery
+                    ->where('student.name', 'like', "%{$search}%")
+                    ->orWhere('student.email', 'like', "%{$search}%")
+                    ->orWhere('student.phone', 'like', "%{$search}%")
+                    ->orWhere('program.title', 'like', "%{$search}%")
+                    ->orWhere('o.orderReference', 'like', "%{$search}%")
+                    ->orWhere('i.invoiceNumber', 'like', "%{$search}%")
+                    ->orWhere('p.paymentReference', 'like', "%{$search}%")
+                    ->orWhere('p.razorpayPaymentId', 'like', "%{$search}%");
+
+                if ($hasProgramTopic) {
+                    $subQuery->orWhere('program.topic', 'like', "%{$search}%");
+                }
+
+                if ($hasProgramCode) {
+                    $subQuery->orWhere('program.code', 'like', "%{$search}%");
+                }
+
+                if ($hasStudentCode) {
+                    $subQuery->orWhere('student.code', 'like', "%{$search}%");
+                }
+            });
+        }
+
+        $summaryQuery = clone $query;
+
+        $totalEnrollments = (clone $summaryQuery)->count('oi.id');
+        $totalStudents = (clone $summaryQuery)->distinct()->count('student.id');
+        $totalPaid = (float) (clone $summaryQuery)->sum(DB::raw('COALESCE(oi.totalAmount, p.totalAmount, o.totalAmount, 0)'));
+
+        $query->select(
+            'oi.id as purchaseItemId',
+            'oi.orderId',
+            'oi.price as itemPrice',
+            'oi.totalAmount as itemTotalAmount',
+
+            'o.orderReference',
+            'o.totalAmount as orderTotalAmount',
+            'o.created_at as enrolledAt',
+
+            'student.id as studentId',
+            'student.name as studentName',
+            'student.email as studentEmail',
+            'student.phone as studentPhone',
+
+            $hasStudentDob ? 'student.dob as studentDob' : DB::raw('NULL as studentDob'),
+            $hasStudentGender ? 'student.gender as studentGender' : DB::raw('NULL as studentGender'),
+            $hasStudentCode ? 'student.code as studentCode' : DB::raw('NULL as studentCode'),
+
+            'program.id as programId',
+            $hasProgramCode ? 'program.code as programCode' : DB::raw('NULL as programCode'),
+            'program.title as programTitle',
+            $hasProgramTopic ? 'program.topic as programTopic' : DB::raw('NULL as programTopic'),
+            $hasProgramVenue ? 'program.venue as programVenue' : DB::raw('NULL as programVenue'),
+            $hasProgramCity ? 'program.city as programCity' : DB::raw('NULL as programCity'),
+
+            DB::raw("{$startDateColumn} as programStartDate"),
+            DB::raw("{$endDateColumn} as programEndDate"),
+
+            $hasProgramStartTime ? 'program.startTime as programStartTime' : DB::raw('NULL as programStartTime'),
+            $hasProgramEndTime ? 'program.endTime as programEndTime' : DB::raw('NULL as programEndTime'),
+            $hasProgramSpeakerName ? 'program.speakerName as programSpeakerName' : DB::raw('NULL as programSpeakerName'),
+            $hasProgramCapacity ? 'program.capacity as programCapacity' : DB::raw('NULL as programCapacity'),
+            $hasProgramStatus ? 'program.status as programStatus' : DB::raw('NULL as programStatus'),
+
+            'p.paymentMethod',
+            'p.paymentReference',
+            'p.razorpayPaymentId',
+            'p.totalAmount as paymentTotalAmount',
+
+            'i.invoiceNumber',
+            'i.paymentReference as invoicePaymentReference',
+            'i.entityType as invoiceEntityType',
+            'i.entityId as invoiceEntityId'
+        );
+
+        $this->applyProgramStudentSort($query, $sortBy);
+
+        if ($isAllPageSize) {
+            $rows = $query->get();
+
+            $data = $rows
+                ->map(fn($row) => $this->formatProgramEnrolledStudentRow($row, $programType))
+                ->values();
+
+            $meta = [
+                'currentPage' => 1,
+                'perPage' => 'all',
+                'total' => $data->count(),
+                'lastPage' => 1,
+                'from' => $data->count() > 0 ? 1 : null,
+                'to' => $data->count() > 0 ? $data->count() : null,
+            ];
+        } else {
+            $students = $query->paginate($perPage, ['*'], 'page', $page);
+
+            $data = collect($students->items())
+                ->map(fn($row) => $this->formatProgramEnrolledStudentRow($row, $programType))
+                ->values();
+
+            $meta = [
+                'currentPage' => $students->currentPage(),
+                'perPage' => $students->perPage(),
+                'total' => $students->total(),
+                'lastPage' => $students->lastPage(),
+                'from' => $students->firstItem(),
+                'to' => $students->lastItem(),
+            ];
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => "{$programLabel} enrolled students fetched successfully.",
+            'data' => $data,
+            'summary' => [
+                'totalEnrollments' => $totalEnrollments,
+                'totalStudents' => $totalStudents,
+                'totalPaid' => $totalPaid,
+            ],
+            'meta' => $meta,
+        ]);
+    }
+
+    public function invoice(Request $request, $orderId)
+    {
+        $orderId = (int) $orderId;
+
+        if ($orderId <= 0) {
+            return response()->json(['success' => false, 'message' => 'Invoice not found.'], 404);
+        }
+
         $invoice = $this->buildInvoice($orderId, (int) $request->user()->id, $this->isAdmin($request));
 
         if (!$invoice) {
@@ -1119,8 +1806,14 @@ class PaymentController extends Controller
         return response()->json(['success' => true, 'message' => 'Invoice fetched successfully.', 'data' => $invoice]);
     }
 
-    public function downloadInvoice(Request $request, int $orderId)
+    public function downloadInvoice(Request $request, $orderId)
     {
+        $orderId = (int) $orderId;
+
+        if ($orderId <= 0) {
+            return response('Invoice not found.', 404);
+        }
+
         $invoice = $this->buildInvoice($orderId, (int) $request->user()->id, $this->isAdmin($request));
 
         if (!$invoice) {
@@ -1331,6 +2024,8 @@ class PaymentController extends Controller
 
     private function enrichStoredInvoicePayload(array $payload, object $invoice, int $orderId): array
     {
+        $payload['orderId'] = (int) ($payload['orderId'] ?? $orderId);
+
         foreach (['entityType', 'entityId', 'entityCode', 'entityTitle'] as $field) {
             if (empty($payload[$field]) && isset($invoice->{$field})) {
                 $payload[$field] = $invoice->{$field};
@@ -1538,7 +2233,7 @@ class PaymentController extends Controller
             'entityId' => $singleItemInvoice ? ($firstItem['entityId'] ?? $firstItem['courseId'] ?? null) : null,
             'entityCode' => $singleItemInvoice ? ($firstItem['entityCode'] ?? null) : null,
             'entityTitle' => $singleItemInvoice ? ($firstItem['entityTitle'] ?? null) : count($items) . ' Courses',
-            'subtotal' => (float) ($order->subtotalAmount ?? array_sum(array_map(fn ($item) => (float) $item['price'], $items))),
+            'subtotal' => (float) ($order->subtotalAmount ?? array_sum(array_map(fn($item) => (float) $item['price'], $items))),
             'tax' => (float) ($order->taxAmount ?? 0),
             'totalAmount' => (float) $order->totalAmount,
         ];
@@ -1666,14 +2361,14 @@ class PaymentController extends Controller
 
     private function programEntityTypeCoalesceSql(array $columns): string
     {
-        $expressions = array_map(fn (string $column): string => $this->programEntityTypeSql($column), $columns);
+        $expressions = array_map(fn(string $column): string => $this->programEntityTypeSql($column), $columns);
 
         return empty($expressions) ? 'NULL' : 'COALESCE(' . implode(', ', $expressions) . ')';
     }
 
     private function programEntityIdCoalesceSql(array $columns): string
     {
-        $expressions = array_map(fn (string $column): string => "NULLIF({$column}, 0)", $columns);
+        $expressions = array_map(fn(string $column): string => "NULLIF({$column}, 0)", $columns);
 
         return empty($expressions) ? 'NULL' : 'COALESCE(' . implode(', ', $expressions) . ')';
     }
@@ -1887,6 +2582,71 @@ class PaymentController extends Controller
             ->first();
     }
 
+    private function applyProgramStudentSort($query, string $sortBy): void
+    {
+        match ($sortBy) {
+            'oldest' => $query->orderBy('o.created_at')->orderBy('oi.id'),
+            'studentAsc' => $query->orderBy('student.name')->orderByDesc('o.created_at'),
+            'studentDesc' => $query->orderByDesc('student.name')->orderByDesc('o.created_at'),
+            'programAsc' => $query->orderBy('program.title')->orderByDesc('o.created_at'),
+            'programDesc' => $query->orderByDesc('program.title')->orderByDesc('o.created_at'),
+            'amountAsc' => $query->orderByRaw('COALESCE(oi.totalAmount, p.totalAmount, o.totalAmount, 0) ASC')->orderByDesc('o.created_at'),
+            'amountDesc' => $query->orderByRaw('COALESCE(oi.totalAmount, p.totalAmount, o.totalAmount, 0) DESC')->orderByDesc('o.created_at'),
+            default => $query->orderByDesc('o.created_at')->orderByDesc('oi.id'),
+        };
+    }
+
+    private function formatProgramEnrolledStudentRow(object $row, string $programType): array
+    {
+        $amount = (float) ($row->itemTotalAmount ?? $row->paymentTotalAmount ?? $row->orderTotalAmount ?? 0);
+
+        return [
+            'id' => (int) $row->purchaseItemId,
+            'orderId' => (int) $row->orderId,
+            'studentId' => (int) $row->studentId,
+            'studentCode' => $row->studentCode ?? null,
+            'studentName' => (string) ($row->studentName ?? 'Learner'),
+            'studentEmail' => (string) ($row->studentEmail ?? ''),
+            'studentPhone' => $row->studentPhone ?? null,
+            'studentDob' => $row->studentDob ?? null,
+            'studentGender' => isset($row->studentGender) ? (int) $row->studentGender : null,
+            'programType' => $programType,
+            'programId' => (int) $row->programId,
+            'programCode' => $row->programCode ?? null,
+            'programTitle' => (string) ($row->programTitle ?? $this->programEntityLabel($programType)),
+            'programTopic' => (string) ($row->programTopic ?? ''),
+            'programVenue' => (string) ($row->programVenue ?? ''),
+            'programCity' => (string) ($row->programCity ?? ''),
+            'programStartDate' => $row->programStartDate ?? null,
+            'programEndDate' => $row->programEndDate ?? null,
+            'programStartTime' => $this->formatProgramTime($row->programStartTime ?? null),
+            'programEndTime' => $this->formatProgramTime($row->programEndTime ?? null),
+            'programSpeakerName' => (string) ($row->programSpeakerName ?? ''),
+            'programCapacity' => (int) ($row->programCapacity ?? 0),
+            'programStatus' => (int) ($row->programStatus ?? 0),
+            'programStatusLabel' => ((int) ($row->programStatus ?? 0)) === 1 ? 'Active' : 'Inactive',
+            'scheduleStatus' => $this->programScheduleStatus(
+                $programType,
+                $row->programStartDate ? (string) $row->programStartDate : '',
+                $row->programEndDate ? (string) $row->programEndDate : null
+            ),
+            'invoiceNo' => $row->invoiceNumber ?? null,
+            'orderReference' => $row->orderReference ?? null,
+            'paymentReference' => $this->paymentDisplayId(
+                $row->razorpayPaymentId ?? null,
+                $row->invoicePaymentReference ?? null,
+                $row->paymentReference ?? null
+            ),
+            'paymentMode' => $this->paymentMethodLabel(
+                $row->paymentMethod ?? null,
+                null,
+                $row->razorpayPaymentId ?? null
+            ),
+            'amountPaid' => $amount,
+            'enrolledAt' => $row->enrolledAt,
+        ];
+    }
+
     private function programScheduleStatus(string $programType, string $startDate, ?string $endDate): string
     {
         if ($startDate === '') {
@@ -1927,9 +2687,9 @@ class PaymentController extends Controller
         }
 
         return collect($decoded)
-            ->filter(fn ($item) => is_string($item) || is_numeric($item))
-            ->map(fn ($item) => trim((string) $item))
-            ->filter(fn ($item) => $item !== '')
+            ->filter(fn($item) => is_string($item) || is_numeric($item))
+            ->map(fn($item) => trim((string) $item))
+            ->filter(fn($item) => $item !== '')
             ->values()
             ->all();
     }
@@ -1979,7 +2739,7 @@ class PaymentController extends Controller
     private function courseOrderItems($orderItems)
     {
         return collect($orderItems)
-            ->filter(fn ($item) => (int) ($item->courseId ?? 0) > 0)
+            ->filter(fn($item) => (int) ($item->courseId ?? 0) > 0)
             ->values();
     }
 
@@ -2204,6 +2964,63 @@ class PaymentController extends Controller
         return $payload;
     }
 
+    private function manualProgramInvoiceData(
+        int $orderId,
+        array $program,
+        int $entityId,
+        string $entityLabel,
+        object $student,
+        string $orderReference,
+        string $paymentReference,
+        string $paymentBy,
+        ?string $transactionNo,
+        float $totalFee
+    ): array {
+        $paymentDisplayId = $transactionNo ?: $paymentReference;
+
+        return $this->normalizeInvoicePaymentFields([
+            'invoiceNo' => 'PENDING',
+            'orderId' => $orderId,
+            'invoiceDate' => now()->toDateString(),
+            'customer' => [
+                'name' => (string) ($student->name ?? 'Learner'),
+                'email' => (string) ($student->email ?? ''),
+                'phone' => $student->phone ?? $student->mobile ?? null,
+            ],
+            'orderReference' => $orderReference,
+            'razorpayOrderId' => null,
+            'razorpayPaymentId' => null,
+            'paymentReference' => $paymentReference,
+            'paymentDisplayId' => $paymentDisplayId,
+            'paymentMethod' => $paymentBy,
+            'paymentBy' => $paymentBy,
+            'transactionNo' => $transactionNo,
+            'entityType' => $entityLabel,
+            'entityId' => $entityId,
+            'entityCode' => $program['code'] ?? null,
+            'entityTitle' => $program['title'] ?? $entityLabel,
+            'items' => [
+                [
+                    'id' => $entityId,
+                    'entityType' => $entityLabel,
+                    'entityId' => $entityId,
+                    'entityCode' => $program['code'] ?? null,
+                    'entityTitle' => $program['title'] ?? $entityLabel,
+                    'code' => $program['code'] ?? null,
+                    'title' => $program['title'] ?? $entityLabel,
+                    'categoryName' => $entityLabel,
+                    'price' => $totalFee,
+                    'taxAmount' => 0,
+                    'totalAmount' => $totalFee,
+                ],
+            ],
+            'subtotal' => $totalFee,
+            'tax' => 0,
+            'totalAmount' => $totalFee,
+            'currency' => self::CURRENCY,
+        ]);
+    }
+
     private function reference(string $prefix): string
     {
         return $prefix . '-' . now()->format('YmdHis') . '-' . strtoupper(bin2hex(random_bytes(4)));
@@ -2226,8 +3043,23 @@ class PaymentController extends Controller
         $paymentDisplayId = $invoice['paymentDisplayId'] ?? $this->paymentDisplayId($invoice['razorpayPaymentId'] ?? null, $invoice['transactionNo'] ?? null, $invoice['paymentReference'] ?? null);
         $paymentMethod = $invoice['paymentBy'] ?? $invoice['paymentMethod'] ?? (($invoice['razorpayPaymentId'] ?? null) ? 'RAZORPAY' : null);
         $orderReference = $invoice['orderReference'] ?? $invoice['razorpayOrderId'] ?? '';
+        $logoDataUri = $this->invoiceLogoDataUri();
+        $logoHtml = $logoDataUri
+            ? '<img class="logo-mark" src="' . e($logoDataUri) . '" alt="ICETL logo">'
+            : '<div class="logo-mark logo-mark--fallback">IC</div>';
 
-        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.code{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));color:#4f46e5;font:700 12px monospace;border:1px solid rgba(79,70,229,.18)}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Entity</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
+        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.brand-left{display:flex;align-items:center;gap:12px}.logo-mark{width:52px;height:52px;object-fit:contain;padding:5px;border-radius:8px;background:#fff;border:1px solid #e6e8ef;box-sizing:border-box}.logo-mark--fallback{display:inline-flex;align-items:center;justify-content:center;color:#2458d3;font-weight:900}.brand h1,.brand h2{margin:0}.brand p{margin:5px 0 0}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.code{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));color:#4f46e5;font:700 12px monospace;border:1px solid rgba(79,70,229,.18)}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div class="brand-left">' . $logoHtml . '<div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Entity</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
+    }
+
+    private function invoiceLogoDataUri(): ?string
+    {
+        $path = base_path('../ICETL_Frontend/src/assets/images/logo/logo.jpeg');
+
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+
+        return 'data:image/jpeg;base64,' . base64_encode((string) file_get_contents($path));
     }
 
     private function privateFileUrl(Request $request, string $path): string
@@ -2258,8 +3090,8 @@ class PaymentController extends Controller
         }
 
         return collect($decodedValue)
-            ->map(fn ($item) => is_array($item) && isset($item['id']) ? (int) $item['id'] : (int) $item)
-            ->filter(fn ($id) => $id > 0)
+            ->map(fn($item) => is_array($item) && isset($item['id']) ? (int) $item['id'] : (int) $item)
+            ->filter(fn($id) => $id > 0)
             ->unique()
             ->values()
             ->all();
@@ -2277,9 +3109,9 @@ class PaymentController extends Controller
         }
 
         return collect($decoded)
-            ->filter(fn ($item) => is_string($item) || is_numeric($item))
-            ->map(fn ($item) => trim((string) $item))
-            ->filter(fn ($item) => $item !== '')
+            ->filter(fn($item) => is_string($item) || is_numeric($item))
+            ->map(fn($item) => trim((string) $item))
+            ->filter(fn($item) => $item !== '')
             ->values()
             ->all();
     }

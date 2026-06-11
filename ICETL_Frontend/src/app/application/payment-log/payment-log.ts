@@ -13,6 +13,8 @@ import { Invoice, PaymentLog, PaymentService } from '../courses/services/payment
   styleUrl: './payment-log.scss',
 })
 export class PaymentLogComponent implements OnInit {
+  readonly invoiceLogoPath = 'assets/images/logo/logo.jpeg';
+
   private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
   });
@@ -79,7 +81,10 @@ export class PaymentLogComponent implements OnInit {
 
     try {
       const response = await lastValueFrom(this.paymentService.getInvoice(orderId));
-      this.selectedInvoice = response.data;
+      this.selectedInvoice = {
+        ...response.data,
+        orderId: Number(response.data?.orderId || orderId),
+      };
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch invoice',
@@ -109,12 +114,18 @@ export class PaymentLogComponent implements OnInit {
       return;
     }
 
+    const orderId = Number(this.selectedInvoice.orderId);
+    if (!Number.isFinite(orderId) || orderId <= 0) {
+      await this.alertHelper.error('Unable to identify this invoice order.', 'Invoice');
+      return;
+    }
+
     this.downloadingInvoice = true;
     this.cdr.detectChanges();
 
     try {
       const response = await lastValueFrom(
-        this.paymentService.downloadInvoice(this.selectedInvoice.orderId),
+        this.paymentService.downloadInvoice(orderId),
       );
       const file = response.body;
 
@@ -316,6 +327,7 @@ export class PaymentLogComponent implements OnInit {
       invoice.orderReference || invoice.razorpayOrderId || `Order #${invoice.orderId}`;
     const paymentMode = this.paymentMethodLabel(invoice);
     const entityCode = invoice.entityCode || '';
+    const logoUrl = this.invoiceLogoUrl();
 
     return `<!doctype html>
 <html>
@@ -354,12 +366,15 @@ export class PaymentLogComponent implements OnInit {
       align-items: center;
       background: #fff;
       border-radius: 8px;
+      box-sizing: border-box;
       color: #2458d3;
       display: inline-flex;
       font-size: 18px;
       font-weight: 900;
       height: 46px;
       justify-content: center;
+      object-fit: contain;
+      padding: 4px;
       width: 46px;
     }
     .brand strong,
@@ -573,7 +588,7 @@ export class PaymentLogComponent implements OnInit {
   <main class="invoice">
     <section class="masthead">
       <div class="brand">
-        <div class="brand-mark">IC</div>
+        <img class="brand-mark" src="${this.escapeHtml(logoUrl)}" alt="ICETL logo">
         <div>
           <strong>${this.escapeHtml(invoice.company?.name || 'ICETL')}</strong>
           <span>${this.escapeHtml(invoice.company?.subtitle || 'Ice Technology Lab')}</span>
@@ -663,6 +678,10 @@ export class PaymentLogComponent implements OnInit {
   </main>
 </body>
 </html>`;
+  }
+
+  private invoiceLogoUrl(): string {
+    return new URL(this.invoiceLogoPath, document.baseURI).href;
   }
 
   private escapeHtml(value: string | number | null | undefined): string {
