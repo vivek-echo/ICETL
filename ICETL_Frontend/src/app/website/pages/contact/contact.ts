@@ -131,8 +131,8 @@ export class ContactComponent {
     const formValue = this.enquiryForm.getRawValue();
 
     this.isSubmitting = true;
-
     try {
+
       const response = await lastValueFrom(
         this.contactEnquiryService.submitEnquiry({
           fullName: formValue.fullName || '',

@@ -170,4 +170,13 @@ export class EnquiriesComponent implements OnInit {
       { value: 'read', label: 'Read only' },
     ];
   }
+
+  get hasActiveFilters(): boolean {
+    return (
+      this.search.trim().length > 0 ||
+      this.readStatus !== 'all' ||
+      this.dateFrom.length > 0 ||
+      this.dateTo.length > 0
+    );
+  }
 }

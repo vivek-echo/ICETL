@@ -41,43 +41,75 @@
     </article>
   </div>
 
-  <div class="enquiry-filters">
-    <label>
-      <span>Search</span>
-      <input
-        type="search"
-        [(ngModel)]="search"
-        (keyup.enter)="applyFilters()"
-        placeholder="Name, email, phone, subject">
-    </label>
+  <div class="enquiry-filters" aria-label="Enquiry filters">
+    <div class="enquiry-filters__header">
+      <div class="enquiry-filters__title">
+        <span class="enquiry-filters__icon">
+          <i class="fa-solid fa-sliders"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
 
-    <label>
-      <span>Status</span>
-      <select [(ngModel)]="readStatus" (change)="applyFilters()">
-        @for (option of readStatusOptions; track option.value) {
-        <option [value]="option.value">{{ option.label }}</option>
-        }
-      </select>
-    </label>
+      @if (hasActiveFilters) {
+      <span class="enquiry-filters__active">Active</span>
+      }
+    </div>
 
-    <label>
-      <span>From</span>
-      <input type="date" [(ngModel)]="dateFrom" (change)="applyFilters()">
-    </label>
+    <div class="enquiry-filters__body">
+      <label class="enquiry-filter-field enquiry-filter-field--search">
+        <span>Search</span>
+        <div class="enquiry-filter-field__control">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input
+            type="search"
+            [(ngModel)]="search"
+            (keyup.enter)="applyFilters()"
+            placeholder="Name, email, phone, subject">
+        </div>
+      </label>
 
-    <label>
-      <span>To</span>
-      <input type="date" [(ngModel)]="dateTo" (change)="applyFilters()">
-    </label>
+      <label class="enquiry-filter-field">
+        <span>Status</span>
+        <div class="enquiry-filter-field__control enquiry-filter-field__control--select">
+          <select [(ngModel)]="readStatus" (change)="applyFilters()">
+            @for (option of readStatusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </label>
 
-    <button type="button" class="enquiry-filter-btn" (click)="applyFilters()">
-      <i class="fa-solid fa-filter"></i>
-      Filter
-    </button>
-    <button type="button" class="enquiry-filter-btn enquiry-filter-btn--ghost" (click)="clearFilters()">
-      <i class="fa-solid fa-rotate-left"></i>
-      Reset
-    </button>
+      <div class="enquiry-filter-field enquiry-filter-field--dates">
+        <span>Received</span>
+        <div class="enquiry-filter-dates">
+          <label>
+            <span class="sr-only">From date</span>
+            <input type="date" [(ngModel)]="dateFrom" (change)="applyFilters()" aria-label="From date">
+          </label>
+          <span class="enquiry-filter-dates__divider"></span>
+          <label>
+            <span class="sr-only">To date</span>
+            <input type="date" [(ngModel)]="dateTo" (change)="applyFilters()" aria-label="To date">
+          </label>
+        </div>
+      </div>
+
+      <div class="enquiry-filters__actions">
+        <button type="button" class="enquiry-filter-btn" (click)="applyFilters()" [disabled]="loading">
+          <i class="fa-solid fa-filter"></i>
+          Filter
+        </button>
+        <button
+          type="button"
+          class="enquiry-filter-btn enquiry-filter-btn--ghost"
+          (click)="clearFilters()"
+          [disabled]="loading || !hasActiveFilters">
+          <i class="fa-solid fa-rotate-left"></i>
+          Reset
+        </button>
+      </div>
+    </div>
   </div>
 
   @if (loading) {
