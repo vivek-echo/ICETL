@@ -12,6 +12,7 @@ import {
   SeminarSummary,
 } from '../../services/seminar';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 type ProgramPaymentMode = 'CASH' | 'UPI' | 'NETBANKING';
 
@@ -38,7 +39,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-view-all-seminar',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './view-all-seminar.html',
   styleUrl: './view-all-seminar.scss',
 })

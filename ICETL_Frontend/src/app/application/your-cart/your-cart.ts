@@ -275,7 +275,7 @@ export class YourCart implements OnInit {
 
               localStorage.removeItem('checkoutData');
               await this.cartService.loadCart();
-              void this.router.navigate(['/application/courses/manageCourses/myLearning']);
+              void this.router.navigate(['/application/courses/myLearning']);
             } else {
               await this.alertHelper.error(
                 verifyResponse.message || 'Payment verification failed',

@@ -62,6 +62,7 @@
 .hero-pagination-button {
   width: 10px;
   height: 10px;
+  min-height: unset !important;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -1036,14 +1037,45 @@
 
 .home-program-modal__panel {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  display: flex;
+  flex-direction: column;
   width: min(980px, 100%);
   max-height: min(86vh, 760px);
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 34px 80px rgba(15, 23, 42, 0.28);
+}
+
+.home-program-modal__header {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(25, 74, 162, 0.12);
+}
+
+.home-program-modal__header span {
+  color: #1b59dc;
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.home-program-modal__header h3 {
+  color: #102345;
+  font-size: clamp(20px, 2vw, 25px);
+  font-weight: 850;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.home-program-modal__body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  min-height: 0;
+  overflow: auto;
 }
 
 .home-program-modal__close {
@@ -1652,9 +1684,12 @@
   }
 
   .home-program-modal__panel {
-    grid-template-columns: 1fr;
     width: min(720px, 100%);
     max-height: calc(100vh - 36px);
+  }
+
+  .home-program-modal__body {
+    grid-template-columns: 1fr;
   }
 
   .home-program-modal__media {

@@ -656,7 +656,8 @@
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
   max-height: min(92dvh, 980px);
   max-width: 1180px;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
   padding: 20px;
   width: min(1180px, 100%);
 }
@@ -715,6 +716,7 @@
 .program-edit-modal app-add-workshop,
 .program-edit-modal app-add-seminar {
   display: block;
+  min-height: 0;
 }
 
 .program-card__creator {

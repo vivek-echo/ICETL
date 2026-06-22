@@ -167,18 +167,17 @@ Route::get('/files/profile-images/{type}/{filename}', [UserProfileController::cl
 Route::get('/files/instructor-documents/{path}', [InstructorRegistrationController::class, 'document'])
     ->where('path', '.*');
 
-Route::post('/login', [AuthController::class, 'login']);
 Route::post('/contact-enquiries', [ContactEnquiryController::class, 'store']);
 
-Route::post('/sendOtp', [AuthController::class, 'sendOtp']);
-Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
+Route::post('/sendOtp', [AuthController::class, 'sendOtp'])->middleware('throttle:otp-send');
+Route::post('/verifyOtp', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
 Route::post('/selectRole', [AuthController::class, 'selectRole']);
 Route::post('/completeProfile', [AuthController::class, 'completeProfile']);
 Route::get('/getAfile', [AuthController::class, 'getAfile']);
 
-Route::post('/instructors/send-otp', [InstructorRegistrationController::class, 'sendInstructorOtp']);
-Route::post('/instructors/resend-otp', [InstructorRegistrationController::class, 'resendInstructorOtp']);
-Route::post('/instructors/verify-otp', [InstructorRegistrationController::class, 'verifyInstructorOtp']);
+Route::post('/instructors/send-otp', [InstructorRegistrationController::class, 'sendInstructorOtp'])->middleware('throttle:otp-send');
+Route::post('/instructors/resend-otp', [InstructorRegistrationController::class, 'resendInstructorOtp'])->middleware('throttle:otp-send');
+Route::post('/instructors/verify-otp', [InstructorRegistrationController::class, 'verifyInstructorOtp'])->middleware('throttle:otp-verify');
 
 
 Route::group(['prefix' => '/preloginapi'], function () {

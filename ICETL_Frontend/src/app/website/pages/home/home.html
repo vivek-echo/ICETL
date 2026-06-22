@@ -653,48 +653,62 @@
 @if (selectedHomeProgram(); as detailProgram) {
 <div class="home-program-modal" role="dialog" aria-modal="true" aria-labelledby="homeProgramModalTitle"
   (click)="closeProgramDetails()">
-  <section class="home-program-modal__panel" (click)="$event.stopPropagation()">
-    <button type="button" class="home-program-modal__close" aria-label="Close details modal"
-      (click)="closeProgramDetails()">
-      <i class="feather-x"></i>
-    </button>
+  <section
+    class="home-program-modal__panel"
+    appModalWindow
+    #homeProgramWindow="appModalWindow"
+    appModalWindowTitle="Program details"
+    (click)="$event.stopPropagation()">
+    <header class="home-program-modal__header app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title">
+        <span>{{ getProgramTypeLabel(detailProgram) }}</span>
+        <h3 id="homeProgramModalTitle">{{ detailProgram.title }}</h3>
+      </div>
+      <app-modal-window-controls
+        [modal]="homeProgramWindow"
+        closeLabel="Close program details"
+        (closed)="closeProgramDetails()">
+      </app-modal-window-controls>
+    </header>
 
-    <div class="home-program-modal__media">
-      <img [src]="detailProgram.image" [alt]="detailProgram.title" (error)="onProgramImageError(detailProgram)" />
-      <span>{{ getProgramTypeLabel(detailProgram) }}</span>
-      <strong [class.is-ongoing]="detailProgram.scheduleStatus === 'ongoing'">
-        {{ getProgramStatusLabel(detailProgram) }}
-      </strong>
-    </div>
-
-    <div class="home-program-modal__content">
-      <span class="home-program-modal__topic">{{ detailProgram.topic }}</span>
-      <h3 id="homeProgramModalTitle">{{ detailProgram.title }}</h3>
-      <p>{{ detailProgram.description }}</p>
-
-      <div class="home-program-modal__meta">
-        <span><i class="feather-calendar"></i>{{ getProgramDateLabel(detailProgram) }}</span>
-        <span><i class="feather-clock"></i>{{ getProgramTimeLabel(detailProgram) }}</span>
-        <span><i class="feather-map-pin"></i>{{ detailProgram.venue }}, {{ detailProgram.city }}</span>
-        <span><i class="feather-user"></i>{{ detailProgram.speakerName }}</span>
-        <span><i class="feather-users"></i>{{ detailProgram.capacity ? detailProgram.capacity + ' seats' : 'Open seats'
-          }}</span>
+    <div class="home-program-modal__body" data-app-modal-body>
+      <div class="home-program-modal__media">
+        <img [src]="detailProgram.image" [alt]="detailProgram.title" (error)="onProgramImageError(detailProgram)" />
+        <span>{{ getProgramTypeLabel(detailProgram) }}</span>
+        <strong [class.is-ongoing]="detailProgram.scheduleStatus === 'ongoing'">
+          {{ getProgramStatusLabel(detailProgram) }}
+        </strong>
       </div>
 
-      <footer class="home-program-modal__footer">
-        <div>
-          <span>Program fee</span>
-          <strong>{{ detailProgram.price > 0 ? 'Rs. ' + formatAmount(detailProgram.price) : 'Free' }}</strong>
+      <div class="home-program-modal__content">
+        <span class="home-program-modal__topic">{{ detailProgram.topic }}</span>
+        <h3>{{ detailProgram.title }}</h3>
+        <p>{{ detailProgram.description }}</p>
+
+        <div class="home-program-modal__meta">
+          <span><i class="feather-calendar"></i>{{ getProgramDateLabel(detailProgram) }}</span>
+          <span><i class="feather-clock"></i>{{ getProgramTimeLabel(detailProgram) }}</span>
+          <span><i class="feather-map-pin"></i>{{ detailProgram.venue }}, {{ detailProgram.city }}</span>
+          <span><i class="feather-user"></i>{{ detailProgram.speakerName }}</span>
+          <span><i class="feather-users"></i>{{ detailProgram.capacity ? detailProgram.capacity + ' seats' : 'Open seats'
+            }}</span>
         </div>
-        <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="getProgramRoute(detailProgram)"
-          (click)="closeProgramDetails()">
-          <span class="icon-reverse-wrapper">
-            <span class="btn-text">View Program</span>
-            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-            <span class="btn-icon"><i class="feather-arrow-right"></i></span>
-          </span>
-        </a>
-      </footer>
+
+        <footer class="home-program-modal__footer">
+          <div>
+            <span>Program fee</span>
+            <strong>{{ detailProgram.price > 0 ? 'Rs. ' + formatAmount(detailProgram.price) : 'Free' }}</strong>
+          </div>
+          <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="getProgramRoute(detailProgram)"
+            (click)="closeProgramDetails()">
+            <span class="icon-reverse-wrapper">
+              <span class="btn-text">View Program</span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+              <span class="btn-icon"><i class="feather-arrow-right"></i></span>
+            </span>
+          </a>
+        </footer>
+      </div>
     </div>
   </section>
 </div>

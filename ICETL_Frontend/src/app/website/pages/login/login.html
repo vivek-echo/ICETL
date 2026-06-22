@@ -16,8 +16,7 @@
               <input id="login-email" type="email" formControlName="emailId" autocomplete="off"
                 [class.has-value]="!!loginForm.get('emailId')?.value"
                 [attr.aria-describedby]="submitted && loginForm.get('emailId')?.errors ? 'login-email-error' : null"
-                [attr.aria-invalid]="submitted && loginForm.get('emailId')?.invalid ? 'true' : null"
-                (keydown.enter)="sendOtp()" />
+                [attr.aria-invalid]="submitted && loginForm.get('emailId')?.invalid ? 'true' : null" />
               <label for="login-email"><i class="fa-solid fa-envelope me-1"></i> Email ID *</label>
               <span class="focus-border"></span>
 
@@ -29,7 +28,7 @@
             </div>
 
             <div class="form-submit-group">
-              <button type="button" class="rbt-btn btn-md w-100 rbt-btn btn-gradient" [disabled]="isLoading" (click)="sendOtp()">
+              <button type="submit" class="rbt-btn btn-md w-100 rbt-btn btn-gradient" [disabled]="isLoading || loginForm.invalid">
                 <i class="fa-solid fa-right-to-bracket me-1"></i> {{ isLoading ? 'Sending...' : 'Send OTP' }}
               </button>
             </div>
@@ -50,13 +49,13 @@
             <div class="text-center mb-3">
               <small *ngIf="timer > 0">Resend OTP in {{ timer }} sec</small>
 
-              <button *ngIf="timer === 0" type="button" class="btn btn-link" (click)="resendOtp()">
+              <button *ngIf="timer === 0" type="button" class="btn btn-link" [disabled]="isLoading" (click)="resendOtp()">
                 Resend OTP
               </button>
             </div>
 
             <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading">
+              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading || getOtp().length !== otpArray.length">
                 {{ isLoading ? 'Verifying...' : 'Verify & Continue' }}
               </button>
             </div>
@@ -353,7 +352,7 @@
             </div>
 
             <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading">
+              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading || profileForm.invalid">
                 {{ isLoading ? 'Saving...' : 'Complete Profile' }}
               </button>
             </div>

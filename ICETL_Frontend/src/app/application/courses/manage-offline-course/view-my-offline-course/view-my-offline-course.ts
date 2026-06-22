@@ -17,6 +17,7 @@ import {
   OfflineCourseSortOption,
   OfflineCourseSummary,
 } from '../../services/offline-course';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 type OfflineCourseScope = 'mine' | 'all';
 type EnrollmentGender = 1 | 2 | '';
@@ -55,7 +56,7 @@ interface OfflineEnrollmentForm {
 @Component({
   selector: 'app-view-my-offline-course',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './view-my-offline-course.html',
   styleUrl: './view-my-offline-course.scss',
 })

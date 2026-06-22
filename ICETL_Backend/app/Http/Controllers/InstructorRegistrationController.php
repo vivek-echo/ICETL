@@ -93,15 +93,17 @@ class InstructorRegistrationController extends Controller
             ], 422);
         }
 
-        $attempts = Cache::increment($this->otpAttemptsCacheKey($email));
-        if ($attempts > 5) {
-            $this->clearOtpCache($email);
-            return $this->errorResponse('Too many attempts', [
-                'otp' => ['Too many invalid attempts. Please request a fresh OTP.'],
-            ], 429);
-        }
-
         if (!Hash::check($otp, (string) $cachedOtp)) {
+            $attempts = Cache::increment($this->otpAttemptsCacheKey($email));
+            $maxAttempts = max(1, (int) config('authotp.max_verify_attempts', 5));
+
+            if ($attempts >= $maxAttempts) {
+                $this->clearOtpCache($email);
+                return $this->errorResponse('Too many attempts', [
+                    'otp' => ['Too many invalid attempts. Please request a fresh OTP.'],
+                ], 429);
+            }
+
             return $this->errorResponse('Invalid OTP', [
                 'otp' => ['The verification code you entered is incorrect.'],
             ], 422);
@@ -639,7 +641,7 @@ class InstructorRegistrationController extends Controller
                 $draft = $this->upsertInstructorDraft($user);
                 $currentStep = $this->normalizeStep((int) ($draft->onboardingStep ?: 1));
                 $flowType = $this->determineFlowType($hadExistingUser, $existingInstructor, $user);
-                if (Cache::has($this->otpLockCacheKey($email))) {
+                if (env('APP_ENV', 'local') !== 'local' && Cache::has($this->otpLockCacheKey($email))) {
                     $remaining = $this->secondsUntilCacheExpires($this->otpLockCacheKey($email))
                         ?: self::OTP_RESEND_THROTTLE_SECONDS;
                     return [
@@ -654,19 +656,31 @@ class InstructorRegistrationController extends Controller
                 Cache::put($this->otpLockCacheKey($email), true, now()->addSeconds(self::OTP_RESEND_THROTTLE_SECONDS));
                 Cache::put($this->flowTypeCacheKey($email), $flowType, now()->addMinutes(10));
 
-                if (!$this->shouldExposeOtpWithoutMail()) {
-                    $this->sendInstructorOtpMail($email, $otp);
+                $exposeOtp = $this->shouldExposeOtpWithoutMail();
+
+                if (!$exposeOtp) {
+                    try {
+                        $this->sendInstructorOtpMail($email, $otp);
+                    } catch (Throwable $exception) {
+                        $this->clearOtpCache($email);
+                        throw $exception;
+                    }
                 }
 
-                return [
+                $responsePayload = [
                     'throttled' => false,
                     'email' => $email,
                     'flowType' => $flowType,
                     'currentStep' => $currentStep,
                     'expiresIn' => self::OTP_EXPIRY_MINUTES * 60,
                     'resendAvailableIn' => self::OTP_RESEND_THROTTLE_SECONDS,
-                    'otp' => $this->shouldExposeOtpWithoutMail() ? $otp : null,
                 ];
+
+                if ($exposeOtp) {
+                    $responsePayload['otp'] = $otp;
+                }
+
+                return $responsePayload;
             });
 
             if (($payload['throttled'] ?? false) === true) {
@@ -726,27 +740,34 @@ class InstructorRegistrationController extends Controller
 
     private function otpCacheKey(string $email): string
     {
-        return 'instructor_otp_' . strtolower(trim($email));
+        return 'instructor_otp_' . $this->emailCacheKey($email);
     }
 
     private function otpAttemptsCacheKey(string $email): string
     {
-        return 'instructor_otp_attempts_' . strtolower(trim($email));
+        return 'instructor_otp_attempts_' . $this->emailCacheKey($email);
     }
 
     private function otpLockCacheKey(string $email): string
     {
-        return 'instructor_otp_lock_' . strtolower(trim($email));
+        return 'instructor_otp_lock_' . $this->emailCacheKey($email);
     }
 
     private function flowTypeCacheKey(string $email): string
     {
-        return 'instructor_otp_flow_' . strtolower(trim($email));
+        return 'instructor_otp_flow_' . $this->emailCacheKey($email);
+    }
+
+    private function emailCacheKey(string $email): string
+    {
+        return hash('sha256', strtolower(trim($email)));
     }
 
     private function shouldExposeOtpWithoutMail(): bool
     {
-        return app()->environment(['local', 'staging']);
+        $appEnv = env('APP_ENV', 'local');
+        $exposeInResponse = env('OTP_EXPOSE_IN_RESPONSE', in_array($appEnv, ['local', 'staging'], true));
+        return in_array($appEnv, ['local', 'staging'], true) && (bool) $exposeInResponse;
     }
 
     private function clearOtpCache(string $email): void

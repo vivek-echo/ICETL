@@ -193,24 +193,38 @@
 @if (selectedInvoice) {
 <div class="invoice-backdrop" (click)="closeInvoice()"></div>
 <section class="invoice-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-title">
-  <div class="invoice-card">
-    <div class="invoice-card__toolbar">
-      <button
-        type="button"
-        class="invoice-action invoice-action--primary"
-        (click)="downloadInvoicePdf()"
-        [disabled]="downloadingInvoice">
-        <i [class]="downloadingInvoice ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-arrow-down'"></i>
-        {{ downloadingInvoice ? 'Downloading' : 'Download PDF' }}
-      </button>
-      <button type="button" class="invoice-action" (click)="printInvoice()" aria-label="Print invoice" title="Print">
-        <i class="fa-solid fa-print"></i>
-      </button>
-      <button type="button" class="invoice-action" (click)="closeInvoice()" aria-label="Close invoice" title="Close">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+  <div
+    class="invoice-card"
+    appModalWindow
+    #invoiceModalWindow="appModalWindow"
+    appModalWindowTitle="Payment invoice">
+    <div class="invoice-card__toolbar app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title invoice-card__window-title">
+        <span>Payment invoice</span>
+        <strong>{{ selectedInvoice.invoiceNo }}</strong>
+      </div>
+
+      <div class="invoice-card__toolbar-actions">
+        <button
+          type="button"
+          class="invoice-action invoice-action--primary"
+          (click)="downloadInvoicePdf()"
+          [disabled]="downloadingInvoice">
+          <i [class]="downloadingInvoice ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-arrow-down'"></i>
+          {{ downloadingInvoice ? 'Downloading' : 'Download PDF' }}
+        </button>
+        <button type="button" class="invoice-action" (click)="printInvoice()" aria-label="Print invoice" title="Print">
+          <i class="fa-solid fa-print"></i>
+        </button>
+        <app-modal-window-controls
+          [modal]="invoiceModalWindow"
+          closeLabel="Close invoice"
+          (closed)="closeInvoice()">
+        </app-modal-window-controls>
+      </div>
     </div>
 
+    <div class="invoice-card__body" data-app-modal-body>
     <header class="invoice-card__masthead">
       <div class="invoice-brand">
         <img class="invoice-brand__mark" [src]="invoiceLogoPath" alt="ICETL logo" />
@@ -327,6 +341,7 @@
       <i class="fa-solid fa-circle-check"></i>
       <span>This invoice is generated for a verified payment record.</span>
     </footer>
+    </div>
   </div>
 </section>
 }

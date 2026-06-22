@@ -10,6 +10,7 @@ import { environment } from '../../../../../environments/environment';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
 import { Course } from '../../services/course';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 import {
   CurriculumItemPayload,
   CurriculumQuizPayload,
@@ -141,7 +142,14 @@ const PENDING_LECTURE_WARNING = 'Curriculum item changes are not saved.';
 @Component({
   selector: 'app-add-course-curriculum',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DragDropModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    DragDropModule,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
+  ],
   templateUrl: './add-course-curriculum.html',
   styleUrl: './add-course-curriculum.scss',
 })

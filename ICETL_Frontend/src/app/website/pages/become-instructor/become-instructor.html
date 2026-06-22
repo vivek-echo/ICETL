@@ -292,6 +292,8 @@
           <div class="col-12" [class.col-xl-8]="stage === 'form'" [class.col-xl-9]="stage !== 'form'">
             @if (stage === 'email') {
               <form
+                id="instructor-email-section"
+                #emailEntrySection
                 class="stage-card stage-card--entry glass-panel"
                 [formGroup]="emailEntryForm"
                 (ngSubmit)="submitEmail()"
@@ -346,7 +348,11 @@
                     </div>
 
                     <div class="stage-card__footer">
-                      <button type="submit" class="rbt-btn btn-gradient btn-xl hover-icon-reverse">
+                      <button
+                        type="submit"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        [disabled]="isEmailSubmitting"
+                      >
                         <span class="icon-reverse-wrapper">
                           <span class="btn-text">Continue to Verification</span>
                           <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
@@ -436,7 +442,11 @@
                   </div>
 
                   <div class="otp-actions">
-                    <button type="submit" class="rbt-btn btn-gradient btn-xl hover-icon-reverse">
+                    <button
+                      type="submit"
+                      class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                      [disabled]="isOtpSubmitting || isOtpResending || otpCode.length !== 6 || otpExpiresIn === 0"
+                    >
                       <span class="icon-reverse-wrapper">
                         <span class="btn-text">Verify OTP</span>
                         <span class="btn-icon"><i class="fa-solid fa-check"></i></span>
@@ -454,7 +464,7 @@
                       type="button"
                       class="otp-link-button"
                       (click)="resendOtp()"
-                      [disabled]="!otpCanResend"
+                      [disabled]="!otpCanResend || isOtpResending || isOtpSubmitting"
                     >
                       {{ otpCanResend ? 'Resend OTP' : 'Resend available in ' + formattedResendTimer }}
                     </button>

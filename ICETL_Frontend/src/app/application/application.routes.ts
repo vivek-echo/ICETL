@@ -110,7 +110,7 @@ export const applicationRoutes: Routes = [
         path: 'myLearning',
         data: { authOnly: true },
         pathMatch: 'full',
-        redirectTo: '/application/courses/manageCourses/myLearning',
+        redirectTo: '/application/courses/myLearning',
         title: 'My Learning | ICETL',
       },
     ],

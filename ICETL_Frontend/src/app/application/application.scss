@@ -41,7 +41,7 @@
   display: flex;
   inset: 0;
   justify-content: center;
-  padding: 24px;
+  padding: 18px;
   position: fixed;
   z-index: 1050;
 }
@@ -49,21 +49,50 @@
 .profile-modal__dialog {
   background: transparent;
   border-radius: 10px;
-  max-height: calc(100vh - 48px);
-  max-width: 980px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 36px);
+  max-width: 900px;
+  min-height: 0;
+  overflow: hidden;
   padding: 0;
   position: relative;
-  width: min(980px, 100%);
+  width: min(900px, 100%);
+}
+
+.profile-modal__header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 10px 10px 0 0;
+  padding: 14px 18px;
+}
+
+.profile-modal__header span {
+  color: #3152c8;
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.profile-modal__header h4 {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.2;
+  margin: 0;
 }
 
 .profile-update-card {
-  border-radius: 10px;
+  border-radius: 0 0 10px 10px;
+  min-height: 0;
   overflow: hidden;
 }
 
 .profile-update-card .content {
-  padding: 32px;
+  padding: 22px;
 }
 
 .profile-modal__close {
@@ -74,36 +103,36 @@
   color: #0f172a;
   display: inline-flex;
   flex: 0 0 auto;
-  height: 38px;
+  height: 34px;
   justify-content: center;
   position: absolute;
-  right: 18px;
-  top: 18px;
-  width: 38px;
+  right: 14px;
+  top: 14px;
+  width: 34px;
   z-index: 2;
 }
 
 .profile-form-select {
   background-color: transparent;
-  border: 2px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   color: var(--color-body);
-  height: 60px;
-  padding: 0 20px;
+  height: 40px;
+  padding: 0 12px;
   width: 100%;
 }
 
 .profile-date-field {
   align-items: center;
   background: #ffffff;
-  border: 2px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   display: grid;
   gap: 10px;
   grid-template-columns: 38px minmax(0, 1fr);
-  min-height: 60px;
+  min-height: 40px;
   overflow: hidden;
-  padding: 0 14px;
+  padding: 0 10px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -118,10 +147,10 @@
   border-radius: 999px;
   color: var(--color-primary);
   display: inline-flex;
-  height: 34px;
+  height: 28px;
   justify-content: center;
   pointer-events: none;
-  width: 34px;
+  width: 28px;
 }
 
 .profile-date-field input[type="date"] {
@@ -130,7 +159,7 @@
   box-shadow: none;
   color: var(--color-body);
   font-weight: 700;
-  height: 56px;
+  height: 38px;
   min-width: 0;
   padding: 0;
   width: 100%;
@@ -167,9 +196,9 @@
   background-size: cover;
   border-radius: 8px;
   display: flex;
-  min-height: 245px;
+  min-height: 205px;
   overflow: hidden;
-  padding: 32px 40px;
+  padding: 24px 28px;
   position: relative;
 }
 
@@ -188,7 +217,7 @@
 
 .profile-cover-stage__size {
   color: rgba(15, 23, 42, 0.78);
-  font-size: clamp(40px, 7vw, 64px);
+  font-size: clamp(30px, 5vw, 46px);
   font-weight: 700;
   left: 50%;
   letter-spacing: 0;
@@ -203,18 +232,18 @@
   align-items: center;
   border: 2px solid rgba(255, 255, 255, 0.88);
   border-radius: 6px;
-  bottom: 32px;
+  bottom: 24px;
   color: #fff;
   cursor: pointer;
   display: inline-flex;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   justify-content: center;
-  min-height: 44px;
-  min-width: 182px;
-  padding: 0 22px;
+  min-height: 36px;
+  min-width: 154px;
+  padding: 0 14px;
   position: absolute;
-  right: 40px;
+  right: 28px;
   z-index: 2;
 }
 
@@ -231,20 +260,20 @@
 .profile-cover-user {
   align-items: center;
   display: flex;
-  gap: 28px;
+  gap: 20px;
   position: relative;
   z-index: 2;
 }
 
 .profile-avatar-upload {
-  border: 5px solid rgba(255, 255, 255, 0.88);
+  border: 4px solid rgba(255, 255, 255, 0.88);
   border-radius: 50%;
   cursor: pointer;
   display: block;
   flex: 0 0 auto;
-  height: 120px;
+  height: 94px;
   position: relative;
-  width: 120px;
+  width: 94px;
 }
 
 .profile-avatar-upload img {
@@ -263,16 +292,16 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
   color: var(--color-primary);
   display: inline-flex;
-  height: 38px;
+  height: 30px;
   justify-content: center;
   position: absolute;
   right: -4px;
-  width: 38px;
+  width: 30px;
 }
 
 .profile-cover-user__content h5 {
   color: #fff;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   margin: 0 0 10px;
 }
@@ -281,7 +310,7 @@
   align-items: center;
   color: #fff;
   display: flex;
-  font-size: 16px;
+  font-size: 13px;
   gap: 8px;
   margin: 0;
 }
@@ -295,7 +324,7 @@
   color: #64748b;
   display: block;
   font-size: 13px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .profile-modal__error {
@@ -309,7 +338,7 @@
 
 .profile-modal__actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-start;
 }
 
@@ -324,7 +353,7 @@
   }
 
   .profile-update-card .content {
-    padding: 24px;
+    padding: 18px;
   }
 
   .profile-modal__close {
@@ -334,12 +363,12 @@
 
   .profile-cover-stage {
     align-items: flex-start;
-    min-height: 330px;
-    padding: 28px 24px;
+    min-height: 280px;
+    padding: 22px 18px;
   }
 
   .profile-cover-stage__size {
-    font-size: 42px;
+    font-size: 32px;
     top: 34%;
   }
 
@@ -351,10 +380,10 @@
   }
 
   .profile-cover-action {
-    bottom: 24px;
-    left: 24px;
+    bottom: 18px;
+    left: 18px;
     min-width: 0;
-    right: 24px;
+    right: 18px;
   }
 
   .profile-modal__actions {

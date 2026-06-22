@@ -262,18 +262,26 @@
 
   @if (editingSeminar) {
   <div class="program-edit-modal" role="dialog" aria-modal="true" aria-labelledby="seminarEditTitle" (click)="closeEditSeminar()">
-    <section class="program-edit-modal__panel" (click)="$event.stopPropagation()">
-      <header class="program-edit-modal__header">
-        <div>
+    <section
+      class="program-edit-modal__panel"
+      appModalWindow
+      #seminarEditWindow="appModalWindow"
+      appModalWindowTitle="Edit seminar"
+      (click)="$event.stopPropagation()">
+      <header class="program-edit-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Seminar</span>
           <h2 id="seminarEditTitle">Edit Seminar</h2>
         </div>
-        <button type="button" class="program-edit-modal__close" aria-label="Close edit modal" (click)="closeEditSeminar()">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="seminarEditWindow"
+          closeLabel="Close seminar edit modal"
+          (closed)="closeEditSeminar()">
+        </app-modal-window-controls>
       </header>
 
       <app-add-seminar
+        data-app-modal-body
         [modalMode]="true"
         [editSeminar]="editingSeminar"
         (saved)="onSeminarSaved()"

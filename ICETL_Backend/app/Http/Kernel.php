@@ -40,7 +40,7 @@ class Kernel extends HttpKernel
 
         'api' => [
             // API clients authenticate with Sanctum bearer tokens; keep CSRF on web routes only.
-            // \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];

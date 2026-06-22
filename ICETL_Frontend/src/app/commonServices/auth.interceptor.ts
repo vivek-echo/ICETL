@@ -33,19 +33,28 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   const isApiRequest = request.url.startsWith(environment.apiUrl);
 
-  const isLoginRequest = request.url === `${environment.apiUrl}/login`;
+  const isAuthFlowRequest = [
+    `${environment.apiUrl}/sendOtp`,
+    `${environment.apiUrl}/verifyOtp`,
+    `${environment.apiUrl}/selectRole`,
+    `${environment.apiUrl}/completeProfile`,
+    `${environment.apiUrl}/instructors/send-otp`,
+    `${environment.apiUrl}/instructors/resend-otp`,
+    `${environment.apiUrl}/instructors/verify-otp`,
+  ].includes(request.url);
 
   let body = request.body;
+  const shouldAttachUserContext = isApiRequest && !isAuthFlowRequest;
 
   // Handle FormData separately
-  if (body instanceof FormData) {
+  if (shouldAttachUserContext && body instanceof FormData) {
     if (userProfile) {
       body.append('userProfile', JSON.stringify(userProfile));
     }
   }
 
   // Handle JSON requests
-  else if (body) {
+  else if (shouldAttachUserContext && body) {
     body = {
       ...body,
 
@@ -57,7 +66,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     Accept: 'application/json',
   };
 
-  if (token) {
+  if (token && shouldAttachUserContext) {
     headers.Authorization = `Bearer ${token}`;
   }
 
@@ -110,7 +119,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(updatedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === HTTP_STATUS.UNAUTHORIZED && !isLoginRequest && token) {
+      if (error.status === HTTP_STATUS.UNAUTHORIZED && !isAuthFlowRequest && token) {
         void handleSessionExpired();
       }
 

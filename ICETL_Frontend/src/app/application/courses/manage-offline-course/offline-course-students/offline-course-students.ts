@@ -23,6 +23,7 @@ import {
   OfflineCourseStudentSummary,
   OfflineInstallmentPaymentType,
 } from '../../services/offline-course';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 type PaymentStatusFilter = '' | 'PAID' | 'PARTIAL';
 type InstallmentStatusFilter = 'all' | 'pending' | 'paid' | 'overdue' | 'none';
@@ -52,7 +53,13 @@ interface InstallmentCalendarDay {
 @Component({
   selector: 'app-offline-course-students',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
+  ],
   templateUrl: './offline-course-students.html',
   styleUrl: './offline-course-students.scss',
 })

@@ -9,6 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import {
+  AfterViewInit,
   Component,
   ChangeDetectorRef,
   ElementRef,
@@ -21,9 +22,10 @@ import {
   ViewChildren,
   inject,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IDropdownSettings, NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, Subscription } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 import { AlertHelperService } from '../../../commonServices/alert-helper-service';
 import { FormValidationService } from '../../../commonServices/form-validation-service';
 import { FormValidationRules } from '../../../commonServices/form-validation-rules';
@@ -99,14 +101,16 @@ interface CalendarDay {
   templateUrl: './become-instructor.html',
   styleUrl: './become-instructor.scss',
 })
-export class BecomeInstructor implements OnDestroy {
+export class BecomeInstructor implements AfterViewInit, OnDestroy {
   @ViewChild('pageTop') private pageTop?: ElementRef<HTMLElement>;
   @ViewChild('journeyStart') private journeyStart?: ElementRef<HTMLElement>;
+  @ViewChild('emailEntrySection') private emailEntrySection?: ElementRef<HTMLElement>;
   @ViewChild('formCard') private formCard?: ElementRef<HTMLElement>;
   @ViewChildren('otpBox') private otpInputs!: QueryList<ElementRef<HTMLInputElement>>;
 
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly el = inject(ElementRef);
   private readonly spinner = inject(SpinnerService);
@@ -120,9 +124,11 @@ export class BecomeInstructor implements OnDestroy {
   private readonly otpSpinnerKey = 'become-instructor-otp';
   private readonly stepSpinnerKey = 'become-instructor-step';
   private readonly submitSpinnerKey = 'become-instructor-submit';
+  private readonly emailSectionFragment = 'enter-email';
 
   private otpExpiryInterval?: ReturnType<typeof setInterval>;
   private resendInterval?: ReturnType<typeof setInterval>;
+  private fragmentSubscription?: Subscription;
 
   readonly currentYear = new Date().getFullYear();
   readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -407,6 +413,9 @@ export class BecomeInstructor implements OnDestroy {
   onboardingEmail = '';
   flowType: InstructorFlowType = 'new';
   hasExistingPassword = false;
+  isEmailSubmitting = false;
+  isOtpSubmitting = false;
+  isOtpResending = false;
   isSubmitting = false;
   isStepSaving = false;
   isDobCalendarOpen = false;
@@ -422,6 +431,18 @@ export class BecomeInstructor implements OnDestroy {
     this.isBrowser = isPlatformBrowser(platformId);
     this.canUseObjectUrl =
       this.isBrowser && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.fragmentSubscription = this.route.fragment.subscribe((fragment) => {
+      if (this.isEmailSectionFragment(fragment)) {
+        setTimeout(() => this.scrollToEmailSection(), 0);
+      }
+    });
   }
 
   get accountGroup(): FormGroup {
@@ -547,7 +568,7 @@ export class BecomeInstructor implements OnDestroy {
   }
 
   scrollToRegistrationSection(): void {
-    this.journeyStart?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.scrollToEmailSection();
   }
 
   toggleDobCalendar(event: Event): void {
@@ -604,6 +625,10 @@ export class BecomeInstructor implements OnDestroy {
   }
 
   async submitEmail(): Promise<void> {
+    if (this.isEmailSubmitting) {
+      return;
+    }
+
     if (!this.formValidationService.validateForm(this.emailEntryForm, this.getFieldName, this.el)) {
       return;
     }
@@ -611,10 +636,19 @@ export class BecomeInstructor implements OnDestroy {
     const email = `${this.emailEntryForm.get('email')?.value ?? ''}`.trim().toLowerCase();
     this.onboardingEmail = email;
     this.instructorRegistrationService.clearOnboardingSession();
-    this.spinner.show();
+    this.isEmailSubmitting = true;
+    this.spinner.show(this.emailSpinnerKey);
 
     try {
       const response = await lastValueFrom(this.otpService.sendInstructorOtp(email));
+
+      if (!response.status) {
+        await this.alertHelper.error(
+          this.extractErrorMessage(response.message, response.errors),
+          'Unable to Send OTP',
+        );
+        return;
+      }
 
       this.flowType = response.data.flowType;
       this.developmentOtp =
@@ -633,18 +667,27 @@ export class BecomeInstructor implements OnDestroy {
       this.startOtpTimers(response.data.expiresIn, response.data.resendAvailableIn);
       await this.transitionToStage('otp');
       this.scrollToRegistrationSection();
-      setTimeout(() => this.focusOtpInput(0), 50);
+      setTimeout(() => {
+        if (environment.otpAutoFillEnabled && this.developmentOtp) {
+          this.fillOtpDigits(this.developmentOtp);
+        } else {
+          this.focusOtpInput(0);
+        }
+      }, 50);
     } catch (error) {
+      await this.alertHelper.error(this.extractHttpError(error), 'Unable to Send OTP');
     } finally {
-      this.spinner.hide();
+      this.isEmailSubmitting = false;
+      this.spinner.hide(this.emailSpinnerKey);
     }
   }
 
   async resendOtp(): Promise<void> {
-    if (!this.onboardingEmail || !this.otpCanResend) {
+    if (!this.onboardingEmail || !this.otpCanResend || this.isOtpResending) {
       return;
     }
 
+    this.isOtpResending = true;
     this.spinner.show(this.otpSpinnerKey);
 
     try {
@@ -665,10 +708,17 @@ export class BecomeInstructor implements OnDestroy {
       this.resetOtpValues();
       this.otpStatusMessage = 'A fresh verification code has been sent to your email.';
       this.startOtpTimers(response.data.expiresIn, response.data.resendAvailableIn);
-      setTimeout(() => this.focusOtpInput(0), 50);
+      setTimeout(() => {
+        if (environment.otpAutoFillEnabled && this.developmentOtp) {
+          this.fillOtpDigits(this.developmentOtp);
+        } else {
+          this.focusOtpInput(0);
+        }
+      }, 50);
     } catch (error) {
       await this.alertHelper.error(this.extractHttpError(error), 'Unable to Resend OTP');
     } finally {
+      this.isOtpResending = false;
       this.spinner.hide(this.otpSpinnerKey);
     }
   }
@@ -683,7 +733,14 @@ export class BecomeInstructor implements OnDestroy {
 
   onOtpInput(event: Event, index: number): void {
     const input = event.target as HTMLInputElement;
-    const sanitized = input.value.replace(/\D/g, '').slice(-1);
+    const digits = input.value.replace(/\D/g, '');
+
+    if (digits.length > 1) {
+      this.fillOtpDigits(digits, index);
+      return;
+    }
+
+    const sanitized = digits.slice(0, 1);
 
     input.value = sanitized;
     this.otpValues[index] = sanitized;
@@ -707,9 +764,7 @@ export class BecomeInstructor implements OnDestroy {
       return;
     }
 
-    this.otpValues = this.otpValues.map((_, index) => pasted[index] ?? '');
-    this.syncOtpDomInputs();
-    this.focusOtpInput(Math.min(pasted.length, this.otpValues.length - 1));
+    this.fillOtpDigits(pasted);
   }
 
   handleOtpSubmit(event: SubmitEvent): void {
@@ -719,6 +774,10 @@ export class BecomeInstructor implements OnDestroy {
   }
 
   async verifyOtp(): Promise<void> {
+    if (this.isOtpSubmitting) {
+      return;
+    }
+
     if (this.otpCode.length !== 6 || this.otpExpiresIn === 0) {
       await this.alertHelper.error(
         this.otpExpiresIn === 0
@@ -729,6 +788,7 @@ export class BecomeInstructor implements OnDestroy {
       return;
     }
 
+    this.isOtpSubmitting = true;
     this.spinner.show(this.otpSpinnerKey);
 
     try {
@@ -780,6 +840,7 @@ export class BecomeInstructor implements OnDestroy {
     } catch (error) {
       await this.alertHelper.error(this.extractHttpError(error), 'OTP Verification Failed');
     } finally {
+      this.isOtpSubmitting = false;
       this.spinner.hide(this.otpSpinnerKey);
     }
   }
@@ -1094,6 +1155,7 @@ export class BecomeInstructor implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.fragmentSubscription?.unsubscribe();
     this.clearOtpTimers();
     this.revokeProfilePreviewIfNeeded(this.uploads.profilePhoto.previewUrl);
   }
@@ -1474,6 +1536,27 @@ export class BecomeInstructor implements OnDestroy {
     this.syncOtpDomInputs();
   }
 
+  private fillOtpDigits(rawDigits: string, startIndex = 0): void {
+    const digits = rawDigits.replace(/\D/g, '').slice(0, this.otpValues.length - startIndex);
+
+    if (!digits) {
+      return;
+    }
+
+    const nextValues = [...this.otpValues];
+    for (let index = startIndex; index < nextValues.length; index += 1) {
+      nextValues[index] = '';
+    }
+
+    [...digits].forEach((digit, offset) => {
+      nextValues[startIndex + offset] = digit;
+    });
+
+    this.otpValues = nextValues;
+    this.syncOtpDomInputs();
+    this.focusOtpInput(Math.min(startIndex + digits.length, this.otpValues.length - 1));
+  }
+
   private startOtpTimers(expiresIn: number, resendIn: number): void {
     this.clearOtpTimers();
     this.otpExpiresIn = expiresIn;
@@ -1581,6 +1664,19 @@ export class BecomeInstructor implements OnDestroy {
   private scrollToForm(): void {
     const target = this.formCard?.nativeElement ?? this.journeyStart?.nativeElement ?? this.pageTop?.nativeElement;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private scrollToEmailSection(behavior: ScrollBehavior = 'smooth'): void {
+    const target =
+      this.emailEntrySection?.nativeElement
+      ?? this.journeyStart?.nativeElement
+      ?? this.pageTop?.nativeElement;
+
+    target?.scrollIntoView({ behavior, block: 'start' });
+  }
+
+  private isEmailSectionFragment(fragment: string | null): boolean {
+    return `${fragment ?? ''}`.trim() === this.emailSectionFragment;
   }
 
   private revokeProfilePreviewIfNeeded(url: string | null): void {

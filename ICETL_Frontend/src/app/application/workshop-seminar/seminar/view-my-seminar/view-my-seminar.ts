@@ -14,11 +14,19 @@ import {
   SeminarSummary,
 } from '../../services/seminar';
 import { AddSeminar } from '../add-seminar/add-seminar';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 @Component({
   selector: 'app-view-my-seminar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AddSeminar],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    AddSeminar,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
+  ],
   templateUrl: './view-my-seminar.html',
   styleUrl: './view-my-seminar.scss',
 })

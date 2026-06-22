@@ -14,11 +14,19 @@ import {
   WorkshopSummary,
 } from '../../services/workshop';
 import { AddWorkshop } from '../add-workshop/add-workshop';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 @Component({
   selector: 'app-view-my-workshop',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AddWorkshop],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    AddWorkshop,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
+  ],
   templateUrl: './view-my-workshop.html',
   styleUrl: './view-my-workshop.scss',
 })

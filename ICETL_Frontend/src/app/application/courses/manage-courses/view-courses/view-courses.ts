@@ -8,6 +8,7 @@ import { ROLE } from '../../../../commonServices/constants.service';
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
 import { Course } from '../../services/course';
 import { Router } from '@angular/router';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 interface CourseCategory {
   id: number;
@@ -81,7 +82,7 @@ interface EditCourseForm {
 @Component({
   selector: 'app-view-courses',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './view-courses.html',
   styleUrl: './view-courses.scss',
 })

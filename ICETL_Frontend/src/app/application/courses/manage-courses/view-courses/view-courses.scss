@@ -1831,8 +1831,34 @@
   position: relative;
   width: min(980px, 100%);
   max-height: calc(100vh - 48px);
-  overflow: auto;
+  overflow: hidden;
   pointer-events: auto;
+}
+
+.course-modal__window-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+  padding: 18px 20px;
+}
+
+.course-modal__window-header span {
+  color: #3152c8;
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.course-modal__window-header h2 {
+  color: #111827;
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.2;
+  margin: 0;
 }
 
 .course-modal__close {
@@ -1852,9 +1878,10 @@
 .course-modal-card {
   display: grid;
   grid-template-columns: 360px 1fr;
+  min-height: 0;
   overflow: hidden;
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 0 0 18px 18px;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
 }
 

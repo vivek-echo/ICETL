@@ -1025,24 +1025,29 @@
     <div class="question-preview-backdrop" role="presentation" (click)="closeQuestionPreview()">
       <div
         class="question-preview-modal"
+        appModalWindow
+        #questionPreviewWindow="appModalWindow"
+        appModalWindowTitle="Question preview"
         role="dialog"
         aria-modal="true"
         aria-labelledby="question-preview-title"
         (click)="$event.stopPropagation()"
       >
-        <div class="question-preview-header">
-          <div>
+        <div class="question-preview-header app-modal-window-header" data-app-modal-header>
+          <div class="app-modal-window-title">
             <span class="question-preview-kicker">
               {{ getQuizQuestionTypeLabel(previewQuestion.questionType) }} | {{ previewQuestion.marks }} marks
             </span>
             <h3 id="question-preview-title">Question Preview</h3>
           </div>
-          <button type="button" class="icon-btn" title="Close preview" (click)="closeQuestionPreview()">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+          <app-modal-window-controls
+            [modal]="questionPreviewWindow"
+            closeLabel="Close question preview"
+            (closed)="closeQuestionPreview()">
+          </app-modal-window-controls>
         </div>
 
-        <div class="question-preview-body">
+        <div class="question-preview-body" data-app-modal-body>
           <p class="question-preview-text">{{ previewQuestion.question }}</p>
 
           <div class="question-preview-options">
@@ -1065,7 +1070,7 @@
           }
         </div>
 
-        <div class="form-actions question-preview-actions">
+        <div class="form-actions question-preview-actions" data-app-modal-footer>
           <button type="button" class="btn btn-soft" (click)="closeQuestionPreview()">Close</button>
         </div>
       </div>
@@ -1076,24 +1081,29 @@
     <div class="question-preview-backdrop" role="presentation" (click)="closeLecturePreview()">
       <div
         class="question-preview-modal lecture-preview-modal"
+        appModalWindow
+        #lecturePreviewWindow="appModalWindow"
+        appModalWindowTitle="Lecture preview"
         role="dialog"
         aria-modal="true"
         aria-labelledby="lecture-preview-title"
         (click)="$event.stopPropagation()"
       >
-        <div class="question-preview-header">
-          <div>
+        <div class="question-preview-header app-modal-window-header" data-app-modal-header>
+          <div class="app-modal-window-title">
             <span class="question-preview-kicker">
               {{ getLecturePreviewSourceLabel(previewLecture) }} | {{ getLecturePreviewDurationLabel(previewLecture) }}
             </span>
             <h3 id="lecture-preview-title">{{ previewLecture.title }}</h3>
           </div>
-          <button type="button" class="icon-btn" title="Close preview" (click)="closeLecturePreview()">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+          <app-modal-window-controls
+            [modal]="lecturePreviewWindow"
+            closeLabel="Close lecture preview"
+            (closed)="closeLecturePreview()">
+          </app-modal-window-controls>
         </div>
 
-        <div class="question-preview-body lecture-preview-body">
+        <div class="question-preview-body lecture-preview-body" data-app-modal-body>
           @if (previewLecture.contentType === 'youtube') {
             @if (getLecturePreviewEmbedUrl(previewLecture); as lectureEmbedUrl) {
               <div class="lecture-preview-frame">
@@ -1137,7 +1147,7 @@
           }
         </div>
 
-        <div class="form-actions question-preview-actions">
+        <div class="form-actions question-preview-actions" data-app-modal-footer>
           <button type="button" class="btn btn-soft" (click)="closeLecturePreview()">Close</button>
         </div>
       </div>
@@ -1148,24 +1158,29 @@
     <div class="question-preview-backdrop" role="presentation" (click)="closeQuizQuestionsPreview()">
       <div
         class="question-preview-modal quiz-preview-modal"
+        appModalWindow
+        #quizPreviewWindow="appModalWindow"
+        appModalWindowTitle="Quiz preview"
         role="dialog"
         aria-modal="true"
         aria-labelledby="quiz-preview-title"
         (click)="$event.stopPropagation()"
       >
-        <div class="question-preview-header">
-          <div>
+        <div class="question-preview-header app-modal-window-header" data-app-modal-header>
+          <div class="app-modal-window-title">
             <span class="question-preview-kicker">
               {{ getQuizPassingLabel(previewQuiz) }} | {{ getQuizTimeLabel(previewQuiz) }}
             </span>
             <h3 id="quiz-preview-title">{{ previewQuiz.title }}</h3>
           </div>
-          <button type="button" class="icon-btn" title="Close preview" (click)="closeQuizQuestionsPreview()">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+          <app-modal-window-controls
+            [modal]="quizPreviewWindow"
+            closeLabel="Close quiz preview"
+            (closed)="closeQuizQuestionsPreview()">
+          </app-modal-window-controls>
         </div>
 
-        <div class="question-preview-body">
+        <div class="question-preview-body" data-app-modal-body>
           @if (quizPreviewLoading) {
             <div class="question-list-state">Loading questions...</div>
           } @else if (quizPreviewError) {
@@ -1212,7 +1227,7 @@
           }
         </div>
 
-        <div class="form-actions question-preview-actions">
+        <div class="form-actions question-preview-actions" data-app-modal-footer>
           <button type="button" class="btn btn-soft" (click)="closeQuizQuestionsPreview()">Close</button>
         </div>
       </div>

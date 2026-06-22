@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\InstructorDocument;
 use App\Models\User;
+use App\Services\Auth\AuthFlowTokenService;
+use App\Services\Auth\EmailOtpService;
 use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +21,12 @@ use Throwable;
 class AuthController extends Controller
 {
     private const MENU_SERIALIZATION_KEY = '_serialization';
+
+    public function __construct(
+        private readonly EmailOtpService $emailOtpService,
+        private readonly AuthFlowTokenService $authFlowTokenService,
+    ) {
+    }
 
     public function logout(Request $request)
     {
@@ -63,35 +69,25 @@ class AuthController extends Controller
             'emailId' => 'required|email',
         ])->validate();
 
-        $email = strtolower(trim((string) $request->emailId));
+        try {
+            $response = $this->emailOtpService->issueOtp(
+                $request,
+                fn(string $email, string $otp): mixed => $this->sendOtpMail($email, $otp),
+            );
 
-        if (Cache::has("otp_lock_{$email}")) {
+            return $this->jsonResponse($response);
+        } catch (Throwable $e) {
+            Log::error('sendOtp failed', [
+                'email_hash' => hash('sha256', $this->emailOtpService->normalizeEmail((string) $request->emailId)),
+                'message' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Please wait before requesting another OTP',
-            ]);
+                'status' => false,
+                'message' => 'Unable to send OTP right now. Please try again later.',
+            ], 500);
         }
-
-        $otp = random_int(100000, 999999);
-
-        Cache::put("otp_{$email}", Hash::make($otp), now()->addMinutes(5));
-        Cache::put("otp_attempts_{$email}", 0, now()->addMinutes(5));
-        Cache::put("otp_lock_{$email}", true, now()->addSeconds(30));
-
-        if (!$this->shouldExposeOtpWithoutMail()) {
-            $this->sendOtpMail($email, $otp);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP sent successfully',
-            'otp' => $this->shouldExposeOtpWithoutMail() ? $otp : null,
-        ]);
-    }
-
-    private function shouldExposeOtpWithoutMail(): bool
-    {
-        return app()->environment(['local', 'staging']);
     }
 
     //////////////////////////////////////////////////////////////
@@ -311,50 +307,15 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $email = strtolower(trim((string) $request->input('emailId')));
-        $otp = trim((string) $request->input('otp'));
-        $otpCacheKey = "otp_{$email}";
-        $otpAttemptsCacheKey = "otp_attempts_{$email}";
-        $profileCacheKey = "profile_{$email}";
-        $verifiedEmailCacheKey = "verified_email_{$email}";
+        $otpVerification = $this->emailOtpService->verifyOtp($request);
+
+        if (($otpVerification['success'] ?? false) !== true) {
+            return $this->jsonResponse($otpVerification, 422);
+        }
+
+        $email = (string) $otpVerification['email'];
 
         try {
-            $cachedOtp = Cache::get($otpCacheKey);
-
-            if (!$cachedOtp) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'OTP expired',
-                ], 422);
-            }
-
-            $attempts = Cache::increment($otpAttemptsCacheKey);
-
-            if ($attempts > 5) {
-                Cache::forget($otpCacheKey);
-                Cache::forget($otpAttemptsCacheKey);
-
-                Log::warning('OTP verification blocked due to too many attempts', [
-                    'email' => $email,
-                    'attempts' => $attempts,
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Too many attempts',
-                ], 429);
-            }
-
-            if (!Hash::check($otp, (string) $cachedOtp)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid OTP',
-                ], 422);
-            }
-
-            Cache::forget($otpCacheKey);
-            Cache::forget($otpAttemptsCacheKey);
-
             $users = User::query()
                 ->where('email', $email)
                 ->where('userType', 1)
@@ -362,35 +323,41 @@ class AuthController extends Controller
                 ->get();
 
             if ($users->isEmpty()) {
-                Cache::forget($verifiedEmailCacheKey);
-                Cache::put($profileCacheKey, true, now()->addMinutes(10));
+                $flowToken = $this->authFlowTokenService->create(
+                    $request,
+                    AuthFlowTokenService::PURPOSE_PROFILE_COMPLETION,
+                    ['email' => $email],
+                );
 
                 return response()->json([
                     'success' => true,
+                    'status' => true,
                     'is_new_user' => true,
                     'is_multi_role_user' => false,
+                    'requiresProfileCompletion' => true,
+                    'requiresRoleSelection' => false,
+                    'flowToken' => $flowToken,
                     'message' => 'OTP verified. Please complete profile.',
                     'data' => null,
                 ]);
             }
 
             if ($users->count() === 1) {
-                Cache::forget($verifiedEmailCacheKey);
-
                 /** @var User $user */
                 $user = $users->first();
                 $tokenData = $this->issueToken($user);
 
                 return response()->json([
                     'success' => true,
+                    'status' => true,
                     'is_new_user' => false,
                     'is_multi_role_user' => false,
+                    'requiresProfileCompletion' => false,
+                    'requiresRoleSelection' => false,
                     'message' => 'Login successful',
                     'data' => $this->buildAuthData($user, $tokenData),
                 ]);
             }
-
-            Cache::put($verifiedEmailCacheKey, $email, now()->addMinutes(10));
 
             $roleIds = $users->pluck('role')
                 ->filter(fn($roleId) => $roleId !== null && $roleId !== '')
@@ -421,23 +388,39 @@ class AuthController extends Controller
                 ];
             })->values();
 
+            $flowToken = $this->authFlowTokenService->create(
+                $request,
+                AuthFlowTokenService::PURPOSE_ROLE_SELECTION,
+                [
+                    'email' => $email,
+                    'allowed_user_ids' => $users->pluck('id')
+                        ->map(fn($userId) => (int) $userId)
+                        ->values()
+                        ->all(),
+                ],
+            );
+
             return response()->json([
                 'success' => true,
+                'status' => true,
                 'is_new_user' => false,
                 'is_multi_role_user' => true,
+                'requiresProfileCompletion' => false,
+                'requiresRoleSelection' => true,
+                'flowToken' => $flowToken,
                 'message' => 'OTP verified. Please select a role to continue.',
                 'data' => null,
-                'email' => $email,
                 'roles' => $availableRoles,
             ]);
         } catch (Throwable $e) {
             Log::error('verifyOtp failed', [
-                'email' => $email,
+                'email_hash' => hash('sha256', $email),
                 'message' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
+                'status' => false,
                 'message' => 'Unable to verify OTP right now. Please try again later.',
             ], 500);
         }
@@ -446,72 +429,95 @@ class AuthController extends Controller
     public function selectRole(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'flowToken' => 'required|string|size:64',
             'user_id' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
+                'status' => false,
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
         }
 
-        $email = strtolower(trim((string) $request->input('email')));
+        $flowToken = (string) $request->input('flowToken');
         $userId = (int) $request->input('user_id');
-        $verifiedEmailCacheKey = "verified_email_{$email}";
 
         try {
-            $verifiedEmail = Cache::get($verifiedEmailCacheKey);
+            $response = $this->authFlowTokenService->consume(
+                $request,
+                $flowToken,
+                AuthFlowTokenService::PURPOSE_ROLE_SELECTION,
+                function (array $state) use ($userId): array {
+                    $email = (string) ($state['email'] ?? '');
+                    $allowedUserIds = collect($state['allowed_user_ids'] ?? [])
+                        ->map(fn($allowedUserId) => (int) $allowedUserId)
+                        ->all();
 
-            if (!$verifiedEmail || strtolower(trim((string) $verifiedEmail)) !== $email) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Role selection session expired. Please verify OTP again.',
-                ], 403);
+                    if (!in_array($userId, $allowedUserIds, true)) {
+                        Log::warning('Invalid role selection attempted', [
+                            'email_hash' => hash('sha256', $email),
+                            'user_id' => $userId,
+                        ]);
+
+                        return [
+                            'success' => false,
+                            'status' => false,
+                            'message' => 'Selected role is invalid for this login session.',
+                            'consume_flow' => false,
+                            'http_status' => 404,
+                        ];
+                    }
+
+                    /** @var User|null $user */
+                    $user = User::query()
+                        ->where('id', $userId)
+                        ->where('email', $email)
+                        ->where('userType', 1)
+                        ->where('deletedFlag', 0)
+                        ->first();
+
+                    if (!$user) {
+                        return [
+                            'success' => false,
+                            'status' => false,
+                            'message' => 'Selected role is invalid for this login session.',
+                            'consume_flow' => false,
+                            'http_status' => 404,
+                        ];
+                    }
+
+                    $tokenData = $this->issueToken($user);
+
+                    return [
+                        'success' => true,
+                        'status' => true,
+                        'is_new_user' => false,
+                        'is_multi_role_user' => false,
+                        'requiresProfileCompletion' => false,
+                        'requiresRoleSelection' => false,
+                        'message' => 'Login successful',
+                        'data' => $this->buildAuthData($user, $tokenData),
+                    ];
+                }
+            );
+
+            if (!$response) {
+                return response()->json($this->authFlowTokenService->expiredResponse(), 403);
             }
 
-            /** @var User|null $user */
-            $user = User::query()
-                ->where('id', $userId)
-                ->where('email', $email)
-                ->where('userType', 1)
-                ->where('deletedFlag', 0)
-                ->first();
-
-            if (!$user) {
-                Log::warning('Invalid role selection attempted', [
-                    'email' => $email,
-                    'user_id' => $userId,
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected role is invalid for this email address.',
-                ], 404);
-            }
-
-            Cache::forget($verifiedEmailCacheKey);
-
-            $tokenData = $this->issueToken($user);
-
-            return response()->json([
-                'success' => true,
-                'is_new_user' => false,
-                'is_multi_role_user' => false,
-                'message' => 'Login successful',
-                'data' => $this->buildAuthData($user, $tokenData),
-            ]);
+            return $this->jsonResponse($response);
         } catch (Throwable $e) {
             Log::error('selectRole failed', [
-                'email' => $email,
                 'user_id' => $userId,
                 'message' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
+                'status' => false,
                 'message' => 'Unable to complete role selection right now. Please try again later.',
             ], 500);
         }
@@ -523,58 +529,92 @@ class AuthController extends Controller
 
     public function completeProfile(Request $request)
     {
-        $email = strtolower(trim((string) $request->email));
-
         Validator::make($request->all(), [
-            'email' => 'required|email',
+            'flowToken' => 'required|string|size:64',
             'name' => ['required', 'string', 'min:3', 'max:150', 'regex:/^[A-Za-z](?:[A-Za-z ]*[A-Za-z])?$/'],
             'phone' => 'required|digits:10',
             'dob' => 'required|date|before:today',
             'gender' => 'required|in:1,2,3',
         ])->validate();
 
-        if (!Cache::pull("profile_{$email}")) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Verify OTP first',
-            ], 403);
-        }
+        $flowToken = (string) $request->input('flowToken');
 
-        if (User::where('email', $email)->where('userType', 1)->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User already exists',
-            ], 409);
-        }
+        try {
+            $response = $this->authFlowTokenService->consume(
+                $request,
+                $flowToken,
+                AuthFlowTokenService::PURPOSE_PROFILE_COMPLETION,
+                function (array $state) use ($request): array {
+                    $email = (string) ($state['email'] ?? '');
 
-        $user = DB::transaction(function () use ($request, $email): User {
-            $user = User::create([
-                'name' => trim((string) $request->name),
-                'email' => $email,
-                'phone' => $request->phone,
-                'dob' => $request->dob,
-                'gender' => $request->gender,
-                'role' => 2,
-                'userType' => 1,
+                    if (User::where('email', $email)->where('userType', 1)->exists()) {
+                        return [
+                            'success' => false,
+                            'status' => false,
+                            'message' => 'User already exists',
+                            'consume_flow' => false,
+                            'http_status' => 409,
+                        ];
+                    }
+
+                    $user = DB::transaction(function () use ($request, $email): User {
+                        $user = User::create([
+                            'name' => trim((string) $request->name),
+                            'email' => $email,
+                            'phone' => $request->phone,
+                            'dob' => $request->dob,
+                            'gender' => $request->gender,
+                            'role' => 2,
+                            'userType' => 1,
+                        ]);
+
+                        $this->assignUserCodeIfMissing($user, 2);
+
+                        return $user;
+                    });
+
+                    $tokenData = $this->issueToken($user);
+
+                    return [
+                        'success' => true,
+                        'status' => true,
+                        'requiresProfileCompletion' => false,
+                        'requiresRoleSelection' => false,
+                        'message' => 'Profile created successfully',
+                        'data' => $this->buildAuthData($user, $tokenData),
+                    ];
+                }
+            );
+
+            if (!$response) {
+                return response()->json($this->authFlowTokenService->expiredResponse(), 403);
+            }
+
+            return $this->jsonResponse($response);
+        } catch (Throwable $e) {
+            Log::error('completeProfile failed', [
+                'message' => $e->getMessage(),
             ]);
 
-            $this->assignUserCodeIfMissing($user, 2);
-
-            return $user;
-        });
-
-        $tokenData = $this->issueToken($user);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Profile created successfully',
-            'data' => $this->buildAuthData($user, $tokenData),
-        ]);
+            return response()->json([
+                'success' => false,
+                'status' => false,
+                'message' => 'Unable to complete profile right now. Please try again later.',
+            ], 500);
+        }
     }
 
     //////////////////////////////////////////////////////////////
     // ISSUE TOKEN (SANCTUM)
     //////////////////////////////////////////////////////////////
+
+    private function jsonResponse(array $payload, int $defaultStatus = 200): \Illuminate\Http\JsonResponse
+    {
+        $status = (int) ($payload['http_status'] ?? $defaultStatus);
+        unset($payload['http_status']);
+
+        return response()->json($payload, $status);
+    }
 
     private function issueToken(User $user): array
     {

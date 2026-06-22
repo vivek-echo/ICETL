@@ -7,6 +7,7 @@ import {
   WorkshopService,
 } from '../../../application/workshop-seminar/services/workshop';
 import { SeminarItem, SeminarService } from '../../../application/workshop-seminar/services/seminar';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../shared/modal-window';
 interface BannerCourse {
   id: string;
   title: string;
@@ -139,7 +140,7 @@ interface NewsletterCounter {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink],
+  imports: [RouterLink, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

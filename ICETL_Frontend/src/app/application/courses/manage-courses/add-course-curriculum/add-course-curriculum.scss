@@ -759,7 +759,8 @@
 .question-preview-modal {
   width: min(720px, 100%);
   max-height: min(88vh, 760px);
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
   background: var(--card-bg);
   border: 1px solid rgba(123, 97, 255, 0.2);
   border-radius: 16px;
@@ -791,7 +792,9 @@
 
 .question-preview-body {
   display: grid;
+  min-height: 0;
   gap: 16px;
+  overflow: auto;
   padding: 20px;
 }
 

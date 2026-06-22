@@ -633,3 +633,919 @@ button {
     transform: translateY(0);
   }
 }
+
+/* Shared application polish */
+:where(a, button, input, select, textarea, [role='button'], [tabindex]):focus-visible {
+  outline: 3px solid rgba(59, 91, 255, 0.34);
+  outline-offset: 3px;
+}
+
+:where(button, .btn, .rbt-btn, .program-action, .offline-action, .student-action, .pager-btn, .payment-filter-btn, .enquiry-filter-btn) {
+  min-height: 42px;
+}
+
+:where(.rbt-form-group, .premium-field, .payment-filter, .enquiry-filter-field, .program-filter, .offline-filter, .student-filter) {
+  min-width: 0;
+}
+
+:where(.rbt-form-group label, .premium-field__legend span, .payment-filter span, .enquiry-filter-field span, .program-filter label, .offline-filter label, .student-filter label) {
+  color: #25324d;
+  font-weight: 800;
+}
+
+:where(.rbt-form-group input, .rbt-form-group select, .rbt-form-group textarea, .payment-filter input, .payment-filter select, .enquiry-filter-field input, .enquiry-filter-field select, .program-filter input, .program-filter select, .offline-filter input, .offline-filter select, .student-filter input, .student-filter select) {
+  min-width: 0;
+}
+
+:where(.rbt-form-group textarea, textarea.form-control) {
+  min-height: 118px;
+  resize: vertical;
+}
+
+:where(.rbt-form-group input, .rbt-form-group select, .rbt-form-group textarea):disabled,
+:where(.rbt-form-group input, .rbt-form-group select, .rbt-form-group textarea)[readonly] {
+  background-color: #f7f9fd;
+  color: #5f6f89;
+}
+
+:where(.table-responsive, [class$='table-wrap'], [class*='table-wrap'], .dashboard-table) {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 91, 255, 0.3) transparent;
+}
+
+:where(table) {
+  vertical-align: middle;
+}
+
+:where(table th) {
+  white-space: nowrap;
+}
+
+:where(table td) {
+  overflow-wrap: anywhere;
+}
+
+:where(.badge, [class*='status'], [class*='badge'], .entity-code-badge) {
+  line-height: 1.25;
+}
+
+:where(.empty-state, [class*='empty']) {
+  overflow-wrap: anywhere;
+}
+
+:where([class*='filters'], [class*='filter-bar'], [class*='toolbar']) {
+  min-width: 0;
+}
+
+:where([class*='filters__actions'], [class*='filter-bar__buttons'], [class*='actions'], .heading-actions) {
+  min-width: 0;
+}
+
+@media (max-width: 575.98px) {
+  :where(.container, .container-fluid) {
+    --bs-gutter-x: 2rem;
+  }
+
+  :where(.rbt-btn, .btn, .program-action, .offline-action, .student-action, .pager-btn, .payment-filter-btn, .enquiry-filter-btn) {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  :where([class*='filters__actions'], [class*='filter-bar__buttons'], [class*='actions'], .heading-actions) {
+    width: 100%;
+    align-items: stretch;
+  }
+}
+
+/* Shared modal window behavior */
+.app-modal-window {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  outline: 0;
+}
+
+.app-modal-window-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.4rem;
+  min-width: 0;
+}
+
+.app-modal-window-title {
+  min-width: 0;
+}
+
+.app-modal-window-title :where(h2, h3, h4) {
+  overflow-wrap: anywhere;
+}
+
+.app-modal-window-controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.app-modal-window-control {
+  width: 4rem;
+  height: 4rem;
+  min-height: 4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(40, 91, 205, 0.14);
+  border-radius: 1.2rem;
+  background: #ffffff;
+  color: #3152c8;
+  box-shadow: 0 10px 24px rgba(31, 74, 167, 0.08);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.app-modal-window-control:hover {
+  transform: translateY(-1px);
+  border-color: rgba(59, 91, 255, 0.3);
+  background: rgba(59, 91, 255, 0.08);
+  color: var(--primary-blue);
+}
+
+.app-modal-window-control--close {
+  color: #dc3f5f;
+}
+
+.app-modal-window-control--close:hover {
+  border-color: rgba(220, 63, 95, 0.24);
+  background: rgba(220, 63, 95, 0.08);
+  color: #c72f4f;
+}
+
+.app-modal-window [data-app-modal-header],
+.app-modal-window [data-app-modal-footer] {
+  flex: 0 0 auto;
+}
+
+.app-modal-window [data-app-modal-body] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.app-modal-window--maximized {
+  position: fixed !important;
+  inset: 1.2rem !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: calc(100dvh - 2.4rem) !important;
+  margin: 0 !important;
+  transform: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 1.6rem !important;
+}
+
+.app-modal-window--maximized [data-app-modal-body] {
+  max-height: none !important;
+}
+
+.app-modal-window--minimized {
+  position: fixed !important;
+  inset: auto 1.6rem 1.6rem auto !important;
+  width: min(46rem, calc(100vw - 3.2rem)) !important;
+  max-width: min(46rem, calc(100vw - 3.2rem)) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: none !important;
+  overflow: hidden !important;
+  border-radius: 1.6rem !important;
+  box-shadow: 0 24px 70px rgba(20, 35, 72, 0.24) !important;
+  z-index: 1080 !important;
+}
+
+.app-modal-window--minimized [data-app-modal-body],
+.app-modal-window--minimized [data-app-modal-footer] {
+  display: none !important;
+}
+
+.app-modal-window--minimized .app-modal-window-header {
+  align-items: center;
+  padding-block: 1.2rem;
+}
+
+@media (max-width: 575.98px) {
+  .app-modal-window--maximized {
+    inset: 0.8rem !important;
+    max-height: calc(100dvh - 1.6rem) !important;
+    border-radius: 1.2rem !important;
+  }
+
+  .app-modal-window-header {
+    gap: 1rem;
+  }
+
+  .app-modal-window-controls {
+    gap: 0.45rem;
+  }
+
+  .app-modal-window-control {
+    width: 3.8rem;
+    min-width: 3.8rem;
+    height: 3.8rem;
+    min-height: 3.8rem;
+    border-radius: 1rem;
+  }
+
+  .app-modal-window--minimized {
+    inset: auto 0.8rem 0.8rem 0.8rem !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+/* ICETL compact UI layer */
+:root {
+  --icetl-primary: #2457e6;
+  --icetl-primary-hover: #1d46bf;
+  --icetl-primary-soft: #eef3ff;
+  --icetl-text: #172033;
+  --icetl-muted: #667085;
+  --icetl-border: #e3e8ef;
+  --icetl-page: #f8faff;
+  --icetl-card: #ffffff;
+  --icetl-danger: #dc3545;
+  --icetl-shadow-soft: 0 10px 24px rgba(23, 32, 51, 0.06);
+  --icetl-shadow-card: 0 14px 34px rgba(23, 32, 51, 0.08);
+  --icetl-radius-sm: 6px;
+  --icetl-radius: 8px;
+  --icetl-radius-lg: 10px;
+  --icetl-control-height: 38px;
+  --icetl-control-height-sm: 32px;
+  --icetl-page-gap: 18px;
+
+  --primary-blue: var(--icetl-primary);
+  --primary-purple: #6554f2;
+  --primary-gradient: linear-gradient(135deg, #2457e6 0%, #6554f2 100%);
+  --text-primary: var(--icetl-text);
+  --text-secondary: var(--icetl-muted);
+  --card-bg: var(--icetl-card);
+  --border: var(--icetl-border);
+  --shadow: var(--icetl-shadow-card);
+  --radius-card: var(--icetl-radius-lg);
+  --radius-button: var(--icetl-radius);
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.website-shell__content,
+.rbt-dashboard-area {
+  color: var(--icetl-text);
+}
+
+.rbt-dashboard-area .container-fluid.p-5 {
+  padding: clamp(16px, 2vw, 26px) !important;
+}
+
+.rbt-dashboard-area .row.g-5 {
+  --bs-gutter-x: 2rem;
+  --bs-gutter-y: 2rem;
+}
+
+.rbt-dashboard-content-wrapper {
+  margin-bottom: var(--icetl-page-gap) !important;
+}
+
+.dashboard-cover-photo,
+.height-350 {
+  min-height: 180px !important;
+  height: clamp(180px, 18vw, 260px) !important;
+}
+
+.rbt-tutor-information {
+  gap: 16px !important;
+  min-height: 0 !important;
+  padding: 16px 20px !important;
+}
+
+.rbt-tutor-information .thumbnail.size-lg {
+  width: 76px !important;
+  height: 76px !important;
+}
+
+.rbt-tutor-information .tutor-content .title,
+.rbt-tutor-information .title {
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+  margin-bottom: 4px !important;
+}
+
+.rbt-default-sidebar {
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+}
+
+.rbt-default-sidebar .inner,
+.rbt-default-sidebar .content-item-content,
+.rbt-default-sidebar-wrapper {
+  padding: 12px !important;
+}
+
+.rbt-default-sidebar .section-title {
+  margin-top: 18px !important;
+  margin-bottom: 10px !important;
+}
+
+.rbt-default-sidebar .rbt-title-style-2 {
+  font-size: 12px !important;
+  letter-spacing: 0.08em !important;
+}
+
+.dashboard-mainmenu li a,
+.rbt-default-sidebar-list li a {
+  min-height: 38px !important;
+  padding: 8px 10px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 13px !important;
+}
+
+.dashboard-mainmenu li a i,
+.rbt-default-sidebar-list li a i {
+  width: 18px !important;
+  min-width: 18px !important;
+  font-size: 14px !important;
+}
+
+.rbt-dashboard-area :is(h1, .h1),
+.rbt-dashboard-content :is(h1, .h1),
+.application-page-title {
+  font-size: clamp(22px, 2vw, 26px) !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.rbt-dashboard-area :is(h2, .h2),
+.rbt-dashboard-content :is(h2, .h2),
+.rbt-title-style-3,
+.section-title .title {
+  font-size: clamp(18px, 1.55vw, 22px) !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+}
+
+.rbt-dashboard-area :is(h3, .h3, h4, .h4),
+.rbt-dashboard-content :is(h3, .h3, h4, .h4),
+.panel-title h5,
+.card-title {
+  font-size: clamp(16px, 1.2vw, 19px) !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0 !important;
+}
+
+.rbt-dashboard-area :is(h5, .h5, h6, .h6),
+.rbt-dashboard-content :is(h5, .h5, h6, .h6) {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+.rbt-dashboard-area :is(p, li, td, label, input, select, textarea, button, .btn, .rbt-btn),
+.rbt-dashboard-content :is(p, li, td, label, input, select, textarea, button, .btn, .rbt-btn) {
+  font-size: 13px !important;
+}
+
+.website-shell__content :is(.form-control, .form-select),
+.rbt-dashboard-area :is(.form-control, .form-select),
+.rbt-dashboard-area :is(input:not([type='checkbox']):not([type='radio']):not([type='file']), select),
+.rbt-form-group :is(input:not([type='checkbox']):not([type='radio']):not([type='file']), select),
+.premium-field__outline > :is(.form-control, .form-select),
+.payment-field,
+.enquiry-filter-field__control,
+.enquiry-filter-dates,
+.course-field__control input,
+.course-filter-select,
+.program-field :is(input, select),
+.academic-field :is(input, select),
+.offline-filter :is(input, select),
+.student-filter :is(input, select),
+.profile-form-select,
+.profile-date-field {
+  min-height: var(--icetl-control-height) !important;
+  height: auto !important;
+  border-color: var(--icetl-border) !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 13px !important;
+}
+
+.rbt-dashboard-area textarea,
+.rbt-form-group textarea,
+textarea.form-control {
+  min-height: 104px !important;
+}
+
+.premium-field__outline {
+  min-height: 62px !important;
+  padding: 0 12px 9px !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+}
+
+.premium-field__legend {
+  margin-left: 10px !important;
+}
+
+.premium-field__legend span {
+  min-height: 24px !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+}
+
+.premium-field__outline > .form-control,
+.premium-field__outline > .form-select,
+.date-picker-trigger {
+  min-height: var(--icetl-control-height) !important;
+  padding-top: 8px !important;
+  padding-bottom: 5px !important;
+  font-size: 13px !important;
+}
+
+.form-label,
+.rbt-form-group label,
+.payment-filter span,
+.enquiry-filter-field > span,
+.program-field > span,
+.academic-field label,
+.offline-filter label,
+.student-filter label,
+.courses-search__label {
+  margin-bottom: 6px !important;
+  color: #465167 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.form-control:focus,
+.form-select:focus,
+.rbt-form-group input:focus,
+.rbt-form-group select:focus,
+.rbt-form-group textarea:focus {
+  border-color: var(--icetl-primary) !important;
+  box-shadow: 0 0 0 3px rgba(36, 87, 230, 0.1) !important;
+}
+
+.btn,
+.rbt-btn,
+button.rbt-btn,
+.dashboard-action,
+.hero-action,
+.primary-action,
+.outline-action,
+.program-browse-btn,
+.program-buy-button,
+.program-pager button,
+.payment-log__refresh,
+.payment-filter-btn,
+.enquiry-filter-btn,
+.enquiries-page__refresh,
+.enquiries-page__mark-all,
+.course-toolbar__reset,
+.courses-search__clear-btn,
+.invoice-action {
+  min-height: 36px !important;
+  height: auto !important;
+  padding: 7px 14px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  line-height: 1.2 !important;
+}
+
+.btn-sm,
+.rbt-btn.btn-sm,
+.pager-btn,
+.payment-pagination button,
+.enquiry-pagination button,
+.program-view-toggle button,
+.app-modal-window-control {
+  min-height: var(--icetl-control-height-sm) !important;
+}
+
+.btn-primary,
+.btn-success,
+.btn-gradient,
+.rbt-btn.btn-gradient,
+.primary-action,
+.program-browse-btn--primary,
+.program-buy-button,
+.payment-log__refresh,
+.payment-filter-btn,
+.enquiry-filter-btn,
+.enquiries-page__refresh,
+.enquiries-page__mark-all {
+  background: var(--primary-gradient) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(36, 87, 230, 0.16) !important;
+}
+
+.btn-light,
+.btn-border,
+.outline-action,
+.payment-filter-btn--ghost,
+.enquiry-filter-btn--ghost,
+.course-toolbar__reset,
+.courses-search__clear-btn,
+.invoice-action:not(.invoice-action--primary) {
+  background: #ffffff !important;
+  border: 1px solid var(--icetl-border) !important;
+  color: #344054 !important;
+  box-shadow: none !important;
+}
+
+.btn-danger,
+.swal2-styled.swal2-cancel {
+  background: var(--icetl-danger) !important;
+  border-color: var(--icetl-danger) !important;
+  color: #ffffff !important;
+}
+
+.rbt-dashboard-area :is(.card, .rbt-card, .course-card, .program-card, .program-list-row, .metric-card, .dashboard-panel, .payment-metric, .enquiry-summary article),
+.website-shell__content :is(.courses-search__card, .courses-category-card, .courses-feature-card, .courses-grid-card, .courses-cta__card, .contact-card, .login-card) {
+  border-color: var(--icetl-border) !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+}
+
+.rbt-dashboard-area :is(.card, .rbt-card, .course-card, .program-card, .program-list-row, .dashboard-panel):hover,
+.website-shell__content :is(.courses-category-card, .courses-feature-card, .courses-grid-card):hover {
+  box-shadow: var(--icetl-shadow-card) !important;
+  transform: translateY(-1px) !important;
+}
+
+.rbt-dashboard-area :is(.card-body, .rbt-card-body, .course-card__content, .program-card__body, .dashboard-panel),
+.website-shell__content :is(.courses-grid-card__body, .courses-feature-card, .courses-category-card, .courses-cta__card) {
+  padding: clamp(16px, 1.6vw, 20px) !important;
+}
+
+.rbt-dashboard-area :is(.course-card__media, .program-card__image, .program-list-row__image, .courses-grid-card__image-wrap) {
+  max-height: 190px !important;
+}
+
+.rbt-dashboard-area :is(.course-card h2, .course-card h3, .program-card h3, .program-list-row h3, .courses-grid-card__title),
+.website-shell__content :is(.courses-grid-card__title, .courses-category-card__head h5, .courses-feature-card h5) {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+}
+
+.rbt-dashboard-area :is(.course-card__description, .course-description, .program-card p, .program-list-row p, .courses-grid-card__description),
+.website-shell__content :is(.courses-grid-card__description, .courses-category-card p, .courses-feature-card p) {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 3 !important;
+}
+
+:is(.enquiry-filters, .payment-filters, .course-toolbar, .program-filter-bar, .academic-toolbar, .program-toolbar, .offline-toolbar, .student-toolbar, .courses-search__card) {
+  background: #ffffff !important;
+  border: 1px solid var(--icetl-border) !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+  gap: 12px !important;
+  margin-bottom: 18px !important;
+  padding: 14px !important;
+}
+
+:is(.enquiry-filters__header, .course-toolbar__heading, .program-filter-bar__heading, .payment-filters__header) {
+  border-bottom-color: #edf0f5 !important;
+}
+
+:is(.enquiry-filters__title strong, .course-toolbar__heading h2, .program-filter-bar__heading h2) {
+  color: var(--icetl-text) !important;
+  font-size: 16px !important;
+  font-weight: 750 !important;
+}
+
+:is(.enquiry-filters__icon, .empty-state__illustration, .payment-log__empty i, .payment-log__state i, .program-empty-state i, .courses-empty-state__icon) {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: var(--icetl-radius) !important;
+  background: var(--icetl-primary-soft) !important;
+  color: var(--icetl-primary) !important;
+  font-size: 20px !important;
+}
+
+:is(.payment-table-wrap, .enquiry-table-wrap, .student-table-wrap, .offline-table-wrap, .program-table-wrap, .dashboard-table) {
+  border: 1px solid var(--icetl-border) !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+  overflow-x: auto !important;
+}
+
+.rbt-dashboard-area table {
+  margin-bottom: 0 !important;
+}
+
+.rbt-dashboard-area table th,
+.rbt-dashboard-area table td,
+.payment-table th,
+.payment-table td,
+.enquiry-table th,
+.enquiry-table td,
+.invoice-items th,
+.invoice-items td {
+  padding: 11px 12px !important;
+  vertical-align: middle !important;
+}
+
+.rbt-dashboard-area table th,
+.payment-table th,
+.enquiry-table th,
+.invoice-items th {
+  background: #f7f9fc !important;
+  color: #596579 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  text-transform: uppercase !important;
+}
+
+.rbt-dashboard-area table td,
+.payment-table td,
+.enquiry-table td,
+.invoice-items td {
+  color: var(--icetl-text) !important;
+  font-size: 13px !important;
+}
+
+.rbt-dashboard-area :is(.badge, [class*='status'], [class*='Status'], [class*='badge'], [class*='Badge']) {
+  min-height: 24px;
+  padding: 5px 9px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+}
+
+:is(.payment-log__empty, .payment-log__state, .enquiries-page__empty, .enquiries-page__state, .program-empty-state, .empty-state, .courses-empty-state) {
+  min-height: 180px !important;
+  padding: 32px 20px !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  background: #ffffff !important;
+  border: 1px solid var(--icetl-border) !important;
+  color: var(--icetl-muted) !important;
+}
+
+:is(.payment-log__empty h2, .enquiries-page__empty h2, .program-empty-state h3, .empty-state h2, .courses-empty-state h4) {
+  font-size: 18px !important;
+  line-height: 1.3 !important;
+}
+
+.payment-pagination,
+.enquiry-pagination,
+.program-pager,
+.course-pager {
+  gap: 12px !important;
+  margin-top: 16px !important;
+  font-size: 13px !important;
+}
+
+.app-modal-window-control {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  border-radius: var(--icetl-radius) !important;
+}
+
+.app-modal-window--maximized {
+  inset: 10px !important;
+  max-height: calc(100dvh - 20px) !important;
+  border-radius: var(--icetl-radius-lg) !important;
+}
+
+.app-modal-window-title :is(h2, h3, h4, strong) {
+  font-size: 17px !important;
+  line-height: 1.25 !important;
+}
+
+.swal2-popup.app-alert-popup {
+  padding: 1.6rem !important;
+  border-radius: var(--icetl-radius-lg) !important;
+}
+
+.swal2-title.app-alert-title {
+  font-size: 2.1rem !important;
+}
+
+.swal2-html-container.app-alert-content {
+  font-size: 1.35rem !important;
+}
+
+.rbt-dashboard-area :is(.welcome-page, .instructor-page) {
+  border-radius: var(--icetl-radius-lg) !important;
+}
+
+.rbt-dashboard-area :is(.welcome-hero, .instructor-hero) {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) !important;
+  gap: 20px !important;
+  min-height: 250px !important;
+  padding: 22px !important;
+  border-radius: var(--icetl-radius-lg) !important;
+  box-shadow: var(--icetl-shadow-soft) !important;
+}
+
+.rbt-dashboard-area :is(.hero-title) {
+  margin-bottom: 10px !important;
+  font-size: clamp(22px, 2vw, 26px) !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.rbt-dashboard-area :is(.hero-description) {
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+}
+
+.rbt-dashboard-area :is(.subtitle-chip, .hero-chip) {
+  min-height: 28px !important;
+  margin-bottom: 12px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+}
+
+.rbt-dashboard-area :is(.welcome-actions, .hero-actions, .welcome-stats, .hero-stats) {
+  gap: 12px !important;
+  margin-top: 18px !important;
+}
+
+.rbt-dashboard-area :is(.explore-btn, .secondary-btn) {
+  min-height: 36px !important;
+  height: auto !important;
+  padding: 7px 14px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 13px !important;
+}
+
+.rbt-dashboard-area :is(.stat-card, .stats-card) {
+  min-width: 136px !important;
+  padding: 14px !important;
+  border-radius: var(--icetl-radius-lg) !important;
+}
+
+.rbt-dashboard-area :is(.stat-icon, .stats-icon) {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 16px !important;
+}
+
+.rbt-dashboard-area :is(.stat-card h5, .stats-card h5) {
+  font-size: 17px !important;
+}
+
+.rbt-dashboard-area :is(.welcome-steps, .instructor-features) {
+  gap: 16px !important;
+  margin-top: 18px !important;
+}
+
+.rbt-dashboard-area :is(.welcome-step, .feature-card) {
+  min-height: 112px !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  border-radius: var(--icetl-radius-lg) !important;
+}
+
+.rbt-dashboard-area :is(.step-icon, .feature-icon) {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 17px !important;
+}
+
+.rbt-dashboard-area :is(.welcome-step h6, .feature-card h6) {
+  margin-bottom: 6px !important;
+  font-size: 16px !important;
+}
+
+.rbt-dashboard-area :is(.welcome-step p, .feature-card p) {
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.rbt-dashboard-area :is(.hero-illustration img, .illustration-wrapper img) {
+  max-width: 280px !important;
+}
+
+.rbt-dashboard-area :is(.floating-card, .floating-badge) {
+  padding: 9px 12px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 12px !important;
+}
+
+.website-shell__content :is(.section-title .title, .about-hero .title, .faq-hero .title, .contact-hero .title, .courses-banner .title, .ictel-newsletter h2) {
+  font-size: clamp(24px, 2.6vw, 34px) !important;
+  line-height: 1.22 !important;
+  letter-spacing: 0 !important;
+}
+
+.website-shell__content :is(.description, .about-hero__description, .faq-hero__description, .contact-hero__description, .courses-banner__description) {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+.website-shell__content :is(.rbt-section-gap) {
+  padding-top: clamp(36px, 5vw, 64px) !important;
+  padding-bottom: clamp(36px, 5vw, 64px) !important;
+}
+
+.website-shell__content :is(.rbt-section-gapTop) {
+  padding-top: clamp(36px, 5vw, 64px) !important;
+}
+
+.website-shell__content :is(.rbt-section-gapBottom) {
+  padding-bottom: clamp(36px, 5vw, 64px) !important;
+}
+
+.website-shell__content :is(.rbt-btn, .btn) {
+  min-height: 38px !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+  padding: 10px 20px !important;
+  border-radius: var(--icetl-radius) !important;
+  font-size: 13px !important;
+}
+
+@media (max-width: 1199.98px) {
+  .rbt-dashboard-area .container-fluid.p-5 {
+    padding: 18px !important;
+  }
+
+  .rbt-dashboard-area .row.g-5 > .col-lg-2,
+  .rbt-dashboard-area .row.g-5 > .col-lg-10 {
+    width: 100% !important;
+  }
+
+  .rbt-default-sidebar.sticky-top {
+    position: static !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .rbt-dashboard-area .container-fluid.p-5 {
+    padding: 12px !important;
+  }
+
+  .rbt-tutor-information {
+    align-items: flex-start !important;
+    padding: 14px !important;
+  }
+
+  .rbt-tutor-information .thumbnail.size-lg {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  :is(.enquiry-filters, .payment-filters, .course-toolbar, .program-filter-bar, .academic-toolbar, .program-toolbar, .offline-toolbar, .student-toolbar, .courses-search__card) {
+    padding: 14px !important;
+  }
+
+  .payment-pagination,
+  .enquiry-pagination,
+  .program-pager,
+  .course-pager {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .payment-filters__actions,
+  .enquiry-filters__actions,
+  .program-filter-bar__buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .payment-filters__actions,
+  .enquiry-filters__actions,
+  .program-filter-bar__buttons {
+    grid-template-columns: 1fr;
+  }
+}

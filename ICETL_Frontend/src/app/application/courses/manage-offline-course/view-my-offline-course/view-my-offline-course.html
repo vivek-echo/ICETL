@@ -319,10 +319,17 @@
 
   @if (enrollmentModalOpen) {
   <div class="offline-modal-backdrop" (click)="closeEnrollmentModal()">
-    <section class="offline-enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="offlineEnrollmentTitle"
+    <section
+      class="offline-enrollment-modal"
+      appModalWindow
+      #offlineEnrollmentWindow="appModalWindow"
+      appModalWindowTitle="Enroll offline student"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="offlineEnrollmentTitle"
       (click)="$event.stopPropagation()">
-      <header class="offline-enrollment-modal__header">
-        <div>
+      <header class="offline-enrollment-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Manual Offline Enrollment</span>
           <h3 id="offlineEnrollmentTitle">Enroll Student</h3>
           <p>{{ selectedEnrollmentCourse?.title }}</p>
@@ -330,13 +337,15 @@
           <span class="entity-code-badge entity-code-badge--light">{{ selectedEnrollmentCourse?.code }}</span>
           }
         </div>
-        <button type="button" class="offline-icon-action" title="Close" (click)="closeEnrollmentModal()"
-          [disabled]="enrollmentSubmitting">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="offlineEnrollmentWindow"
+          closeLabel="Close offline enrollment"
+          (closed)="closeEnrollmentModal()">
+        </app-modal-window-controls>
       </header>
 
       <form class="offline-enrollment-form" (ngSubmit)="submitEnrollment()" novalidate>
+        <div class="offline-enrollment-modal__body" data-app-modal-body>
         <section class="offline-enrollment-summary-panel" aria-label="Enrollment payment summary">
           <div>
             <span>Course Fee</span>
@@ -645,8 +654,9 @@
           </div>
         </section>
         }
+        </div>
 
-        <footer class="offline-enrollment-modal__footer">
+        <footer class="offline-enrollment-modal__footer" data-app-modal-footer>
           <button type="button" class="offline-action" (click)="closeEnrollmentModal()"
             [disabled]="enrollmentSubmitting">
             Cancel

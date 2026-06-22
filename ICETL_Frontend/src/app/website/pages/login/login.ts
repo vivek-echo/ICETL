@@ -18,7 +18,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { lastValueFrom } from 'rxjs';
+import { finalize, lastValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   AuthService,
@@ -82,6 +82,7 @@ export class Login implements OnDestroy {
   currentStep: LoginStep = 'identify';
   availableRoles: RoleSelectionOption[] = [];
   selectedRoleUserId: number | null = null;
+  private flowToken: string | null = null;
   isDobCalendarOpen = false;
   dobCalendarView = this.defaultDobCalendarView();
   otpArray = [0, 1, 2, 3, 4, 5];
@@ -284,6 +285,10 @@ export class Login implements OnDestroy {
   }
 
   async sendOtp(): Promise<void> {
+    if (this.isLoading) {
+      return;
+    }
+
     this.submitted = true;
 
     if (!this.formValidationService.validateForm(this.loginForm, this.getFieldName, this.el)) {
@@ -303,16 +308,23 @@ export class Login implements OnDestroy {
     this.isDobCalendarOpen = false;
 
     try {
-      const response = await lastValueFrom(this.authService.sendOtp(this.loginForm.value.emailId));
+      const response = await lastValueFrom(
+        this.authService.sendOtp(this.loginForm.value.emailId).pipe(
+          finalize(() => {
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          }),
+        ),
+      );
 
-      if (response?.success === false) {
+      if (!this.isSuccessfulResponse(response)) {
         this.errorMessage = response.message || 'Failed to send OTP';
         return;
       }
 
       this.currentStep = 'otp';
       this.applyOtpFromResponse(response);
-      this.startTimer();
+      this.startTimer(response.resendAfter ?? 60);
       this.cdr.detectChanges();
 
       setTimeout(() => {
@@ -323,9 +335,6 @@ export class Login implements OnDestroy {
       }, 0);
     } catch (error) {
       this.errorMessage = this.getApiErrorMessage(error, 'Failed to send OTP');
-    } finally {
-      this.isLoading = false;
-      this.cdr.detectChanges();
     }
   }
 
@@ -363,9 +372,9 @@ export class Login implements OnDestroy {
     return this.otpValues.join('');
   }
 
-  startTimer(): void {
+  startTimer(seconds = 60): void {
     this.stopTimer(false);
-    this.timer = 60;
+    this.timer = Math.max(seconds, 0);
 
     this.interval = setInterval(() => {
       this.timer--;
@@ -379,6 +388,10 @@ export class Login implements OnDestroy {
   }
 
   resendOtp(): void {
+    if (this.isLoading || this.timer > 0) {
+      return;
+    }
+
     void this.sendOtp();
   }
 
@@ -406,6 +419,10 @@ export class Login implements OnDestroy {
   }
 
   verifyOtp(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     const otp = this.getOtp();
 
     if (otp.length !== this.otpArray.length) {
@@ -421,58 +438,79 @@ export class Login implements OnDestroy {
         emailId: this.loginForm.value.emailId,
         otp,
       })
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: (response: VerifyOtpResponse<LoginData>) => {
-          if (response.success && response.is_new_user) {
+          if (
+            this.isSuccessfulResponse(response) &&
+            (response.requiresProfileCompletion || response.is_new_user)
+          ) {
+            if (!response.flowToken) {
+              this.errorMessage = 'Your login session has expired. Please request a new OTP.';
+              return;
+            }
+
             this.stopTimer();
             this.resetOtpValues();
             this.resetRoleSelection();
+            this.flowToken = response.flowToken;
             this.currentStep = 'profile';
-            this.isLoading = false;
             this.errorMessage = '';
-            this.cdr.detectChanges();
             return;
           }
 
           if (
-            response.success &&
-            response.is_multi_role_user &&
+            this.isSuccessfulResponse(response) &&
+            (response.requiresRoleSelection || response.is_multi_role_user) &&
             Array.isArray(response.roles) &&
             response.roles.length > 0
           ) {
+            if (!response.flowToken) {
+              this.errorMessage = 'Your login session has expired. Please request a new OTP.';
+              return;
+            }
+
             this.stopTimer();
             this.resetOtpValues();
+            this.flowToken = response.flowToken;
             this.availableRoles = response.roles;
             this.selectedRoleUserId = response.roles[0]?.user_id ?? null;
             this.currentStep = 'role';
-            this.isLoading = false;
             this.errorMessage = '';
-            this.cdr.detectChanges();
             return;
           }
 
-          if (response.success && response.data) {
+          if (this.isSuccessfulResponse(response) && response.data) {
             this.stopTimer();
-            this.isLoading = false;
             this.navigateAfterAuth(response.data);
             return;
           }
 
           this.errorMessage = response.message || 'Login failed';
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getApiErrorMessage(error, 'Login failed');
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
       });
   }
 
   selectRole(role: RoleSelectionOption): void {
+    if (this.isLoading) {
+      return;
+    }
+
     if (!role?.user_id) {
       this.errorMessage = 'Please select a valid role';
+      return;
+    }
+
+    if (!this.flowToken) {
+      this.errorMessage = 'Your login session has expired. Please request a new OTP.';
       return;
     }
 
@@ -482,30 +520,41 @@ export class Login implements OnDestroy {
 
     this.authService
       .selectRole({
-        email: this.loginForm.value.emailId,
+        flowToken: this.flowToken,
         user_id: role.user_id,
       })
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: (response) => {
-          if (response.success && response.data) {
-            this.isLoading = false;
+          if (this.isSuccessfulResponse(response) && response.data) {
+            this.clearFlowToken();
             this.navigateAfterAuth(response.data);
             return;
           }
 
           this.errorMessage = response.message || 'Role selection failed';
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getApiErrorMessage(error, 'Role selection failed');
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
       });
   }
 
   completeProfile(): void {
+    if (this.isLoading) {
+      return;
+    }
+
+    if (!this.flowToken) {
+      this.errorMessage = 'Your login session has expired. Please request a new OTP.';
+      return;
+    }
+
     this.prepareProfileFormForSubmit();
 
     if (!this.formValidationService.validateForm(this.profileForm, this.getFieldName, this.el)) {
@@ -524,26 +573,28 @@ export class Login implements OnDestroy {
 
     this.authService
       .completeProfile({
-        email: this.loginForm.value.emailId,
+        flowToken: this.flowToken,
         ...this.profileForm.value,
         dob,
       })
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: (response) => {
-          if (response.success && response.data) {
-            this.isLoading = false;
+          if (this.isSuccessfulResponse(response) && response.data) {
+            this.clearFlowToken();
             this.navigateAfterAuth(response.data);
             return;
           }
 
           this.errorMessage = response.message || 'Profile completion failed';
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getApiErrorMessage(error, 'Profile completion failed');
-          this.isLoading = false;
-          this.cdr.detectChanges();
         },
       });
   }
@@ -559,6 +610,11 @@ export class Login implements OnDestroy {
   private resetRoleSelection(): void {
     this.availableRoles = [];
     this.selectedRoleUserId = null;
+    this.clearFlowToken();
+  }
+
+  private clearFlowToken(): void {
+    this.flowToken = null;
   }
 
   private applyOtpFromResponse(response?: Partial<SendOtpResponse> | null): void {
@@ -784,5 +840,9 @@ export class Login implements OnDestroy {
     }
 
     return apiError?.error?.message || fallbackMessage;
+  }
+
+  private isSuccessfulResponse(response?: { success?: boolean; status?: boolean } | null): boolean {
+    return response?.success === true || response?.status === true;
   }
 }

@@ -14,6 +14,7 @@ import { FormValidationService } from '../commonServices/form-validation-service
 import { FormValidationRules } from '../commonServices/form-validation-rules';
 import { ContactEnquiryService } from '../commonServices/contact-enquiry.service';
 import { ROLE } from '../commonServices/constants.service';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../shared/modal-window';
 
 @Component({
   selector: 'app-application',
@@ -26,6 +27,8 @@ import { ROLE } from '../commonServices/constants.service';
     HeaderComponent,
     FooterComponent,
     SideNav,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
   ],
   templateUrl: './application.html',
   styleUrl: './application.scss',

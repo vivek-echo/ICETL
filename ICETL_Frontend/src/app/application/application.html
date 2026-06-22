@@ -113,15 +113,27 @@
   @if (isProfileModalOpen) {
   <div class="profile-modal-backdrop" (click)="closeUpdateProfileModal()"></div>
   <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="update-profile-title">
-    <div class="profile-modal__dialog">
-      <button type="button" class="profile-modal__close" (click)="closeUpdateProfileModal()" aria-label="Close">
-        <i class="feather-x"></i>
-      </button>
+    <div
+      class="profile-modal__dialog"
+      appModalWindow
+      #profileModalWindow="appModalWindow"
+      appModalWindowTitle="Profile settings">
+      <header class="profile-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
+          <span>Account</span>
+          <h4 id="update-profile-title">Profile Settings</h4>
+        </div>
+        <app-modal-window-controls
+          [modal]="profileModalWindow"
+          closeLabel="Close profile settings"
+          (closed)="closeUpdateProfileModal()">
+        </app-modal-window-controls>
+      </header>
 
-      <div class="rbt-dashboard-content bg-color-white rbt-shadow-box profile-update-card">
+      <div class="rbt-dashboard-content bg-color-white rbt-shadow-box profile-update-card" data-app-modal-body>
         <div class="content">
           <div class="section-title">
-            <h4 id="update-profile-title" class="rbt-title-style-3">Settings</h4>
+            <h4 class="rbt-title-style-3">Settings</h4>
           </div>
 
           <!-- <div class="advance-tab-button mb--30">

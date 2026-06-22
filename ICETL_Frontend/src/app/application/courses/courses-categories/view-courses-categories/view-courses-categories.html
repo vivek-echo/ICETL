@@ -225,15 +225,27 @@
 <div class="category-modal-backdrop" (click)="closeEditModal()"></div>
 
 <section class="category-modal" role="dialog" aria-modal="true" aria-labelledby="edit-category-title">
-  <div class="category-modal__dialog">
-    <button type="button" class="category-modal__close" (click)="closeEditModal()" aria-label="Close">
-      <i class="feather-x"></i>
-    </button>
+  <div
+    class="category-modal__dialog"
+    appModalWindow
+    #categoryEditWindow="appModalWindow"
+    appModalWindowTitle="Edit course category">
+    <header class="category-modal__header app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title">
+        <span>Category</span>
+        <h4 id="edit-category-title">Edit Course Category</h4>
+      </div>
+      <app-modal-window-controls
+        [modal]="categoryEditWindow"
+        closeLabel="Close category edit modal"
+        (closed)="closeEditModal()">
+      </app-modal-window-controls>
+    </header>
 
-    <div class="category-modal-card">
+    <div class="category-modal-card" data-app-modal-body>
       <div class="category-modal-card__content">
         <div class="section-title mb--20">
-          <h4 id="edit-category-title" class="rbt-title-style-3">Edit Course Category</h4>
+          <h4 class="rbt-title-style-3">Category Details</h4>
         </div>
 
         <form class="row g-4" [formGroup]="editCategoryForm" (ngSubmit)="submitEditCategory()">

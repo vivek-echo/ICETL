@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { WebsiteComponent } from './website';
 import { becomeInstructorGuard } from './guards/become-instructor.guard';
+import { loginRedirectGuard } from './guards/login-redirect.guard';
 
 export const websiteRoutes: Routes = [
   {
@@ -26,6 +27,7 @@ export const websiteRoutes: Routes = [
       {
         path: 'login',
         loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+        canActivate: [loginRedirectGuard],
         title: 'Login | ICETL',
       },
       {

@@ -10,6 +10,7 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Course } from '../../services/course';
 import { environment } from '../../../../../environments/environment';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 interface CourseCategory {
   id: number;
@@ -39,7 +40,14 @@ interface CategoryActionResponse {
 @Component({
   selector: 'app-view-courses-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterLink,
+    ModalWindowDirective,
+    ModalWindowControlsComponent,
+  ],
   templateUrl: './view-courses-categories.html',
   styleUrl: './view-courses-categories.scss',
 })

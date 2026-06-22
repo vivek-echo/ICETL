@@ -22,15 +22,15 @@
 .side-nav-section + .side-nav-item,
 .side-nav-item + .side-nav-section,
 .side-nav-item + .side-nav-item {
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .side-nav-section__title {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  margin: 18px 0 8px;
+  letter-spacing: 0.08em;
+  margin: 14px 0 6px;
   text-transform: uppercase;
 }
 
@@ -44,10 +44,10 @@
   border: 1px solid transparent;
   color: var(--text-secondary);
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-start;
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 7px 9px;
   width: 100%;
   border-radius: var(--radius-button);
   text-decoration: none;
@@ -56,16 +56,16 @@
 
 .side-nav-link i {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 14px;
   margin-right: 0;
-  min-width: 20px;
+  min-width: 18px;
   text-align: center;
   transition: all .3s ease;
 }
 
 .side-nav-link span {
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
   transition: all .3s ease;
@@ -77,7 +77,7 @@
   background: var(--primary-gradient);
   border-color: transparent;
   box-shadow: var(--shadow);
-  transform: translateY(-3px);
+  transform: translateY(-1px);
 }
 
 .side-nav-link:hover i,
@@ -124,7 +124,7 @@
 
 .side-nav-item--nested .side-nav-link span,
 .side-nav-item--nested .side-nav-link--static span {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .side-nav-item:last-child > .side-nav-link,

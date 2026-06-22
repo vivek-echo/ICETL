@@ -7,14 +7,6 @@ import { NavigationService } from './nav-item-service';
 import { isPlatformBrowser } from '@angular/common';
 
 // =======================
-// OLD LOGIN (OPTIONAL)
-// =======================
-export interface LoginPayload {
-  emailId: string;
-  password: string;
-}
-
-// =======================
 // OTP LOGIN PAYLOAD
 // =======================
 export interface SendOtpPayload {
@@ -27,12 +19,12 @@ export interface VerifyOtpPayload {
 }
 
 export interface SelectRolePayload {
-  email: string;
+  flowToken: string;
   user_id: number;
 }
 
 export interface CompleteProfilePayload {
-  email: string;
+  flowToken: string;
   name: string;
   phone: string;
   dob: string;
@@ -43,7 +35,8 @@ export interface CompleteProfilePayload {
 // COMMON RESPONSE
 // =======================
 export interface ApiResponse<T> {
-  success: boolean;
+  success?: boolean;
+  status?: boolean;
   message: string;
   data?: T;
   errors?: Record<string, string[]>;
@@ -60,12 +53,16 @@ export interface RoleSelectionOption {
 export interface VerifyOtpResponse<T> extends ApiResponse<T> {
   is_new_user?: boolean;
   is_multi_role_user?: boolean;
-  email?: string;
+  requiresRoleSelection?: boolean;
+  requiresProfileCompletion?: boolean;
+  flowToken?: string;
   roles?: RoleSelectionOption[];
 }
 
 export interface SendOtpResponse extends ApiResponse<null> {
-  otp?: number | string;
+  expiresIn?: number;
+  resendAfter?: number;
+  otp?: string;
 }
 
 // =======================
@@ -115,15 +112,6 @@ export class AuthService {
   }
 
   // =======================
-  // 🔐 PASSWORD LOGIN (OPTIONAL)
-  // =======================
-  login(payload: LoginPayload): Observable<ApiResponse<LoginData>> {
-    return this.http
-      .post<ApiResponse<LoginData>>(`${this.apiBaseUrl}/login`, payload)
-      .pipe(tap((res) => this.handleAuthSuccess(res)));
-  }
-
-  // =======================
   // 📩 SEND OTP
   // =======================
   sendOtp(emailId: string): Observable<SendOtpResponse> {
@@ -162,7 +150,7 @@ export class AuthService {
   // 💾 HANDLE LOGIN SUCCESS
   // =======================
   private handleAuthSuccess(response: ApiResponse<LoginData>) {
-    if (response.success && response.data && this.isBrowser) {
+    if ((response.success || response.status) && response.data && this.isBrowser) {
       this.persistAuthSession(response.data);
     }
   }

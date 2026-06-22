@@ -289,12 +289,24 @@
 <div class="course-modal-backdrop" (click)="closeEditModal()"></div>
 
 <section class="course-modal" role="dialog" aria-modal="true" aria-labelledby="edit-course-title">
-  <div class="course-modal__dialog">
-    <button type="button" class="course-modal__close" (click)="closeEditModal()" aria-label="Close">
-      <i class="feather-x"></i>
-    </button>
+  <div
+    class="course-modal__dialog"
+    appModalWindow
+    #courseEditWindow="appModalWindow"
+    appModalWindowTitle="Edit course">
+    <header class="course-modal__window-header app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title">
+        <span>Course</span>
+        <h2 id="edit-course-title">Edit Course</h2>
+      </div>
+      <app-modal-window-controls
+        [modal]="courseEditWindow"
+        closeLabel="Close edit course modal"
+        (closed)="closeEditModal()">
+      </app-modal-window-controls>
+    </header>
 
-    <div class="course-modal-card">
+    <div class="course-modal-card" data-app-modal-body>
       <div class="course-modal-card__preview">
         <div class="course-edit-image">
           <img [src]="editPreviewImage" alt="Course preview">
@@ -310,7 +322,7 @@
 
       <div class="course-modal-card__content">
         <div class="course-modal__heading">
-          <h4 id="edit-course-title">Edit Course</h4>
+          <h4>Course Details</h4>
           <p>Update the course details and save your changes.</p>
         </div>
 

@@ -160,24 +160,18 @@ export const coursesRoutes: Routes = [
               import('./manage-courses/add-course-curriculum/add-course-curriculum').then((m) => m.AddCourseCurriculum),
             canDeactivate: [curriculumPendingChangesGuard],
             title: 'Curriculum | ICETL',
-          }
-          // {
-          //   path: 'learn',
-          //   loadComponent: () =>
-          //     import('./manage-courses/course-player/course-player').then((m) => m.CoursePlayer),
-          //   title: 'Course Player | ICETL',
-          // },
-          // {
-          //   path: 'myLearning',
-          //   loadComponent: () =>
-          //     import('./manage-courses/my-learning/my-learning').then((m) => m.MyLearning),
-          //   title: 'My Learning | ICETL',
-          // },
+          },
+          {
+            path: 'myLearning',
+            redirectTo: '/application/courses/myLearning',
+            pathMatch: 'full',
+          },
         ],
       },
 
       {
         path: 'myLearning',
+        data: { authOnly: true },
         loadComponent: () => import('./my-learning/my-learning').then((m) => m.MyLearning),
         title: 'My Learning | ICETL',
         children: [

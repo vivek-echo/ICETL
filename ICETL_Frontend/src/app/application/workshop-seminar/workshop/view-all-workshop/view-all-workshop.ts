@@ -12,6 +12,7 @@ import {
   WorkshopSummary,
 } from '../../services/workshop';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 
 type ProgramPaymentMode = 'CASH' | 'UPI' | 'NETBANKING';
 
@@ -38,7 +39,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-view-all-workshop',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './view-all-workshop.html',
   styleUrl: './view-all-workshop.scss',
 })

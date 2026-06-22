@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../commonServices/alert-helper-service';
 import { Invoice, PaymentLog, PaymentService } from '../courses/services/payment';
+import { ModalWindowControlsComponent, ModalWindowDirective } from '../../shared/modal-window';
 
 @Component({
   selector: 'app-payment-log',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalWindowDirective, ModalWindowControlsComponent],
   templateUrl: './payment-log.html',
   styleUrl: './payment-log.scss',
 })

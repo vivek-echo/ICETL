@@ -286,20 +286,26 @@
 
   @if (selectedEnrollmentSeminar) {
   <div class="program-enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="seminarEnrollmentTitle">
-    <div class="program-enrollment-modal__panel">
-      <header class="program-enrollment-modal__header">
-        <div>
+    <div
+      class="program-enrollment-modal__panel"
+      appModalWindow
+      #seminarEnrollmentWindow="appModalWindow"
+      appModalWindowTitle="Enroll seminar student">
+      <header class="program-enrollment-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Manual Seminar Enrollment</span>
           <h2 id="seminarEnrollmentTitle">Enroll Student</h2>
           <p>{{ selectedEnrollmentSeminar.title }}</p>
         </div>
-        <button type="button" class="program-edit-modal__close" (click)="closeEnrollment()"
-          [disabled]="enrollmentSaving" aria-label="Close enrollment form">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="seminarEnrollmentWindow"
+          closeLabel="Close enrollment form"
+          (closed)="closeEnrollment()">
+        </app-modal-window-controls>
       </header>
 
       <form class="program-enrollment-form" (ngSubmit)="submitEnrollment()" #seminarEnrollmentForm="ngForm">
+        <div class="program-enrollment-modal__body" data-app-modal-body>
         <section class="program-enrollment-summary">
           <div>
             <span>Seminar Code</span>
@@ -442,8 +448,9 @@
             }
           </div>
         </div>
+        </div>
 
-        <footer class="program-enrollment-modal__footer">
+        <footer class="program-enrollment-modal__footer" data-app-modal-footer>
           <button type="button" class="program-action" (click)="closeEnrollment()" [disabled]="enrollmentSaving">
             Cancel
           </button>

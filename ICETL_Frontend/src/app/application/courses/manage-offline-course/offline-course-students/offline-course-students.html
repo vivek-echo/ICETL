@@ -229,12 +229,15 @@
   <div class="student-modal-backdrop" (click)="closePaymentDetails()">
     <section
       class="student-payment-modal"
+      appModalWindow
+      #studentPaymentWindow="appModalWindow"
+      appModalWindowTitle="Payment details"
       role="dialog"
       aria-modal="true"
       aria-labelledby="studentPaymentTitle"
       (click)="$event.stopPropagation()">
-      <header class="student-payment-modal__header">
-        <div>
+      <header class="student-payment-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Payment Details</span>
           <h3 id="studentPaymentTitle">{{ selectedStudent.studentName }}</h3>
           <p>{{ selectedStudent.courseTitle }}</p>
@@ -245,11 +248,14 @@
           <span class="entity-code-badge entity-code-badge--light">{{ selectedStudent.courseCode }}</span>
           }
         </div>
-        <button type="button" class="student-close-button" (click)="closePaymentDetails()" [disabled]="savingInstallments">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="studentPaymentWindow"
+          closeLabel="Close payment details"
+          (closed)="closePaymentDetails()">
+        </app-modal-window-controls>
       </header>
 
+      <div class="student-payment-modal__body" data-app-modal-body>
       <div class="student-payment-overview card border-0">
         <div class="student-payment-grid">
           <div class="student-metric-card student-metric-card--fee">
@@ -429,8 +435,9 @@
         </div>
         }
       </section>
+      </div>
 
-      <footer class="student-payment-modal__footer">
+      <footer class="student-payment-modal__footer" data-app-modal-footer>
         <button type="button" class="student-action" (click)="closePaymentDetails()" [disabled]="paymentSubmitting">
           Close
         </button>
@@ -443,12 +450,15 @@
   <div class="student-pay-modal-backdrop" (click)="closeInstallmentPayment()">
     <section
       class="student-pay-modal"
+      appModalWindow
+      #studentPayWindow="appModalWindow"
+      appModalWindowTitle="Collect installment"
       role="dialog"
       aria-modal="true"
       aria-labelledby="studentPayTitle"
       (click)="$event.stopPropagation()">
-      <header class="student-payment-modal__header">
-        <div>
+      <header class="student-payment-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Collect Installment</span>
           <h3 id="studentPayTitle">Pay {{ ordinalInstallment(selectedInstallment.installmentNo) }} Installment</h3>
           <p>{{ selectedStudent.studentName }} | {{ selectedStudent.courseTitle }}</p>
@@ -456,11 +466,14 @@
           <span class="entity-code-badge entity-code-badge--light">{{ selectedStudent.courseCode }}</span>
           }
         </div>
-        <button type="button" class="student-close-button" (click)="closeInstallmentPayment()" [disabled]="paymentSubmitting">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="studentPayWindow"
+          closeLabel="Close installment payment"
+          (closed)="closeInstallmentPayment()">
+        </app-modal-window-controls>
       </header>
 
+      <div class="student-pay-modal__body" data-app-modal-body>
       <div class="student-pay-hero">
         <span class="student-pay-hero__icon">₹</span>
         <div>
@@ -575,6 +588,7 @@
           </button>
         </footer>
       </form>
+      </div>
     </section>
   </div>
   }

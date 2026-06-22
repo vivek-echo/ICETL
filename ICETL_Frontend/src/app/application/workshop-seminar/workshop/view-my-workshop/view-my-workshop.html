@@ -263,18 +263,26 @@
 
   @if (editingWorkshop) {
   <div class="program-edit-modal" role="dialog" aria-modal="true" aria-labelledby="workshopEditTitle" (click)="closeEditWorkshop()">
-    <section class="program-edit-modal__panel" (click)="$event.stopPropagation()">
-      <header class="program-edit-modal__header">
-        <div>
+    <section
+      class="program-edit-modal__panel"
+      appModalWindow
+      #workshopEditWindow="appModalWindow"
+      appModalWindowTitle="Edit workshop"
+      (click)="$event.stopPropagation()">
+      <header class="program-edit-modal__header app-modal-window-header" data-app-modal-header>
+        <div class="app-modal-window-title">
           <span>Workshop</span>
           <h2 id="workshopEditTitle">Edit Workshop</h2>
         </div>
-        <button type="button" class="program-edit-modal__close" aria-label="Close edit modal" (click)="closeEditWorkshop()">
-          <i class="feather-x"></i>
-        </button>
+        <app-modal-window-controls
+          [modal]="workshopEditWindow"
+          closeLabel="Close workshop edit modal"
+          (closed)="closeEditWorkshop()">
+        </app-modal-window-controls>
       </header>
 
       <app-add-workshop
+        data-app-modal-body
         [modalMode]="true"
         [editWorkshop]="editingWorkshop"
         (saved)="onWorkshopSaved()"
