@@ -1555,12 +1555,14 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     this.otpValues = nextValues;
     this.syncOtpDomInputs();
     this.focusOtpInput(Math.min(startIndex + digits.length, this.otpValues.length - 1));
+    this.cdr.detectChanges();
   }
 
   private startOtpTimers(expiresIn: number, resendIn: number): void {
     this.clearOtpTimers();
     this.otpExpiresIn = expiresIn;
     this.resendIn = resendIn;
+    this.cdr.detectChanges();
 
     this.otpExpiryInterval = setInterval(() => {
       this.otpExpiresIn = Math.max(this.otpExpiresIn - 1, 0);
@@ -1568,6 +1570,7 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
         clearInterval(this.otpExpiryInterval);
         this.otpExpiryInterval = undefined;
       }
+      this.cdr.detectChanges();
     }, 1000);
 
     this.resendInterval = setInterval(() => {
@@ -1576,6 +1579,7 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
         clearInterval(this.resendInterval);
         this.resendInterval = undefined;
       }
+      this.cdr.detectChanges();
     }, 1000);
   }
 
