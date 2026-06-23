@@ -98,10 +98,14 @@ class CoursesController extends Controller
                 ->select('cc.*');
 
             if (Schema::hasTable('courses')) {
-                $courseCountQuery = $this->applyOnlineCourseScope(
-                    DB::table('courses')
-                        ->select('categoryId', DB::raw('COUNT(*) as courseCount'))
-                        ->where('deletedFlag', 0)
+                $courseCountBaseQuery = DB::table('courses')
+                    ->select('categoryId', DB::raw('COUNT(*) as courseCount'))
+                    ->where('deletedFlag', 0);
+
+                $courseCountQuery = (
+                    $this->isPreLoginRequest($request)
+                        ? $this->applyPublicWebsiteCourseScope($courseCountBaseQuery)
+                        : $this->applyOnlineCourseScope($courseCountBaseQuery)
                 )
                     ->where('status', 1)
                     ->groupBy('categoryId');
@@ -427,6 +431,18 @@ class CoursesController extends Controller
         return $query;
     }
 
+    private function applyPublicWebsiteCourseScope($query, ?string $alias = null)
+    {
+        $prefix = $alias ? $alias . '.' : '';
+
+        return $query->whereIn($prefix . 'courseType', [1, 2]);
+    }
+
+    private function isPreLoginRequest(Request $request): bool
+    {
+        return str_contains($request->path(), 'preloginapi');
+    }
+
     private function courseInstructorMap($courses)
     {
         $courseIds = collect($courses)
@@ -483,6 +499,8 @@ class CoursesController extends Controller
             'id' => (int) $course->id,
             'code' => $course->code ?? null,
             'title' => (string) $course->title,
+            'courseType' => (int) ($course->courseType ?? 1),
+            'courseTypeLabel' => ((int) ($course->courseType ?? 1)) === 2 ? 'Academic Course' : 'Online Course',
             'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
             'categoryName' => $course->categoryName ?: 'Uncategorized',
             'instructors' => $instructors->values()->all(),
@@ -499,6 +517,18 @@ class CoursesController extends Controller
             'popularityCount' => (int) ($course->popularityCount ?? 0),
             'status' => (int) $course->status,
             'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
+            'scheduleStatus' => ((int) ($course->courseType ?? 1)) === 2
+                ? $this->getOfflineCourseScheduleStatus(
+                    (string) ($course->startDate ?? ''),
+                    ($course->endDate ?? null) ? (string) $course->endDate : null
+                )
+                : null,
+            'venue' => $course->venue ?? null,
+            'city' => $course->city ?? null,
+            'startDate' => $course->startDate ?? null,
+            'endDate' => $course->endDate ?? null,
+            'startTime' => $this->formatOfflineCourseTime($course->startTime ?? null),
+            'endTime' => $this->formatOfflineCourseTime($course->endTime ?? null),
             'createdOn' => $course->createdOn ?? null,
             'updatedOn' => $course->updatedOn ?? null,
         ];
@@ -542,7 +572,7 @@ class CoursesController extends Controller
             $page = (int) $request->input('page', 1);
             $isAllPageSize = $request->input('perPage') === 'all';
 
-            $query = $this->applyOnlineCourseScope(
+            $query = $this->applyPublicWebsiteCourseScope(
                 DB::table('courses as c')
                     ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
                     ->where('c.deletedFlag', 0),
@@ -553,6 +583,7 @@ class CoursesController extends Controller
                     'c.id',
                     EntityCodeService::codeSelect('courses', 'c'),
                     'c.title',
+                    'c.courseType',
                     'c.categoryId',
                     'cc.categoryName as categoryName',
                     'c.instructorIds',
@@ -564,6 +595,12 @@ class CoursesController extends Controller
                     'c.courseHighlights',
                     'c.thumbnail',
                     'c.status',
+                    'c.venue',
+                    'c.city',
+                    'c.startDate',
+                    'c.endDate',
+                    'c.startTime',
+                    'c.endTime',
                     'c.createdOn',
                     'c.updatedOn'
                 );
@@ -628,7 +665,9 @@ class CoursesController extends Controller
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('c.title', 'LIKE', '%' . $search . '%')
                         ->orWhere('c.description', 'LIKE', '%' . $search . '%')
-                        ->orWhere('cc.categoryName', 'LIKE', '%' . $search . '%');
+                        ->orWhere('cc.categoryName', 'LIKE', '%' . $search . '%')
+                        ->orWhere('c.venue', 'LIKE', '%' . $search . '%')
+                        ->orWhere('c.city', 'LIKE', '%' . $search . '%');
                     EntityCodeService::orWhereCode($subQuery, 'courses', 'c.code', $search);
                 });
             }
@@ -648,7 +687,7 @@ class CoursesController extends Controller
                 $query->where('c.categoryId', (int) $request->input('categoryId'));
             }
 
-            $summaryQuery = $this->applyOnlineCourseScope(
+            $summaryQuery = $this->applyPublicWebsiteCourseScope(
                 DB::table('courses')
                     ->where('deletedFlag', 0)
             )
@@ -902,8 +941,8 @@ class CoursesController extends Controller
             'instructor' => 'required',
             'venue' => ['required', 'string', 'min:3', 'max:150'],
             'city' => ['required', 'string', 'min:2', 'max:100'],
-            'startDate' => 'required|date',
-            'endDate' => 'nullable|date|after_or_equal:startDate',
+            'startDate' => 'required|date|after_or_equal:today',
+            'endDate' => 'nullable|date|after:startDate',
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'nullable|date_format:H:i',
             'youtubeLiveUrl' => 'nullable|string|max:255',
@@ -934,8 +973,7 @@ class CoursesController extends Controller
         }
 
         if (
-            $request->filled('endDate')
-            && $request->input('endDate') === $request->input('startDate')
+            (!$request->filled('endDate') || $request->input('endDate') === $request->input('startDate'))
             && $request->filled('endTime')
             && $request->input('endTime') <= $request->input('startTime')
         ) {
@@ -1460,12 +1498,14 @@ class CoursesController extends Controller
     {
         $request->merge([
             'paymentBy' => strtoupper(trim((string) $request->input('paymentBy', ''))),
+            'phone' => preg_replace('/\D+/', '', (string) $request->input('phone', '')) ?? '',
         ]);
 
         $validator = Validator::make($request->all(), [
             'courseId' => 'required|integer|exists:courses,id',
             'name' => ['required', 'string', 'min:2', 'max:150'],
             'email' => ['required', 'email', 'max:191'],
+            'phone' => ['required', 'digits:10'],
             'dob' => 'required|date|before_or_equal:today',
             'gender' => ['required', Rule::in([1, 2])],
             'paymentBy' => ['required', Rule::in(['CASH', 'UPI', 'NETBANKING'])],
@@ -1589,6 +1629,7 @@ class CoursesController extends Controller
             }
 
             $email = strtolower(trim((string) $request->input('email')));
+            $phone = (string) $request->input('phone');
             $student = DB::table('users')
                 ->where('email', $email)
                 ->where('userType', 1)
@@ -1597,11 +1638,22 @@ class CoursesController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            $studentId = $student
-                ? (int) $student->id
-                : DB::table('users')->insertGetId($this->filterExistingColumns('users', [
+            if ($student) {
+                $studentId = (int) $student->id;
+
+                if (trim((string) ($student->phone ?? '')) === '') {
+                    DB::table('users')
+                        ->where('id', $studentId)
+                        ->update($this->filterExistingColumns('users', [
+                            'phone' => $phone,
+                            'updated_at' => now(),
+                        ]));
+                }
+            } else {
+                $studentId = DB::table('users')->insertGetId($this->filterExistingColumns('users', [
                     'name' => trim((string) $request->input('name')),
                     'email' => $email,
+                    'phone' => $phone,
                     'dob' => $request->input('dob'),
                     'gender' => (int) $request->input('gender'),
                     'userType' => 1,
@@ -1612,6 +1664,9 @@ class CoursesController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));
+            }
+
+            $studentPhone = trim((string) ($student->phone ?? '')) ?: $phone;
             EntityCodeService::assignIfMissing('users', $studentId, EntityCodeService::PREFIX_LEARNER);
 
             $alreadyEnrolled = DB::table('enrollments')
@@ -1703,7 +1758,7 @@ class CoursesController extends Controller
                 'invoiceDate' => now()->toDateString(),
                 'customerName' => $student ? $student->name : trim((string) $request->input('name')),
                 'customerEmail' => $email,
-                'customerPhone' => $student->phone ?? null,
+                'customerPhone' => $studentPhone,
                 'gstNumber' => null,
                 'subtotal' => $amountPaid,
                 'tax' => 0,
@@ -1725,6 +1780,7 @@ class CoursesController extends Controller
                 $studentId,
                 $course,
                 $request,
+                $studentPhone,
                 $totalFee,
                 $amountPaid,
                 $amountBalance,
@@ -1959,6 +2015,7 @@ class CoursesController extends Controller
         int $studentId,
         object $course,
         Request $request,
+        string $studentPhone,
         float $totalFee,
         float $amountPaid,
         float $amountBalance,
@@ -1984,6 +2041,7 @@ class CoursesController extends Controller
             'customer' => [
                 'name' => trim((string) $request->input('name')),
                 'email' => strtolower(trim((string) $request->input('email'))),
+                'phone' => $studentPhone,
                 'dob' => $request->input('dob'),
                 'gender' => (int) $request->input('gender'),
             ],

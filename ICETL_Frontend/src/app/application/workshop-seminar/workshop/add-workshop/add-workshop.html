@@ -151,6 +151,7 @@
           <div class="premium-calendar" (click)="keepCalendarOpen($event)">
             <div class="premium-calendar__header">
               <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                [disabled]="isPreviousMonthDisabled('startDate')"
                 (click)="changeCalendarMonth('startDate', -1)">
                 <i class="fa-solid fa-chevron-left"></i>
               </button>
@@ -220,6 +221,7 @@
           <div class="premium-calendar" (click)="keepCalendarOpen($event)">
             <div class="premium-calendar__header">
               <button type="button" class="premium-calendar__nav" aria-label="Previous month"
+                [disabled]="isPreviousMonthDisabled('endDate')"
                 (click)="changeCalendarMonth('endDate', -1)">
                 <i class="fa-solid fa-chevron-left"></i>
               </button>
@@ -269,7 +271,7 @@
           <input type="hidden" formControlName="endDate">
         </div>
         @if (hasDateRangeError()) {
-        <small class="program-field-error">End date cannot be earlier than start date.</small>
+        <small class="program-field-error">End date must be after start date.</small>
         } @else if (getFieldError('endDate')) {
         <small class="program-field-error">{{ getFieldError('endDate') }}</small>
         }

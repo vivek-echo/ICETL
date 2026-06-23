@@ -75,6 +75,19 @@ export class AddOfflineCourse implements OnInit {
   bannerPreviewUrl: string | null = null;
   private readonly maxBannerImageSize = 2 * 1024 * 1024;
   private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly dateNotBeforeTodayValidator = (control: AbstractControl): ValidationErrors | null => {
+    const value = `${control.value || ''}`;
+
+    if (!value) {
+      return null;
+    }
+
+    if (!this.parseIsoDate(value)) {
+      return { invalidDate: true };
+    }
+
+    return value < this.todayIso() ? { dateInPast: true } : null;
+  };
 
   constructor(
     private readonly fb: FormBuilder,
@@ -92,8 +105,8 @@ export class AddOfflineCourse implements OnInit {
         categoryId: ['', Validators.required],
         venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
         city: ['', FormValidationRules.requiredName()],
-        startDate: ['', Validators.required],
-        endDate: [''],
+        startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
+        endDate: ['', [this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
         endTime: [''],
         youtubeLiveUrl: ['', [Validators.maxLength(255), Validators.pattern(/^https?:\/\/.+/i)]],
@@ -339,6 +352,14 @@ export class AddOfflineCourse implements OnInit {
       return `${fieldName} is required.`;
     }
 
+    if (control.errors['dateInPast']) {
+      return `${fieldName} cannot be before today.`;
+    }
+
+    if (control.errors['invalidDate']) {
+      return `${fieldName} format is invalid.`;
+    }
+
     if (control.errors['minlength']) {
       return `${fieldName} must be at least ${control.errors['minlength'].requiredLength} characters.`;
     }
@@ -395,7 +416,10 @@ export class AddOfflineCourse implements OnInit {
     const currentView = this.calendarViews[controlName];
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(currentView.getFullYear(), currentView.getMonth() + offset, 1),
+      [controlName]: this.clampCalendarView(
+        controlName,
+        new Date(currentView.getFullYear(), currentView.getMonth() + offset, 1),
+      ),
     };
   }
 
@@ -405,7 +429,7 @@ export class AddOfflineCourse implements OnInit {
 
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(currentView.getFullYear(), month, 1),
+      [controlName]: this.clampCalendarView(controlName, new Date(currentView.getFullYear(), month, 1)),
     };
   }
 
@@ -415,8 +439,15 @@ export class AddOfflineCourse implements OnInit {
 
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(year, currentView.getMonth(), 1),
+      [controlName]: this.clampCalendarView(controlName, new Date(year, currentView.getMonth(), 1)),
     };
+  }
+
+  isPreviousMonthDisabled(controlName: OfflineDateControl): boolean {
+    const currentView = this.calendarViews[controlName];
+    const previousView = new Date(currentView.getFullYear(), currentView.getMonth() - 1, 1);
+
+    return previousView < this.minimumCalendarView(controlName);
   }
 
   selectCalendarDate(controlName: OfflineDateControl, day: CalendarDay): void {
@@ -432,7 +463,7 @@ export class AddOfflineCourse implements OnInit {
 
     if (controlName === 'startDate') {
       const endDate = `${this.f['endDate'].value || ''}`;
-      if (endDate && new Date(endDate) < new Date(day.iso)) {
+      if (endDate && endDate <= day.iso) {
         this.courseForm.patchValue({ endDate: '' });
       }
       this.syncCalendarView('endDate');
@@ -619,7 +650,7 @@ export class AddOfflineCourse implements OnInit {
     const startDate = control.get('startDate')?.value;
     const endDate = control.get('endDate')?.value;
 
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+    if (startDate && endDate && endDate <= startDate) {
       return { dateRange: true };
     }
 
@@ -683,9 +714,7 @@ export class AddOfflineCourse implements OnInit {
   }
 
   private isCalendarDayDisabled(controlName: OfflineDateControl, iso: string): boolean {
-    const startDate = `${this.f['startDate'].value || ''}`;
-
-    return controlName === 'endDate' && !!startDate && new Date(iso) < new Date(startDate);
+    return iso < this.minimumSelectableIso(controlName);
   }
 
   private syncCalendarView(controlName: OfflineDateControl): void {
@@ -695,13 +724,15 @@ export class AddOfflineCourse implements OnInit {
         ? this.parseIsoDate(`${this.f['startDate'].value || ''}`)
         : null;
 
+    const nextView = selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      : fallbackDate
+        ? new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1)
+        : this.defaultCalendarView();
+
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: selectedDate
-        ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-        : fallbackDate
-          ? new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1)
-          : this.defaultCalendarView(),
+      [controlName]: this.clampCalendarView(controlName, nextView),
     };
   }
 
@@ -712,7 +743,44 @@ export class AddOfflineCourse implements OnInit {
   }
 
   private buildCalendarYearOptions(): number[] {
-    return Array.from({ length: 8 }, (_, index) => this.currentYear - 1 + index);
+    return Array.from({ length: 8 }, (_, index) => this.currentYear + index);
+  }
+
+  private clampCalendarView(controlName: OfflineDateControl, value: Date): Date {
+    const nextView = new Date(value.getFullYear(), value.getMonth(), 1);
+    const minimumView = this.minimumCalendarView(controlName);
+
+    return nextView < minimumView ? minimumView : nextView;
+  }
+
+  private minimumCalendarView(controlName: OfflineDateControl): Date {
+    const minimumDate = this.parseIsoDate(this.minimumSelectableIso(controlName)) || new Date();
+
+    return new Date(minimumDate.getFullYear(), minimumDate.getMonth(), 1);
+  }
+
+  private minimumSelectableIso(controlName: OfflineDateControl): string {
+    let minimumIso = this.todayIso();
+
+    if (controlName === 'endDate') {
+      const startDate = this.parseIsoDate(`${this.f['startDate'].value || ''}`);
+
+      if (startDate) {
+        const minimumEndDate = new Date(startDate);
+        minimumEndDate.setDate(startDate.getDate() + 1);
+        const minimumEndIso = this.toIsoDate(minimumEndDate);
+
+        if (minimumEndIso > minimumIso) {
+          minimumIso = minimumEndIso;
+        }
+      }
+    }
+
+    return minimumIso;
+  }
+
+  private todayIso(): string {
+    return this.toIsoDate(new Date());
   }
 
   private parseIsoDate(value: string): Date | null {

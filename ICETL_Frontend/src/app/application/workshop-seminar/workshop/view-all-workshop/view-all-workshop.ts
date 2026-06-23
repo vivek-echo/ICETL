@@ -19,6 +19,7 @@ type ProgramPaymentMode = 'CASH' | 'UPI' | 'NETBANKING';
 interface WorkshopEnrollmentForm {
   name: string;
   email: string;
+  phone: string;
   dob: string;
   gender: number | null;
   paymentBy: ProgramPaymentMode;
@@ -243,6 +244,18 @@ export class ViewAllWorkshop implements OnInit {
     this.markEnrollmentFieldTouched(field);
   }
 
+  sanitizeEnrollmentPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '').slice(0, 10);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    this.enrollmentForm.phone = sanitized;
+    this.markEnrollmentFieldTouched('phone');
+  }
+
   markEnrollmentFieldTouched(field: string): void {
     this.enrollmentTouched[field] = true;
     this.enrollmentErrors = this.validateEnrollmentForm();
@@ -335,6 +348,7 @@ export class ViewAllWorkshop implements OnInit {
     this.enrollmentTouched = {
       name: true,
       email: true,
+      phone: true,
       dob: true,
       gender: true,
       paymentBy: true,
@@ -353,6 +367,7 @@ export class ViewAllWorkshop implements OnInit {
           workshopId: this.selectedEnrollmentWorkshop.id,
           name: this.enrollmentForm.name.trim(),
           email: this.enrollmentForm.email.trim().toLowerCase(),
+          phone: this.enrollmentForm.phone.trim(),
           dob: this.enrollmentForm.dob,
           gender: Number(this.enrollmentForm.gender),
           paymentBy: this.enrollmentForm.paymentBy,
@@ -518,6 +533,7 @@ export class ViewAllWorkshop implements OnInit {
     return {
       name: '',
       email: '',
+      phone: '',
       dob: '',
       gender: null,
       paymentBy: 'CASH',
@@ -536,6 +552,10 @@ export class ViewAllWorkshop implements OnInit {
 
     if (!emailPattern.test(this.enrollmentForm.email.trim())) {
       errors['email'] = 'Valid email is required.';
+    }
+
+    if (!/^\d{10}$/.test(this.enrollmentForm.phone.trim())) {
+      errors['phone'] = 'Enter a valid 10 digit mobile number.';
     }
 
     const dobDate = this.parseIsoDate(this.enrollmentForm.dob);

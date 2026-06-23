@@ -381,6 +381,17 @@
           </div>
 
           <div class="rbt-form-group">
+            <label for="offlineEnrollPhone">Mobile Number</label>
+            <input id="offlineEnrollPhone" name="enrollPhone" type="tel" autocomplete="tel" inputmode="numeric"
+              maxlength="10" pattern="[0-9]*" [(ngModel)]="enrollmentForm.phone"
+              (input)="sanitizeEnrollmentPhoneInput($event)"
+              [class.offline-input--invalid]="getEnrollmentError('phone')">
+            @if (getEnrollmentError('phone')) {
+            <small class="offline-form-error">{{ getEnrollmentError('phone') }}</small>
+            }
+          </div>
+
+          <div class="rbt-form-group">
             <label for="offlineEnrollDob">DOB</label>
             <div class="offline-date-field" [class.is-invalid]="getEnrollmentError('dob')"
               [class.is-open]="openEnrollmentCalendar === 'dob'" (click)="keepEnrollmentCalendarOpen($event)">

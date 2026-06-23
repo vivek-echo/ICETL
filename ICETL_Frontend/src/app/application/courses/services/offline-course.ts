@@ -95,6 +95,7 @@ export interface OfflineCourseEnrollmentPayload {
   courseId: number;
   name: string;
   email: string;
+  phone: string;
   dob: string;
   gender: 1 | 2;
   paymentBy: OfflineCourseEnrollmentPaymentBy;

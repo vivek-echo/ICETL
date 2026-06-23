@@ -532,11 +532,16 @@ button {
   transition: all .3s ease;
 }
 
-.premium-calendar__nav:hover {
+.premium-calendar__nav:not(:disabled):hover {
   transform: translateY(-3px);
   background: var(--primary-gradient);
   color: #ffffff;
   box-shadow: var(--shadow);
+}
+
+.premium-calendar__nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .premium-calendar__weekdays,
@@ -924,6 +929,19 @@ body {
 .rbt-dashboard-area .row.g-5 {
   --bs-gutter-x: 2rem;
   --bs-gutter-y: 2rem;
+  --application-sidebar-width: clamp(260px, 21vw, 320px);
+}
+
+.rbt-dashboard-area .application-layout-row > .application-sidebar-column {
+  flex: 0 0 var(--application-sidebar-width) !important;
+  max-width: var(--application-sidebar-width) !important;
+  width: var(--application-sidebar-width) !important;
+}
+
+.rbt-dashboard-area .application-layout-row > .application-content-column {
+  flex: 1 1 calc(100% - var(--application-sidebar-width)) !important;
+  max-width: calc(100% - var(--application-sidebar-width)) !important;
+  width: calc(100% - var(--application-sidebar-width)) !important;
 }
 
 .rbt-dashboard-content-wrapper {
@@ -943,8 +961,28 @@ body {
 }
 
 .rbt-tutor-information .thumbnail.size-lg {
-  width: 76px !important;
   height: 76px !important;
+  max-width: 76px !important;
+  min-width: 76px !important;
+  width: 76px !important;
+}
+
+.rbt-tutor-information .thumbnail.rbt-avatars.size-lg,
+.rbt-tutor-information .thumbnail.rbt-avatars.size-lg img {
+  border-radius: 50% !important;
+}
+
+.rbt-tutor-information .thumbnail.rbt-avatars.size-lg {
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.rbt-tutor-information .thumbnail.rbt-avatars.size-lg img {
+  background: transparent !important;
+  border: 0 !important;
+  display: block;
+  padding: 0 !important;
 }
 
 .rbt-tutor-information .tutor-content .title,
@@ -959,9 +997,18 @@ body {
   box-shadow: var(--icetl-shadow-soft) !important;
 }
 
-.rbt-default-sidebar .inner,
-.rbt-default-sidebar .content-item-content,
-.rbt-default-sidebar-wrapper {
+.application-sidebar .inner,
+.application-sidebar .content-item-content {
+  padding: 0 !important;
+}
+
+.application-sidebar .rbt-default-sidebar-wrapper {
+  padding: 18px 0px !important;
+}
+
+.rbt-default-sidebar:not(.application-sidebar) .inner,
+.rbt-default-sidebar:not(.application-sidebar) .content-item-content,
+.rbt-default-sidebar:not(.application-sidebar) .rbt-default-sidebar-wrapper {
   padding: 12px !important;
 }
 
@@ -975,6 +1022,25 @@ body {
   letter-spacing: 0.08em !important;
 }
 
+.application-sidebar .dashboard-mainmenu,
+.application-sidebar .rbt-default-sidebar-list {
+  width: 100% !important;
+}
+
+.application-sidebar .dashboard-mainmenu li,
+.application-sidebar .rbt-default-sidebar-list li {
+  width: 100% !important;
+}
+
+.application-sidebar .dashboard-mainmenu li + li,
+.application-sidebar .rbt-default-sidebar-list li + li {
+  border-top: 0 !important;
+  margin-top: 6px !important;
+  padding-top: 0 !important;
+}
+
+.application-sidebar .dashboard-mainmenu li a,
+.application-sidebar .rbt-default-sidebar-list li a,
 .dashboard-mainmenu li a,
 .rbt-default-sidebar-list li a {
   min-height: 38px !important;
@@ -983,11 +1049,79 @@ body {
   font-size: 13px !important;
 }
 
+.application-sidebar .dashboard-mainmenu li a,
+.application-sidebar .rbt-default-sidebar-list li a {
+  align-items: center !important;
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+  min-height: 40px !important;
+  padding: 9px 12px !important;
+  width: 100% !important;
+}
+
+.application-sidebar .dashboard-mainmenu li a span,
+.application-sidebar .rbt-default-sidebar-list li a span {
+  flex: 1 1 auto;
+  line-height: 1.3 !important;
+  min-width: 0;
+}
+
+.application-sidebar .dashboard-mainmenu li a:hover,
+.application-sidebar .dashboard-mainmenu li a.active,
+.application-sidebar .rbt-default-sidebar-list li a:hover,
+.application-sidebar .rbt-default-sidebar-list li a.active {
+  background: var(--primary-gradient) !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 22px rgba(47, 87, 239, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.application-sidebar .dashboard-mainmenu li a:hover i,
+.application-sidebar .dashboard-mainmenu li a:hover span,
+.application-sidebar .dashboard-mainmenu li a.active i,
+.application-sidebar .dashboard-mainmenu li a.active span,
+.application-sidebar .rbt-default-sidebar-list li a:hover i,
+.application-sidebar .rbt-default-sidebar-list li a:hover span,
+.application-sidebar .rbt-default-sidebar-list li a.active i,
+.application-sidebar .rbt-default-sidebar-list li a.active span {
+  color: #ffffff !important;
+}
+
 .dashboard-mainmenu li a i,
 .rbt-default-sidebar-list li a i {
   width: 18px !important;
   min-width: 18px !important;
   font-size: 14px !important;
+}
+
+.application-sidebar .dashboard-mainmenu li a i,
+.application-sidebar .rbt-default-sidebar-list li a i {
+  margin-right: 0 !important;
+}
+
+.rbt-dashboard-content .course-categories-tabs.tab-button-style-2 {
+  align-items: stretch;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.rbt-dashboard-content .course-categories-tabs.tab-button-style-2 > li {
+  display: flex;
+  margin-bottom: -2px;
+}
+
+.rbt-dashboard-content .course-categories-tabs.tab-button-style-2 .tab-button {
+  align-items: center;
+  border-bottom: 2px solid transparent !important;
+  display: flex;
+}
+
+.rbt-dashboard-content .course-categories-tabs.tab-button-style-2 .tab-button::after {
+  display: none;
+}
+
+.rbt-dashboard-content .course-categories-tabs.tab-button-style-2 .tab-button.active {
+  border-bottom-color: var(--color-primary) !important;
 }
 
 .rbt-dashboard-area :is(h1, .h1),
@@ -1501,6 +1635,13 @@ button.rbt-btn,
     width: 100% !important;
   }
 
+  .rbt-dashboard-area .application-layout-row > .application-sidebar-column,
+  .rbt-dashboard-area .application-layout-row > .application-content-column {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
   .rbt-default-sidebar.sticky-top {
     position: static !important;
   }
@@ -1517,8 +1658,10 @@ button.rbt-btn,
   }
 
   .rbt-tutor-information .thumbnail.size-lg {
-    width: 64px !important;
     height: 64px !important;
+    max-width: 64px !important;
+    min-width: 64px !important;
+    width: 64px !important;
   }
 
   :is(.enquiry-filters, .payment-filters, .course-toolbar, .program-filter-bar, .academic-toolbar, .program-toolbar, .offline-toolbar, .student-toolbar, .courses-search__card) {

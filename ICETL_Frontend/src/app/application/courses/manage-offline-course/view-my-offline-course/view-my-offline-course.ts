@@ -42,6 +42,7 @@ interface OfflineEnrollmentInstallmentForm {
 interface OfflineEnrollmentForm {
   name: string;
   email: string;
+  phone: string;
   dob: string;
   gender: EnrollmentGender;
   paymentBy: OfflineCourseEnrollmentPaymentBy;
@@ -335,6 +336,18 @@ export class ViewMyOfflineCourse implements OnInit {
 
   onTransactionNoChange(): void {
     this.clearEnrollmentErrors(['transactionNo']);
+  }
+
+  sanitizeEnrollmentPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '').slice(0, 10);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    this.enrollmentForm.phone = sanitized;
+    this.clearEnrollmentErrors(['phone']);
   }
 
   keepEnrollmentCalendarOpen(event: Event): void {
@@ -733,6 +746,7 @@ export class ViewMyOfflineCourse implements OnInit {
     return {
       name: '',
       email: '',
+      phone: '',
       dob: '',
       gender: '',
       paymentBy: 'CASH',
@@ -908,6 +922,10 @@ export class ViewMyOfflineCourse implements OnInit {
       errors['email'] = 'Enter a valid email address.';
     }
 
+    if (!/^\d{10}$/.test(this.enrollmentForm.phone.trim())) {
+      errors['phone'] = 'Enter a valid 10 digit mobile number.';
+    }
+
     if (!this.enrollmentForm.dob) {
       errors['dob'] = 'DOB is required.';
     }
@@ -963,6 +981,7 @@ export class ViewMyOfflineCourse implements OnInit {
       courseId: course.id,
       name: this.enrollmentForm.name.trim(),
       email: this.enrollmentForm.email.trim().toLowerCase(),
+      phone: this.enrollmentForm.phone.trim(),
       dob: this.enrollmentForm.dob,
       gender: this.enrollmentForm.gender as 1 | 2,
       paymentBy: this.enrollmentForm.paymentBy,

@@ -351,6 +351,7 @@ class PaymentController extends Controller
     {
         $request->merge([
             'paymentBy' => strtoupper(trim((string) $request->input('paymentBy', ''))),
+            'phone' => preg_replace('/\D+/', '', (string) $request->input('phone', '')) ?? '',
         ]);
 
         $idField = $entityType === 'seminar' ? 'seminarId' : 'workshopId';
@@ -361,6 +362,7 @@ class PaymentController extends Controller
             $idField => 'required|integer|min:1',
             'name' => ['required', 'string', 'min:2', 'max:150'],
             'email' => ['required', 'email', 'max:191'],
+            'phone' => ['required', 'digits:10'],
             'dob' => 'required|date|before_or_equal:today',
             'gender' => 'required|in:1,2',
             'paymentBy' => 'required|in:CASH,UPI,NETBANKING',
@@ -441,6 +443,7 @@ class PaymentController extends Controller
             }
 
             $email = strtolower(trim((string) $request->input('email')));
+            $phone = (string) $request->input('phone');
             $student = DB::table('users')
                 ->where('email', $email)
                 ->where('userType', 1)
@@ -449,11 +452,22 @@ class PaymentController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            $studentId = $student
-                ? (int) $student->id
-                : DB::table('users')->insertGetId($this->filterExistingColumns('users', [
+            if ($student) {
+                $studentId = (int) $student->id;
+
+                if (trim((string) ($student->phone ?? '')) === '') {
+                    DB::table('users')
+                        ->where('id', $studentId)
+                        ->update($this->filterExistingColumns('users', [
+                            'phone' => $phone,
+                            'updated_at' => now(),
+                        ]));
+                }
+            } else {
+                $studentId = DB::table('users')->insertGetId($this->filterExistingColumns('users', [
                     'name' => trim((string) $request->input('name')),
                     'email' => $email,
+                    'phone' => $phone,
                     'dob' => $request->input('dob'),
                     'gender' => (int) $request->input('gender'),
                     'userType' => 1,
@@ -464,6 +478,9 @@ class PaymentController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]));
+            }
+
+            $studentPhone = trim((string) ($student->phone ?? '')) ?: $phone;
 
             EntityCodeService::assignIfMissing('users', $studentId, EntityCodeService::PREFIX_LEARNER);
 
@@ -534,9 +551,10 @@ class PaymentController extends Controller
                 $programPayload,
                 $entityId,
                 $entityLabel,
-                $student ?: (object) [
-                    'name' => trim((string) $request->input('name')),
-                    'email' => $email,
+                (object) [
+                    'name' => (string) ($student->name ?? trim((string) $request->input('name'))),
+                    'email' => (string) ($student->email ?? $email),
+                    'phone' => $studentPhone,
                 ],
                 $orderReference,
                 $paymentReference,

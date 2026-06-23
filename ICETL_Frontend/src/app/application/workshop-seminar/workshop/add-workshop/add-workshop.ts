@@ -73,6 +73,19 @@ export class AddWorkshop implements OnInit {
   private existingBannerImageUrl: string | null = null;
   private inputEditMode = false;
   private workshopId: number | null = null;
+  private readonly dateNotBeforeTodayValidator = (control: AbstractControl): ValidationErrors | null => {
+    const value = `${control.value || ''}`;
+
+    if (!value) {
+      return null;
+    }
+
+    if (!this.parseIsoDate(value)) {
+      return { invalidDate: true };
+    }
+
+    return value < this.todayIso() ? { dateInPast: true } : null;
+  };
 
   @Input() set editWorkshop(value: WorkshopItem | null | undefined) {
     if (!value?.id) {
@@ -112,8 +125,8 @@ export class AddWorkshop implements OnInit {
         topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
         venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
         city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(48)]],
-        startDate: ['', Validators.required],
-        endDate: ['', Validators.required],
+        startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
+        endDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
         endTime: [''],
         speakerName: ['', FormValidationRules.requiredName()],
@@ -250,6 +263,14 @@ export class AddWorkshop implements OnInit {
       return `${fieldName} is required.`;
     }
 
+    if (control.errors['dateInPast']) {
+      return `${fieldName} cannot be before today.`;
+    }
+
+    if (control.errors['invalidDate']) {
+      return `${fieldName} format is invalid.`;
+    }
+
     if (control.errors['minlength']) {
       return `${fieldName} must be at least ${control.errors['minlength'].requiredLength} characters.`;
     }
@@ -297,7 +318,10 @@ export class AddWorkshop implements OnInit {
     const currentView = this.calendarViews[controlName];
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(currentView.getFullYear(), currentView.getMonth() + offset, 1),
+      [controlName]: this.clampCalendarView(
+        controlName,
+        new Date(currentView.getFullYear(), currentView.getMonth() + offset, 1),
+      ),
     };
   }
 
@@ -307,7 +331,7 @@ export class AddWorkshop implements OnInit {
 
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(currentView.getFullYear(), month, 1),
+      [controlName]: this.clampCalendarView(controlName, new Date(currentView.getFullYear(), month, 1)),
     };
   }
 
@@ -317,8 +341,15 @@ export class AddWorkshop implements OnInit {
 
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: new Date(year, currentView.getMonth(), 1),
+      [controlName]: this.clampCalendarView(controlName, new Date(year, currentView.getMonth(), 1)),
     };
+  }
+
+  isPreviousMonthDisabled(controlName: WorkshopDateControl): boolean {
+    const currentView = this.calendarViews[controlName];
+    const previousView = new Date(currentView.getFullYear(), currentView.getMonth() - 1, 1);
+
+    return previousView < this.minimumCalendarView(controlName);
   }
 
   selectCalendarDate(controlName: WorkshopDateControl, day: CalendarDay): void {
@@ -334,9 +365,10 @@ export class AddWorkshop implements OnInit {
 
     if (controlName === 'startDate') {
       const endDate = `${this.f['endDate'].value || ''}`;
-      if (endDate && new Date(endDate) < new Date(day.iso)) {
+      if (endDate && endDate <= day.iso) {
         this.itemForm.patchValue({ endDate: '' });
       }
+      this.syncCalendarView('endDate');
     }
 
     this.itemForm.updateValueAndValidity();
@@ -381,6 +413,8 @@ export class AddWorkshop implements OnInit {
     this.existingBannerImageUrl = null;
     this.setBannerPreviewUrl(null);
     this.formMessage = '';
+    this.syncCalendarView('startDate');
+    this.syncCalendarView('endDate');
   }
 
   closeModal(): void {
@@ -614,7 +648,17 @@ export class AddWorkshop implements OnInit {
   private getDateValidationMessage(): string {
     if (this.itemForm.hasError('dateRange')) {
       this.f['endDate'].markAsTouched();
-      return 'End date cannot be earlier than start date.';
+      return 'End date must be after start date.';
+    }
+
+    if (this.f['startDate'].hasError('dateInPast')) {
+      this.f['startDate'].markAsTouched();
+      return 'Start date cannot be before today.';
+    }
+
+    if (this.f['endDate'].hasError('dateInPast')) {
+      this.f['endDate'].markAsTouched();
+      return 'End date cannot be before today.';
     }
 
     if (this.itemForm.hasError('timeRange')) {
@@ -682,9 +726,7 @@ export class AddWorkshop implements OnInit {
   }
 
   private isCalendarDayDisabled(controlName: WorkshopDateControl, iso: string): boolean {
-    const startDate = `${this.f['startDate'].value || ''}`;
-
-    return controlName === 'endDate' && !!startDate && new Date(iso) < new Date(startDate);
+    return iso < this.minimumSelectableIso(controlName);
   }
 
   private syncCalendarView(controlName: WorkshopDateControl): void {
@@ -694,13 +736,15 @@ export class AddWorkshop implements OnInit {
         ? this.parseIsoDate(`${this.f['startDate'].value || ''}`)
         : null;
 
+    const nextView = selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      : fallbackDate
+        ? new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1)
+        : this.defaultCalendarView();
+
     this.calendarViews = {
       ...this.calendarViews,
-      [controlName]: selectedDate
-        ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-        : fallbackDate
-          ? new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1)
-          : this.defaultCalendarView(),
+      [controlName]: this.clampCalendarView(controlName, nextView),
     };
   }
 
@@ -711,7 +755,44 @@ export class AddWorkshop implements OnInit {
   }
 
   private buildCalendarYearOptions(): number[] {
-    return Array.from({ length: 8 }, (_, index) => this.currentYear - 1 + index);
+    return Array.from({ length: 8 }, (_, index) => this.currentYear + index);
+  }
+
+  private clampCalendarView(controlName: WorkshopDateControl, value: Date): Date {
+    const nextView = new Date(value.getFullYear(), value.getMonth(), 1);
+    const minimumView = this.minimumCalendarView(controlName);
+
+    return nextView < minimumView ? minimumView : nextView;
+  }
+
+  private minimumCalendarView(controlName: WorkshopDateControl): Date {
+    const minimumDate = this.parseIsoDate(this.minimumSelectableIso(controlName)) || new Date();
+
+    return new Date(minimumDate.getFullYear(), minimumDate.getMonth(), 1);
+  }
+
+  private minimumSelectableIso(controlName: WorkshopDateControl): string {
+    let minimumIso = this.todayIso();
+
+    if (controlName === 'endDate') {
+      const startDate = this.parseIsoDate(`${this.f['startDate'].value || ''}`);
+
+      if (startDate) {
+        const minimumEndDate = new Date(startDate);
+        minimumEndDate.setDate(startDate.getDate() + 1);
+        const minimumEndIso = this.toIsoDate(minimumEndDate);
+
+        if (minimumEndIso > minimumIso) {
+          minimumIso = minimumEndIso;
+        }
+      }
+    }
+
+    return minimumIso;
+  }
+
+  private todayIso(): string {
+    return this.toIsoDate(new Date());
   }
 
   private parseIsoDate(value: string): Date | null {
@@ -771,7 +852,7 @@ export class AddWorkshop implements OnInit {
     const startDate = control.get('startDate')?.value;
     const endDate = control.get('endDate')?.value;
 
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+    if (startDate && endDate && endDate <= startDate) {
       return { dateRange: true };
     }
 

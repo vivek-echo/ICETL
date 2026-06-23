@@ -334,6 +334,17 @@
             }
           </div>
 
+          <div class="rbt-form-group">
+            <label for="workshopEnrollPhone">Mobile Number</label>
+            <input id="workshopEnrollPhone" name="workshopEnrollPhone" type="tel" autocomplete="tel"
+              inputmode="numeric" maxlength="10" pattern="[0-9]*" [(ngModel)]="enrollmentForm.phone"
+              (input)="sanitizeEnrollmentPhoneInput($event)" (blur)="markEnrollmentFieldTouched('phone')"
+              [class.is-invalid]="shouldShowEnrollmentError('phone')">
+            @if (shouldShowEnrollmentError('phone')) {
+            <small>{{ getEnrollmentError('phone') }}</small>
+            }
+          </div>
+
           <div class="rbt-form-group program-dob-field" [class.is-calendar-open]="isDobCalendarOpen">
             <label for="workshopEnrollDob">Date of Birth</label>
             <input id="workshopEnrollDob" name="workshopEnrollDob" type="hidden" [(ngModel)]="enrollmentForm.dob">

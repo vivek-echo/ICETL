@@ -581,7 +581,7 @@ class SeminarController extends Controller
             'topic' => ['required', 'string', 'min:3', 'max:120'],
             'venue' => ['required', 'string', 'min:3', 'max:150'],
             'city' => ['required', 'string', 'min:2', 'max:100'],
-            'eventDate' => 'required|date',
+            'eventDate' => 'required|date|after_or_equal:today',
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'nullable|date_format:H:i',
             'speakerName' => ['required', 'string', 'min:2', 'max:120'],

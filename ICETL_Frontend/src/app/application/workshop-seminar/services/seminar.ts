@@ -88,6 +88,7 @@ export interface SeminarEnrollmentPayload {
   seminarId: number;
   name: string;
   email: string;
+  phone: string;
   dob: string;
   gender: number;
   paymentBy: 'CASH' | 'UPI' | 'NETBANKING';

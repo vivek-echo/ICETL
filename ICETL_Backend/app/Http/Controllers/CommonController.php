@@ -26,7 +26,7 @@ class CommonController extends Controller
             // $isAdmin = $profileData && isset($profileData['role']) && $profileData['role'] === 1;
             
             $insId = $requestData['instructorId'] ? Crypt::decryptString($requestData['instructorId']) : null;
-            $ins = DB::table('users')->where('role', 3)->where('deletedFlag', 0)->select('id', 'name', 'email');
+            $ins = DB::table('users')->where('role', 3)->wherenotnull('name')->where('deletedFlag', 0)->select('id', 'name', 'email');
 
             if (!empty($insId)) {
                 $ins->where('id', $insId);

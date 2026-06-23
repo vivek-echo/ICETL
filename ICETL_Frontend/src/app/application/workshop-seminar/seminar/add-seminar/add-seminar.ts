@@ -68,6 +68,19 @@ export class AddSeminar implements OnInit {
   private existingBannerImageUrl: string | null = null;
   private inputEditMode = false;
   private seminarId: number | null = null;
+  private readonly dateNotBeforeTodayValidator = (control: AbstractControl): ValidationErrors | null => {
+    const value = `${control.value || ''}`;
+
+    if (!value) {
+      return null;
+    }
+
+    if (!this.parseIsoDate(value)) {
+      return { invalidDate: true };
+    }
+
+    return value < this.todayIso() ? { dateInPast: true } : null;
+  };
 
   @Input() set editSeminar(value: SeminarItem | null | undefined) {
     if (!value?.id) {
@@ -107,7 +120,7 @@ export class AddSeminar implements OnInit {
         topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
         venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
         city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(48)]],
-        eventDate: ['', Validators.required],
+        eventDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
         endTime: [''],
         speakerName: ['', FormValidationRules.requiredName()],
@@ -206,7 +219,7 @@ export class AddSeminar implements OnInit {
         isCurrentMonth: date.getMonth() === this.eventCalendarView.getMonth(),
         isSelected: iso === selectedIso,
         isToday: iso === todayIso,
-        isDisabled: false,
+        isDisabled: iso < todayIso,
       };
     });
   }
@@ -246,6 +259,14 @@ export class AddSeminar implements OnInit {
 
     if (control.errors['required']) {
       return `${fieldName} is required.`;
+    }
+
+    if (control.errors['dateInPast']) {
+      return `${fieldName} cannot be before today.`;
+    }
+
+    if (control.errors['invalidDate']) {
+      return `${fieldName} format is invalid.`;
     }
 
     if (control.errors['minlength']) {
@@ -289,21 +310,37 @@ export class AddSeminar implements OnInit {
   }
 
   changeEventCalendarMonth(offset: number): void {
-    this.eventCalendarView = new Date(
-      this.eventCalendarView.getFullYear(),
-      this.eventCalendarView.getMonth() + offset,
-      1,
+    this.eventCalendarView = this.clampEventCalendarView(
+      new Date(
+        this.eventCalendarView.getFullYear(),
+        this.eventCalendarView.getMonth() + offset,
+        1,
+      ),
     );
   }
 
   setEventCalendarMonth(event: Event): void {
     const month = Number((event.target as HTMLSelectElement).value);
-    this.eventCalendarView = new Date(this.eventCalendarView.getFullYear(), month, 1);
+    this.eventCalendarView = this.clampEventCalendarView(
+      new Date(this.eventCalendarView.getFullYear(), month, 1),
+    );
   }
 
   setEventCalendarYear(event: Event): void {
     const year = Number((event.target as HTMLSelectElement).value);
-    this.eventCalendarView = new Date(year, this.eventCalendarView.getMonth(), 1);
+    this.eventCalendarView = this.clampEventCalendarView(
+      new Date(year, this.eventCalendarView.getMonth(), 1),
+    );
+  }
+
+  isEventPreviousMonthDisabled(): boolean {
+    const previousView = new Date(
+      this.eventCalendarView.getFullYear(),
+      this.eventCalendarView.getMonth() - 1,
+      1,
+    );
+
+    return previousView < this.minimumEventCalendarView();
   }
 
   selectEventDate(day: CalendarDay): void {
@@ -356,6 +393,7 @@ export class AddSeminar implements OnInit {
     this.existingBannerImageUrl = null;
     this.setBannerPreviewUrl(null);
     this.formMessage = '';
+    this.syncEventCalendarView();
   }
 
   closeModal(): void {
@@ -589,6 +627,11 @@ export class AddSeminar implements OnInit {
     const startTime = this.f['startTime'].value;
     const endTime = this.f['endTime'].value;
 
+    if (this.f['eventDate'].hasError('dateInPast')) {
+      this.f['eventDate'].markAsTouched();
+      return 'Event date cannot be before today.';
+    }
+
     if (startTime && endTime && endTime <= startTime) {
       return 'End time must be later than start time.';
     }
@@ -637,9 +680,11 @@ export class AddSeminar implements OnInit {
 
   private syncEventCalendarView(): void {
     const selectedDate = this.parseIsoDate(`${this.f['eventDate'].value || ''}`);
-    this.eventCalendarView = selectedDate
+    const nextView = selectedDate
       ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
       : this.defaultCalendarView();
+
+    this.eventCalendarView = this.clampEventCalendarView(nextView);
   }
 
   private defaultCalendarView(): Date {
@@ -649,7 +694,24 @@ export class AddSeminar implements OnInit {
   }
 
   private buildCalendarYearOptions(): number[] {
-    return Array.from({ length: 8 }, (_, index) => this.currentYear - 1 + index);
+    return Array.from({ length: 8 }, (_, index) => this.currentYear + index);
+  }
+
+  private clampEventCalendarView(value: Date): Date {
+    const nextView = new Date(value.getFullYear(), value.getMonth(), 1);
+    const minimumView = this.minimumEventCalendarView();
+
+    return nextView < minimumView ? minimumView : nextView;
+  }
+
+  private minimumEventCalendarView(): Date {
+    const today = new Date();
+
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  private todayIso(): string {
+    return this.toIsoDate(new Date());
   }
 
   private parseIsoDate(value: string): Date | null {
