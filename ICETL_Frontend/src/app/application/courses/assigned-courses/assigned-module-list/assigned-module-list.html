@@ -1,0 +1,159 @@
+<section class="assigned-module-list" [attr.aria-label]="sectionTitle">
+  <div class="assigned-module-list__toolbar">
+    <div class="assigned-module-list__toolbar-header">
+      <div class="assigned-module-list__toolbar-title">
+        <span class="assigned-module-list__toolbar-icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="assigned-module-list__toolbar-toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="assignedModuleFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="assignedModuleFiltersPanel" class="assigned-module-list__toolbar-body" [hidden]="!showFilters">
+    <label>
+      <span>Search</span>
+      <div>
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="search"
+          [(ngModel)]="search"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Title or code"
+          autocomplete="off">
+        @if (search) {
+        <button type="button" (click)="clearSearch()" aria-label="Clear search">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+        }
+      </div>
+    </label>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="assigned-module-list__grid" aria-label="Loading assigned modules">
+    @for (row of skeletonRows; track row) {
+    <article class="assigned-card assigned-card--skeleton">
+      <span></span>
+      <div>
+        <i></i>
+        <i></i>
+        <i></i>
+      </div>
+    </article>
+    }
+  </div>
+  }
+
+  @if (!loading && modules.length === 0) {
+  <section class="assigned-empty">
+    <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+    <h2>No {{ emptyLabel }}</h2>
+    <p>Assigned items will appear here.</p>
+  </section>
+  }
+
+  @if (!loading && modules.length > 0) {
+  <div class="assigned-module-list__grid">
+    @for (module of modules; track trackByModuleId($index, module)) {
+    <article class="assigned-card">
+      <div class="assigned-card__media">
+        <img [src]="moduleImage(module)" [alt]="module.title" (error)="onModuleImageError(module)" loading="lazy">
+        <span [class.is-inactive]="module.status !== 1">{{ module.statusLabel || 'Active' }}</span>
+      </div>
+
+      <div class="assigned-card__body">
+        <div class="assigned-card__topline">
+          <small>{{ module.moduleTypeLabel }}</small>
+          @if (module.code) {
+          <small>{{ module.code }}</small>
+          }
+          @if (isSpecialCourse(module)) {
+          <small class="assigned-card__special">Special</small>
+          }
+        </div>
+
+        <h2>{{ module.title }}</h2>
+
+        @if (isSpecialCourse(module) && getPrimaryCourseLabel(module)) {
+        <div class="assigned-card__primary">
+          <i class="fa-solid fa-link"></i>
+          <span>Primary Course: {{ getPrimaryCourseLabel(module) }}</span>
+        </div>
+        }
+
+        @if (module.subtitle) {
+        <p>{{ module.subtitle }}</p>
+        }
+
+        <div class="assigned-card__meta">
+          <span><i class="fa-regular fa-calendar"></i>{{ getDateRange(module) }}</span>
+          <span><i class="fa-solid fa-signal"></i>{{ scheduleLabel(module) }}</span>
+          <span><i class="fa-regular fa-file-lines"></i>{{ module.materialsCount }} material{{ module.materialsCount === 1 ? '' : 's' }}</span>
+        </div>
+      </div>
+
+      <footer class="assigned-card__footer">
+        <button
+          type="button"
+          class="assigned-card__footer-button assigned-card__footer-button--secondary"
+          (click)="openStudents(module)"
+          title="View enrolled students">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          Enrolled Students
+        </button>
+        <button type="button" (click)="openMaterials(module)" title="Upload and manage materials">
+          <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+          Upload Materials
+        </button>
+      </footer>
+    </article>
+    }
+  </div>
+
+  @if (meta && meta.lastPage > 1) {
+  <nav class="assigned-pagination" aria-label="Assigned modules pagination">
+    <button type="button" (click)="previousPage()" [disabled]="!canGoPrevious || loading">
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      Previous
+    </button>
+    <span>Page {{ meta.currentPage }} of {{ meta.lastPage }}</span>
+    <button type="button" (click)="nextPage()" [disabled]="!canGoNext || loading">
+      Next
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
+  </nav>
+  }
+  }
+
+  @if (selectedModule) {
+  <app-module-materials-modal
+    [moduleType]="selectedModule.moduleType"
+    [moduleId]="selectedModule.moduleId"
+    [moduleTitle]="selectedModule.title"
+    [canUpload]="true"
+    [canDelete]="true"
+    (closed)="closeMaterials()"
+    (materialsChanged)="onMaterialsChanged($event)" />
+  }
+
+  @if (selectedStudentsModule) {
+  <app-assigned-module-students-modal
+    [moduleType]="selectedStudentsModule.moduleType"
+    [moduleId]="selectedStudentsModule.moduleId"
+    [moduleTitle]="selectedStudentsModule.title"
+    [moduleTypeLabel]="selectedStudentsModule.moduleTypeLabel"
+    (closed)="closeStudents()" />
+  }
+</section>

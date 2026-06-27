@@ -27,9 +27,6 @@ interface OfflineCourseTab {
 export class ManageOfflineCourse implements OnInit, OnDestroy {
   private readonly parentRoute = '/application/courses/manageOfflineCourses';
   private readonly fallbackTabs: OfflineCourseTab[] = [
-    { id: -1, label: 'Add Offline Course', route: 'add' },
-    { id: -2, label: 'View My Offline Courses', route: 'viewMyOfflineCourses' },
-    { id: -3, label: 'View All Offline Courses', route: 'viewAllOfflineCourses' },
   ];
   private readonly isBrowser: boolean;
   private readonly refreshTabs = () => {

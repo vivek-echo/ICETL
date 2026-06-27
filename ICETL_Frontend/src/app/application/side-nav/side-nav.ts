@@ -44,6 +44,8 @@ export class SideNav implements OnInit, OnDestroy {
     '/application/courses/coursesCategories',
     '/application/courses/manageCourses',
     '/application/courses/manageOfflineCourses',
+    '/application/courses/assignedCourses',
+    '/application/courses/myLearning',
     '/application/workshopSeminar/workshop',
     '/application/workshopSeminar/seminar',
   ]);

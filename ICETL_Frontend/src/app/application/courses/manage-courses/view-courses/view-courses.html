@@ -44,7 +44,28 @@
 
   <!-- TOOLBAR -->
   <div class="course-toolbar">
-    
+
+    <div class="course-toolbar__header">
+      <div class="course-toolbar__title">
+        <span class="course-toolbar__icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="course-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="viewCourseFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="viewCourseFiltersPanel" class="course-toolbar__body" [hidden]="!showFilters">
     <div class="rbt-form-group">
       <label>Search Course</label>
       <div class="course-field">
@@ -127,6 +148,7 @@
       <i class="feather-refresh-cw"></i>
       Reset
     </button>
+    </div>
 
   </div>
 
@@ -189,6 +211,12 @@
           <span class="entity-code-badge">{{ course.code }}</span>
           }
         </div>
+        @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
+        <div class="course-primary-ref">
+          <i class="feather-link"></i>
+          <span>Primary Course: {{ getPrimaryCourseLabel(course) }}</span>
+        </div>
+        }
 
         <p class="course-row__description">
           {{ course.description || 'Build practical skills with a focused, instructor-led learning path.' }}
@@ -210,6 +238,9 @@
         </div>
 
         <div class="course-badges">
+          @if (isSpecialCourse(course)) {
+          <span class="special-course-badge"><i class="fa-solid fa-star"></i> Special</span>
+          }
           <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
           <span class="bestseller-badge">Bestseller</span>
         </div>

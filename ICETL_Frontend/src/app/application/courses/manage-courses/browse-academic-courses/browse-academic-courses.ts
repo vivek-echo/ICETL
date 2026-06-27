@@ -45,6 +45,7 @@ export class BrowseAcademicCourses implements OnInit {
   private requestSerial = 0;
 
   loading = false;
+  showFilters = false;
   categoriesLoading = false;
   courses: OfflineCourseItem[] = [];
   cartItems: CourseCartItem[] = [];
@@ -77,6 +78,10 @@ export class BrowseAcademicCourses implements OnInit {
     void this.cartService.loadCart();
     void this.loadCategories();
     void this.loadCourses();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadCategories(): Promise<void> {
@@ -239,6 +244,21 @@ export class BrowseAcademicCourses implements OnInit {
     }
 
     return course.scheduleStatus === 'ongoing' ? 'is-ongoing' : 'is-upcoming';
+  }
+
+  isSpecialCourse(course: OfflineCourseItem): boolean {
+    return course.isSpecial === true || Number(course.isSpecial ?? 0) === 1;
+  }
+
+  getPrimaryCourseLabel(course: OfflineCourseItem): string {
+    const title = `${course.parentCourseTitle || ''}`.trim();
+    const code = `${course.parentCourseCode || ''}`.trim();
+
+    if (title && code) {
+      return `${title} (${code})`;
+    }
+
+    return title || code;
   }
 
   getDateRange(course: OfflineCourseItem): string {

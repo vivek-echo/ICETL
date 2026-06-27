@@ -78,6 +78,7 @@ export class ViewAllWorkshop implements OnInit {
 
   workshops: WorkshopItem[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   city = '';
   status = '';
@@ -104,6 +105,10 @@ export class ViewAllWorkshop implements OnInit {
 
   ngOnInit(): void {
     void this.loadWorkshops();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadWorkshops(page = 1): Promise<void> {

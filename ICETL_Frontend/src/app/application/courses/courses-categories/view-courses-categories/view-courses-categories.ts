@@ -65,6 +65,7 @@ export class ViewCoursesCategories implements OnDestroy {
   loading = false;
   isSavingEdit = false;
   isEditModalOpen = false;
+  showFilters = false;
 
   search = '';
 
@@ -103,6 +104,10 @@ export class ViewCoursesCategories implements OnDestroy {
     afterNextRender(() => {
       void this.getCourseCategories();
     });
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async getCourseCategories(): Promise<void> {

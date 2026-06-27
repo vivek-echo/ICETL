@@ -25,6 +25,10 @@ export interface PublicCourseApiItem {
   title: string;
   categoryId: number | null;
   categoryName: string;
+  isSpecial?: boolean | number;
+  parentCourseId?: number | null;
+  parentCourseTitle?: string | null;
+  parentCourseCode?: string | null;
   instructors: PublicCourseInstructor[];
   instructorName: string;
   duration: number | string | null;

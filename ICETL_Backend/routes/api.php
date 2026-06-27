@@ -15,6 +15,7 @@ use App\Http\Controllers\WorkshopController;
 use App\Http\Controllers\SeminarController;
 use App\Http\Controllers\ContactEnquiryController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ModuleMaterialController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -45,6 +46,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/instructors/documents-and-social-links', [InstructorRegistrationController::class, 'saveDocumentsAndSocialLinks']);
     Route::post('/instructors/complete-onboarding', [InstructorRegistrationController::class, 'completeInstructorOnboarding']);
     Route::get('/instructors/profile', [InstructorRegistrationController::class, 'getInstructorProfile']);
+    Route::get('/instructor/assigned-modules', [ModuleMaterialController::class, 'assignedModules']);
+    Route::get('/instructor/assigned-module-students', [ModuleMaterialController::class, 'assignedModuleStudents']);
+    Route::get('/module-materials', [ModuleMaterialController::class, 'index']);
+    Route::post('/module-materials', [ModuleMaterialController::class, 'store']);
+    Route::get('/module-materials/{id}/download', [ModuleMaterialController::class, 'download'])
+        ->whereNumber('id');
+    Route::delete('/module-materials/{id}', [ModuleMaterialController::class, 'destroy'])
+        ->whereNumber('id');
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);

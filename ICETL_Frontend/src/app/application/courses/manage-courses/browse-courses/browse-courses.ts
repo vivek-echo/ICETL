@@ -49,6 +49,7 @@ export class BrowseCourses implements OnInit {
   private activeSearchTerm = '';
 
   loading = false;
+  showFilters = false;
   search = '';
   categoryId: number | '' = '';
   sortBy: CourseSortOption = 'newest';
@@ -84,6 +85,10 @@ export class BrowseCourses implements OnInit {
     void this.cartService.loadCart();
     void this.loadCategories();
     void this.loadCourses();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadCategories(): Promise<void> {

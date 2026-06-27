@@ -35,39 +35,61 @@
   </header>
 
   <div class="payment-filters">
-    <label class="payment-filter payment-filter--search">
-      <span>Search</span>
-      <div class="payment-field">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input
-          type="search"
-          [(ngModel)]="search"
-          (keyup.enter)="applyFilters()"
-          placeholder="Invoice, order, code, or transaction no">
+    <div class="payment-filters__header">
+      <div class="payment-filters__title">
+        <span class="payment-filters__icon">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
       </div>
-    </label>
 
-    <label class="payment-filter">
-      <span>Status</span>
-      <div class="payment-field payment-field--select">
-        <select [(ngModel)]="status" (change)="applyFilters()">
-          @for (option of statusOptions; track option) {
-          <option [value]="option">{{ option === 'all' ? 'All statuses' : option }}</option>
-          }
-        </select>
-        <i class="fa-solid fa-chevron-down"></i>
+      <button
+        type="button"
+        class="payment-filters__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="paymentFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="paymentFiltersPanel" class="payment-filters__body" [hidden]="!showFilters">
+      <label class="payment-filter payment-filter--search">
+        <span>Search</span>
+        <div class="payment-field">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input
+            type="search"
+            [(ngModel)]="search"
+            (keyup.enter)="applyFilters()"
+            placeholder="Invoice, order, code, or transaction no">
+        </div>
+      </label>
+
+      <label class="payment-filter">
+        <span>Status</span>
+        <div class="payment-field payment-field--select">
+          <select [(ngModel)]="status" (change)="applyFilters()">
+            @for (option of statusOptions; track option) {
+            <option [value]="option">{{ option === 'all' ? 'All statuses' : option }}</option>
+            }
+          </select>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </label>
+
+      <div class="payment-filters__actions">
+        <button type="button" class="payment-filter-btn" (click)="applyFilters()">
+          <i class="fa-solid fa-filter"></i>
+          Filter
+        </button>
+        <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
+          <i class="fa-solid fa-rotate-left"></i>
+          Reset
+        </button>
       </div>
-    </label>
-
-    <div class="payment-filters__actions">
-      <button type="button" class="payment-filter-btn" (click)="applyFilters()">
-        <i class="fa-solid fa-filter"></i>
-        Filter
-      </button>
-      <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
-        <i class="fa-solid fa-rotate-left"></i>
-        Reset
-      </button>
     </div>
   </div>
 

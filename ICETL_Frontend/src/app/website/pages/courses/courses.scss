@@ -944,3 +944,102 @@
     width: 100%;
   }
 }
+
+/* Filter toggle layout */
+.courses-search__card {
+  display: grid;
+  gap: 14px;
+  overflow: visible;
+}
+
+.courses-search__header {
+  align-items: center;
+  border-bottom: 1px solid #edf2ff;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.courses-search__title {
+  align-items: center;
+  color: var(--icetl-text);
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 10px;
+}
+
+.courses-search__icon {
+  align-items: center;
+  background: var(--icetl-blue-soft);
+  border-radius: 8px;
+  color: var(--icetl-blue);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.courses-search__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 8px;
+  color: var(--icetl-blue);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.courses-search__toggle:hover {
+  background: var(--icetl-blue-soft);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.courses-search__toggle i:last-child {
+  font-size: 10px;
+}
+
+.courses-search__body {
+  overflow: visible;
+}
+
+@media (max-width: 767px) {
+  .courses-search__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .courses-search__toggle {
+    width: 100%;
+  }
+}
+
+.courses-search__card:has(> .courses-search__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.courses-search__card:has(> .courses-search__body[hidden]) .courses-search__header {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.courses-search__card:has(> .courses-search__body[hidden]) .courses-search__title {
+  display: none;
+}

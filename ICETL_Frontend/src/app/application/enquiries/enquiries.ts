@@ -25,6 +25,7 @@ export class EnquiriesComponent implements OnInit {
   total = 0;
   perPage = 10;
   unreadCount = 0;
+  showFilters = false;
 
   constructor(
     private readonly enquiryService: ContactEnquiryService,
@@ -34,6 +35,10 @@ export class EnquiriesComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadEnquiries();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadEnquiries(): Promise<void> {

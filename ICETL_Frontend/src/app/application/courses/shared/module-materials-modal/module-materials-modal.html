@@ -1,0 +1,210 @@
+<div class="module-materials-backdrop" (click)="onBackdropClick($event)">
+  <section
+    class="module-materials-modal"
+    appModalWindow
+    [appModalWindowTitle]="moduleTitle"
+    #materialsWindow="appModalWindow"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="module-materials-title"
+    (click)="$event.stopPropagation()">
+    <header class="module-materials-modal__header" data-app-modal-header>
+      <div>
+        <span>{{ canUpload ? 'Upload Materials' : 'Course Materials' }}</span>
+        <h2 id="module-materials-title">{{ moduleTitle }}</h2>
+      </div>
+
+      <app-modal-window-controls
+        [modal]="materialsWindow"
+        closeLabel="Close materials"
+        (closed)="attemptClose()" />
+    </header>
+
+    <div class="module-materials-modal__body" data-app-modal-body>
+      @if (canUpload) {
+      <form class="materials-upload" [formGroup]="form" (ngSubmit)="uploadMaterial(fileInput)">
+        <div class="materials-upload__grid">
+          <label>
+            <span>Material Title *</span>
+            <input
+              type="text"
+              formControlName="title"
+              placeholder="Enter material title"
+              [class.is-invalid]="titleControlInvalid">
+            @if (titleControlInvalid) {
+            <small>Title is required and must be 2 to 150 characters.</small>
+            }
+          </label>
+
+          <label>
+            <span>Material Date</span>
+            <input type="date" formControlName="materialDate">
+          </label>
+
+          <label class="materials-upload__description">
+            <span>Description</span>
+            <textarea
+              rows="3"
+              formControlName="description"
+              placeholder="Short note for learners"
+              [class.is-invalid]="descriptionControlInvalid"></textarea>
+            @if (descriptionControlInvalid) {
+            <small>Description must be 2000 characters or fewer.</small>
+            }
+          </label>
+        </div>
+
+        <div class="materials-file">
+          <div class="materials-file__field">
+            <span class="materials-file__caption">File *</span>
+            <div class="materials-file__picker-row">
+              <label class="materials-file__picker" [class.has-file]="selectedFile">
+                <input
+                  #fileInput
+                  class="materials-file__input"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                  (change)="onFileSelected($event)">
+
+                <span class="materials-file__button">
+                  <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                  {{ selectedFile ? 'Change File' : 'Choose File' }}
+                </span>
+
+                <span class="materials-file__name">
+                  {{ selectedFile?.name || 'No file selected' }}
+                </span>
+
+                @if (selectedFile) {
+                <span class="materials-file__size">{{ selectedFileSizeLabel }}</span>
+                }
+              </label>
+
+              @if (selectedFile) {
+              <button
+                type="button"
+                class="materials-file__clear"
+                (click)="clearSelectedFile(fileInput)"
+                aria-label="Remove selected file">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              }
+            </div>
+          </div>
+
+          @if (fileError) {
+          <p class="materials-file__error">{{ fileError }}</p>
+          }
+        </div>
+
+        @if (uploading) {
+        <div class="materials-upload__progress" aria-label="Upload progress">
+          <span [style.width.%]="uploadProgress || 6"></span>
+          <strong>{{ uploadProgress || 0 }}%</strong>
+        </div>
+        }
+
+        <div class="materials-upload__actions">
+          <span>PDF, Office, image, and ZIP files up to 20 MB</span>
+          <button type="submit" [disabled]="uploading">
+            <i [class]="uploading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'"></i>
+            {{ uploading ? 'Uploading' : 'Upload' }}
+          </button>
+        </div>
+      </form>
+      }
+
+      <section class="materials-list" aria-labelledby="materials-list-title">
+        <div class="materials-list__head">
+          <div>
+            <h3 id="materials-list-title">Uploaded Materials</h3>
+            <p>{{ materials.length }} item{{ materials.length === 1 ? '' : 's' }}</p>
+          </div>
+          <button type="button" (click)="loadMaterials()" [disabled]="loadingMaterials || uploading" title="Refresh materials">
+            <i [class]="loadingMaterials ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+          </button>
+        </div>
+
+        @if (loadingMaterials) {
+        <div class="materials-list__items" aria-label="Loading materials">
+          @for (row of skeletonRows; track row) {
+          <article class="material-row material-row--skeleton">
+            <span></span>
+            <div>
+              <i></i>
+              <i></i>
+            </div>
+          </article>
+          }
+        </div>
+        }
+
+        @if (!loadingMaterials && listError) {
+        <div class="materials-state materials-state--error">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          <p>{{ listError }}</p>
+        </div>
+        }
+
+        @if (!loadingMaterials && !listError && materials.length === 0) {
+        <div class="materials-state">
+          <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+          <p>No materials have been uploaded yet.</p>
+        </div>
+        }
+
+        @if (!loadingMaterials && !listError && materials.length > 0) {
+        <div class="materials-list__items">
+          @for (material of materials; track trackByMaterialId($index, material)) {
+          <article class="material-row">
+            <div class="material-row__type">{{ extensionLabel(material) }}</div>
+
+            <div class="material-row__content">
+              <div class="material-row__title">
+                <h4>{{ material.title }}</h4>
+                <span>{{ material.fileSizeLabel || 'N/A' }}</span>
+              </div>
+
+              @if (material.description) {
+              <p>{{ material.description }}</p>
+              }
+
+              <div class="material-row__meta">
+                <span><i class="fa-regular fa-file-lines"></i>{{ material.originalFileName }}</span>
+                <span><i class="fa-regular fa-calendar"></i>{{ formatDate(material.materialDate) }}</span>
+                <span><i class="fa-regular fa-clock"></i>{{ formatDateTime(material.createdAt) }}</span>
+                @if (material.uploadedBy?.name) {
+                <span><i class="fa-solid fa-user-tie"></i>{{ material.uploadedBy?.name }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="material-row__actions">
+              <button type="button" (click)="openMaterial(material)" title="View material">
+                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                View
+              </button>
+              <button type="button" (click)="saveMaterial(material)" title="Download material">
+                <i class="fa-solid fa-download" aria-hidden="true"></i>
+                Download
+              </button>
+              @if (canDelete) {
+              <button
+                type="button"
+                class="material-row__delete"
+                (click)="deleteMaterial(material)"
+                [disabled]="deletingMaterialId === material.id"
+                title="Delete material">
+                <i [class]="deletingMaterialId === material.id ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-trash-can'"></i>
+                Delete
+              </button>
+              }
+            </div>
+          </article>
+          }
+        </div>
+        }
+      </section>
+    </div>
+  </section>
+</div>

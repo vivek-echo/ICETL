@@ -32,6 +32,7 @@ export class PaymentLogComponent implements OnInit {
   lastPage = 1;
   total = 0;
   perPage = 10;
+  showFilters = false;
 
   constructor(
     private readonly paymentService: PaymentService,
@@ -100,6 +101,10 @@ export class PaymentLogComponent implements OnInit {
 
   closeInvoice(): void {
     this.selectedInvoice = null;
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   printInvoice(): void {

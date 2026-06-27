@@ -18,7 +18,7 @@ import { FormValidationService } from '../../../../commonServices/form-validatio
 import { FormValidationRules } from '../../../../commonServices/form-validation-rules';
 import { ROLE } from '../../../../commonServices/constants.service';
 import { Course } from '../../services/course';
-import { OfflineCourseInstructor } from '../../services/offline-course';
+import { OfflineCourseInstructor, OfflineCourseItem } from '../../services/offline-course';
 
 interface CourseCategory {
   id: number;
@@ -63,9 +63,12 @@ export class AddOfflineCourse implements OnInit {
   readonly calendarYearOptions = this.buildCalendarYearOptions();
   courseForm: FormGroup;
   categories: CourseCategory[] = [];
+  parentAcademicCourses: OfflineCourseItem[] = [];
   instructorList: OfflineCourseInstructor[] = [];
   instructorSearchTerm = '';
   isInstructorPickerOpen = false;
+  isParentCoursesLoading = false;
+  parentCoursesMessage = '';
   openCalendar: OfflineDateControl | null = null;
   calendarViews: Record<OfflineDateControl, Date> = {
     startDate: this.defaultCalendarView(),
@@ -102,7 +105,9 @@ export class AddOfflineCourse implements OnInit {
     this.courseForm = this.fb.group(
       {
         title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(50)]],
+        isSpecial: [false],
         categoryId: ['', Validators.required],
+        parentCourseId: [''],
         venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
         city: ['', FormValidationRules.requiredName()],
         startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
@@ -124,6 +129,7 @@ export class AddOfflineCourse implements OnInit {
   }
 
   ngOnInit(): void {
+    this.applyInstructorSpecialCourseDefaults();
     void this.loadCategories();
     void this.loadInstructorList();
   }
@@ -134,6 +140,16 @@ export class AddOfflineCourse implements OnInit {
 
   get highlights(): FormArray<FormControl<string | null>> {
     return this.courseForm.get('highlights') as FormArray<FormControl<string | null>>;
+  }
+
+  get isSpecialCourse(): boolean {
+    const value = this.f['isSpecial'].value;
+
+    return value === true || value === 1 || value === '1';
+  }
+
+  get isInstructorUser(): boolean {
+    return Number(this.getStoredUser()?.role) === ROLE.INSTRUCTOR;
   }
 
   get selectedCategory(): string {
@@ -174,6 +190,18 @@ export class AddOfflineCourse implements OnInit {
     return this.instructorList.filter((instructor) =>
       `${instructor.name || ''}`.toLowerCase().includes(term),
     );
+  }
+
+  get parentCoursePlaceholder(): string {
+    if (!this.f['categoryId'].value) {
+      return 'Select category first';
+    }
+
+    if (this.isParentCoursesLoading) {
+      return 'Loading courses...';
+    }
+
+    return 'Select Academic Course';
   }
 
   get dateRangeLabel(): string {
@@ -259,7 +287,7 @@ export class AddOfflineCourse implements OnInit {
       instructorId: '',
     };
 
-    if (userProfile?.role === ROLE.INSTRUCTOR) {
+    if (this.isInstructorUser) {
       payload.instructorId = userProfile.id;
     }
 
@@ -270,6 +298,7 @@ export class AddOfflineCourse implements OnInit {
 
       if (response.status) {
         this.instructorList = response.data || [];
+        this.applyInstructorSelectionDefaults();
       }
     } catch (error) {
       console.error(error);
@@ -291,6 +320,12 @@ export class AddOfflineCourse implements OnInit {
   }
 
   toggleInstructorPicker(): void {
+    if (this.isInstructorUser) {
+      this.isInstructorPickerOpen = false;
+      this.openCalendar = null;
+      return;
+    }
+
     this.isInstructorPickerOpen = !this.isInstructorPickerOpen;
     this.openCalendar = null;
   }
@@ -308,6 +343,12 @@ export class AddOfflineCourse implements OnInit {
   }
 
   toggleInstructor(instructor: OfflineCourseInstructor, event: Event): void {
+    if (this.isInstructorUser) {
+      (event.target as HTMLInputElement).checked = true;
+      this.applyInstructorSelectionDefaults();
+      return;
+    }
+
     const checked = (event.target as HTMLInputElement).checked;
     const selectedInstructors = [...this.selectedInstructors];
 
@@ -423,6 +464,96 @@ export class AddOfflineCourse implements OnInit {
     };
   }
 
+  async onSpecialCourseToggle(): Promise<void> {
+    const parentControl = this.courseForm.get('parentCourseId');
+
+    if (this.isInstructorUser && !this.isSpecialCourse) {
+      this.courseForm.patchValue({ isSpecial: true });
+    }
+
+    if (this.isSpecialCourse) {
+      parentControl?.setValidators([Validators.required]);
+      await this.loadParentAcademicCourses();
+    } else {
+      parentControl?.clearValidators();
+      parentControl?.setValue('');
+      this.parentAcademicCourses = [];
+      this.parentCoursesMessage = '';
+    }
+
+    parentControl?.updateValueAndValidity();
+    this.cdr.markForCheck();
+  }
+
+  async onCategoryChange(): Promise<void> {
+    this.courseForm.patchValue({ parentCourseId: '' });
+    this.parentAcademicCourses = [];
+    this.parentCoursesMessage = '';
+
+    if (this.isSpecialCourse) {
+      await this.loadParentAcademicCourses();
+    }
+  }
+
+  async loadParentAcademicCourses(): Promise<void> {
+    const categoryId = Number(this.f['categoryId'].value);
+
+    this.parentAcademicCourses = [];
+    this.parentCoursesMessage = '';
+
+    if (!this.isSpecialCourse || !Number.isFinite(categoryId) || categoryId <= 0) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isParentCoursesLoading = true;
+
+    try {
+      const response = await lastValueFrom(
+        this.courseService
+          .getAllOfflineCourses({
+            page: 1,
+            perPage: 'all',
+            categoryId,
+            isSpecial: 0,
+            sortBy: 'newest',
+          })
+          .pipe(timeout(15000)),
+      );
+
+      const courses = response.status ? response.data || [] : [];
+      this.parentAcademicCourses = courses.filter(
+        (course) => Number(course.categoryId) === categoryId && Number(course.isSpecial ?? 0) !== 1,
+      );
+      this.parentCoursesMessage = this.parentAcademicCourses.length
+        ? ''
+        : 'No academic courses found for this category.';
+    } catch (error) {
+      console.error(error);
+      this.parentCoursesMessage = 'Unable to load academic courses.';
+    } finally {
+      this.isParentCoursesLoading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onParentCourseChange(): void {
+    const parentCourseId = Number(this.f['parentCourseId'].value);
+    const selectedCourse = this.parentAcademicCourses.find((course) => course.id === parentCourseId);
+
+    if (!selectedCourse) {
+      return;
+    }
+
+    this.courseForm.patchValue({
+      description: selectedCourse.description || '',
+    });
+    this.setHighlightsFromCourse(this.getSelectedCourseHighlights(selectedCourse));
+    this.f['description'].markAsDirty();
+    this.f['description'].markAsTouched();
+    this.cdr.detectChanges();
+  }
+
   setCalendarMonth(controlName: OfflineDateControl, event: Event): void {
     const month = Number((event.target as HTMLSelectElement).value);
     const currentView = this.calendarViews[controlName];
@@ -487,7 +618,9 @@ export class AddOfflineCourse implements OnInit {
   resetForm(): void {
     this.courseForm.reset({
       title: '',
+      isSpecial: this.isInstructorUser,
       categoryId: '',
+      parentCourseId: '',
       venue: '',
       city: '',
       startDate: '',
@@ -502,6 +635,12 @@ export class AddOfflineCourse implements OnInit {
       highlights: [''],
       status: '1',
     });
+    this.courseForm.get('parentCourseId')?.clearValidators();
+    this.courseForm.get('parentCourseId')?.updateValueAndValidity();
+    this.applyInstructorSpecialCourseDefaults();
+    this.applyInstructorSelectionDefaults();
+    this.parentAcademicCourses = [];
+    this.parentCoursesMessage = '';
     this.highlights.clear();
     this.addHighlight();
     this.selectedBannerImage = null;
@@ -578,7 +717,9 @@ export class AddOfflineCourse implements OnInit {
   getFieldName(field: string): string {
     const map: Record<string, string> = {
       title: 'Course Title',
+      isSpecial: 'Special Course',
       categoryId: 'Category',
+      parentCourseId: 'Parent Academic Course',
       venue: 'Venue',
       city: 'City',
       startDate: 'Start Date',
@@ -604,6 +745,8 @@ export class AddOfflineCourse implements OnInit {
     const formData = new FormData();
 
     formData.append('title', `${value.title}`.trim());
+    formData.append('isSpecial', this.isSpecialCourse ? '1' : '0');
+    formData.append('parentCourseId', this.isSpecialCourse ? `${Number(value.parentCourseId) || ''}` : '');
     formData.append('category', `${Number.isFinite(categoryId) ? categoryId : ''}`);
     formData.append('instructor', JSON.stringify(this.selectedInstructors.map((instructor) => instructor.id)));
     formData.append('venue', `${value.venue}`.trim());
@@ -630,6 +773,91 @@ export class AddOfflineCourse implements OnInit {
     return this.highlights.value
       .map((highlight) => `${highlight || ''}`.trim())
       .filter((highlight) => highlight.length > 0);
+  }
+
+  private getSelectedCourseHighlights(course: OfflineCourseItem): string[] {
+    const courseData = course as unknown as Record<string, unknown>;
+    const fields = [
+      courseData['courseHighlights'],
+      courseData['highlights'],
+      courseData['keyOutcomes'],
+      courseData['key_outcomes'],
+      courseData['learningOutcomes'],
+      courseData['learning_outcomes'],
+    ];
+
+    for (const field of fields) {
+      const highlights = this.normalizeHighlights(field);
+
+      if (highlights.length) {
+        return highlights;
+      }
+    }
+
+    return [];
+  }
+
+  private normalizeHighlights(value: unknown): string[] {
+    let source = value;
+
+    if (typeof source === 'string') {
+      const trimmed = source.trim();
+
+      if (!trimmed) {
+        return [];
+      }
+
+      try {
+        source = JSON.parse(trimmed);
+      } catch {
+        source = trimmed.split(/\r?\n|,/);
+      }
+    }
+
+    if (!Array.isArray(source)) {
+      return [];
+    }
+
+    return source
+      .map((highlight) => {
+        if (typeof highlight === 'string' || typeof highlight === 'number') {
+          return `${highlight}`.trim();
+        }
+
+        if (highlight && typeof highlight === 'object') {
+          const row = highlight as Record<string, unknown>;
+
+          return `${row['title'] || row['name'] || row['text'] || row['outcome'] || ''}`.trim();
+        }
+
+        return '';
+      })
+      .filter((highlight) => highlight.length > 0);
+  }
+
+  private setHighlightsFromCourse(highlights: string[]): void {
+    const cleanHighlights = this.normalizeHighlights(highlights)
+      .map((highlight) => `${highlight || ''}`.trim())
+      .filter((highlight) => highlight.length > 0);
+    const nextHighlights = cleanHighlights.length ? cleanHighlights : [''];
+
+    while (this.highlights.length < nextHighlights.length) {
+      this.highlights.push(this.fb.control(''));
+    }
+
+    while (this.highlights.length > nextHighlights.length) {
+      this.highlights.removeAt(this.highlights.length - 1);
+    }
+
+    nextHighlights.forEach((highlight, index) => {
+      this.highlights.at(index).setValue(highlight);
+      this.highlights.at(index).markAsDirty();
+      this.highlights.at(index).markAsTouched();
+    });
+
+    this.highlights.markAsDirty();
+    this.highlights.markAsTouched();
+    this.highlights.updateValueAndValidity();
   }
 
   private normalizeOptionalText(value: unknown): string | null {
@@ -846,5 +1074,42 @@ export class AddOfflineCourse implements OnInit {
     }
 
     return apiError?.message || 'Unable to add offline course. Please try again.';
+  }
+
+  private applyInstructorSpecialCourseDefaults(): void {
+    if (!this.isInstructorUser) {
+      return;
+    }
+
+    const parentControl = this.courseForm.get('parentCourseId');
+    this.courseForm.patchValue({ isSpecial: true }, { emitEvent: false });
+    parentControl?.setValidators([Validators.required]);
+    parentControl?.updateValueAndValidity();
+  }
+
+  private applyInstructorSelectionDefaults(): void {
+    if (!this.isInstructorUser) {
+      return;
+    }
+
+    const instructor = this.getLoggedInInstructorOption();
+
+    if (!instructor) {
+      return;
+    }
+
+    this.courseForm.patchValue({ instructors: [instructor] }, { emitEvent: false });
+    this.f['instructors'].updateValueAndValidity({ emitEvent: false });
+    this.isInstructorPickerOpen = false;
+    this.instructorSearchTerm = '';
+  }
+
+  private getLoggedInInstructorOption(): OfflineCourseInstructor | null {
+    const userId = Number(this.getStoredUser()?.id);
+    const matchingInstructor = Number.isFinite(userId)
+      ? this.instructorList.find((instructor) => Number(instructor.id) === userId)
+      : null;
+
+    return matchingInstructor || this.instructorList[0] || null;
   }
 }

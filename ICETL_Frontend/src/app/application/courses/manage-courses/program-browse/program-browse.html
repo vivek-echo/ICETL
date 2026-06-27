@@ -38,76 +38,100 @@
 
   <section class="program-browse__filters">
     <div class="container-fluid">
-      <div class="program-filter-bar">
-        <label class="program-field program-field--search">
-          <span>Search</span>
-          <div>
-            <i class="feather-search"></i>
-            <input
-              type="search"
-              placeholder="Title, topic, speaker"
-              [(ngModel)]="search"
-              (keyup.enter)="onSearch()">
+      <div class="program-filter-panel">
+        <div class="program-filter-panel__header">
+          <div class="program-filter-panel__title">
+            <span class="program-filter-panel__icon">
+              <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            </span>
+            <strong>Filters</strong>
           </div>
-        </label>
 
-        <label class="program-field">
-          <span>City</span>
-          <div>
-            <i class="feather-map-pin"></i>
-            <input
-              type="text"
-              placeholder="Any city"
-              [(ngModel)]="city"
-              (keyup.enter)="onSearch()">
-          </div>
-        </label>
-
-        <label class="program-field">
-          <span>Sort</span>
-          <div>
-            <i class="feather-sliders"></i>
-            <select [(ngModel)]="sortBy" (change)="onFilterChange()">
-              @for (option of sortOptions; track option.value) {
-              <option [ngValue]="option.value">{{ option.label }}</option>
-              }
-            </select>
-          </div>
-        </label>
-
-        <label class="program-field">
-          <span>Per Page</span>
-          <div>
-            <i class="feather-list"></i>
-            <select [(ngModel)]="meta.perPage" (change)="onFilterChange()">
-              @for (option of perPageOptions; track option) {
-              <option [ngValue]="option">{{ option }}</option>
-              }
-            </select>
-          </div>
-        </label>
-
-        <div class="program-filter-bar__buttons">
-          <button type="button" class="program-browse-btn program-browse-btn--primary" (click)="onSearch()">
-            <i class="feather-filter"></i>
-            Apply
-          </button>
-          <button type="button" class="program-browse-btn" (click)="clearFilters()">
-            <i class="feather-refresh-cw"></i>
-            Reset
+          <button
+            type="button"
+            class="program-filter-panel__toggle"
+            (click)="toggleFilters()"
+            [attr.aria-expanded]="showFilters"
+            aria-controls="programBrowseFiltersPanel">
+            <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+            <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
           </button>
         </div>
-      </div>
 
-      <div class="program-timeline-tabs" aria-label="Timeline filter">
-        @for (option of timelineOptions; track option.value) {
-        <button
-          type="button"
-          [class.is-active]="timeline === option.value"
-          (click)="selectTimeline(option.value)">
-          {{ option.label }}
-        </button>
-        }
+        <div id="programBrowseFiltersPanel" class="program-filter-panel__body" [hidden]="!showFilters">
+          <div class="program-filter-bar">
+            <label class="program-field program-field--search">
+              <span>Search</span>
+              <div>
+                <i class="feather-search"></i>
+                <input
+                  type="search"
+                  placeholder="Title, topic, speaker"
+                  [(ngModel)]="search"
+                  (keyup.enter)="onSearch()">
+              </div>
+            </label>
+
+            <label class="program-field">
+              <span>City</span>
+              <div>
+                <i class="feather-map-pin"></i>
+                <input
+                  type="text"
+                  placeholder="Any city"
+                  [(ngModel)]="city"
+                  (keyup.enter)="onSearch()">
+              </div>
+            </label>
+
+            <label class="program-field">
+              <span>Sort</span>
+              <div>
+                <i class="feather-sliders"></i>
+                <select [(ngModel)]="sortBy" (change)="onFilterChange()">
+                  @for (option of sortOptions; track option.value) {
+                  <option [ngValue]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
+            </label>
+
+            <label class="program-field">
+              <span>Per Page</span>
+              <div>
+                <i class="feather-list"></i>
+                <select [(ngModel)]="meta.perPage" (change)="onFilterChange()">
+                  @for (option of perPageOptions; track option) {
+                  <option [ngValue]="option">{{ option }}</option>
+                  }
+                </select>
+              </div>
+            </label>
+
+            <div class="program-filter-bar__buttons">
+              <button type="button" class="program-browse-btn program-browse-btn--primary" (click)="onSearch()">
+                <i class="feather-filter"></i>
+                Apply
+              </button>
+              <button type="button" class="program-browse-btn" (click)="clearFilters()">
+                <i class="feather-refresh-cw"></i>
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="program-timeline-tabs" aria-label="Timeline filter">
+            @for (option of timelineOptions; track option.value) {
+            <button
+              type="button"
+              [class.is-active]="timeline === option.value"
+              (click)="selectTimeline(option.value)">
+              {{ option.label }}
+            </button>
+            }
+          </div>
+        </div>
       </div>
     </div>
   </section>

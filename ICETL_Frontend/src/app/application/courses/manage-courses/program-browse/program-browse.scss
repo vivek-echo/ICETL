@@ -990,3 +990,115 @@
     justify-content: space-between;
   }
 }
+
+/* Filter toggle layout */
+.program-filter-panel {
+  background: #ffffff;
+  border: 1px solid var(--program-border);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.07);
+  display: grid;
+  gap: 14px;
+  overflow: visible;
+  padding: 14px;
+}
+
+.program-filter-panel__header {
+  align-items: center;
+  border-bottom: 1px solid var(--program-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.program-filter-panel__title {
+  align-items: center;
+  color: var(--program-ink);
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 10px;
+}
+
+.program-filter-panel__icon {
+  align-items: center;
+  background: var(--program-soft);
+  border-radius: 8px;
+  color: var(--program-blue);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.program-filter-panel__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 8px;
+  color: var(--program-blue);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.program-filter-panel__toggle:hover {
+  background: var(--program-soft);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.program-filter-panel__toggle i:last-child {
+  font-size: 10px;
+}
+
+.program-filter-panel__body {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+}
+
+.program-filter-panel .program-filter-bar {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+@media (max-width: 767.98px) {
+  .program-filter-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .program-filter-panel__toggle {
+    width: 100%;
+  }
+}
+
+.program-filter-panel:has(> .program-filter-panel__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.program-filter-panel:has(> .program-filter-panel__body[hidden]) .program-filter-panel__header {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.program-filter-panel:has(> .program-filter-panel__body[hidden]) .program-filter-panel__title {
+  display: none;
+}

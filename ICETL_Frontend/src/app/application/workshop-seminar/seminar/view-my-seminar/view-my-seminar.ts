@@ -49,6 +49,7 @@ export class ViewMySeminar implements OnInit {
 
   seminars: SeminarItem[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   city = '';
   status = '';
@@ -70,6 +71,10 @@ export class ViewMySeminar implements OnInit {
 
   ngOnInit(): void {
     void this.loadSeminars();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadSeminars(page = 1): Promise<void> {

@@ -108,6 +108,7 @@ export class OfflineCourseStudents implements OnInit {
 
   students: OfflineCourseStudentItem[] = [];
   loading = false;
+  showFilters = false;
   savingInstallments = false;
   search = '';
   courseCode = '';
@@ -155,6 +156,10 @@ export class OfflineCourseStudents implements OnInit {
 
   ngOnInit(): void {
     void this.loadStudents();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   get nextDueDate(): string | null {

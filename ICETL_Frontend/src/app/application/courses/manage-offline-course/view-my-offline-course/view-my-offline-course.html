@@ -51,6 +51,27 @@
   }
 
   <div class="offline-toolbar">
+    <div class="offline-toolbar__header">
+      <div class="offline-toolbar__title">
+        <span class="offline-toolbar__icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="offline-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="offlineCourseFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="offlineCourseFiltersPanel" class="offline-toolbar__body" [hidden]="!showFilters">
     <div class="rbt-form-group offline-toolbar__field offline-toolbar__field--search">
       <label for="offlineCourseSearch">Search</label>
       <div class="offline-field">
@@ -120,6 +141,7 @@
         </button>
 
     </div>
+    </div>
   </div>
 
   @if (loading) {
@@ -173,6 +195,9 @@
           <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
             {{ course.statusLabel || (isActive(course) ? 'Active' : 'Inactive') }}
           </span>
+          @if (isSpecialCourse(course)) {
+          <span class="offline-course-card__special">Special</span>
+          }
           <span class="offline-course-card__category">{{ course.categoryName }}</span>
           <span class="offline-course-card__timeline"
             [class.offline-course-card__timeline--completed]="course.scheduleStatus === 'completed'">
@@ -186,6 +211,12 @@
           <span class="entity-code-badge">{{ course.code }}</span>
           }
         </div>
+        @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
+        <div class="offline-course-row__primary">
+          <i class="feather-link"></i>
+          <span>Primary Course: {{ getPrimaryCourseLabel(course) }}</span>
+        </div>
+        }
 
         <p class="offline-course-row__description">
           {{ course.description || 'Classroom learning details will appear here.' }}

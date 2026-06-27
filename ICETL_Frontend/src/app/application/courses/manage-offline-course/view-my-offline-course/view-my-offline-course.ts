@@ -102,6 +102,7 @@ export class ViewMyOfflineCourse implements OnInit {
   scope: OfflineCourseScope = 'mine';
   courses: OfflineCourseItem[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   city = '';
   status = '';
@@ -136,6 +137,10 @@ export class ViewMyOfflineCourse implements OnInit {
       this.scopeOverride ??
       (this.route.snapshot.data['offlineCourseScope'] === 'all' ? 'all' : 'mine');
     void this.loadCourses();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   get isAllCoursesView(): boolean {
@@ -657,6 +662,21 @@ export class ViewMyOfflineCourse implements OnInit {
 
   isActive(course: OfflineCourseItem): boolean {
     return Number(course.status) === 1;
+  }
+
+  isSpecialCourse(course: OfflineCourseItem): boolean {
+    return course.isSpecial === true || Number(course.isSpecial ?? 0) === 1;
+  }
+
+  getPrimaryCourseLabel(course: OfflineCourseItem): string {
+    const title = `${course.parentCourseTitle || ''}`.trim();
+    const code = `${course.parentCourseCode || ''}`.trim();
+
+    if (title && code) {
+      return `${title} (${code})`;
+    }
+
+    return title || code;
   }
 
   getInitial(course: OfflineCourseItem): string {

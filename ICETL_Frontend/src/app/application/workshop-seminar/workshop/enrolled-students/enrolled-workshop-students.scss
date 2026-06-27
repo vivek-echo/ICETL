@@ -1,1 +1,106 @@
 @use '../../enrolled-students-list.scss';
+
+.student-toolbar {
+  align-items: stretch;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+  overflow: visible;
+}
+
+.student-toolbar__header {
+  align-items: center;
+  border-bottom: 1px solid var(--student-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.student-toolbar__title {
+  align-items: center;
+  color: var(--student-ink);
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 10px;
+}
+
+.student-toolbar__icon {
+  align-items: center;
+  background: rgba(37, 99, 235, 0.09);
+  border-radius: 8px;
+  color: var(--student-accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.student-toolbar__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 8px;
+  color: var(--student-accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.student-toolbar__toggle:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.student-toolbar__toggle i:last-child {
+  font-size: 10px;
+}
+
+.student-toolbar__body {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  overflow: visible;
+}
+
+@media (max-width: 767px) {
+  .student-toolbar__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .student-toolbar__toggle {
+    width: 100%;
+  }
+}
+
+.student-toolbar:has(> .student-toolbar__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.student-toolbar:has(> .student-toolbar__body[hidden]) .student-toolbar__header {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.student-toolbar:has(> .student-toolbar__body[hidden]) .student-toolbar__title {
+  display: none;
+}

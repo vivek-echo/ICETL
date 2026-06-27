@@ -7,9 +7,10 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
 import { CertificateService } from '../../services/certificate.service';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
   selector: 'app-my-workshop',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ModuleMaterialsModalComponent],
   templateUrl: './my-workshop.html',
   styleUrl: './my-workshop.scss',
 })
@@ -23,8 +24,10 @@ export class MyWorkshop implements OnInit {
   certificateLoading = false;
   programs: MyProgram[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   scheduleFilter: 'all' | 'upcoming' | 'ongoing' | 'completed' = 'all';
+  selectedMaterialsProgram: MyProgram | null = null;
 
   private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -42,6 +45,10 @@ export class MyWorkshop implements OnInit {
 
   ngOnInit(): void {
     void this.loadPrograms();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   // canDownloadWorkshopCertificate(course: any): boolean {
@@ -125,6 +132,14 @@ export class MyWorkshop implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     }
+  }
+
+  openMaterials(program: MyProgram): void {
+    this.selectedMaterialsProgram = program;
+  }
+
+  closeMaterials(): void {
+    this.selectedMaterialsProgram = null;
   }
 
   programImage(program: MyProgram): string {

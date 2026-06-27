@@ -542,6 +542,11 @@
   color: #047857;
 }
 
+.learning-card__action--materials {
+  background: #eef6ff;
+  color: #2f57ef;
+}
+
 .learning-card__action--disabled {
   background: #f1f5f9;
   color: #64748b;
@@ -849,4 +854,112 @@
   min-height: 42px;
   padding: 8px 12px;
   text-align: center;
+}
+
+/* Filter toggle layout */
+.learning-toolbar {
+  align-items: stretch;
+  grid-template-columns: 1fr;
+  overflow: visible;
+}
+
+.learning-toolbar__header {
+  align-items: center;
+  border-bottom: 1px solid #e5edf7;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.learning-toolbar__title {
+  align-items: center;
+  color: #172033;
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 10px;
+}
+
+.learning-toolbar__icon {
+  align-items: center;
+  background: #eef6ff;
+  border-radius: 8px;
+  color: #2f57ef;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.learning-toolbar__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(47, 87, 239, 0.24);
+  border-radius: 8px;
+  color: #2f57ef;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.learning-toolbar__toggle:hover {
+  background: #eef6ff;
+  border-color: rgba(47, 87, 239, 0.42);
+  box-shadow: 0 8px 18px rgba(47, 87, 239, 0.12);
+}
+
+.learning-toolbar__toggle i:last-child {
+  font-size: 10px;
+}
+
+.learning-toolbar__body {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 1fr) 220px;
+  overflow: visible;
+}
+
+@media (max-width: 767px) {
+  .learning-toolbar__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .learning-toolbar__toggle {
+    width: 100%;
+  }
+
+  .learning-toolbar__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.learning-toolbar:has(> .learning-toolbar__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.learning-toolbar:has(> .learning-toolbar__body[hidden]) .learning-toolbar__header {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.learning-toolbar:has(> .learning-toolbar__body[hidden]) .learning-toolbar__title {
+  display: none;
 }

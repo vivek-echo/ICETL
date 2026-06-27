@@ -68,6 +68,7 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
   programType: ProgramType = 'workshop';
   programs: ProgramItem[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   city = '';
   timeline: TimelineFilter = 'all';
@@ -99,6 +100,10 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
       this.programType = nextType;
       void this.loadPrograms(1);
     });
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   ngOnDestroy(): void {

@@ -38,6 +38,10 @@ interface CourseItem {
   thumbnailUrl: string | null;
   status: number | string;
   courseType?: number | string;
+  isSpecial?: boolean | number | string;
+  parentCourseId?: number | null;
+  parentCourseTitle?: string | null;
+  parentCourseCode?: string | null;
   statusLabel: string;
   createdOn: string | null;
 }
@@ -109,6 +113,7 @@ export class ViewCourses implements OnInit, OnDestroy {
   };
 
   loading = false;
+  showFilters = false;
   isEditModalOpen = false;
   isSavingEdit = false;
   isCategoryDropdownOpen = false;
@@ -177,6 +182,10 @@ export class ViewCourses implements OnInit, OnDestroy {
     void this.loadCategories();
     void this.loadInstructorList();
     void this.getCourses();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   ngOnDestroy(): void {
@@ -569,6 +578,21 @@ export class ViewCourses implements OnInit, OnDestroy {
 
   isActive(course: CourseItem): boolean {
     return `${course.status}` === '1';
+  }
+
+  isSpecialCourse(course: CourseItem): boolean {
+    return course.isSpecial === true || Number(course.isSpecial ?? 0) === 1;
+  }
+
+  getPrimaryCourseLabel(course: CourseItem): string {
+    const title = `${course.parentCourseTitle || ''}`.trim();
+    const code = `${course.parentCourseCode || ''}`.trim();
+
+    if (title && code) {
+      return `${title} (${code})`;
+    }
+
+    return title || code;
   }
 
   isCategorySelected(categoryId: number): boolean {

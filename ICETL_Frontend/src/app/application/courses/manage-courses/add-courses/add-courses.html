@@ -9,10 +9,17 @@
                             <input type="text" formControlName="title" placeholder="React Front To Back">
                         </div>
                     </div>
+                    <div class="col-12">
+                        <label class="special-course-toggle" [class.is-locked]="isInstructorUser">
+                            <input type="checkbox" formControlName="isSpecial" (change)="onSpecialCourseToggle()"
+                                [attr.disabled]="isInstructorUser ? true : null">
+                            <span>Is this special course</span>
+                        </label>
+                    </div>
                     <div class="col-md-6">
                         <div class="rbt-form-group">
                             <label>Category</label>
-                            <select formControlName="category">
+                            <select formControlName="category" (change)="onCategoryChange()">
                                 <option value="">
                                     Select Category
                                 </option>
@@ -23,12 +30,34 @@
                         </div>
                     </div>
 
+                    @if (isSpecialCourse) {
+                    <div class="col-md-6">
+                        <div class="rbt-form-group">
+                            <label>Parent Academic Course</label>
+                            <select formControlName="parentCourseId"
+                                [disabled]="!f['category'].value || isParentCoursesLoading"
+                                (change)="onParentCourseChange()">
+                                <option value="">{{ parentCoursePlaceholder }}</option>
+                                @for (course of parentAcademicCourses; track course.id) {
+                                <option [value]="course.id">{{ course.title }}</option>
+                                }
+                            </select>
+                            @if (parentCoursesMessage) {
+                            <small class="field-note">{{ parentCoursesMessage }}</small>
+                            }
+                        </div>
+                    </div>
+                    }
+
                     <div class="col-md-6">
                         <div class="rbt-form-group">
                             <label>Instructor</label>
-                            <div class="instructor-select" [class.is-open]="isInstructorPickerOpen">
+                            <div class="instructor-select" [class.is-open]="isInstructorPickerOpen"
+                                [class.is-locked]="isInstructorUser">
                                 <button class="instructor-select__trigger" type="button"
-                                    (click)="toggleInstructorPicker()" [attr.aria-expanded]="isInstructorPickerOpen">
+                                    (click)="toggleInstructorPicker()" [attr.aria-expanded]="isInstructorPickerOpen"
+                                    [attr.aria-disabled]="isInstructorUser ? 'true' : null"
+                                    [disabled]="isInstructorUser">
                                     <span>{{ instructorPickerLabel }}</span>
                                     <i class="fa-solid fa-chevron-down"></i>
                                 </button>
@@ -60,6 +89,7 @@
                                         @for (instructor of filteredInstructorList; track instructor.id) {
                                         <label class="instructor-option">
                                             <input type="checkbox" [checked]="isInstructorSelected(instructor)"
+                                                [disabled]="isInstructorUser"
                                                 (change)="toggleInstructor(instructor, $event)">
                                             <span>{{ instructor.name }}</span>
                                         </label>
@@ -137,7 +167,7 @@
                                 </div>
 
                                 <div formArrayName="courseHighlights" class="highlight-list">
-                                    @for (highlight of getHighlights().controls; track $index) {
+                                    @for (highlight of getHighlights().controls; track highlight) {
                                     <div class="highlight-row">
                                         <input type="text" [formControlName]="$index"
                                             placeholder="Enter learning outcome">

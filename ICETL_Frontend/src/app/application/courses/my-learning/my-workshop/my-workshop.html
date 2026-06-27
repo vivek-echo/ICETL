@@ -2,6 +2,27 @@
 
 
   <div class="program-library-toolbar">
+    <div class="program-library-toolbar__header">
+      <div class="program-library-toolbar__title">
+        <span class="program-library-toolbar__icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="program-library-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="myWorkshopLibraryFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="myWorkshopLibraryFiltersPanel" class="program-library-toolbar__body" [hidden]="!showFilters">
     <label>
       <span>Search</span>
       <div>
@@ -22,6 +43,7 @@
         </select>
       </div>
     </label>
+    </div>
   </div>
 
   @if (loading) {
@@ -133,9 +155,25 @@
           <span *ngIf="!certificateLoading">Download Certificate</span>
           <span *ngIf="certificateLoading">Generating...</span>
         </a>
+
+        <button type="button" class="program-library-row__action program-library-row__action--materials"
+          (click)="openMaterials(program)">
+          <i class="fa-regular fa-folder-open"></i>
+          Materials
+        </button>
       </aside>
     </article>
     }
   </div>
+  }
+
+  @if (selectedMaterialsProgram) {
+  <app-module-materials-modal
+    [moduleType]="'WORKSHOP'"
+    [moduleId]="selectedMaterialsProgram.id"
+    [moduleTitle]="selectedMaterialsProgram.title"
+    [canUpload]="false"
+    [canDelete]="false"
+    (closed)="closeMaterials()" />
   }
 </section>

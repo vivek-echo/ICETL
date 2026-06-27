@@ -83,6 +83,7 @@ export class CoursesComponent {
   readonly loginRoute = '/login';
   readonly placeholderCourseImage = 'assets/images/course/course-01.png';
   readonly placeholderAuthorImage = 'assets/images/client/avatar-02.png';
+  showFilters = false;
   private readonly document = inject(DOCUMENT);
   private readonly courseService = inject(Course);
 
@@ -124,6 +125,10 @@ export class CoursesComponent {
     afterNextRender(() => {
       void this.loadDynamicCourseData();
     });
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   readonly categoryMeta: CategoryMeta[] = [

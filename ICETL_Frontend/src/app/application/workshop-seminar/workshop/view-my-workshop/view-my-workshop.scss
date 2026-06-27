@@ -186,14 +186,10 @@
     linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.15fr) repeat(3, minmax(150px, 1fr)) minmax(154px, 0.9fr);
-  overflow: hidden;
+  grid-template-columns: 1fr;
+  overflow: visible;
   padding: 16px;
   position: relative;
-}
-
-.program-toolbar--all {
-  grid-template-columns: minmax(180px, 0.85fr) minmax(260px, 1.25fr) repeat(3, minmax(150px, 1fr)) minmax(148px, 0.82fr);
 }
 
 .program-toolbar::before {
@@ -202,6 +198,76 @@
   height: 3px;
   inset: 0 0 auto;
   position: absolute;
+}
+
+.program-toolbar__header {
+  align-items: center;
+  border-bottom: 1px solid #dbe4f0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.program-toolbar__title {
+  align-items: center;
+  color: var(--program-ink);
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 10px;
+  min-width: 0;
+}
+
+.program-toolbar__icon {
+  align-items: center;
+  background: var(--program-accent-soft);
+  border-radius: 8px;
+  color: var(--program-accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.program-toolbar__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 8px;
+  color: var(--program-accent-dark);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.program-toolbar__toggle:hover {
+  background: var(--program-accent-soft);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.program-toolbar__toggle i:last-child {
+  font-size: 10px;
+}
+
+.program-toolbar__body {
+  align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.15fr) repeat(3, minmax(150px, 1fr)) minmax(154px, 0.9fr);
+  overflow: visible;
+}
+
+.program-toolbar__body--all {
+  grid-template-columns: minmax(180px, 0.85fr) minmax(260px, 1.25fr) repeat(3, minmax(150px, 1fr)) minmax(148px, 0.82fr);
 }
 
 .program-toolbar__heading {
@@ -859,11 +925,11 @@
 }
 
 @media (max-width: 1399px) {
-  .program-toolbar {
+  .program-toolbar__body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .program-toolbar--all {
+  .program-toolbar__body--all {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
@@ -881,11 +947,11 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .program-toolbar {
+  .program-toolbar__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .program-toolbar--all {
+  .program-toolbar__body--all {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -921,7 +987,7 @@
 }
 
 @media (max-width: 991px) {
-  .program-toolbar {
+  .program-toolbar__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -944,8 +1010,20 @@
 
 @media (max-width: 767px) {
   .program-toolbar {
-    grid-template-columns: 1fr;
     padding: 14px;
+  }
+
+  .program-toolbar__body {
+    grid-template-columns: 1fr;
+  }
+
+  .program-toolbar__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .program-toolbar__toggle {
+    width: 100%;
   }
 
   .program-toolbar__heading,
@@ -1027,4 +1105,28 @@
     grid-template-columns: repeat(3, minmax(44px, 1fr));
     justify-content: stretch;
   }
+}
+
+.program-toolbar:has(> .program-toolbar__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.program-toolbar:has(> .program-toolbar__body[hidden])::before {
+  display: none;
+}
+
+.program-toolbar:has(> .program-toolbar__body[hidden]) .program-toolbar__header {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.program-toolbar:has(> .program-toolbar__body[hidden]) .program-toolbar__title {
+  display: none;
 }

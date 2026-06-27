@@ -47,6 +47,7 @@ export class EnrolledSeminarStudents implements OnInit {
 
   students: SeminarEnrolledStudent[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   programCode = '';
   status = '';
@@ -66,6 +67,10 @@ export class EnrolledSeminarStudents implements OnInit {
 
   ngOnInit(): void {
     void this.loadStudents();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async loadStudents(page = 1): Promise<void> {

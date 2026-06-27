@@ -178,7 +178,12 @@ export const coursesRoutes: Routes = [
           {
             path: '',
             pathMatch: 'full',
-            redirectTo: getRedirectRoute('/application/courses/myLearning'),
+            redirectTo: getRedirectRoute('/application/courses/myLearning', 'myCourses'),
+          },
+          {
+            path: 'browse',
+            redirectTo: '/application/courses/manageCourses/browse',
+            pathMatch: 'full',
           },
          
           {
@@ -206,6 +211,52 @@ export const coursesRoutes: Routes = [
             title: 'My Learning | ICETL',
           },
         ],
+      },
+      {
+        path: 'assignedCourses',
+        data: { authOnly: true },
+        loadComponent: () =>
+          import('./assigned-courses/assigned-courses').then((m) => m.AssignedCourses),
+        title: 'Assigned Courses | ICETL',
+        children:[
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: getRedirectRoute(
+              '/application/courses/assignedCourses',
+              'assignedAcadmicCourse',
+            ),
+          },
+          {
+            path: 'assignedAcademicCourse',
+            redirectTo: 'assignedAcadmicCourse',
+            pathMatch: 'full',
+          },
+          {
+            path: 'assignedAcadmicCourse',
+            loadComponent: () =>
+              import('./assigned-courses/assigned-accadmic-course/assigned-accadmic-course').then(
+                (m) => m.AssignedAccadmicCourse,
+              ),
+            title: 'ICETL',
+          },
+          {
+            path: 'assignedWorkshop',
+            loadComponent: () =>
+              import('./assigned-courses/assigned-workshop/assigned-workshop').then(
+                (m) => m.AssignedWorkshop,
+              ),
+            title: 'ICETL',
+          },
+          {
+            path: 'assignedSeminar',
+            loadComponent: () =>
+              import('./assigned-courses/assigned-seminar/assigned-seminar').then(
+                (m) => m.AssignedSeminar,
+              ),
+            title: 'ICETL',
+          },
+        ]
       },
       {
         path: 'manageOfflineCourse',

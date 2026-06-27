@@ -9,6 +9,7 @@ interface StoredMenu {
   parentId?: number | null;
   deletedFlag?: number;
   visiblity?: number;
+  visibility?: number;
 }
 
 interface CourseTab {
@@ -27,6 +28,9 @@ interface CourseTab {
 export class MyLearning implements OnInit, OnDestroy {
   private readonly parentRoute = '/application/courses/myLearning';
   private readonly fallbackTabs: CourseTab[] = [
+    { id: 1, label: 'My Courses', route: 'myCourses' },
+    { id: 2, label: 'My Workshops', route: 'myWorkshops' },
+    { id: 3, label: 'My Seminars', route: 'mySeminars' },
   ];
   private readonly isBrowser: boolean;
   private readonly refreshTabs = () => {
@@ -77,7 +81,7 @@ export class MyLearning implements OnInit, OnDestroy {
     }
 
     const permittedTabs = menus
-      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && menu.visiblity ===1)
+      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && this.isVisible(menu))
       .map((menu) => this.toCourseTab(menu))
       .filter((tab): tab is CourseTab => tab !== null);
 
@@ -141,6 +145,10 @@ export class MyLearning implements OnInit, OnDestroy {
     }
 
     return route.startsWith('/') ? route : `/${route}`;
+  }
+
+  private isVisible(menu: StoredMenu): boolean {
+    return Number(menu.visiblity ?? menu.visibility ?? 1) === 1;
   }
 
 

@@ -509,6 +509,11 @@
   gap: 7px;
 }
 
+.academic-card__special {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
 .academic-card h2 {
   color: var(--academic-ink);
   display: -webkit-box;
@@ -521,6 +526,24 @@
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.academic-card__primary {
+  align-items: center;
+  color: #475569;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
+  line-height: 1.35;
+  margin: 8px 0 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.academic-card__primary i {
+  color: var(--academic-primary);
+  flex: 0 0 auto;
 }
 
 .academic-card__description {
@@ -1027,4 +1050,75 @@
     justify-content: center;
     width: 100%;
   }
+}
+
+/* Filter toggle layout */
+.academic-toolbar {
+  overflow: visible;
+}
+
+.academic-toolbar__top {
+  margin-bottom: 0;
+}
+
+.academic-toolbar__toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  border-radius: 8px;
+  color: var(--academic-primary-dark);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.academic-toolbar__toggle:hover {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.42);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
+}
+
+.academic-toolbar__toggle i:last-child {
+  font-size: 10px;
+}
+
+.academic-toolbar__body {
+  display: grid;
+  gap: 16px;
+  overflow: visible;
+  padding-top: 16px;
+}
+
+@media (max-width: 767px) {
+  .academic-toolbar__toggle {
+    width: 100%;
+  }
+}
+
+.academic-toolbar:has(> .academic-toolbar__body[hidden]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.academic-toolbar:has(> .academic-toolbar__body[hidden]) .academic-toolbar__top {
+  border-bottom: 0;
+  justify-content: flex-end;
+  padding: 0;
+  width: auto;
+}
+
+.academic-toolbar:has(> .academic-toolbar__body[hidden]) .academic-toolbar__top > div {
+  display: none;
 }

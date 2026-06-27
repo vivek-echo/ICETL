@@ -800,6 +800,13 @@ class CoursesController extends Controller
                 'max:100'
             ],
             'category' => 'required|numeric',
+            'isSpecial' => 'nullable|boolean',
+            'parentCourseId' => [
+                Rule::requiredIf(fn() => $request->boolean('isSpecial')),
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
             'instructor' => 'required',
             'duration' => 'required|integer|min:1',
             'durationUnit' => 'required|integer|in:1,2',
@@ -877,6 +884,20 @@ class CoursesController extends Controller
             }
 
             $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+            $isSpecial = $request->boolean('isSpecial');
+            $parentCourseId = $isSpecial ? (int) $request->input('parentCourseId') : null;
+
+            if ($isSpecial && !$this->isValidParentAcademicCourse($parentCourseId, (int) $request->input('category'))) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'parentCourseId' => ['Please select a valid parent academic course from the same category.']
+                    ]
+                ], 422);
+            }
 
             // Insert Data
             $courseId = DB::table('courses')->insertGetId([
@@ -892,6 +913,8 @@ class CoursesController extends Controller
                 'thumbnail' => $thumbnailPath,
                 'status' => $request->status,
                 'courseType' => 1,
+                'isSpecial' => $isSpecial ? 1 : 0,
+                'parentCourseId' => $parentCourseId,
                 'createdBy' => $this->resolveCreatedById($request, $ProfileData),
                 'createdByRoleId' => $ProfileData ? $ProfileData['role'] : null,
                 'deletedFlag' => 0,
@@ -938,6 +961,13 @@ class CoursesController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => ['required', 'string', 'min:5', 'max:120'],
             'category' => 'required|integer|exists:coursecategories,id',
+            'isSpecial' => 'nullable|boolean',
+            'parentCourseId' => [
+                Rule::requiredIf(fn() => $request->boolean('isSpecial')),
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
             'instructor' => 'required',
             'venue' => ['required', 'string', 'min:3', 'max:150'],
             'city' => ['required', 'string', 'min:2', 'max:100'],
@@ -987,6 +1017,8 @@ class CoursesController extends Controller
         }
 
         $instructorIds = $this->normalizeInstructorIds($request->input('instructor'));
+        $isSpecial = $request->boolean('isSpecial');
+        $parentCourseId = $isSpecial ? (int) $request->input('parentCourseId') : null;
 
         if (empty($instructorIds)) {
             return response()->json([
@@ -994,6 +1026,16 @@ class CoursesController extends Controller
                 'message' => 'Validation failed',
                 'errors' => [
                     'instructor' => ['Please select at least one valid instructor.']
+                ]
+            ], 422);
+        }
+
+        if ($isSpecial && !$this->isValidParentAcademicCourse($parentCourseId, (int) $request->input('category'))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'parentCourseId' => ['Please select a valid parent academic course from the same category.']
                 ]
             ], 422);
         }
@@ -1026,6 +1068,8 @@ class CoursesController extends Controller
                 'thumbnail' => $thumbnailPath,
                 'status' => (int) $request->input('status'),
                 'courseType' => 2,
+                'isSpecial' => $isSpecial ? 1 : 0,
+                'parentCourseId' => $parentCourseId,
                 'venue' => trim((string) $request->input('venue')),
                 'city' => trim((string) $request->input('city')),
                 'startDate' => $request->input('startDate'),
@@ -1084,6 +1128,24 @@ class CoursesController extends Controller
         return $this->getOfflineCourseList($request, true);
     }
 
+    private function isValidParentAcademicCourse(?int $parentCourseId, int $categoryId): bool
+    {
+        if (!$parentCourseId || $categoryId <= 0) {
+            return false;
+        }
+
+        return DB::table('courses')
+            ->where('id', $parentCourseId)
+            ->where('categoryId', $categoryId)
+            ->where('courseType', 2)
+            ->where('deletedFlag', 0)
+            ->where(function ($query) {
+                $query->whereNull('isSpecial')
+                    ->orWhere('isSpecial', 0);
+            })
+            ->exists();
+    }
+
     public function getMyOfflineCourses(Request $request)
     {
         return $this->getOfflineCourseList($request, true);
@@ -1119,6 +1181,7 @@ class CoursesController extends Controller
                 'categoryId' => 'nullable',
                 'categoryIds' => 'nullable|array',
                 'categoryIds.*' => 'integer',
+                'isSpecial' => 'nullable|boolean',
                 'status' => 'nullable|in:0,1',
                 'scheduleStatus' => 'nullable|in:all,upcoming,ongoing,completed',
                 'activeScheduleOnly' => 'nullable|boolean',
@@ -1220,6 +1283,7 @@ class CoursesController extends Controller
         return DB::table('courses as c')
             ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
             ->leftJoin('users as creator', 'creator.id', '=', 'c.createdBy')
+            ->leftJoin('courses as parentCourse', 'parentCourse.id', '=', 'c.parentCourseId')
             ->where('c.deletedFlag', 0)
             ->where('c.courseType', 2)
             ->select(
@@ -1228,6 +1292,10 @@ class CoursesController extends Controller
                 'c.title',
                 'c.categoryId',
                 'cc.categoryName as categoryName',
+                'c.isSpecial',
+                'c.parentCourseId',
+                'parentCourse.title as parentCourseTitle',
+                $this->parentCourseCodeSelect(),
                 'c.instructorIds',
                 'c.price',
                 'c.description',
@@ -1249,6 +1317,13 @@ class CoursesController extends Controller
                 'c.createdOn',
                 'c.updatedOn'
             );
+    }
+
+    private function parentCourseCodeSelect(): mixed
+    {
+        return Schema::hasColumn('courses', 'code')
+            ? DB::raw('parentCourse.code as parentCourseCode')
+            : DB::raw('NULL as parentCourseCode');
     }
 
     private function applyOfflineCourseFilters($query, Request $request): void
@@ -1297,6 +1372,10 @@ class CoursesController extends Controller
             }
         } elseif ($request->filled('categoryId')) {
             $query->where('c.categoryId', (int) $request->input('categoryId'));
+        }
+
+        if ($request->has('isSpecial') && $request->input('isSpecial') !== '') {
+            $query->where('c.isSpecial', $request->boolean('isSpecial') ? 1 : 0);
         }
 
         if ($request->input('status') !== null && $request->input('status') !== '') {
@@ -1440,6 +1519,10 @@ class CoursesController extends Controller
             'title' => (string) $course->title,
             'categoryId' => $course->categoryId ? (int) $course->categoryId : null,
             'categoryName' => $course->categoryName ?: 'Uncategorized',
+            'isSpecial' => (int) ($course->isSpecial ?? 0),
+            'parentCourseId' => empty($course->parentCourseId ?? null) ? null : (int) $course->parentCourseId,
+            'parentCourseTitle' => $course->parentCourseTitle ?? null,
+            'parentCourseCode' => $course->parentCourseCode ?? null,
             'instructors' => $instructors->values()->all(),
             'instructorName' => $instructors->pluck('name')->filter()->join(', '),
             'price' => is_numeric($course->price) ? (float) $course->price : 0,
@@ -4041,6 +4124,7 @@ class CoursesController extends Controller
             $query = $this->applyOnlineCourseScope(
                 DB::table('courses as c')
                     ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+                    ->leftJoin('courses as parentCourse', 'parentCourse.id', '=', 'c.parentCourseId')
                     ->leftJoinSub(
                         DB::table('carts')
                             ->select('course_id', DB::raw('COUNT(*) as cart_count'))
@@ -4068,6 +4152,10 @@ class CoursesController extends Controller
                     'c.description',
                     'c.courseHighlights',
                     'c.thumbnail',
+                    'c.isSpecial',
+                    'c.parentCourseId',
+                    'parentCourse.title as parentCourseTitle',
+                    $this->parentCourseCodeSelect(),
                     'c.status',
                     'c.courseType',
                     'c.createdOn',
@@ -4194,6 +4282,10 @@ class CoursesController extends Controller
                 $course->categoryName = $course->categoryName ?: 'Uncategorized';
                 $course->statusLabel = ((int) $course->status) === 1 ? 'Active' : 'Inactive';
                 $course->courseHighlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
+                $course->isSpecial = (int) ($course->isSpecial ?? 0);
+                $course->parentCourseId = empty($course->parentCourseId ?? null) ? null : (int) $course->parentCourseId;
+                $course->parentCourseTitle = $course->parentCourseTitle ?? null;
+                $course->parentCourseCode = $course->parentCourseCode ?? null;
 
                 return $course;
             });
@@ -4272,6 +4364,7 @@ class CoursesController extends Controller
                 DB::table('courses as c')
                     ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
                     ->leftJoin('users as creator', 'creator.id', '=', 'c.createdBy')
+                    ->leftJoin('courses as parentCourse', 'parentCourse.id', '=', 'c.parentCourseId')
                     ->leftJoinSub(
                         DB::table('carts')
                             ->select('course_id', DB::raw('COUNT(*) as cart_count'))
@@ -4298,6 +4391,10 @@ class CoursesController extends Controller
                     'c.description',
                     'c.courseHighlights',
                     'c.thumbnail',
+                    'c.isSpecial',
+                    'c.parentCourseId',
+                    'parentCourse.title as parentCourseTitle',
+                    $this->parentCourseCodeSelect(),
                     'c.status',
                     'c.courseType',
                     'c.createdOn',
@@ -4427,6 +4524,10 @@ class CoursesController extends Controller
                 $course->statusLabel = ((int) $course->status) === 1 ? 'Active' : 'Inactive';
                 $course->createdByName = $course->createdByName ?: 'Unknown User';
                 $course->courseHighlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
+                $course->isSpecial = (int) ($course->isSpecial ?? 0);
+                $course->parentCourseId = empty($course->parentCourseId ?? null) ? null : (int) $course->parentCourseId;
+                $course->parentCourseTitle = $course->parentCourseTitle ?? null;
+                $course->parentCourseCode = $course->parentCourseCode ?? null;
 
                 return $course;
             });

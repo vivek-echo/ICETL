@@ -7,9 +7,10 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { MyLearningCourse, PaymentService } from '../../services/payment';
 import { CertificateService } from '../../services/certificate.service';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
   selector: 'app-my-courses',
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, ModuleMaterialsModalComponent],
   templateUrl: './my-courses.html',
   styleUrl: './my-courses.scss',
 })
@@ -22,8 +23,10 @@ export class MyCourses implements OnInit {
   readonly skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   courses: MyLearningCourse[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   statusFilter = 'all';
+  selectedMaterialsCourse: MyLearningCourse | null = null;
 
   constructor(
     private readonly paymentService: PaymentService,
@@ -35,6 +38,10 @@ export class MyCourses implements OnInit {
 
   ngOnInit(): void {
     void this.loadMyLearning();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   certificateLoading: boolean = false;
@@ -170,6 +177,14 @@ export class MyCourses implements OnInit {
 
   hasMeetingLink(course: MyLearningCourse): boolean {
     return this.normalizeExternalUrl(course.meetingLink).length > 0;
+  }
+
+  openMaterials(course: MyLearningCourse): void {
+    this.selectedMaterialsCourse = course;
+  }
+
+  closeMaterials(): void {
+    this.selectedMaterialsCourse = null;
   }
 
   getYoutubeUrl(course: MyLearningCourse): string {

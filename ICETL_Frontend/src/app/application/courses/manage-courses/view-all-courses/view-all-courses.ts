@@ -24,6 +24,10 @@ interface CourseItem {
   thumbnailUrl: string | null;
   status: number | string;
   courseType?: number | string;
+  isSpecial?: boolean | number | string;
+  parentCourseId?: number | null;
+  parentCourseTitle?: string | null;
+  parentCourseCode?: string | null;
   statusLabel: string;
   createdOn: string | null;
   createdByName: string;
@@ -74,6 +78,7 @@ export class ViewAllCourses implements OnInit {
   private activeSearchTerm = '';
 
   loading = false;
+  showFilters = false;
   isCategoryDropdownOpen = false;
   search = '';
   categorySearch = '';
@@ -122,6 +127,10 @@ export class ViewAllCourses implements OnInit {
   ngOnInit(): void {
     void this.loadCategories();
     void this.getAllCourses();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   @HostListener('document:click')
@@ -334,6 +343,21 @@ export class ViewAllCourses implements OnInit {
 
   isActive(course: CourseItem): boolean {
     return `${course.status}` === '1';
+  }
+
+  isSpecialCourse(course: CourseItem): boolean {
+    return course.isSpecial === true || Number(course.isSpecial ?? 0) === 1;
+  }
+
+  getPrimaryCourseLabel(course: CourseItem): string {
+    const title = `${course.parentCourseTitle || ''}`.trim();
+    const code = `${course.parentCourseCode || ''}`.trim();
+
+    if (title && code) {
+      return `${title} (${code})`;
+    }
+
+    return title || code;
   }
 
   getDurationLabel(course: CourseItem): string {

@@ -1,0 +1,150 @@
+<div class="assigned-students-backdrop" (click)="onBackdropClick($event)">
+  <section
+    class="assigned-students-modal"
+    appModalWindow
+    [appModalWindowTitle]="moduleTitle"
+    #studentsWindow="appModalWindow"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="assigned-students-title"
+    (click)="$event.stopPropagation()">
+    <header class="assigned-students-modal__header" data-app-modal-header>
+      <div>
+        <span>{{ moduleTypeLabel }} Students</span>
+        <h2 id="assigned-students-title">{{ moduleTitle }}</h2>
+      </div>
+
+      <app-modal-window-controls
+        [modal]="studentsWindow"
+        closeLabel="Close enrolled students"
+        (closed)="closed.emit()" />
+    </header>
+
+    <div class="assigned-students-modal__body" data-app-modal-body>
+      <section class="assigned-students-summary" aria-label="Enrolled students summary">
+        <div>
+          <span>Total Students</span>
+          <strong>{{ summary.totalStudents }}</strong>
+        </div>
+        <div>
+          <span>Enrollments</span>
+          <strong>{{ summary.totalEnrollments }}</strong>
+        </div>
+        <div>
+          <span>Total Paid</span>
+          <strong>{{ formatMoney(summary.totalPaid) }}</strong>
+        </div>
+      </section>
+
+      <div class="assigned-students-toolbar">
+        <label>
+          <span>Search</span>
+          <div>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              type="search"
+              [(ngModel)]="search"
+              (ngModelChange)="onSearchChange()"
+              placeholder="Name, email, phone, invoice"
+              autocomplete="off">
+            @if (search) {
+            <button type="button" (click)="clearSearch()" aria-label="Clear student search">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            }
+          </div>
+        </label>
+
+        <button
+          type="button"
+          class="assigned-students-toolbar__refresh"
+          (click)="refresh()"
+          [disabled]="loading"
+          title="Refresh students">
+          <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'" aria-hidden="true"></i>
+          Refresh
+        </button>
+      </div>
+
+      <section class="assigned-students-list" aria-live="polite">
+        @if (loading) {
+        <div class="assigned-students-list__items" aria-label="Loading enrolled students">
+          @for (row of skeletonRows; track row) {
+          <article class="assigned-student-row assigned-student-row--skeleton">
+            <span></span>
+            <div>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </article>
+          }
+        </div>
+        }
+
+        @if (!loading && listError) {
+        <div class="assigned-students-state assigned-students-state--error">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          <p>{{ listError }}</p>
+        </div>
+        }
+
+        @if (!loading && !listError && students.length === 0) {
+        <div class="assigned-students-state">
+          <i class="fa-regular fa-user" aria-hidden="true"></i>
+          <p>No enrolled students found.</p>
+        </div>
+        }
+
+        @if (!loading && !listError && students.length > 0) {
+        <div class="assigned-students-list__items">
+          @for (student of students; track trackByStudent($index, student)) {
+          <article class="assigned-student-row">
+            <div class="assigned-student-row__avatar" aria-hidden="true">
+              {{ studentInitials(student) }}
+            </div>
+
+            <div class="assigned-student-row__content">
+              <div class="assigned-student-row__title">
+                <h3>{{ student.studentName }}</h3>
+                @if (student.studentCode) {
+                <span>{{ student.studentCode }}</span>
+                }
+              </div>
+
+              <div class="assigned-student-row__meta">
+                <span><i class="fa-regular fa-envelope"></i>{{ student.studentEmail || 'N/A' }}</span>
+                <span><i class="fa-solid fa-phone"></i>{{ student.studentPhone || 'N/A' }}</span>
+                <span><i class="fa-regular fa-calendar-check"></i>{{ formatDate(student.enrolledAt) }}</span>
+                <span><i class="fa-solid fa-venus-mars"></i>{{ genderLabel(student.studentGender) }}</span>
+              </div>
+            </div>
+
+            <div class="assigned-student-row__side">
+              <strong>{{ formatMoney(student.amountPaid) }}</strong>
+              <small>{{ student.invoiceNumber || student.orderReference || student.paymentMode || 'Payment reference N/A' }}</small>
+            </div>
+          </article>
+          }
+        </div>
+        }
+      </section>
+
+      @if (meta.lastPage > 1) {
+      <footer class="assigned-students-pagination" data-app-modal-footer>
+        <span>{{ getPaginationLabel() }}</span>
+        <div>
+          <button type="button" (click)="previousPage()" [disabled]="!canGoPrevious || loading">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            Previous
+          </button>
+          <button type="button" (click)="nextPage()" [disabled]="!canGoNext || loading">
+            Next
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </footer>
+      }
+    </div>
+  </section>
+</div>

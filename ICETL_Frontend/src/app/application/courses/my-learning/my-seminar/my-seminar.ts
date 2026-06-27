@@ -7,9 +7,10 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CertificateService } from '../../services/certificate.service';
+import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
   selector: 'app-my-seminar',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ModuleMaterialsModalComponent],
   templateUrl: './my-seminar.html',
   styleUrl: './my-seminar.scss',
 })
@@ -23,8 +24,10 @@ export class MySeminar implements OnInit {
 
   programs: MyProgram[] = [];
   loading = false;
+  showFilters = false;
   search = '';
   scheduleFilter: 'all' | 'upcoming' | 'ongoing' | 'completed' = 'all';
+  selectedMaterialsProgram: MyProgram | null = null;
 
   private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -42,6 +45,10 @@ export class MySeminar implements OnInit {
 
   ngOnInit(): void {
     void this.loadPrograms();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   async downloadWorkshopCertificate(courseId: number, courseType: any): Promise<void> {
@@ -123,6 +130,14 @@ export class MySeminar implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     }
+  }
+
+  openMaterials(program: MyProgram): void {
+    this.selectedMaterialsProgram = program;
+  }
+
+  closeMaterials(): void {
+    this.selectedMaterialsProgram = null;
   }
 
   programImage(program: MyProgram): string {

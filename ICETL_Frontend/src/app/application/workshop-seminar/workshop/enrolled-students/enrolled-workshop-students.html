@@ -15,7 +15,28 @@
   </section>
 
   <div class="student-toolbar">
-    <div class="rbt-form-group student-toolbar__field student-toolbar__field--search">
+    <div class="student-toolbar__header">
+      <div class="student-toolbar__title">
+        <span class="student-toolbar__icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="student-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="workshopStudentFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="workshopStudentFiltersPanel" class="student-toolbar__body" [hidden]="!showFilters">
+      <div class="rbt-form-group student-toolbar__field student-toolbar__field--search">
       <label for="workshopStudentSearch">Search</label>
       <div class="student-field">
         <i class="feather-search"></i>
@@ -104,6 +125,7 @@
         <i class="feather-refresh-cw"></i>
         Reset
       </button>
+      </div>
     </div>
   </div>
 

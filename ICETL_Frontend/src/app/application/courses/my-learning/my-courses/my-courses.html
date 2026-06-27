@@ -53,6 +53,27 @@
   </section> -->
 
   <div class="learning-toolbar">
+    <div class="learning-toolbar__header">
+      <div class="learning-toolbar__title">
+        <span class="learning-toolbar__icon">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+
+      <button
+        type="button"
+        class="learning-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="myCourseFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="myCourseFiltersPanel" class="learning-toolbar__body" [hidden]="!showFilters">
     <label>
       <span>Search Library</span>
       <div class="learning-toolbar__field">
@@ -71,6 +92,7 @@
         </select>
       </div>
     </label>
+    </div>
   </div>
 
   @if (loading) {
@@ -200,6 +222,12 @@
           </a>
           }
 
+          <button type="button" class="learning-card__action learning-card__action--materials"
+            (click)="openMaterials(course)">
+            <i class="fa-regular fa-folder-open"></i>
+            Materials
+          </button>
+
 
           @if (!hasYoutubeLink(course) && !hasMeetingLink(course)) {
           <span class="learning-card__action learning-card__action--disabled">
@@ -248,5 +276,15 @@
     </article>
     }
   </div>
+  }
+
+  @if (selectedMaterialsCourse) {
+  <app-module-materials-modal
+    [moduleType]="'ACADEMIC_COURSE'"
+    [moduleId]="selectedMaterialsCourse.id"
+    [moduleTitle]="selectedMaterialsCourse.title"
+    [canUpload]="false"
+    [canDelete]="false"
+    (closed)="closeMaterials()" />
   }
 </section>

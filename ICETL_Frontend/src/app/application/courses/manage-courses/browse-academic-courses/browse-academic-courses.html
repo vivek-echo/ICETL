@@ -47,6 +47,19 @@
         <p>Active offline courses, sorted by latest creation.</p>
       </div>
 
+      <button
+        type="button"
+        class="academic-toolbar__toggle"
+        (click)="toggleFilters()"
+        [attr.aria-expanded]="showFilters"
+        aria-controls="academicCourseFiltersPanel">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ showFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="showFilters ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="academicCourseFiltersPanel" class="academic-toolbar__body" [hidden]="!showFilters">
       <div class="timeline-control" aria-label="Timeline filter">
         @for (option of timelineFilters; track option.value) {
         <button
@@ -57,9 +70,8 @@
         </button>
         }
       </div>
-    </div>
 
-    <div class="academic-filter-grid">
+      <div class="academic-filter-grid">
       <div class="rbt-form-group academic-field academic-field--search">
         <label for="academicCourseSearch">Search</label>
         <div class="academic-field__control">
@@ -139,6 +151,7 @@
           Reset
         </button>
       </div>
+      </div>
     </div>
   </section>
 
@@ -215,11 +228,20 @@
             <i class="fa-solid fa-person-chalkboard" aria-hidden="true"></i>
             Classroom
           </span>
+          @if (isSpecialCourse(course)) {
+          <span class="academic-card__special">Special</span>
+          }
         </div>
 
         <h2>{{ course.title }}</h2>
         @if (course.code) {
         <span class="entity-code-badge">{{ course.code }}</span>
+        }
+        @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
+        <div class="academic-card__primary">
+          <i class="fa-solid fa-link" aria-hidden="true"></i>
+          <span>Primary Course: {{ getPrimaryCourseLabel(course) }}</span>
+        </div>
         }
         <p class="academic-card__description">
           {{ course.description || 'Instructor-led classroom learning with structured sessions and guided practice.' }}
