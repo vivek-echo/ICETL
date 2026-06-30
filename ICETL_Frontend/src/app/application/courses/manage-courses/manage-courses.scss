@@ -1,1 +1,77 @@
 @use "../shared/course-tabs";
+
+.course-tabbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.course-tabbar .course-categories-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.course-tabbar__filter-toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(47, 87, 239, 0.24);
+  border-radius: 8px;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+  white-space: nowrap;
+}
+
+.course-tabbar__filter-toggle:hover {
+  background: var(--color-primary-light);
+  border-color: rgba(47, 87, 239, 0.42);
+  box-shadow: 0 8px 18px rgba(47, 87, 239, 0.12);
+}
+
+.course-tabbar__filter-toggle i:last-child {
+  font-size: 10px;
+}
+
+:host ::ng-deep .course-toolbar__header,
+:host ::ng-deep .academic-toolbar__top,
+:host ::ng-deep .program-filter-panel__header {
+  display: none;
+}
+
+:host ::ng-deep .course-toolbar:has(> .course-toolbar__body[hidden]),
+:host ::ng-deep .academic-toolbar:has(> .academic-toolbar__body[hidden]),
+:host ::ng-deep .program-filter-panel:has(> .program-filter-panel__body[hidden]) {
+  display: none;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+:host ::ng-deep .academic-toolbar__body {
+  padding-top: 0;
+}
+
+@media (max-width: 767px) {
+  .course-tabbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .course-tabbar .course-categories-tabs {
+    flex-basis: 100%;
+  }
+
+  .course-tabbar__filter-toggle {
+    margin-left: auto;
+  }
+}

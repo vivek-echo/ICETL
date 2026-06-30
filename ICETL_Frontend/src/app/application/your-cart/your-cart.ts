@@ -163,6 +163,14 @@ export class YourCart implements OnInit {
     return Math.max(this.subtotal - this.discount + this.tax, 0);
   }
 
+  get isFreeCheckout(): boolean {
+    return this.selectedCount > 0 && this.finalTotal <= 0;
+  }
+
+  get checkoutActionLabel(): string {
+    return this.isFreeCheckout ? 'Enroll Free' : 'Purchase Selected';
+  }
+
   async checkout(): Promise<void> {
     if (this.selectedCount === 0) {
       await this.alertHelper.warning(
@@ -174,12 +182,10 @@ export class YourCart implements OnInit {
     }
 
     const confirmed = await this.alertHelper.confirm(
-      `Purchase ${this.selectedCount} selected course${
-        this.selectedCount === 1 ? '' : 's'
-      } for Rs. ${this.formatAmount(this.finalTotal)}?`,
+      this.checkoutConfirmationMessage(),
 
-      'Checkout',
-      'Proceed',
+      this.isFreeCheckout ? 'Free Enrollment' : 'Checkout',
+      this.isFreeCheckout ? 'Enroll' : 'Proceed',
       'Cancel',
     );
 
@@ -203,6 +209,19 @@ export class YourCart implements OnInit {
       if (!response.success) {
         await this.alertHelper.error(response.message || 'Checkout failed', 'Error');
 
+        return;
+      }
+
+      if (response.paymentRequired === false || response.freeEnrollment === true) {
+        localStorage.removeItem('checkoutData');
+
+        await this.alertHelper.success(
+          response.message || 'Enrollment completed successfully.',
+          'Enrollment Complete',
+        );
+
+        await this.cartService.loadCart();
+        void this.router.navigate(['/application/courses/myLearning']);
         return;
       }
 
@@ -415,6 +434,16 @@ export class YourCart implements OnInit {
 
     const selectedIds = [...this.selectedCourseIds].filter((id) => availableIds.has(id));
     this.selectedCourseIds = new Set(selectedIds);
+  }
+
+  private checkoutConfirmationMessage(): string {
+    const courseLabel = `selected course${this.selectedCount === 1 ? '' : 's'}`;
+
+    if (this.isFreeCheckout) {
+      return `Enroll in ${this.selectedCount} ${courseLabel} for free?`;
+    }
+
+    return `Purchase ${this.selectedCount} ${courseLabel} for Rs. ${this.formatAmount(this.finalTotal)}?`;
   }
 
   private getStoredUser(): { name?: string; email?: string; phone?: string } {

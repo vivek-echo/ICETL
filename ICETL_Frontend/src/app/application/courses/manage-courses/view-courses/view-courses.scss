@@ -1956,6 +1956,16 @@
   }
 }
 
+:host-context(.course-categories-page) .course-toolbar__header {
+  display: none;
+}
+
+:host-context(.course-categories-page) .course-toolbar:has(> .course-toolbar__body[hidden]) {
+  display: none;
+  margin-bottom: 0;
+  padding: 0;
+}
+
 .course-toolbar:has(> .course-toolbar__body[hidden]) {
   background: transparent;
   border-color: transparent;

@@ -1,0 +1,133 @@
+<section class="certificate-verification" aria-labelledby="certificate-verification-title">
+  <div class="container">
+    <div class="certificate-verification__panel">
+      <div class="certificate-verification__brand">
+        <img src="assets/images/logo/ice_logo.png" alt="ICETL logo" />
+        <span>ICETL</span>
+      </div>
+
+      <div class="certificate-verification__heading">
+        <span class="certificate-verification__eyebrow">Official Verification</span>
+        <h1 id="certificate-verification-title">Certificate Verification</h1>
+      </div>
+
+      @if (state() === 'loading') {
+      <div class="verification-status verification-status--loading" role="status" aria-live="polite">
+        <span class="verification-status__icon">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+        </span>
+        <div>
+          <h2>Verifying Certificate</h2>
+          <p>{{ message() }}</p>
+        </div>
+      </div>
+      }
+
+      @if (state() === 'valid') {
+      @if (certificate(); as certificateData) {
+      <div class="verification-status verification-status--valid" role="status" aria-live="polite">
+        <span class="verification-status__icon">
+          <i class="fa-solid fa-circle-check"></i>
+        </span>
+        <div>
+          <h2>Certificate Verified</h2>
+          <p>{{ message() }}</p>
+        </div>
+      </div>
+
+      <dl class="certificate-details" aria-label="Verified certificate details">
+        <div class="certificate-details__item">
+          <dt>Certificate Number</dt>
+          <dd>{{ displayValue(certificateData.certificateNo) }}</dd>
+        </div>
+
+        <div class="certificate-details__item">
+          <dt>Student Name</dt>
+          <dd>{{ displayValue(certificateData.studentName) }}</dd>
+        </div>
+
+        <div class="certificate-details__item">
+          <dt>Certificate Type</dt>
+          <dd>{{ displayValue(certificateData.moduleTypeLabel || certificateData.moduleType) }}</dd>
+        </div>
+
+        <div class="certificate-details__item certificate-details__item--wide">
+          <dt>Title</dt>
+          <dd>{{ displayValue(certificateData.moduleTitle) }}</dd>
+        </div>
+
+        @if (certificateData.courseCategory) {
+        <div class="certificate-details__item">
+          <dt>Category</dt>
+          <dd>{{ certificateData.courseCategory }}</dd>
+        </div>
+        }
+
+        <div class="certificate-details__item">
+          <dt>Duration</dt>
+          <dd>{{ displayValue(certificateData.durationText) }}</dd>
+        </div>
+
+        @if (certificateData.grade) {
+        <div class="certificate-details__item">
+          <dt>Grade</dt>
+          <dd>{{ certificateData.grade }}</dd>
+        </div>
+        }
+
+        @if (certificateData.completionDate) {
+        <div class="certificate-details__item">
+          <dt>Completion Date</dt>
+          <dd>{{ certificateData.completionDate }}</dd>
+        </div>
+        }
+
+        <div class="certificate-details__item">
+          <dt>Issue Date</dt>
+          <dd>{{ displayValue(certificateData.issueDate) }}</dd>
+        </div>
+
+        <div class="certificate-details__item certificate-details__item--wide">
+          <dt>Verification Code</dt>
+          <dd class="certificate-details__code">{{ displayValue(certificateData.verificationCode) }}</dd>
+        </div>
+      </dl>
+      }
+      }
+
+      @if (state() === 'invalid') {
+      <div class="verification-status verification-status--invalid" role="status" aria-live="polite">
+        <span class="verification-status__icon">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </span>
+        <div>
+          <h2>Certificate Not Found</h2>
+          <p>{{ message() }}</p>
+        </div>
+      </div>
+      }
+
+      @if (state() === 'error') {
+      <div class="verification-status verification-status--error" role="alert">
+        <span class="verification-status__icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </span>
+        <div>
+          <h2>Verification Unavailable</h2>
+          <p>{{ message() }}</p>
+        </div>
+      </div>
+      }
+
+      <div class="certificate-verification__actions">
+        <a class="rbt-btn btn-gradient hover-icon-reverse" routerLink="/">
+          <span class="icon-reverse-wrapper">
+            <span class="btn-text">Return Home</span>
+            <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+            <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

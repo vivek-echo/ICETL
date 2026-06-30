@@ -33,7 +33,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   const isApiRequest = request.url.startsWith(environment.apiUrl);
 
-  const isAuthFlowRequest = [
+  const unauthenticatedApiRequestPrefixes = [
     `${environment.apiUrl}/sendOtp`,
     `${environment.apiUrl}/verifyOtp`,
     `${environment.apiUrl}/selectRole`,
@@ -41,10 +41,15 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     `${environment.apiUrl}/instructors/send-otp`,
     `${environment.apiUrl}/instructors/resend-otp`,
     `${environment.apiUrl}/instructors/verify-otp`,
-  ].includes(request.url);
+    `${environment.apiUrl}/public/certificates/verify`,
+  ];
+
+  const isUnauthenticatedApiRequest = unauthenticatedApiRequestPrefixes.some((url) =>
+    request.url === url || request.url.startsWith(`${url}/`),
+  );
 
   let body = request.body;
-  const shouldAttachUserContext = isApiRequest && !isAuthFlowRequest;
+  const shouldAttachUserContext = isApiRequest && !isUnauthenticatedApiRequest;
 
   // Handle FormData separately
   if (shouldAttachUserContext && body instanceof FormData) {
@@ -119,7 +124,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(updatedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === HTTP_STATUS.UNAUTHORIZED && !isAuthFlowRequest && token) {
+      if (error.status === HTTP_STATUS.UNAUTHORIZED && !isUnauthenticatedApiRequest && token) {
         void handleSessionExpired();
       }
 

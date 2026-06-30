@@ -10,7 +10,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { lastValueFrom, timeout } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
@@ -76,6 +76,9 @@ export class AddOfflineCourse implements OnInit {
   };
   selectedBannerImage: File | null = null;
   bannerPreviewUrl: string | null = null;
+  editCourseId: number | null = null;
+  isEditMode = false;
+  loadingCourse = false;
   private readonly maxBannerImageSize = 2 * 1024 * 1024;
   private readonly allowedBannerImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
   private readonly dateNotBeforeTodayValidator = (control: AbstractControl): ValidationErrors | null => {
@@ -87,6 +90,10 @@ export class AddOfflineCourse implements OnInit {
 
     if (!this.parseIsoDate(value)) {
       return { invalidDate: true };
+    }
+
+    if (this.isEditMode) {
+      return null;
     }
 
     return value < this.todayIso() ? { dateInPast: true } : null;
@@ -129,9 +136,32 @@ export class AddOfflineCourse implements OnInit {
   }
 
   ngOnInit(): void {
+    const editId = this.getEditCourseIdFromState();
+    this.editCourseId = Number.isFinite(editId) && editId > 0 ? editId : null;
+    this.isEditMode = this.editCourseId !== null;
     this.applyInstructorSpecialCourseDefaults();
-    void this.loadCategories();
-    void this.loadInstructorList();
+    void this.initializeFormData();
+  }
+
+  private getEditCourseIdFromState(): number {
+    const navigationState = this.router.getCurrentNavigation()?.extras.state as
+      | { offlineCourseId?: number | string }
+      | undefined;
+    const browserState =
+      typeof history !== 'undefined'
+        ? (history.state as { offlineCourseId?: number | string } | undefined)
+        : undefined;
+    const editId = Number(navigationState?.offlineCourseId ?? browserState?.offlineCourseId);
+
+    return Number.isFinite(editId) ? editId : 0;
+  }
+
+  async initializeFormData(): Promise<void> {
+    await Promise.all([this.loadCategories(), this.loadInstructorList()]);
+
+    if (this.editCourseId) {
+      await this.loadCourseForEdit(this.editCourseId);
+    }
   }
 
   get f() {
@@ -306,6 +336,81 @@ export class AddOfflineCourse implements OnInit {
     } finally {
       this.cdr.markForCheck();
     }
+  }
+
+  async loadCourseForEdit(courseId: number): Promise<void> {
+    this.loadingCourse = true;
+
+    try {
+      const response: any = await lastValueFrom(
+        this.courseService.getOfflineCourseById({ id: courseId }).pipe(timeout(15000)),
+      );
+
+      if (!response?.status || !response.data) {
+        await this.alertHelper.error(response?.message || 'Unable to load offline course.');
+        return;
+      }
+
+      await this.applyCourseForEdit(response.data as OfflineCourseItem);
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load offline course.',
+        'Edit Offline Course',
+      );
+    } finally {
+      this.loadingCourse = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async applyCourseForEdit(course: OfflineCourseItem): Promise<void> {
+    const isSpecial = this.isSpecialCourseValue(course.isSpecial);
+    const instructors = Array.isArray(course.instructors) ? course.instructors : [];
+
+    this.courseForm.patchValue(
+      {
+        title: course.title || '',
+        isSpecial,
+        categoryId: course.categoryId ? `${course.categoryId}` : '',
+        parentCourseId: '',
+        venue: course.venue || '',
+        city: course.city || '',
+        startDate: course.startDate || '',
+        endDate: course.endDate || '',
+        startTime: course.startTime || '',
+        endTime: course.endTime || '',
+        youtubeLiveUrl: course.youtubeLiveUrl || '',
+        meetingLink: course.meetingLink || '',
+        instructors,
+        price: Number(course.price) || 0,
+        description: course.description || '',
+        status: Number(course.publishedFlag ?? course.status) === 1 ? '1' : '0',
+      },
+      { emitEvent: false },
+    );
+
+    const parentControl = this.courseForm.get('parentCourseId');
+
+    if (isSpecial) {
+      parentControl?.setValidators([Validators.required]);
+      parentControl?.updateValueAndValidity({ emitEvent: false });
+      await this.loadParentAcademicCourses();
+      this.courseForm.patchValue(
+        { parentCourseId: course.parentCourseId ? `${course.parentCourseId}` : '' },
+        { emitEvent: false },
+      );
+    } else {
+      parentControl?.clearValidators();
+      parentControl?.updateValueAndValidity({ emitEvent: false });
+    }
+
+    this.setHighlightsFromCourse(this.getSelectedCourseHighlights(course));
+    this.selectedBannerImage = null;
+    this.setBannerPreviewUrl(course.thumbnailUrl || null);
+    this.syncCalendarView('startDate');
+    this.syncCalendarView('endDate');
+    this.courseForm.markAsPristine();
+    this.courseForm.markAsUntouched();
   }
 
   @HostListener('document:click', ['$event'])
@@ -616,6 +721,11 @@ export class AddOfflineCourse implements OnInit {
   }
 
   resetForm(): void {
+    if (this.isEditMode && this.editCourseId) {
+      void this.loadCourseForEdit(this.editCourseId);
+      return;
+    }
+
     this.courseForm.reset({
       title: '',
       isSpecial: this.isInstructorUser,
@@ -684,8 +794,8 @@ export class AddOfflineCourse implements OnInit {
     }
 
     const confirmed = await this.alertHelper.confirm(
-      'Do you want to add this offline course?',
-      'Add Offline Course',
+      this.isEditMode ? 'Do you want to update this offline course?' : 'Do you want to add this offline course?',
+      this.isEditMode ? 'Update Offline Course' : 'Add Offline Course',
     );
 
     if (!confirmed) {
@@ -694,16 +804,27 @@ export class AddOfflineCourse implements OnInit {
 
     try {
       this.spinner.show();
+      const payload = this.getPayload();
+
+      if (this.isEditMode && this.editCourseId) {
+        payload.append('id', `${this.editCourseId}`);
+      }
+
       const response: any = await lastValueFrom(
-        this.courseService.createOfflineCourse(this.getPayload()).pipe(timeout(20000)),
+        (this.isEditMode
+          ? this.courseService.updateOfflineCourse(payload)
+          : this.courseService.createOfflineCourse(payload)
+        ).pipe(timeout(20000)),
       );
 
       if (response.status) {
         const courseCode = response.data?.code ? `\nCode: ${response.data.code}` : '';
         await this.alertHelper.success(
-          `${response.message || 'Offline course added successfully!'}${courseCode}`,
+          `${response.message || (this.isEditMode ? 'Offline course updated successfully!' : 'Offline course added successfully!')}${courseCode}`,
         );
-        this.resetForm();
+        if (!this.isEditMode) {
+          this.resetForm();
+        }
         void this.router.navigate(['/application/courses/manageOfflineCourses/viewMyOfflineCourses']);
       }
     } catch (error) {
@@ -864,6 +985,10 @@ export class AddOfflineCourse implements OnInit {
     const text = `${value || ''}`.trim();
 
     return text || null;
+  }
+
+  private isSpecialCourseValue(value: unknown): boolean {
+    return value === true || Number(value ?? 0) === 1;
   }
 
   private setBannerPreviewUrl(url: string | null): void {
@@ -1073,7 +1198,10 @@ export class AddOfflineCourse implements OnInit {
       }
     }
 
-    return apiError?.message || 'Unable to add offline course. Please try again.';
+    return (
+      apiError?.message ||
+      `Unable to ${this.isEditMode ? 'update' : 'add'} offline course. Please try again.`
+    );
   }
 
   private applyInstructorSpecialCourseDefaults(): void {

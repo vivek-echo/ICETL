@@ -1,7 +1,7 @@
 <div class="rbt-dashboard-content bg-color-white rbt-shadow-box mb--60 course-categories-page">
   <div class="content">
     @if (tabs.length) {
-      <div class="advance-tab-button mb--30">
+      <div class="advance-tab-button course-tabbar mb--30">
         <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs" role="tablist">
           @for (tab of tabs; track tab.id) {
             <li role="presentation">
@@ -19,8 +19,23 @@
             </li>
           }
         </ul>
+
+        @if (hasFilterToggle) {
+          <button
+            type="button"
+            class="course-tabbar__filter-toggle"
+            (click)="toggleActiveFilters()"
+            [attr.aria-expanded]="filtersVisible"
+            aria-label="Toggle filters">
+            <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            <span>{{ filtersVisible ? 'Hide Filters' : 'Show Filters' }}</span>
+            <i [class]="filtersVisible ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+          </button>
+        }
       </div>
     }
-    <router-outlet />
+    <router-outlet
+      (activate)="onRouteComponentActivate($event)"
+      (deactivate)="onRouteComponentDeactivate()" />
   </div>
 </div>

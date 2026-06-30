@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { ViewMyOfflineCourse } from '../view-my-offline-course/view-my-offline-course';
 
 @Component({
@@ -8,4 +8,14 @@ import { ViewMyOfflineCourse } from '../view-my-offline-course/view-my-offline-c
   templateUrl: './view-all-offline-course.html',
   styleUrl: './view-all-offline-course.scss',
 })
-export class ViewAllOfflineCourse {}
+export class ViewAllOfflineCourse {
+  @ViewChild(ViewMyOfflineCourse) private offlineCourseList?: ViewMyOfflineCourse;
+
+  get showFilters(): boolean {
+    return this.offlineCourseList?.showFilters ?? false;
+  }
+
+  toggleFilters(): void {
+    this.offlineCourseList?.toggleFilters();
+  }
+}

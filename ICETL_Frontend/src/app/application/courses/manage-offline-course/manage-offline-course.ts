@@ -17,6 +17,11 @@ interface OfflineCourseTab {
   route: string;
 }
 
+interface FilterToggleHost {
+  showFilters: boolean;
+  toggleFilters(): void;
+}
+
 @Component({
   selector: 'app-manage-offline-course',
   standalone: true,
@@ -34,6 +39,7 @@ export class ManageOfflineCourse implements OnInit, OnDestroy {
   };
 
   tabs: OfflineCourseTab[] = this.fallbackTabs;
+  activeFilterHost: FilterToggleHost | null = null;
 
   constructor(@Inject(PLATFORM_ID) platformId: object) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -59,6 +65,26 @@ export class ManageOfflineCourse implements OnInit, OnDestroy {
     window.removeEventListener('storage', this.refreshTabs);
     window.removeEventListener('auth-user-updated', this.refreshTabs);
     window.removeEventListener('auth-session-cleared', this.refreshTabs);
+  }
+
+  onRouteComponentActivate(component: unknown): void {
+    this.activeFilterHost = this.isFilterToggleHost(component) ? component : null;
+  }
+
+  onRouteComponentDeactivate(): void {
+    this.activeFilterHost = null;
+  }
+
+  get hasFilterToggle(): boolean {
+    return this.activeFilterHost !== null;
+  }
+
+  get filtersVisible(): boolean {
+    return this.activeFilterHost?.showFilters ?? false;
+  }
+
+  toggleActiveFilters(): void {
+    this.activeFilterHost?.toggleFilters();
   }
 
   private loadTabs(): void {
@@ -149,6 +175,16 @@ export class ManageOfflineCourse implements OnInit, OnDestroy {
     return normalizedRoute.replace(
       /\/application\/courses\/manageOfflineCourse(\/|$)/,
       '/application/courses/manageOfflineCourses$1',
+    );
+  }
+
+  private isFilterToggleHost(component: unknown): component is FilterToggleHost {
+    const candidate = component as Partial<FilterToggleHost> | null;
+
+    return (
+      !!candidate &&
+      typeof candidate.showFilters === 'boolean' &&
+      typeof candidate.toggleFilters === 'function'
     );
   }
 }

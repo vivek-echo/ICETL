@@ -51,6 +51,14 @@ export const websiteRoutes: Routes = [
         title: 'Courses | ICETL',
       },
       {
+        path: 'verify-certificate/:verificationCode',
+        loadComponent: () =>
+          import('./certificate-verification/certificate-verification.component').then(
+            (m) => m.CertificateVerificationComponent,
+          ),
+        title: 'Certificate Verification | ICETL',
+      },
+      {
         path: '**',
         redirectTo: '',
       },

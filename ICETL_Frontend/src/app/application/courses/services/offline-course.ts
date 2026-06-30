@@ -41,15 +41,41 @@ export interface OfflineCourseItem extends OfflineCoursePayload {
   thumbnail?: string | null;
   thumbnailUrl?: string | null;
   statusLabel?: string;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | string | null;
+  approvalStatusLabel?: string | null;
+  approvedBy?: number | null;
+  approvedByName?: string | null;
+  approvedOn?: string | null;
+  rejectedBy?: number | null;
+  rejectedByName?: string | null;
+  rejectedOn?: string | null;
+  rejectionReason?: string | null;
+  publishedFlag?: number | boolean | null;
+  publishStatus?: number | boolean | null;
+  publishStatusLabel?: string | null;
+  publishedBy?: number | null;
+  publishedByName?: string | null;
+  publishedOn?: string | null;
   scheduleStatus?: OfflineCourseScheduleStatus;
   isEnrolled?: boolean;
   courseType?: number;
   courseHighlights?: string[];
   createdById: number | null;
+  createdByRoleId?: number | null;
+  createdByRole?: string | null;
+  createdByRoleName?: string | null;
   createdByName: string;
   createdByEmail?: string | null;
   createdOn: string;
   updatedOn: string;
+  actions?: {
+    view?: boolean;
+    edit?: boolean;
+    approve?: boolean;
+    reject?: boolean;
+    publish?: boolean;
+    unpublish?: boolean;
+  };
 }
 
 export interface OfflineCoursePaginationMeta {
@@ -419,10 +445,25 @@ export class OfflineCourseStore {
         ? value.highlights.map((item) => `${item}`.trim()).filter((item) => item.length > 0)
         : [],
       status: Number(value.status) === 0 ? 0 : 1,
+      approvalStatus: value.approvalStatus || 'APPROVED',
+      approvalStatusLabel: value.approvalStatusLabel || null,
+      publishedFlag:
+        value.publishedFlag === null || value.publishedFlag === undefined
+          ? Number(value.status) === 0
+            ? 0
+            : 1
+          : value.publishedFlag,
+      publishStatusLabel: value.publishStatusLabel || null,
       createdById:
         value.createdById === null || value.createdById === undefined
           ? null
           : Number(value.createdById) || null,
+      createdByRoleId:
+        value.createdByRoleId === null || value.createdByRoleId === undefined
+          ? null
+          : Number(value.createdByRoleId) || null,
+      createdByRole: value.createdByRole ? `${value.createdByRole}`.trim() : null,
+      createdByRoleName: value.createdByRoleName ? `${value.createdByRoleName}`.trim() : null,
       createdByName: `${value.createdByName || 'Current User'}`.trim(),
       createdOn: `${value.createdOn || new Date().toISOString()}`,
       updatedOn: `${value.updatedOn || value.createdOn || new Date().toISOString()}`,

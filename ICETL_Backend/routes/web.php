@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use App\Services\CertificateQrCodeService;
+use App\Services\CertificateVerificationService;
 use App\Http\Controllers\AdminConsole\AdminConsoleController;
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +18,13 @@ use App\Http\Controllers\AdminConsole\AdminConsoleController;
 */
 use Barryvdh\DomPDF\Facade\Pdf;
 
-Route::get('/view', function () {
+Route::get('/view', function (
+    CertificateQrCodeService $qrCodeService,
+    CertificateVerificationService $verificationService
+) {
+    $verificationCode = (string) Str::uuid();
+    $verificationUrl = $verificationService->buildVerificationUrl($verificationCode);
+
     $certificate = (object) [
         'enrollmentId'    => 'LR_2026_4',
         'studentId'       => 'ICETL-001',
@@ -27,18 +36,27 @@ Route::get('/view', function () {
         'courseCategory'  => 'Finance and Accounting',
         'issueDate'       => '2026-06-10',
         'certificateNo'   => 'ICETL-C-2026-000001',
+        'verificationCode' => $verificationCode,
+        'verificationUrl' => $verificationUrl,
     ];
 
     $pdf = Pdf::loadView('certificates.course', [
         'certificate' => $certificate,
+        'qrCodeDataUri' => $qrCodeService->generateDataUri($verificationUrl),
         'isPdf' => true,
     ])->setPaper('a4', 'portrait');
 
     return $pdf->stream('ICETL-C-2026-000001.pdf');
 });
-Route::get('/workshop-certificate', function () {
+
+Route::get('/workshop-certificate', function (
+    CertificateQrCodeService $qrCodeService,
+    CertificateVerificationService $verificationService
+) {
     $startDate = '2026-06-15';
     $endDate = '2026-06-16';
+    $verificationCode = (string) Str::uuid();
+    $verificationUrl = $verificationService->buildVerificationUrl($verificationCode);
 
     $start = strtotime($startDate);
     $end = strtotime($endDate);
@@ -55,7 +73,7 @@ Route::get('/workshop-certificate', function () {
         'certificateNo' => 'ICETL-WK-2026-000001',
         'studentName' => 'Vivek',
         'studentId' => 'LR_2026_4',
-        'workshopTitle' => 'Modern Web Development with Angular & Laravel',
+        'moduleTitle' => 'Modern Web Development with Angular & Laravel',
         'startDate' => $startDate,
         'endDate' => $endDate,
         'workshopDate' => $startDate,
@@ -63,10 +81,13 @@ Route::get('/workshop-certificate', function () {
         'durationText' => $durationText,
         'gender' => 1,
         'venue' => 'ICETL Training Hall asdsa asdcsad asdcsad zxcdsadc xcsdac, Patna',
+        'verificationCode' => $verificationCode,
+        'verificationUrl' => $verificationUrl,
     ];
 
-    $pdf = Pdf::loadView('certificates.seminar', [
+    $pdf = Pdf::loadView('certificates.workshop', [
         'certificate' => $certificate,
+        'qrCodeDataUri' => $qrCodeService->generateDataUri($verificationUrl),
         'isPdf' => true,
     ])
         ->setPaper('a4', 'portrait')

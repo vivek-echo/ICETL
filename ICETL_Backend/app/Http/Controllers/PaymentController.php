@@ -65,10 +65,15 @@ class PaymentController extends Controller
             $totalAmount = round($subtotal + $taxAmount, 2);
 
             if ($totalAmount <= 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Checkout amount must be greater than zero.',
-                ], 422);
+                return $this->completeFreeCartCheckout(
+                    $request,
+                    $userId,
+                    $courses,
+                    $courseIds,
+                    $subtotal,
+                    $taxAmount,
+                    $totalAmount
+                );
             }
 
             $api = $this->razorpay();
@@ -335,6 +340,138 @@ class PaymentController extends Controller
                 'message' => "Unable to initialize {$entityLabel} checkout. Please try again.",
             ], 500);
         }
+    }
+
+    private function completeFreeCartCheckout(
+        Request $request,
+        int $userId,
+        $courses,
+        array $courseIds,
+        float $subtotal,
+        float $taxAmount,
+        float $totalAmount
+    ) {
+        DB::beginTransaction();
+
+        DB::table('orders')
+            ->where('userId', $userId)
+            ->where('status', 'pending')
+            ->where('deletedFlag', 0)
+            ->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+        $orderReference = $this->reference('ORD');
+        $orderId = DB::table('orders')->insertGetId([
+            'userId' => $userId,
+            'orderReference' => $orderReference,
+            'subtotalAmount' => $subtotal,
+            'taxAmount' => $taxAmount,
+            'totalAmount' => $totalAmount,
+            'currency' => self::CURRENCY,
+            'status' => 'paid',
+            'expiresAt' => null,
+            'deletedFlag' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $orderItems = $courses->map(fn($course) => [
+            'orderId' => $orderId,
+            'courseId' => (int) $course->id,
+            'price' => (float) $course->price,
+            'taxAmount' => 0,
+            'totalAmount' => (float) $course->price,
+            'deletedFlag' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->all();
+
+        DB::table('order_items')->insert($orderItems);
+
+        $paymentReference = $this->reference('FREE');
+        $paymentId = DB::table('payments')->insertGetId([
+            'orderId' => $orderId,
+            'userId' => $userId,
+            'paymentReference' => $paymentReference,
+            'razorpayPaymentId' => null,
+            'razorpayOrderId' => null,
+            'razorpaySignature' => null,
+            'amount' => $subtotal,
+            'taxAmount' => $taxAmount,
+            'totalAmount' => $totalAmount,
+            'currency' => self::CURRENCY,
+            'paymentMethod' => 'FREE',
+            'status' => 'success',
+            'paidAt' => now(),
+            'deletedFlag' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ($courses as $course) {
+            DB::table('enrollments')->updateOrInsert(
+                ['userId' => $userId, 'courseId' => (int) $course->id, 'deletedFlag' => 0],
+                [
+                    'orderId' => $orderId,
+                    'paymentId' => $paymentId,
+                    'status' => 'active',
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
+
+        DB::table('carts')
+            ->where('user_id', $userId)
+            ->whereIn('course_id', $courseIds)
+            ->delete();
+
+        $invoice = $this->createOrFetchInvoice($orderId, $paymentId, $userId);
+
+        $this->logPaymentEvent($request, 'checkout.free_enrolled', [
+            'userId' => $userId,
+            'orderId' => $orderId,
+            'paymentId' => $paymentId,
+            'status' => 'success',
+            'gateway' => 'free',
+            'paymentMode' => 'FREE',
+            'paymentBy' => 'FREE',
+            'referenceNo' => $orderReference,
+            'transactionNo' => $paymentReference,
+            'entityType' => $invoice['entityType'] ?? null,
+            'entityId' => $invoice['entityId'] ?? null,
+            'entityCode' => $invoice['entityCode'] ?? null,
+            'entityTitle' => $invoice['entityTitle'] ?? null,
+            'requestPayload' => ['courseIds' => $courseIds],
+            'responsePayload' => [
+                'paymentRequired' => false,
+                'amount' => $totalAmount,
+                'courses' => $courses,
+            ],
+            'verificationResult' => [
+                'enrollments' => $courses->count(),
+                'items' => count($orderItems),
+            ],
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Free course enrollment completed successfully.',
+            'paymentRequired' => false,
+            'freeEnrollment' => true,
+            'orderId' => $orderId,
+            'orderReference' => $orderReference,
+            'razorpayOrderId' => null,
+            'razorpayKey' => null,
+            'currency' => self::CURRENCY,
+            'subtotalAmount' => $subtotal,
+            'taxAmount' => $taxAmount,
+            'totalAmount' => $totalAmount,
+            'amountInPaise' => 0,
+            'courses' => $courses,
+            'invoice' => $invoice,
+        ]);
     }
 
     public function enrollWorkshopStudent(Request $request)
@@ -2280,7 +2417,7 @@ class PaymentController extends Controller
                 'orderId' => $data['orderId'] ?? null,
                 'paymentId' => $data['paymentId'] ?? null,
                 'eventType' => $eventType,
-                'gateway' => 'razorpay',
+                'gateway' => $data['gateway'] ?? 'razorpay',
                 'status' => $data['status'] ?? null,
                 'requestPayload' => isset($data['requestPayload']) ? json_encode($data['requestPayload']) : null,
                 'responsePayload' => isset($data['responsePayload']) ? json_encode($data['responsePayload']) : null,
@@ -2295,8 +2432,8 @@ class PaymentController extends Controller
             ];
 
             $optionalColumns = [
-                'paymentMode' => $transactionNo ? 'ONLINE' : null,
-                'paymentBy' => $transactionNo ? 'RAZORPAY' : null,
+                'paymentMode' => $data['paymentMode'] ?? ($transactionNo ? 'ONLINE' : null),
+                'paymentBy' => $data['paymentBy'] ?? ($transactionNo ? 'RAZORPAY' : null),
                 'referenceNo' => $referenceNo,
                 'transactionNo' => $transactionNo,
                 'entityType' => $data['entityType'] ?? null,

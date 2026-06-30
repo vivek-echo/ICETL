@@ -3,16 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Services\CertificateQrCodeService;
+use App\Services\CertificateVerificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
+use RuntimeException;
+use Throwable;
 
 class CertificateController extends Controller
 {
-
+    public function __construct(
+        private readonly CertificateQrCodeService $certificateQrCodeService,
+        private readonly CertificateVerificationService $certificateVerificationService,
+    ) {
+    }
 
     public function generate(Request $request)
     {
@@ -21,6 +31,7 @@ class CertificateController extends Controller
             'moduleType' => 'required|in:COURSE,ACADEMIC_COURSE,WORKSHOP,SEMINAR',
             'moduleId' => 'required|integer|min:1',
         ]);
+
         $user = $requestData['userProfile'] ?? null;
         $userid = Crypt::decryptstring($user['id']);
 
@@ -35,6 +46,8 @@ class CertificateController extends Controller
             ->first();
 
         if ($existingCertificate) {
+            $this->syncExistingCertificateVerification($existingCertificate);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Certificate already generated.',
@@ -49,7 +62,7 @@ class CertificateController extends Controller
 
             $moduleDetails = $this->getModuleDetails($moduleType, $moduleId);
 
-            if (!$moduleDetails) {
+            if (! $moduleDetails) {
                 DB::rollBack();
 
                 return response()->json([
@@ -59,14 +72,12 @@ class CertificateController extends Controller
             }
 
             $certificateNo = $this->generateCertificateNo($moduleType);
-            $verificationCode = Str::uuid()->toString();
-            $verificationUrl = url('/verify-certificate/' . $certificateNo);
-            $certificate = Certificate::create([
+            $certificate = $this->createCertificateWithVerification([
                 'certificateNo' => $certificateNo,
                 'userId' => $userid,
                 'moduleType' => $moduleType,
                 'moduleId' => $moduleId,
-                'enrollmentId' =>  null, // learner code
+                'enrollmentId' => null,
 
                 'studentName' => $user['name'] ?? 'Learner',
                 'studentId' => $user['code'] ?? null,
@@ -82,10 +93,6 @@ class CertificateController extends Controller
 
                 'issueDate' => now()->toDateString(),
                 'completionDate' => now()->toDateString(),
-
-                'verificationCode' => $verificationCode,
-                'verificationUrl' => $verificationUrl,
-
                 'certificatePdfPath' => null,
 
                 'status' => 1,
@@ -110,45 +117,75 @@ class CertificateController extends Controller
                 'certificateNo' => $certificate->certificateNo,
                 'downloadUrl' => $this->getCertificateDownloadUrl($certificate),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $exception) {
             DB::rollBack();
+
+            Log::error('Certificate generation failed.', [
+                'message' => $exception->getMessage(),
+                'moduleType' => $moduleType,
+                'moduleId' => $moduleId,
+            ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to generate certificate.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
-    public function verify(string $certificateNo)
+    public function verify(string $verificationCode)
     {
-        $certificate = Certificate::where('certificateNo', $certificateNo)
-            ->where('deletedFlag', 0)
-            ->where('status', 1)
-            ->first();
+        $verificationCode = trim($verificationCode);
 
-        if (!$certificate) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid certificate number.',
-            ], 404);
+        $validator = Validator::make([
+            'verificationCode' => $verificationCode,
+        ], [
+            'verificationCode' => ['required', 'string', 'min:20', 'max:120', 'regex:/^[A-Za-z0-9-]+$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->invalidCertificateResponse();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Certificate is valid.',
-            'data' => [
-                'certificateNo' => $certificate->certificateNo,
-                'studentName' => $certificate->studentName,
-                'studentId' => $certificate->studentId,
-                'moduleType' => $certificate->moduleType,
-                'moduleTitle' => $certificate->moduleTitle,
-                'durationText' => $certificate->durationText,
-                'issueDate' => $certificate->issueDate,
-                'verificationUrl' => $certificate->verificationUrl,
-            ],
-        ]);
+        try {
+            $certificate = Certificate::where('verificationCode', $verificationCode)
+                ->where('deletedFlag', 0)
+                ->first();
+
+            if (! $certificate) {
+                return $this->invalidCertificateResponse();
+            }
+
+            if ((int) $certificate->status !== 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Certificate has been revoked or is inactive.',
+                    'data' => [
+                        'isValid' => false,
+                        'status' => 'Inactive',
+                    ],
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Certificate verified successfully.',
+                'data' => $this->certificateVerificationService->toPublicPayload($certificate),
+            ]);
+        } catch (Throwable $exception) {
+            Log::error('Certificate verification lookup failed.', [
+                'message' => $exception->getMessage(),
+                'verificationCode' => $verificationCode,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to verify certificate at the moment.',
+                'data' => [
+                    'isValid' => false,
+                ],
+            ], 500);
+        }
     }
 
     private function getModuleDetails(string $moduleType, int $moduleId): ?array
@@ -159,7 +196,7 @@ class CertificateController extends Controller
                 ->where('deletedFlag', 0)
                 ->first();
 
-            if (!$course) {
+            if (! $course) {
                 return null;
             }
 
@@ -179,7 +216,7 @@ class CertificateController extends Controller
                 ->where('deletedFlag', 0)
                 ->first();
 
-            if (!$workshop) {
+            if (! $workshop) {
                 return null;
             }
 
@@ -191,7 +228,7 @@ class CertificateController extends Controller
                 'durationText' => $this->getDurationText(
                     $workshop->startDate,
                     $workshop->endDate
-                )
+                ),
             ];
         }
 
@@ -201,7 +238,7 @@ class CertificateController extends Controller
                 ->where('deletedFlag', 0)
                 ->first();
 
-            if (!$academicCourse) {
+            if (! $academicCourse) {
                 return null;
             }
 
@@ -227,7 +264,6 @@ class CertificateController extends Controller
                     )
                     . ')'
                     : null,
-
             ];
         }
 
@@ -237,11 +273,11 @@ class CertificateController extends Controller
                 ->where('deletedFlag', 0)
                 ->first();
 
-            if (!$seminar) {
+            if (! $seminar) {
                 return null;
             }
 
-           return [
+            return [
                 'title' => $seminar->title,
                 'venue' => $seminar->venue ?? null,
                 'startDate' => $seminar->startDate,
@@ -249,7 +285,7 @@ class CertificateController extends Controller
                 'durationText' => $this->getDurationText(
                     $seminar->startDate,
                     $seminar->endDate
-                )
+                ),
             ];
         }
 
@@ -258,18 +294,17 @@ class CertificateController extends Controller
 
     private function getDurationText($startDate, $endDate): ?string
     {
-        if (!$startDate || !$endDate) {
+        if (! $startDate || ! $endDate) {
             return null;
         }
 
         $start = strtotime($startDate);
         $end = strtotime($endDate);
 
-        if (!$start || !$end || $end < $start) {
+        if (! $start || ! $end || $end < $start) {
             return null;
         }
 
-        // Inclusive days: 15 Jun to 16 Jun = 2 days
         $days = floor(($end - $start) / (24 * 60 * 60)) + 1;
 
         if ($days < 7) {
@@ -289,6 +324,66 @@ class CertificateController extends Controller
         $years = round($days / 365, 1);
 
         return $years . ' ' . ($years > 1 ? 'years' : 'year');
+    }
+
+    private function createCertificateWithVerification(array $attributes): Certificate
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $verificationCode = $this->certificateVerificationService->generateUniqueVerificationCode();
+
+            try {
+                return Certificate::create([
+                    ...$attributes,
+                    'verificationCode' => $verificationCode,
+                    'verificationUrl' => $this->certificateVerificationService->buildVerificationUrl($verificationCode),
+                ]);
+            } catch (QueryException $exception) {
+                if (! $this->isVerificationCodeConflict($exception)) {
+                    throw $exception;
+                }
+            }
+        }
+
+        throw new RuntimeException('Unable to create a certificate with a unique verification code.');
+    }
+
+    private function syncExistingCertificateVerification(Certificate $certificate): void
+    {
+        try {
+            $changed = $this->certificateVerificationService->ensureVerificationDetails($certificate);
+
+            if (! $changed) {
+                return;
+            }
+
+            $certificate->updatedOn = now();
+            $certificate->save();
+
+            if (! $certificate->certificatePdfPath) {
+                return;
+            }
+
+            $certificate->certificatePdfPath = $this->generateCertificatePdf($certificate);
+            $certificate->updatedOn = now();
+            $certificate->save();
+        } catch (Throwable $exception) {
+            Log::warning('Unable to sync existing certificate verification details.', [
+                'message' => $exception->getMessage(),
+                'certificateNo' => $certificate->certificateNo,
+            ]);
+        }
+    }
+
+    private function isVerificationCodeConflict(QueryException $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        return (string) $exception->getCode() === '23000'
+            && (
+                str_contains($message, 'verificationCode')
+                || str_contains($message, 'verification_code')
+                || str_contains($message, 'certificates_verification_code_unique')
+            );
     }
 
     private function generateCertificateNo(string $moduleType): string
@@ -321,35 +416,16 @@ class CertificateController extends Controller
         };
     }
 
-    // private function generateCertificatePdf(Certificate $certificate): string
-    // {
-    //     $folder = 'certificates';
-
-    //     if (!Storage::disk('private')->exists($folder)) {
-    //         Storage::disk('private')->makeDirectory($folder);
-    //     }
-
-    //     $fileName = $certificate->certificateNo . '.pdf';
-    //     $storagePath = $folder . '/' . $fileName;
-
-    //     $logoPath = public_path('certificate-assets/logo.png');
-
-    //     $pdf = Pdf::loadView('certificates.default', [
-    //         'certificate' => $certificate,
-    //         'certificateTitle' => $this->getCertificateTitle($certificate->moduleType),
-    //         'logoPath' => file_exists($logoPath) ? $logoPath : null,
-    //     ])->setPaper('a4', 'landscape');
-
-    //     Storage::disk('private')->put($storagePath, $pdf->output());
-
-    //     return $storagePath;
-    // }
-
     private function generateCertificatePdf(Certificate $certificate): string
     {
+        if ($this->certificateVerificationService->ensureVerificationDetails($certificate)) {
+            $certificate->updatedOn = now();
+            $certificate->save();
+        }
+
         $folder = 'certificates';
 
-        if (!Storage::disk('private')->exists($folder)) {
+        if (! Storage::disk('private')->exists($folder)) {
             Storage::disk('private')->makeDirectory($folder);
         }
 
@@ -359,13 +435,11 @@ class CertificateController extends Controller
         if (Storage::disk('private')->exists($storagePath)) {
             Storage::disk('private')->delete($storagePath);
         }
-        if ($certificate->moduleType === 'WORKSHOP') {
-            $view = 'certificates.workshop';
-        } else {
-            $view = 'certificates.course';
-        }
-        $pdf = Pdf::loadView($view, [
+
+        $pdf = Pdf::loadView($this->getCertificateView($certificate->moduleType), [
             'certificate' => $certificate,
+            'certificateTitle' => $this->getCertificateTitle($certificate->moduleType),
+            'qrCodeDataUri' => $this->certificateQrCodeService->generateDataUri($certificate->verificationUrl),
             'isPdf' => true,
         ])
             ->setPaper('a4', 'portrait')
@@ -382,44 +456,63 @@ class CertificateController extends Controller
         return $storagePath;
     }
 
-   private function getCertificateDownloadUrl(Certificate $certificate): ?string
-{
-    if (!$certificate->certificatePdfPath) {
-        return null;
+    private function getCertificateView(string $moduleType): string
+    {
+        return match ($moduleType) {
+            'WORKSHOP' => 'certificates.workshop',
+            'SEMINAR' => 'certificates.seminar',
+            default => 'certificates.course',
+        };
     }
 
-    return url('/api/certificates/download/' . $certificate->certificateNo);
-}
+    private function getCertificateDownloadUrl(Certificate $certificate): ?string
+    {
+        if (! $certificate->certificatePdfPath) {
+            return null;
+        }
+
+        return url('/api/certificates/download/' . $certificate->certificateNo);
+    }
+
+    private function invalidCertificateResponse()
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'Certificate not found or verification code is invalid.',
+            'data' => [
+                'isValid' => false,
+            ],
+        ], 404);
+    }
 
     public function download(string $certificateNo)
-{
-    $certificate = Certificate::where('certificateNo', $certificateNo)
-        ->where('deletedFlag', 0)
-        ->where('status', 1)
-        ->first();
+    {
+        $certificate = Certificate::where('certificateNo', $certificateNo)
+            ->where('deletedFlag', 0)
+            ->where('status', 1)
+            ->first();
 
-    if (!$certificate || !$certificate->certificatePdfPath) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Certificate not found.',
-        ], 404);
+        if (! $certificate || ! $certificate->certificatePdfPath) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Certificate not found.',
+            ], 404);
+        }
+
+        if (! Storage::disk('private')->exists($certificate->certificatePdfPath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Certificate file not found.',
+            ], 404);
+        }
+
+        $filePath = Storage::disk('private')->path($certificate->certificatePdfPath);
+        $fileName = $certificate->certificateNo . '.pdf';
+
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
     }
-
-    if (!Storage::disk('private')->exists($certificate->certificatePdfPath)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Certificate file not found.',
-        ], 404);
-    }
-
-    $filePath = Storage::disk('private')->path($certificate->certificatePdfPath);
-
-    $fileName = $certificate->certificateNo . '.pdf';
-
-    return response()->download($filePath, $fileName, [
-        'Content-Type' => 'application/pdf',
-        'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-    ]);
-}
 }

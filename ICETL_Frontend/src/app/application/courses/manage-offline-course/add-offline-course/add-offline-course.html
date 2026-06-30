@@ -17,7 +17,7 @@
       <div class="offline-form__heading">
         <span>01</span>
         <div>
-          <h2>Course Details</h2>
+          <h2>{{ isEditMode ? 'Edit Course Details' : 'Course Details' }}</h2>
           <p>Core information shown on the offline course listing.</p>
         </div>
       </div>
@@ -429,7 +429,7 @@
         Reset
       </button>
       <button type="submit" class="rbt-btn btn-gradient">
-        Save Offline Course
+        {{ isEditMode ? 'Update Offline Course' : 'Save Offline Course' }}
       </button>
     </div>
   </form>

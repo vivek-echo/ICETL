@@ -208,8 +208,8 @@
 
       <div class="summary-actions">
         <button type="button" class="cart-btn cart-btn--primary" (click)="checkout()" [disabled]="selectedCount === 0" >
-          <i class="fa-solid fa-lock"></i>
-          Purchase Selected
+          <i [class]="isFreeCheckout ? 'fa-solid fa-unlock' : 'fa-solid fa-lock'"></i>
+          {{ checkoutActionLabel }}
         </button>
         <!-- <a class="cart-btn cart-btn--secondary" routerLink="/application/courses/manageCourses/browse">
           <i class="fa-solid fa-arrow-left"></i>

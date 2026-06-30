@@ -1728,3 +1728,13 @@
 .student-toolbar:has(> .student-toolbar__body[hidden]) .student-toolbar__title {
   display: none;
 }
+
+:host-context(.offline-course-page) .student-toolbar__header {
+  display: none;
+}
+
+:host-context(.offline-course-page) .student-toolbar:has(> .student-toolbar__body[hidden]) {
+  display: none;
+  margin-bottom: 0;
+  padding: 0;
+}

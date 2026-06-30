@@ -66,6 +66,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/getOfflineCourses', [CoursesController::class, 'getOfflineCourses']);
     Route::post('/getMyOfflineCourses', [CoursesController::class, 'getMyOfflineCourses']);
     Route::post('/getAllOfflineCourses', [CoursesController::class, 'getAllOfflineCourses']);
+    Route::post('/getOfflineCourseById', [CoursesController::class, 'getOfflineCourseById']);
+    Route::post('/updateOfflineCourse', [CoursesController::class, 'updateOfflineCourse']);
+    Route::post('/offline-courses/approve', [CoursesController::class, 'approveOfflineCourse']);
+    Route::post('/offline-courses/reject', [CoursesController::class, 'rejectOfflineCourse']);
+    Route::post('/offline-courses/publish', [CoursesController::class, 'publishOfflineCourse']);
     Route::post('/offline-courses/enroll-student', [CoursesController::class, 'enrollStudent']);
     Route::post('/offline-courses/enrolled-students', [CoursesController::class, 'getOfflineCourseEnrolledStudents']);
     Route::post('/offline-courses/installments/pay', [CoursesController::class, 'payOfflineCourseInstallment']);
@@ -162,6 +167,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     
 });
+Route::get('/public/certificates/verify/{verificationCode}', [CertificateController::class, 'verify'])
+    ->middleware('throttle:certificate-verify')
+    ->where('verificationCode', '[A-Za-z0-9\-]+');
+
 Route::get('/certificates/download/{certificateNo}', [CertificateController::class, 'download']);
 Route::post('/razorpay/webhook', [PaymentController::class, 'webhook']);
 

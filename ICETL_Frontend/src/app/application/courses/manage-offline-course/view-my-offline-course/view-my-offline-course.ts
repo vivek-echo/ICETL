@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, HostListener, Input, OnInit } from '@angu
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { lastValueFrom, timeout } from 'rxjs';
+import Swal from 'sweetalert2';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { Course } from '../../services/course';
 import {
@@ -22,6 +23,13 @@ import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../
 type OfflineCourseScope = 'mine' | 'all';
 type EnrollmentGender = 1 | 2 | '';
 type EnrollmentCalendarTarget = 'dob' | `installment-${number}`;
+type OfflineApprovalStatus = '' | 'PENDING' | 'APPROVED' | 'REJECTED';
+type OfflinePublishStatus = '' | '0' | '1';
+
+interface CourseCategoryFilter {
+  id: number;
+  categoryName: string;
+}
 
 interface EnrollmentCalendarDay {
   day: number;
@@ -96,15 +104,38 @@ export class ViewMyOfflineCourse implements OnInit {
     { value: 'ongoing', label: 'Ongoing' },
     { value: 'completed', label: 'Completed' },
   ];
+  readonly approvalStatusOptions: Array<{ value: OfflineApprovalStatus; label: string }> = [
+    { value: '', label: 'All Approval' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'REJECTED', label: 'Rejected' },
+  ];
+  readonly publishStatusOptions: Array<{ value: OfflinePublishStatus; label: string }> = [
+    { value: '', label: 'All Publish' },
+    { value: '1', label: 'Published' },
+    { value: '0', label: 'Unpublished' },
+  ];
+  readonly createdByRoleOptions: Array<{ value: string; label: string }> = [
+    { value: '', label: 'All Creator Roles' },
+    { value: 'admin', label: 'Admin' },
+    { value: 'team', label: 'Team' },
+    { value: 'instructor', label: 'Instructor' },
+  ];
 
   @Input() scopeOverride?: OfflineCourseScope;
 
   scope: OfflineCourseScope = 'mine';
+  categories: CourseCategoryFilter[] = [];
   courses: OfflineCourseItem[] = [];
   loading = false;
   showFilters = false;
   search = '';
-  city = '';
+  categoryId = '';
+  approvalStatus: OfflineApprovalStatus = '';
+  publishStatus: OfflinePublishStatus = '';
+  createdByRole = '';
+  startDate = '';
+  endDate = '';
   status = '';
   scheduleStatus: OfflineCourseScheduleFilter = '';
   sortBy: OfflineCourseSortOption = 'newest';
@@ -136,7 +167,22 @@ export class ViewMyOfflineCourse implements OnInit {
     this.scope =
       this.scopeOverride ??
       (this.route.snapshot.data['offlineCourseScope'] === 'all' ? 'all' : 'mine');
+    void this.loadCategories();
     void this.loadCourses();
+  }
+
+  async loadCategories(): Promise<void> {
+    try {
+      const response: any = await lastValueFrom(
+        this.courseService.getCourseCategories({ status: '1' }).pipe(timeout(15000)),
+      );
+
+      this.categories = response?.status && Array.isArray(response.data) ? response.data : [];
+    } catch {
+      this.categories = [];
+    } finally {
+      this.cdr.markForCheck();
+    }
   }
 
   toggleFilters(): void {
@@ -242,7 +288,12 @@ export class ViewMyOfflineCourse implements OnInit {
 
   clearFilters(): void {
     this.search = '';
-    this.city = '';
+    this.categoryId = '';
+    this.approvalStatus = '';
+    this.publishStatus = '';
+    this.createdByRole = '';
+    this.startDate = '';
+    this.endDate = '';
     this.status = '';
     this.scheduleStatus = '';
     this.sortBy = 'newest';
@@ -624,14 +675,148 @@ export class ViewMyOfflineCourse implements OnInit {
   }
 
   async toggleStatus(course: OfflineCourseItem): Promise<void> {
-    if (this.isAllCoursesView) {
+    await this.publishCourse(course, !this.isPublished(course));
+  }
+
+  async viewCourse(course: OfflineCourseItem): Promise<void> {
+    const primaryCourse = this.getPrimaryCourseLabel(course);
+    const html = `
+      <div class="offline-course-swal-detail">
+        <p><strong>Code:</strong> ${this.escapeHtml(course.code || 'N/A')}</p>
+        <p><strong>Category:</strong> ${this.escapeHtml(course.categoryName || 'Uncategorized')}</p>
+        <p><strong>Instructor:</strong> ${this.escapeHtml(course.instructorName || 'Instructor')}</p>
+        <p><strong>Venue:</strong> ${this.escapeHtml(course.venue || 'N/A')}</p>
+        <p><strong>Schedule:</strong> ${this.escapeHtml(this.formatDateRange(course))}</p>
+        <p><strong>Approval:</strong> ${this.escapeHtml(this.getApprovalStatusLabel(course))}</p>
+        <p><strong>Publish:</strong> ${this.escapeHtml(this.getPublishStatusLabel(course))}</p>
+        ${primaryCourse ? `<p><strong>Primary Course:</strong> ${this.escapeHtml(primaryCourse)}</p>` : ''}
+        ${course.rejectionReason ? `<p><strong>Rejection Reason:</strong> ${this.escapeHtml(course.rejectionReason)}</p>` : ''}
+      </div>
+    `;
+
+    await this.alertHelper.viewAlertHtml('info', course.title || 'Offline Course', html);
+  }
+
+  editCourse(course: OfflineCourseItem): void {
+    if (!this.canEdit(course)) {
       return;
     }
 
-    const nextStatus = this.isActive(course) ? 0 : 1;
+    void this.router.navigate([this.addRoute], {
+      state: {
+        offlineCourseId: course.id,
+      },
+    });
+  }
+
+  async approveCourse(course: OfflineCourseItem): Promise<void> {
+    if (!this.canApprove(course)) {
+      return;
+    }
+
     const confirmed = await this.alertHelper.confirm(
-      `Do you want to mark this course as ${nextStatus === 1 ? 'active' : 'inactive'}?`,
-      'Update Status',
+      `Approve "${course.title}"?`,
+      'Approve Offline Course',
+      'Approve',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response: any = await lastValueFrom(
+        this.courseService.approveOfflineCourse({ id: course.id }).pipe(timeout(15000)),
+      );
+
+      if (response.status) {
+        await this.alertHelper.success(response.message || 'Offline course approved successfully.');
+        await this.loadCourses(this.meta.currentPage);
+      }
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to approve offline course.',
+        'Approve Offline Course',
+      );
+    }
+  }
+
+  async rejectCourse(course: OfflineCourseItem): Promise<void> {
+    if (!this.canReject(course)) {
+      return;
+    }
+
+    const result = await Swal.fire({
+      width: '36rem',
+      icon: 'warning',
+      title: 'Reject Offline Course',
+      input: 'textarea',
+      inputLabel: `Reason for rejecting "${course.title}"`,
+      inputPlaceholder: 'Enter rejection reason',
+      inputAttributes: {
+        maxlength: '500',
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Reject',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      inputValidator: (value) => {
+        const reason = `${value || ''}`.trim();
+
+        if (!reason) {
+          return 'Rejection reason is required.';
+        }
+
+        if (reason.length < 5) {
+          return 'Rejection reason must be at least 5 characters.';
+        }
+
+        return null;
+      },
+    });
+
+    const rejectionReason = `${result.value || ''}`.trim();
+
+    if (!result.isConfirmed || !rejectionReason) {
+      return;
+    }
+
+    try {
+      const response: any = await lastValueFrom(
+        this.courseService
+          .rejectOfflineCourse({ id: course.id, rejectionReason })
+          .pipe(timeout(15000)),
+      );
+
+      if (response.status) {
+        await this.alertHelper.success(response.message || 'Offline course rejected successfully.');
+        await this.loadCourses(this.meta.currentPage);
+      }
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to reject offline course.',
+        'Reject Offline Course',
+      );
+    }
+  }
+
+  async publishCourse(course: OfflineCourseItem, shouldPublish: boolean): Promise<void> {
+    if (shouldPublish && this.getApprovalStatus(course) !== 'APPROVED') {
+      await this.alertHelper.warning(
+        'This offline course must be approved before it can be published.',
+        'Publish Offline Course',
+      );
+      return;
+    }
+
+    if (shouldPublish ? !this.canPublish(course) : !this.canUnpublish(course)) {
+      return;
+    }
+
+    const confirmed = await this.alertHelper.confirm(
+      `Do you want to ${shouldPublish ? 'publish' : 'unpublish'} "${course.title}"?`,
+      shouldPublish ? 'Publish Offline Course' : 'Unpublish Offline Course',
+      shouldPublish ? 'Publish' : 'Unpublish',
     );
 
     if (!confirmed) {
@@ -641,17 +826,22 @@ export class ViewMyOfflineCourse implements OnInit {
     try {
       const response: any = await lastValueFrom(
         this.courseService
-          .updateOfflineCourseStatus({ id: course.id, status: nextStatus })
+          .publishOfflineCourse({ id: course.id, publishedFlag: shouldPublish ? 1 : 0 })
           .pipe(timeout(15000)),
       );
 
       if (response.status) {
+        await this.alertHelper.success(
+          response.message ||
+            `Offline course ${shouldPublish ? 'published' : 'unpublished'} successfully.`,
+        );
         await this.loadCourses(this.meta.currentPage);
       }
     } catch (error: any) {
       await this.alertHelper.error(
-        error?.error?.message || 'Unable to update offline course status.',
-        'Update Status',
+        error?.error?.message ||
+          `Unable to ${shouldPublish ? 'publish' : 'unpublish'} offline course.`,
+        shouldPublish ? 'Publish Offline Course' : 'Unpublish Offline Course',
       );
     }
   }
@@ -662,6 +852,60 @@ export class ViewMyOfflineCourse implements OnInit {
 
   isActive(course: OfflineCourseItem): boolean {
     return Number(course.status) === 1;
+  }
+
+  isPublished(course: OfflineCourseItem): boolean {
+    const publishedValue = course.publishedFlag ?? course.publishStatus ?? course.status;
+
+    return publishedValue === true || Number(publishedValue) === 1;
+  }
+
+  getApprovalStatus(course: OfflineCourseItem): 'PENDING' | 'APPROVED' | 'REJECTED' {
+    const status = `${course.approvalStatus || 'PENDING'}`.toUpperCase();
+
+    return status === 'APPROVED' || status === 'REJECTED' ? status : 'PENDING';
+  }
+
+  getApprovalStatusLabel(course: OfflineCourseItem): string {
+    return course.approvalStatusLabel || this.toTitleCase(this.getApprovalStatus(course));
+  }
+
+  getPublishStatusLabel(course: OfflineCourseItem): string {
+    return course.publishStatusLabel || (this.isPublished(course) ? 'Published' : 'Unpublished');
+  }
+
+  getApprovalBadgeClass(course: OfflineCourseItem): string {
+    return `offline-status-badge--${this.getApprovalStatus(course).toLowerCase()}`;
+  }
+
+  getPublishBadgeClass(course: OfflineCourseItem): string {
+    return this.isPublished(course)
+      ? 'offline-status-badge--published'
+      : 'offline-status-badge--unpublished';
+  }
+
+  canView(course: OfflineCourseItem): boolean {
+    return course.actions?.view !== false;
+  }
+
+  canEdit(course: OfflineCourseItem): boolean {
+    return !!course.actions?.edit;
+  }
+
+  canApprove(course: OfflineCourseItem): boolean {
+    return !!course.actions?.approve;
+  }
+
+  canReject(course: OfflineCourseItem): boolean {
+    return !!course.actions?.reject;
+  }
+
+  canPublish(course: OfflineCourseItem): boolean {
+    return !!course.actions?.publish;
+  }
+
+  canUnpublish(course: OfflineCourseItem): boolean {
+    return !!course.actions?.unpublish;
   }
 
   isSpecialCourse(course: OfflineCourseItem): boolean {
@@ -727,6 +971,10 @@ export class ViewMyOfflineCourse implements OnInit {
     return `${startDate} - ${this.formatDate(course.endDate)}`;
   }
 
+  formatDateValue(value: string | null | undefined): string {
+    return value ? this.formatDate(value) : 'N/A';
+  }
+
   formatTimeRange(course: OfflineCourseItem): string {
     if (!course.startTime) {
       return 'N/A';
@@ -760,6 +1008,21 @@ export class ViewMyOfflineCourse implements OnInit {
     const to = this.meta.to ?? 0;
 
     return `Showing ${from}-${to} of ${this.meta.total} offline courses`;
+  }
+
+  private toTitleCase(value: string): string {
+    return `${value || ''}`
+      .toLowerCase()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  private escapeHtml(value: string): string {
+    return `${value}`
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private createEmptyEnrollmentForm(totalFee = 0): OfflineEnrollmentForm {
@@ -1107,7 +1370,12 @@ export class ViewMyOfflineCourse implements OnInit {
       page,
       perPage: this.meta.perPage,
       search: this.search.trim(),
-      city: this.city.trim(),
+      categoryId: this.categoryId,
+      approvalStatus: this.approvalStatus,
+      publishStatus: this.publishStatus,
+      createdByRole: this.createdByRole,
+      startDate: this.startDate,
+      endDate: this.endDate,
       status: this.status,
       scheduleStatus: this.scheduleStatus || 'all',
       sortBy: this.sortBy,

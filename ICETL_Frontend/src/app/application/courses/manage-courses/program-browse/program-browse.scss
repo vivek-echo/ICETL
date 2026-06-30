@@ -1102,3 +1102,12 @@
 .program-filter-panel:has(> .program-filter-panel__body[hidden]) .program-filter-panel__title {
   display: none;
 }
+
+:host-context(.course-categories-page) .program-filter-panel__header {
+  display: none;
+}
+
+:host-context(.course-categories-page) .program-filter-panel:has(> .program-filter-panel__body[hidden]) {
+  display: none;
+  padding: 0;
+}

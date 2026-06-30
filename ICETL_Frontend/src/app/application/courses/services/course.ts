@@ -130,6 +130,21 @@ export class Course {
       this.skipSpinnerOptions(),
     );
   }
+  getOfflineCourseById(payload: { id: number }): Observable<any> {
+    return this.http.post(`${this.API_URL}/getOfflineCourseById`, payload, this.skipSpinnerOptions());
+  }
+  updateOfflineCourse(payload: any): Observable<any> {
+    return this.http.post(`${this.API_URL}/updateOfflineCourse`, payload, {});
+  }
+  approveOfflineCourse(payload: { id: number }): Observable<any> {
+    return this.http.post(`${this.API_URL}/offline-courses/approve`, payload, this.skipSpinnerOptions());
+  }
+  rejectOfflineCourse(payload: { id: number; rejectionReason: string }): Observable<any> {
+    return this.http.post(`${this.API_URL}/offline-courses/reject`, payload, this.skipSpinnerOptions());
+  }
+  publishOfflineCourse(payload: { id: number; publishedFlag: 0 | 1 }): Observable<any> {
+    return this.http.post(`${this.API_URL}/offline-courses/publish`, payload, this.skipSpinnerOptions());
+  }
   enrollOfflineCourseStudent(
     payload: OfflineCourseEnrollmentPayload,
   ): Observable<OfflineCourseEnrollmentResponse> {

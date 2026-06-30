@@ -72,75 +72,104 @@
     </div>
 
     <div id="offlineCourseFiltersPanel" class="offline-toolbar__body" [hidden]="!showFilters">
-    <div class="rbt-form-group offline-toolbar__field offline-toolbar__field--search">
-      <label for="offlineCourseSearch">Search</label>
-      <div class="offline-field">
-        <i class="feather-search"></i>
-        <input id="offlineCourseSearch" type="text" placeholder="Course, venue, instructor..." autocomplete="off"
-          [(ngModel)]="search" (keyup.enter)="onSearch()">
+      <div class="rbt-form-group offline-toolbar__field offline-toolbar__field--search">
+        <label for="offlineCourseSearch">Search</label>
+        <div class="offline-field">
+          <i class="feather-search"></i>
+          <input id="offlineCourseSearch" type="text" placeholder="Title, code, instructor" autocomplete="off"
+            [(ngModel)]="search" (keyup.enter)="onSearch()">
+        </div>
       </div>
-    </div>
 
-    <div class="rbt-form-group offline-toolbar__field">
-      <label for="offlineCourseStatus">Status</label>
-      <div class="offline-field offline-field--select">
-        <i class="feather-activity"></i>
-        <select id="offlineCourseStatus" [(ngModel)]="status" (change)="onFilterChange()">
-          <option value="">All Status</option>
-          <option value="1">Active</option>
-          <option value="0">Inactive</option>
-        </select>
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCourseCategory">Category</label>
+        <div class="offline-field offline-field--select">
+          <i class="feather-grid"></i>
+          <select id="offlineCourseCategory" [(ngModel)]="categoryId" (change)="onFilterChange()">
+            <option value="">All Categories</option>
+            @for (category of categories; track category.id) {
+            <option [value]="category.id">{{ category.categoryName }}</option>
+            }
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div class="rbt-form-group offline-toolbar__field">
-      <label for="offlineCourseTimeline">Timeline</label>
-      <div class="offline-field offline-field--select">
-        <i class="feather-calendar"></i>
-        <select id="offlineCourseTimeline" [(ngModel)]="scheduleStatus" (change)="onFilterChange()">
-          @for (option of scheduleFilters; track option.value) {
-          <option [ngValue]="option.value">{{ option.label }}</option>
-          }
-        </select>
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCourseApproval">Approval</label>
+        <div class="offline-field offline-field--select">
+          <i class="feather-check-circle"></i>
+          <select id="offlineCourseApproval" [(ngModel)]="approvalStatus" (change)="onFilterChange()">
+            @for (option of approvalStatusOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div class="rbt-form-group offline-toolbar__field">
-      <label for="offlineCourseSort">Sort</label>
-      <div class="offline-field offline-field--select">
-        <i class="feather-sliders"></i>
-        <select id="offlineCourseSort" [(ngModel)]="sortBy" (change)="onFilterChange()">
-          @for (option of sortOptions; track option.value) {
-          <option [ngValue]="option.value">{{ option.label }}</option>
-          }
-        </select>
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCoursePublish">Publish</label>
+        <div class="offline-field offline-field--select">
+          <i class="feather-radio"></i>
+          <select id="offlineCoursePublish" [(ngModel)]="publishStatus" (change)="onFilterChange()">
+            @for (option of publishStatusOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div class="rbt-form-group offline-toolbar__field">
-      <label for="offlineCoursePerPage">Per Page</label>
-      <div class="offline-field offline-field--select">
-        <i class="feather-list"></i>
-        <select id="offlineCoursePerPage" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
-          @for (option of perPageOptions; track option) {
-          <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
-          }
-        </select>
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCourseCreatorRole">Created By Role</label>
+        <div class="offline-field offline-field--select">
+          <i class="feather-user-check"></i>
+          <select id="offlineCourseCreatorRole" [(ngModel)]="createdByRole" (change)="onFilterChange()">
+            @for (option of createdByRoleOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div class="offline-toolbar__actions">
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCourseStartDate">Start Date</label>
+        <div class="offline-field">
+          <i class="feather-calendar"></i>
+          <input id="offlineCourseStartDate" type="date" [(ngModel)]="startDate" (change)="onFilterChange()">
+        </div>
+      </div>
+
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCourseEndDate">End Date</label>
+        <div class="offline-field">
+          <i class="feather-calendar"></i>
+          <input id="offlineCourseEndDate" type="date" [(ngModel)]="endDate" (change)="onFilterChange()">
+        </div>
+      </div>
+
+      <div class="rbt-form-group offline-toolbar__field">
+        <label for="offlineCoursePerPage">Per Page</label>
+        <div class="offline-field offline-field--select">
+          <i class="feather-list"></i>
+          <select id="offlineCoursePerPage" [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+            @for (option of perPageOptions; track option) {
+            <option [ngValue]="option">{{ option === 'all' ? 'All' : option }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="offline-toolbar__actions">
         <button type="button" class="offline-action offline-action--primary offline-toolbar__button" (click)="onSearch()"
           [disabled]="loading">
           <i class="feather-filter"></i>
           Apply
         </button>
-        <button type="button" class="offline-action offline-toolbar__button" (click)="clearFilters()" [disabled]="loading">
+        <button type="button" class="offline-action offline-toolbar__button" (click)="clearFilters()"
+          [disabled]="loading">
           <i class="feather-refresh-cw"></i>
           Reset
         </button>
-
-    </div>
+      </div>
     </div>
   </div>
 
@@ -179,146 +208,120 @@
   }
 
   @if (!loading && courses.length > 0) {
-  <div class="offline-course-list">
-    @for (course of courses; track trackByCourseId($index, course)) {
-    <article class="offline-course-row">
-      <div class="offline-course-row__media" [class.offline-course-row__media--empty]="!course.thumbnailUrl">
-        @if (course.thumbnailUrl) {
-        <img [src]="course.thumbnailUrl" [alt]="course.title + ' banner'" (error)="course.thumbnailUrl = null">
-        } @else {
-        <i class="feather-image"></i>
-        }
-      </div>
-
-      <div class="offline-course-row__main">
-        <div class="offline-course-row__badges">
-          <span class="offline-course-card__status" [class.offline-course-card__status--inactive]="!isActive(course)">
-            {{ course.statusLabel || (isActive(course) ? 'Active' : 'Inactive') }}
-          </span>
-          @if (isSpecialCourse(course)) {
-          <span class="offline-course-card__special">Special</span>
-          }
-          <span class="offline-course-card__category">{{ course.categoryName }}</span>
-          <span class="offline-course-card__timeline"
-            [class.offline-course-card__timeline--completed]="course.scheduleStatus === 'completed'">
-            {{ getScheduleLabel(course) }}
-          </span>
-        </div>
-
-        <div class="offline-course-row__title">
-          <h3>{{ course.title }}</h3>
-          @if (course.code) {
-          <span class="entity-code-badge">{{ course.code }}</span>
-          }
-        </div>
-        @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
-        <div class="offline-course-row__primary">
-          <i class="feather-link"></i>
-          <span>Primary Course: {{ getPrimaryCourseLabel(course) }}</span>
-        </div>
-        }
-
-        <p class="offline-course-row__description">
-          {{ course.description || 'Classroom learning details will appear here.' }}
-        </p>
-
-        <div class="offline-course-row__meta">
-          <span>
-            <i class="feather-map-pin"></i>
-            {{ course.venue || 'Venue' }}
-          </span>
-          <span>
-            <i class="feather-navigation"></i>
-            {{ course.city || 'City' }}
-          </span>
-          <span>
-            <i class="feather-calendar"></i>
-            {{ formatDateRange(course) }}
-          </span>
-          <span>
-            <i class="feather-clock"></i>
-            {{ formatTimeRange(course) }}
-          </span>
-        </div>
-
-        @if (getHighlights(course).length > 0) {
-        <ul class="offline-course-row__highlights">
-          @for (highlight of getHighlights(course); track $index) {
-          <li>{{ highlight }}</li>
-          }
-        </ul>
-        }
-      </div>
-
-      <aside class="offline-course-row__side">
-        <div class="offline-course-row__price">
-          <span>Price</span>
-          <strong>{{ formatPrice(course.price) }}</strong>
-        </div>
-
-        <div class="offline-course-card__people">
-          <div class="offline-course-card__person">
-            <div>{{ getInitial(course) }}</div>
-            <span>
-              Instructor
-              <strong>{{ course.instructorName || 'Instructor' }}</strong>
+  <div class="offline-table-wrap">
+    <table class="offline-course-table">
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Category</th>
+          <th>Instructor</th>
+          <th>Created By</th>
+          <th>Creator Role</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Venue</th>
+          <th>Fee</th>
+          <th>Approval</th>
+          <th>Publish</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (course of courses; track trackByCourseId($index, course)) {
+        <tr>
+          <td class="offline-course-table__course">
+            <div class="offline-table-course">
+              <div class="offline-table-thumb" [class.offline-table-thumb--empty]="!course.thumbnailUrl">
+                @if (course.thumbnailUrl) {
+                <img [src]="course.thumbnailUrl" [alt]="course.title + ' banner'" (error)="course.thumbnailUrl = null">
+                } @else {
+                <i class="feather-image"></i>
+                }
+              </div>
+              <div>
+                <strong>{{ course.title }}</strong>
+                <div class="offline-table-code-row">
+                  @if (course.code) {
+                  <span class="entity-code-badge">{{ course.code }}</span>
+                  }
+                  @if (isSpecialCourse(course)) {
+                  <span class="offline-course-card__special">Special</span>
+                  }
+                </div>
+                @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
+                <small>Primary: {{ getPrimaryCourseLabel(course) }}</small>
+                }
+              </div>
+            </div>
+          </td>
+          <td>{{ course.categoryName || 'Uncategorized' }}</td>
+          <td>{{ course.instructorName || 'Instructor' }}</td>
+          <td>{{ course.createdByName || 'Unknown User' }}</td>
+          <td>{{ course.createdByRoleName || course.createdByRole || 'Unknown Role' }}</td>
+          <td>{{ formatDateValue(course.startDate) }}</td>
+          <td>{{ formatDateValue(course.endDate) }}</td>
+          <td>{{ course.venue || 'N/A' }}</td>
+          <td>{{ formatPrice(course.price) }}</td>
+          <td>
+            <span class="offline-status-badge" [ngClass]="getApprovalBadgeClass(course)">
+              {{ getApprovalStatusLabel(course) }}
             </span>
-          </div>
-
-          @if (isAllCoursesView) {
-          <div class="offline-course-card__person">
-            <div>{{ getCreatorInitial(course) }}</div>
-            <span>
-              Created by
-              <strong>{{ course.createdByName || 'Unknown User' }}</strong>
-              @if (course.createdByEmail) {
-              <small>{{ course.createdByEmail }}</small>
+          </td>
+          <td>
+            <span class="offline-status-badge" [ngClass]="getPublishBadgeClass(course)">
+              {{ getPublishStatusLabel(course) }}
+            </span>
+          </td>
+          <td>{{ formatDateValue(course.createdOn) }}</td>
+          <td>
+            <div class="offline-row-actions">
+              @if (canView(course)) {
+              <button type="button" class="offline-icon-action" (click)="viewCourse(course)" title="View course">
+                <i class="feather-eye"></i>
+              </button>
               }
-            </span>
-          </div>
-          }
-        </div>
-
-        @if (course.youtubeLiveUrl || course.meetingLink) {
-        <div class="offline-course-card__links">
-          @if (course.youtubeLiveUrl) {
-          <a [href]="getExternalLinkUrl(course.youtubeLiveUrl)" target="_blank" rel="noopener">
-            <i class="feather-youtube"></i>
-            YouTube Live
-          </a>
-          }
-
-          @if (course.meetingLink) {
-          <a [href]="getExternalLinkUrl(course.meetingLink)" target="_blank" rel="noopener">
-            <i class="feather-video"></i>
-            Meeting Link
-          </a>
-          }
-        </div>
+              @if (canEdit(course)) {
+              <button type="button" class="offline-icon-action" (click)="editCourse(course)" title="Edit course">
+                <i class="feather-edit-2"></i>
+              </button>
+              }
+              @if (canApprove(course)) {
+              <button type="button" class="offline-icon-action offline-icon-action--success"
+                (click)="approveCourse(course)" title="Approve course">
+                <i class="feather-check"></i>
+              </button>
+              }
+              @if (canReject(course)) {
+              <button type="button" class="offline-icon-action offline-icon-action--danger"
+                (click)="rejectCourse(course)" title="Reject course">
+                <i class="feather-x"></i>
+              </button>
+              }
+              @if (canPublish(course)) {
+              <button type="button" class="offline-icon-action offline-icon-action--success"
+                (click)="publishCourse(course, true)" title="Publish course">
+                <i class="feather-upload-cloud"></i>
+              </button>
+              }
+              @if (canUnpublish(course)) {
+              <button type="button" class="offline-icon-action" (click)="publishCourse(course, false)"
+                title="Unpublish course">
+                <i class="feather-slash"></i>
+              </button>
+              }
+              @if (isAllCoursesView && isPublished(course)) {
+              <button type="button" class="offline-icon-action" (click)="openEnrollmentModal(course)"
+                title="Enroll student">
+                <i class="feather-user-plus"></i>
+              </button>
+              }
+            </div>
+          </td>
+        </tr>
         }
-
-        @if (isAllCoursesView) {
-        <button type="button" class="offline-action offline-action--primary offline-enroll-trigger"
-          (click)="openEnrollmentModal(course)">
-          <i class="feather-user-plus"></i>
-          Enroll Student
-        </button>
-        }
-
-        @if (!isAllCoursesView) {
-        <div class="offline-course-card__actions">
-          <button type="button" class="offline-icon-action" (click)="toggleStatus(course)" title="Toggle status">
-            <i class="feather-power"></i>
-          </button>
-          <button type="button" class="offline-icon-action offline-icon-action--danger" (click)="deleteCourse(course)"
-            title="Delete course">
-            <i class="feather-trash-2"></i>
-          </button>
-        </div>
-        }
-      </aside>
-    </article>
-    }
+      </tbody>
+    </table>
   </div>
   }
 

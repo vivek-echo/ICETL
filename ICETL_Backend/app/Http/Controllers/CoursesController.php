@@ -18,6 +18,17 @@ use Illuminate\Validation\Rule;
 
 class CoursesController extends Controller
 {
+    private const ROLE_ADMIN = 1;
+    private const ROLE_INSTRUCTOR = 3;
+    private const APPROVAL_PENDING = 'PENDING';
+    private const APPROVAL_APPROVED = 'APPROVED';
+    private const APPROVAL_REJECTED = 'REJECTED';
+    private const OFFLINE_COURSE_PERMISSION_ROUTES = [
+        '/application/courses/manageOfflineCourses',
+        '/application/courses/manageOfflineCourses/add',
+        '/application/courses/manageOfflineCourses/viewMyOfflineCourses',
+        '/application/courses/manageOfflineCourses/viewAllOfflineCourses',
+    ];
 
     public function addCourseCategory(Request $request)
     {
@@ -1003,6 +1014,16 @@ class CoursesController extends Controller
         }
 
         if (
+            !$this->isInstructorUser($user)
+            && !$this->canManageOfflineCourseWorkflow($user)
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to create offline courses.'
+            ], 403);
+        }
+
+        if (
             (!$request->filled('endDate') || $request->input('endDate') === $request->input('startDate'))
             && $request->filled('endTime')
             && $request->input('endTime') <= $request->input('startTime')
@@ -1017,7 +1038,8 @@ class CoursesController extends Controller
         }
 
         $instructorIds = $this->normalizeInstructorIds($request->input('instructor'));
-        $isSpecial = $request->boolean('isSpecial');
+        $creatorIsInstructor = $this->isInstructorUser($user);
+        $isSpecial = $request->boolean('isSpecial') || $creatorIsInstructor;
         $parentCourseId = $isSpecial ? (int) $request->input('parentCourseId') : null;
 
         if (empty($instructorIds)) {
@@ -1054,8 +1076,17 @@ class CoursesController extends Controller
             }
 
             $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+            $requestedPublishedFlag = (int) $request->input('status') === 1 ? 1 : 0;
+            $publishedFlag = $creatorIsInstructor ? 0 : $requestedPublishedFlag;
+            $approvalStatus = $creatorIsInstructor
+                ? self::APPROVAL_PENDING
+                : self::APPROVAL_APPROVED;
+            $approvedBy = $approvalStatus === self::APPROVAL_APPROVED ? (int) $user->id : null;
+            $approvedOn = $approvalStatus === self::APPROVAL_APPROVED ? now() : null;
+            $publishedBy = $publishedFlag === 1 ? (int) $user->id : null;
+            $publishedOn = $publishedFlag === 1 ? now() : null;
 
-            $courseId = DB::table('courses')->insertGetId([
+            $courseId = DB::table('courses')->insertGetId($this->filterExistingColumns('courses', [
                 'title' => trim((string) $request->input('title')),
                 'categoryId' => (int) $request->input('category'),
                 'instructorIds' => json_encode($instructorIds),
@@ -1066,7 +1097,7 @@ class CoursesController extends Controller
                 'description' => trim((string) $request->input('description')),
                 'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
                 'thumbnail' => $thumbnailPath,
-                'status' => (int) $request->input('status'),
+                'status' => $publishedFlag,
                 'courseType' => 2,
                 'isSpecial' => $isSpecial ? 1 : 0,
                 'parentCourseId' => $parentCourseId,
@@ -1080,9 +1111,18 @@ class CoursesController extends Controller
                 'meetingLink' => $request->input('meetingLink') ?: null,
                 'createdBy' => (int) $user->id,
                 'createdByRoleId' => $user->role ?? null,
+                'approvalStatus' => $approvalStatus,
+                'approvedBy' => $approvedBy,
+                'approvedOn' => $approvedOn,
+                'rejectedBy' => null,
+                'rejectedOn' => null,
+                'rejectionReason' => null,
+                'publishedFlag' => $publishedFlag,
+                'publishedBy' => $publishedBy,
+                'publishedOn' => $publishedOn,
                 'deletedFlag' => 0,
                 'createdOn' => now(),
-            ]);
+            ]));
 
             $courseCode = EntityCodeService::assignIfMissing(
                 'courses',
@@ -1183,6 +1223,15 @@ class CoursesController extends Controller
                 'categoryIds.*' => 'integer',
                 'isSpecial' => 'nullable|boolean',
                 'status' => 'nullable|in:0,1',
+                'approvalStatus' => ['nullable', Rule::in([
+                    self::APPROVAL_PENDING,
+                    self::APPROVAL_APPROVED,
+                    self::APPROVAL_REJECTED,
+                ])],
+                'publishStatus' => 'nullable|in:0,1',
+                'createdByRole' => 'nullable|string|max:50',
+                'startDate' => 'nullable|date',
+                'endDate' => 'nullable|date',
                 'scheduleStatus' => 'nullable|in:all,upcoming,ongoing,completed',
                 'activeScheduleOnly' => 'nullable|boolean',
                 'sortBy' => 'nullable|in:newest,oldest,dateAsc,dateDesc',
@@ -1211,8 +1260,8 @@ class CoursesController extends Controller
                 ->where('c.courseType', 2);
 
             if ($onlyMine) {
-                $query->where('c.createdBy', (int) $user->id);
-                $summaryQuery->where('c.createdBy', (int) $user->id);
+                $this->applyOfflineCourseMineScope($query, (int) $user->id);
+                $this->applyOfflineCourseMineScope($summaryQuery, (int) $user->id);
             }
 
             if ($request->boolean('activeScheduleOnly')) {
@@ -1247,7 +1296,8 @@ class CoursesController extends Controller
                     $course,
                     $courseInstructorMap,
                     $fallbackInstructors,
-                    $enrolledCourseLookup
+                    $enrolledCourseLookup,
+                    $user
                 ))
                 ->values();
 
@@ -1283,6 +1333,10 @@ class CoursesController extends Controller
         return DB::table('courses as c')
             ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
             ->leftJoin('users as creator', 'creator.id', '=', 'c.createdBy')
+            ->leftJoin('roles as creatorRole', 'creatorRole.id', '=', 'c.createdByRoleId')
+            ->leftJoin('users as approver', 'approver.id', '=', 'c.approvedBy')
+            ->leftJoin('users as rejector', 'rejector.id', '=', 'c.rejectedBy')
+            ->leftJoin('users as publisher', 'publisher.id', '=', 'c.publishedBy')
             ->leftJoin('courses as parentCourse', 'parentCourse.id', '=', 'c.parentCourseId')
             ->where('c.deletedFlag', 0)
             ->where('c.courseType', 2)
@@ -1312,8 +1366,22 @@ class CoursesController extends Controller
                 'c.youtubeLiveUrl',
                 'c.meetingLink',
                 'c.createdBy',
+                'c.createdByRoleId',
+                'creatorRole.roleName as createdByRoleName',
                 'creator.name as createdByName',
                 'creator.email as createdByEmail',
+                $this->courseColumnSelect('c', 'approvalStatus', 'approvalStatus', "'" . self::APPROVAL_PENDING . "'"),
+                $this->courseColumnSelect('c', 'approvedBy', 'approvedBy'),
+                $this->courseColumnSelect('c', 'approvedOn', 'approvedOn'),
+                'approver.name as approvedByName',
+                $this->courseColumnSelect('c', 'rejectedBy', 'rejectedBy'),
+                $this->courseColumnSelect('c', 'rejectedOn', 'rejectedOn'),
+                $this->courseColumnSelect('c', 'rejectionReason', 'rejectionReason'),
+                'rejector.name as rejectedByName',
+                $this->courseColumnSelect('c', 'publishedFlag', 'publishedFlag', 'c.status'),
+                $this->courseColumnSelect('c', 'publishedBy', 'publishedBy'),
+                $this->courseColumnSelect('c', 'publishedOn', 'publishedOn'),
+                'publisher.name as publishedByName',
                 'c.createdOn',
                 'c.updatedOn'
             );
@@ -1324,6 +1392,13 @@ class CoursesController extends Controller
         return Schema::hasColumn('courses', 'code')
             ? DB::raw('parentCourse.code as parentCourseCode')
             : DB::raw('NULL as parentCourseCode');
+    }
+
+    private function courseColumnSelect(string $tableAlias, string $column, string $alias, string $fallback = 'NULL'): mixed
+    {
+        return Schema::hasColumn('courses', $column)
+            ? DB::raw("{$tableAlias}.{$column} as {$alias}")
+            : DB::raw("{$fallback} as {$alias}");
     }
 
     private function applyOfflineCourseFilters($query, Request $request): void
@@ -1380,6 +1455,44 @@ class CoursesController extends Controller
 
         if ($request->input('status') !== null && $request->input('status') !== '') {
             $query->where('c.status', (int) $request->input('status'));
+        }
+
+        if ($request->filled('approvalStatus') && Schema::hasColumn('courses', 'approvalStatus')) {
+            $query->where('c.approvalStatus', strtoupper((string) $request->input('approvalStatus')));
+        }
+
+        if ($request->input('publishStatus') !== null && $request->input('publishStatus') !== '') {
+            if (Schema::hasColumn('courses', 'publishedFlag')) {
+                $query->where('c.publishedFlag', (int) $request->input('publishStatus'));
+            } else {
+                $query->where('c.status', (int) $request->input('publishStatus'));
+            }
+        }
+
+        if ($request->filled('createdByRole')) {
+            $roleFilter = $this->normalizeRoleValue($request->input('createdByRole'));
+
+            if ($roleFilter !== '') {
+                $query->where(function ($roleQuery) use ($roleFilter) {
+                    $roleQuery->whereRaw(
+                        "LOWER(REPLACE(REPLACE(COALESCE(creatorRole.roleName, ''), ' ', ''), '-', '')) LIKE ?",
+                        ['%' . $roleFilter . '%']
+                    );
+
+                    if (ctype_digit($roleFilter)) {
+                        $roleQuery->orWhere('c.createdByRoleId', (int) $roleFilter);
+                    }
+                });
+            }
+        }
+
+        if ($request->filled('startDate')) {
+            $query->whereDate('c.startDate', '>=', $request->input('startDate'));
+        }
+
+        if ($request->filled('endDate')) {
+            $lastCourseDate = DB::raw('COALESCE(c.endDate, c.startDate)');
+            $query->whereDate($lastCourseDate, '<=', $request->input('endDate'));
         }
 
         $scheduleStatus = (string) $request->input('scheduleStatus', '');
@@ -1492,7 +1605,7 @@ class CoursesController extends Controller
             ->all();
     }
 
-    private function formatOfflineCourse(object $course, $courseInstructorMap, $fallbackInstructors, array $enrolledCourseLookup = []): array
+    private function formatOfflineCourse(object $course, $courseInstructorMap, $fallbackInstructors, array $enrolledCourseLookup = [], ?object $viewer = null): array
     {
         $relationInstructors = collect($courseInstructorMap->get($course->id, []))
             ->map(fn($instructor) => [
@@ -1512,6 +1625,16 @@ class CoursesController extends Controller
         $endDate = $course->endDate ? (string) $course->endDate : null;
         $highlights = $this->decodeCourseHighlights($course->courseHighlights ?? null);
         $thumbnail = $course->thumbnail ? (string) $course->thumbnail : null;
+        $approvalStatus = strtoupper((string) ($course->approvalStatus ?? self::APPROVAL_PENDING));
+        $approvalStatus = in_array($approvalStatus, [
+            self::APPROVAL_PENDING,
+            self::APPROVAL_APPROVED,
+            self::APPROVAL_REJECTED,
+        ], true)
+            ? $approvalStatus
+            : self::APPROVAL_PENDING;
+        $publishedFlag = (int) ($course->publishedFlag ?? $course->status ?? 0) === 1 ? 1 : 0;
+        $actions = $this->offlineCourseActionPermissions($course, $instructors, $viewer);
 
         return [
             'id' => (int) $course->id,
@@ -1533,6 +1656,21 @@ class CoursesController extends Controller
             'thumbnailUrl' => $thumbnail ? $this->privateFileUrl(request(), $thumbnail) : null,
             'status' => (int) $course->status,
             'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
+            'approvalStatus' => $approvalStatus,
+            'approvalStatusLabel' => ucfirst(strtolower($approvalStatus)),
+            'approvedBy' => $course->approvedBy ? (int) $course->approvedBy : null,
+            'approvedByName' => $course->approvedByName ?? null,
+            'approvedOn' => $course->approvedOn ?? null,
+            'rejectedBy' => $course->rejectedBy ? (int) $course->rejectedBy : null,
+            'rejectedByName' => $course->rejectedByName ?? null,
+            'rejectedOn' => $course->rejectedOn ?? null,
+            'rejectionReason' => $course->rejectionReason ?? null,
+            'publishedFlag' => $publishedFlag,
+            'publishStatus' => $publishedFlag,
+            'publishStatusLabel' => $publishedFlag === 1 ? 'Published' : 'Unpublished',
+            'publishedBy' => $course->publishedBy ? (int) $course->publishedBy : null,
+            'publishedByName' => $course->publishedByName ?? null,
+            'publishedOn' => $course->publishedOn ?? null,
             'scheduleStatus' => $this->getOfflineCourseScheduleStatus($startDate, $endDate),
             'isEnrolled' => !empty($enrolledCourseLookup[(int) $course->id]),
             'courseType' => (int) $course->courseType,
@@ -1545,10 +1683,14 @@ class CoursesController extends Controller
             'youtubeLiveUrl' => $course->youtubeLiveUrl,
             'meetingLink' => $course->meetingLink,
             'createdById' => $course->createdBy ? (int) $course->createdBy : null,
+            'createdByRoleId' => $course->createdByRoleId ? (int) $course->createdByRoleId : null,
+            'createdByRoleName' => $course->createdByRoleName ?: 'Unknown Role',
+            'createdByRole' => $course->createdByRoleName ?: 'Unknown Role',
             'createdByName' => $course->createdByName ?: 'Unknown User',
             'createdByEmail' => $course->createdByEmail,
             'createdOn' => $course->createdOn,
             'updatedOn' => $course->updatedOn,
+            'actions' => $actions,
         ];
     }
 
@@ -3968,6 +4110,485 @@ class CoursesController extends Controller
         return "COALESCE(NULLIF(pl.transactionNo, ''), NULLIF(p.razorpayPaymentId, ''), NULLIF(pl.referenceNo, ''), NULLIF(p.paymentReference, ''), NULLIF(i.paymentReference, ''))";
     }
 
+    public function getOfflineCourseById(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        try {
+            $course = $this->baseOfflineCourseQuery()
+                ->where('c.id', (int) $request->input('id'))
+                ->first();
+
+            if (!$course) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Offline course not found'
+                ], 404);
+            }
+
+            $courseItems = collect([$course]);
+            $courseInstructorMap = $this->courseInstructorMap($courseItems);
+            $fallbackInstructors = $this->fallbackInstructorNames($courseItems);
+            $formatted = $this->formatOfflineCourse(
+                $course,
+                $courseInstructorMap,
+                $fallbackInstructors,
+                [],
+                $user
+            );
+
+            if (empty($formatted['actions']['view'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You are not allowed to view this offline course.'
+                ], 403);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course fetched successfully',
+                'data' => $formatted,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching offline course by id: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateOfflineCourse(Request $request)
+    {
+        $this->prepareCourseHighlightsForValidation($request);
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+            'title' => ['required', 'string', 'min:5', 'max:120'],
+            'category' => 'required|integer|exists:coursecategories,id',
+            'isSpecial' => 'nullable|boolean',
+            'parentCourseId' => [
+                Rule::requiredIf(fn() => $request->boolean('isSpecial')),
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
+            'instructor' => 'required',
+            'venue' => ['required', 'string', 'min:3', 'max:150'],
+            'city' => ['required', 'string', 'min:2', 'max:100'],
+            'startDate' => 'required|date',
+            'endDate' => 'nullable|date|after:startDate',
+            'startTime' => 'required|date_format:H:i',
+            'endTime' => 'nullable|date_format:H:i',
+            'youtubeLiveUrl' => 'nullable|string|max:255',
+            'meetingLink' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'description' => ['required', 'string', 'min:20', 'max:300'],
+            'courseHighlights' => 'nullable|array',
+            'courseHighlights.*' => 'string|max:255',
+            'thumbnail' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'status' => 'required|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        if (
+            (!$request->filled('endDate') || $request->input('endDate') === $request->input('startDate'))
+            && $request->filled('endTime')
+            && $request->input('endTime') <= $request->input('startTime')
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'endTime' => ['End time must be later than start time for a same-day course.']
+                ]
+            ], 422);
+        }
+
+        $courseId = (int) $request->input('id');
+        $course = $this->findOfflineCourseRecord($courseId);
+
+        if (!$course) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline course not found'
+            ], 404);
+        }
+
+        $currentApprovalStatus = $this->offlineCourseApprovalStatus($course);
+        $userCanManageWorkflow = $this->canManageOfflineCourseWorkflow($user);
+        $userIsInstructor = $this->isInstructorUser($user);
+        $userOwnsOrIsAssigned = $this->offlineCourseBelongsToViewer($course, (int) $user->id);
+
+        if (
+            !$userCanManageWorkflow
+            && !(
+                $userIsInstructor
+                && $userOwnsOrIsAssigned
+                && in_array($currentApprovalStatus, [self::APPROVAL_PENDING, self::APPROVAL_REJECTED], true)
+            )
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to edit this offline course.'
+            ], 403);
+        }
+
+        $instructorIds = $this->normalizeInstructorIds($request->input('instructor'));
+        $isSpecial = $request->boolean('isSpecial') || $userIsInstructor;
+        $parentCourseId = $isSpecial ? (int) $request->input('parentCourseId') : null;
+
+        if (empty($instructorIds)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'instructor' => ['Please select at least one valid instructor.']
+                ]
+            ], 422);
+        }
+
+        if ($isSpecial && !$this->isValidParentAcademicCourse($parentCourseId, (int) $request->input('category'))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'parentCourseId' => ['Please select a valid parent academic course from the same category.']
+                ]
+            ], 422);
+        }
+
+        $requestedPublishedFlag = (int) $request->input('status') === 1 ? 1 : 0;
+
+        if ($requestedPublishedFlag === 1 && $currentApprovalStatus !== self::APPROVAL_APPROVED) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This offline course must be approved before it can be published.'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $thumbnailPath = $course->thumbnail ?? null;
+
+            if ($request->hasFile('thumbnail')) {
+                if ($thumbnailPath && Storage::disk('private')->exists($thumbnailPath)) {
+                    Storage::disk('private')->delete($thumbnailPath);
+                }
+
+                $file = $request->file('thumbnail');
+                $thumbnailPath = $file->storeAs(
+                    'course-thumbnails',
+                    uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension(),
+                    'private'
+                );
+            }
+
+            $courseHighlights = $this->normalizeCourseHighlights($request->input('courseHighlights', []));
+            $nextApprovalStatus = $userIsInstructor
+                ? self::APPROVAL_PENDING
+                : $currentApprovalStatus;
+            $nextPublishedFlag = $userIsInstructor ? 0 : $requestedPublishedFlag;
+            $publishedBy = $nextPublishedFlag === 1 ? (int) $user->id : null;
+            $publishedOn = $nextPublishedFlag === 1 ? now() : null;
+
+            $updatePayload = [
+                'title' => trim((string) $request->input('title')),
+                'categoryId' => (int) $request->input('category'),
+                'instructorIds' => json_encode($instructorIds),
+                'price' => $request->input('price'),
+                'description' => trim((string) $request->input('description')),
+                'courseHighlights' => !empty($courseHighlights) ? json_encode($courseHighlights) : null,
+                'thumbnail' => $thumbnailPath,
+                'status' => $nextPublishedFlag,
+                'isSpecial' => $isSpecial ? 1 : 0,
+                'parentCourseId' => $parentCourseId,
+                'venue' => trim((string) $request->input('venue')),
+                'city' => trim((string) $request->input('city')),
+                'startDate' => $request->input('startDate'),
+                'endDate' => $request->input('endDate') ?: null,
+                'startTime' => $request->input('startTime'),
+                'endTime' => $request->input('endTime') ?: null,
+                'youtubeLiveUrl' => $request->input('youtubeLiveUrl') ?: null,
+                'meetingLink' => $request->input('meetingLink') ?: null,
+                'approvalStatus' => $nextApprovalStatus,
+                'publishedFlag' => $nextPublishedFlag,
+                'publishedBy' => $publishedBy,
+                'publishedOn' => $publishedOn,
+                'updatedOn' => now(),
+            ];
+
+            if ($userIsInstructor) {
+                $updatePayload['approvedBy'] = null;
+                $updatePayload['approvedOn'] = null;
+            }
+
+            DB::table('courses')
+                ->where('id', $courseId)
+                ->update($this->filterExistingColumns('courses', $updatePayload));
+
+            DB::table('courseinstructors')
+                ->where('courseId', $courseId)
+                ->delete();
+
+            foreach ($instructorIds as $instructorId) {
+                DB::table('courseinstructors')->insert([
+                    'courseId' => $courseId,
+                    'instructorId' => $instructorId,
+                    'createdOn' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course updated successfully',
+                'data' => [
+                    'id' => $courseId,
+                    'approvalStatus' => $nextApprovalStatus,
+                    'publishedFlag' => $nextPublishedFlag,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating offline course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function approveOfflineCourse(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        if (!$this->canManageOfflineCourseWorkflow($user)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only Admin or an authorized Team role can approve offline courses.'
+            ], 403);
+        }
+
+        $course = $this->findOfflineCourseRecord((int) $request->input('id'));
+
+        if (!$course) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline course not found'
+            ], 404);
+        }
+
+        if ($this->offlineCourseApprovalStatus($course) !== self::APPROVAL_PENDING) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only pending offline courses can be approved.'
+            ], 422);
+        }
+
+        try {
+            DB::table('courses')
+                ->where('id', (int) $course->id)
+                ->update($this->filterExistingColumns('courses', [
+                    'approvalStatus' => self::APPROVAL_APPROVED,
+                    'approvedBy' => (int) $user->id,
+                    'approvedOn' => now(),
+                    'rejectedBy' => null,
+                    'rejectedOn' => null,
+                    'rejectionReason' => null,
+                    'publishedFlag' => 0,
+                    'status' => 0,
+                    'publishedBy' => null,
+                    'publishedOn' => null,
+                    'updatedOn' => now(),
+                ]));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course approved successfully',
+                'data' => [
+                    'id' => (int) $course->id,
+                    'approvalStatus' => self::APPROVAL_APPROVED,
+                    'publishedFlag' => 0,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error approving offline course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function rejectOfflineCourse(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+            'rejectionReason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        if (!$this->canManageOfflineCourseWorkflow($user)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only Admin or an authorized Team role can reject offline courses.'
+            ], 403);
+        }
+
+        $course = $this->findOfflineCourseRecord((int) $request->input('id'));
+
+        if (!$course) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline course not found'
+            ], 404);
+        }
+
+        if ($this->offlineCourseApprovalStatus($course) === self::APPROVAL_REJECTED) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This offline course is already rejected.'
+            ], 422);
+        }
+
+        try {
+            DB::table('courses')
+                ->where('id', (int) $course->id)
+                ->update($this->filterExistingColumns('courses', [
+                    'approvalStatus' => self::APPROVAL_REJECTED,
+                    'approvedBy' => null,
+                    'approvedOn' => null,
+                    'rejectedBy' => (int) $user->id,
+                    'rejectedOn' => now(),
+                    'rejectionReason' => trim((string) $request->input('rejectionReason')),
+                    'publishedFlag' => 0,
+                    'status' => 0,
+                    'publishedBy' => null,
+                    'publishedOn' => null,
+                    'updatedOn' => now(),
+                ]));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offline course rejected successfully',
+                'data' => [
+                    'id' => (int) $course->id,
+                    'approvalStatus' => self::APPROVAL_REJECTED,
+                    'publishedFlag' => 0,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error rejecting offline course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function publishOfflineCourse(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:courses,id',
+            'publishedFlag' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        return $this->setOfflineCoursePublishState(
+            $request,
+            (int) $request->input('id'),
+            $request->boolean('publishedFlag')
+        );
+    }
+
     public function updateOfflineCourseStatus(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -3983,40 +4604,77 @@ class CoursesController extends Controller
             ], 422);
         }
 
-        try {
-            $updated = DB::table('courses')
-                ->where('id', (int) $request->input('id'))
-                ->where('createdBy', $request->user()->id)
-                ->where('courseType', 2)
-                ->where('deletedFlag', 0)
-                ->update([
-                    'status' => (int) $request->input('status'),
-                    'updatedOn' => now(),
-                ]);
+        return $this->setOfflineCoursePublishState(
+            $request,
+            (int) $request->input('id'),
+            (int) $request->input('status') === 1
+        );
+    }
 
-            if (!$updated) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Offline course not found'
-                ], 404);
-            }
+    private function setOfflineCoursePublishState(Request $request, int $courseId, bool $shouldPublish)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        if (!$this->canManageOfflineCourseWorkflow($user)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Only Admin or an authorized Team role can publish or unpublish offline courses.'
+            ], 403);
+        }
+
+        $course = $this->findOfflineCourseRecord($courseId);
+
+        if (!$course) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offline course not found'
+            ], 404);
+        }
+
+        if ($shouldPublish && $this->offlineCourseApprovalStatus($course) !== self::APPROVAL_APPROVED) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This offline course must be approved before it can be published.'
+            ], 422);
+        }
+
+        try {
+            DB::table('courses')
+                ->where('id', $courseId)
+                ->update($this->filterExistingColumns('courses', [
+                    'status' => $shouldPublish ? 1 : 0,
+                    'publishedFlag' => $shouldPublish ? 1 : 0,
+                    'publishedBy' => $shouldPublish ? (int) $user->id : null,
+                    'publishedOn' => $shouldPublish ? now() : null,
+                    'updatedOn' => now(),
+                ]));
 
             $courseCode = EntityCodeService::assignIfMissing(
                 'courses',
-                (int) $request->input('id'),
+                $courseId,
                 EntityCodeService::PREFIX_ACADEMIC_COURSE
             );
 
             return response()->json([
                 'status' => true,
-                'message' => 'Offline course status updated successfully',
+                'message' => $shouldPublish
+                    ? 'Offline course published successfully'
+                    : 'Offline course unpublished successfully',
                 'data' => [
-                    'id' => (int) $request->input('id'),
+                    'id' => $courseId,
                     'code' => $courseCode,
+                    'publishedFlag' => $shouldPublish ? 1 : 0,
                 ],
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error updating offline course status: ' . $e->getMessage());
+            Log::error('Error updating offline course publish status: ' . $e->getMessage());
 
             return response()->json([
                 'status' => false,
@@ -4024,6 +4682,224 @@ class CoursesController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function findOfflineCourseRecord(int $courseId): ?object
+    {
+        return DB::table('courses')
+            ->where('id', $courseId)
+            ->where('courseType', 2)
+            ->where('deletedFlag', 0)
+            ->first();
+    }
+
+    private function offlineCourseApprovalStatus(object $course): string
+    {
+        $status = strtoupper((string) ($course->approvalStatus ?? self::APPROVAL_PENDING));
+
+        return in_array($status, [
+            self::APPROVAL_PENDING,
+            self::APPROVAL_APPROVED,
+            self::APPROVAL_REJECTED,
+        ], true)
+            ? $status
+            : self::APPROVAL_PENDING;
+    }
+
+    private function offlineCourseBelongsToViewer(object $course, int $userId): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        if ((int) ($course->createdBy ?? 0) === $userId) {
+            return true;
+        }
+
+        return DB::table('courseinstructors')
+            ->where('courseId', (int) ($course->id ?? 0))
+            ->where('instructorId', $userId)
+            ->exists();
+    }
+
+    private function applyOfflineCourseMineScope($query, int $userId): void
+    {
+        $query->where(function ($mineQuery) use ($userId) {
+            $mineQuery->where('c.createdBy', $userId)
+                ->orWhereExists(function ($assignedQuery) use ($userId) {
+                    $assignedQuery
+                        ->select(DB::raw(1))
+                        ->from('courseinstructors as my_ci')
+                        ->whereColumn('my_ci.courseId', 'c.id')
+                        ->where('my_ci.instructorId', $userId);
+                });
+        });
+    }
+
+    private function offlineCourseActionPermissions(object $course, $instructors, ?object $viewer): array
+    {
+        if (!$viewer) {
+            return [
+                'view' => false,
+                'edit' => false,
+                'approve' => false,
+                'reject' => false,
+                'publish' => false,
+                'unpublish' => false,
+            ];
+        }
+
+        $approvalStatus = $this->offlineCourseApprovalStatus($course);
+        $publishedFlag = (int) ($course->publishedFlag ?? $course->status ?? 0) === 1;
+        $canManageWorkflow = $this->canManageOfflineCourseWorkflow($viewer);
+        $viewerId = (int) ($viewer->id ?? 0);
+        $isCreatedByViewer = (int) ($course->createdBy ?? 0) === $viewerId;
+        $isAssignedToViewer = collect($instructors)
+            ->contains(fn($instructor) => (int) ($instructor['id'] ?? 0) === $viewerId);
+        $isInstructor = $this->isInstructorUser($viewer);
+        $canView = $canManageWorkflow || $isCreatedByViewer || $isAssignedToViewer;
+        $canEdit = $canManageWorkflow || (
+            $isInstructor
+            && ($isCreatedByViewer || $isAssignedToViewer)
+            && in_array($approvalStatus, [self::APPROVAL_PENDING, self::APPROVAL_REJECTED], true)
+        );
+
+        return [
+            'view' => $canView,
+            'edit' => $canEdit,
+            'approve' => $canManageWorkflow && $approvalStatus === self::APPROVAL_PENDING,
+            'reject' => $canManageWorkflow && $approvalStatus === self::APPROVAL_PENDING,
+            'publish' => $canManageWorkflow && $approvalStatus === self::APPROVAL_APPROVED && !$publishedFlag,
+            'unpublish' => $canManageWorkflow && $approvalStatus === self::APPROVAL_APPROVED && $publishedFlag,
+        ];
+    }
+
+    private function canManageOfflineCourseWorkflow(object $user): bool
+    {
+        if ($this->isAdminUser($user)) {
+            return true;
+        }
+
+        if ($this->isInstructorUser($user)) {
+            return false;
+        }
+
+        $roleId = (int) ($user->role ?? 0);
+
+        if ($roleId <= 0 || !Schema::hasTable('roles') || !Schema::hasTable('role_menu_permissions')) {
+            return false;
+        }
+
+        static $permissionCache = [];
+
+        if (array_key_exists($roleId, $permissionCache)) {
+            return $permissionCache[$roleId];
+        }
+
+        $role = DB::table('roles')
+            ->where('id', $roleId)
+            ->where('deletedFlag', 0)
+            ->first();
+
+        if (!$role || !str_contains($this->normalizeRoleValue($role->roleName ?? ''), 'team')) {
+            $permissionCache[$roleId] = false;
+            return false;
+        }
+
+        $permissionCache[$roleId] = $this->roleHasAnyMenuPermission(
+            $roleId,
+            self::OFFLINE_COURSE_PERMISSION_ROUTES
+        );
+
+        return $permissionCache[$roleId];
+    }
+
+    private function roleHasAnyMenuPermission(int $roleId, array $routes): bool
+    {
+        $permission = DB::table('role_menu_permissions')
+            ->where('roleId', $roleId)
+            ->where('deletedFlag', 0)
+            ->first();
+
+        if (!$permission || !is_string($permission->permissionJson ?? null)) {
+            return false;
+        }
+
+        $payload = json_decode($permission->permissionJson, true);
+
+        if (!is_array($payload)) {
+            return false;
+        }
+
+        $allowedMenuIds = collect($payload)
+            ->filter(function ($value, $key): bool {
+                if (!ctype_digit((string) $key)) {
+                    return false;
+                }
+
+                if (is_bool($value)) {
+                    return $value;
+                }
+
+                if (is_numeric($value)) {
+                    return (int) $value === 1;
+                }
+
+                if (is_string($value)) {
+                    return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
+                }
+
+                return false;
+            })
+            ->keys()
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if (empty($allowedMenuIds)) {
+            return false;
+        }
+
+        $normalizedRoutes = collect($routes)
+            ->map(fn($route) => $this->normalizeRoute($route))
+            ->values()
+            ->all();
+
+        $allowedRouteSet = array_flip($normalizedRoutes);
+        $allowedMenus = DB::table('menus')
+            ->whereIn('id', $allowedMenuIds)
+            ->where('deletedFlag', 0)
+            ->pluck('url');
+
+        return $allowedMenus
+            ->contains(fn($url) => isset($allowedRouteSet[$this->normalizeRoute($url)]));
+    }
+
+    private function isAdminUser(object $user): bool
+    {
+        return (int) ($user->role ?? 0) === self::ROLE_ADMIN;
+    }
+
+    private function isInstructorUser(object $user): bool
+    {
+        return (int) ($user->role ?? 0) === self::ROLE_INSTRUCTOR;
+    }
+
+    private function normalizeRoleValue(mixed $value): string
+    {
+        return preg_replace('/[^a-z0-9]+/', '', strtolower(trim((string) ($value ?? '')))) ?? '';
+    }
+
+    private function normalizeRoute(mixed $value): string
+    {
+        $route = trim((string) ($value ?? ''));
+        $route = $route === '' ? '' : ('/' . ltrim($route, '/'));
+
+        return preg_replace(
+            '#/application/courses/manageOfflineCourse(/|$)#',
+            '/application/courses/manageOfflineCourses$1',
+            rtrim($route, '/')
+        ) ?: '';
     }
 
     public function deleteOfflineCourse(Request $request)

@@ -1122,3 +1122,17 @@
 .academic-toolbar:has(> .academic-toolbar__body[hidden]) .academic-toolbar__top > div {
   display: none;
 }
+
+:host-context(.course-categories-page) .academic-toolbar__top {
+  display: none;
+}
+
+:host-context(.course-categories-page) .academic-toolbar__body {
+  padding-top: 0;
+}
+
+:host-context(.course-categories-page) .academic-toolbar:has(> .academic-toolbar__body[hidden]) {
+  display: none;
+  margin-bottom: 0;
+  padding: 0;
+}

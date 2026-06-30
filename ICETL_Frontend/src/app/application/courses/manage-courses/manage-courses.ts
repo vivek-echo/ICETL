@@ -17,6 +17,11 @@ interface CourseTab {
   route: string;
 }
 
+interface FilterToggleHost {
+  showFilters: boolean;
+  toggleFilters(): void;
+}
+
 @Component({
   selector: 'app-manage-courses',
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
@@ -33,6 +38,7 @@ export class ManageCourses implements OnInit, OnDestroy {
   };
 
   tabs: CourseTab[] = this.fallbackTabs;
+  activeFilterHost: FilterToggleHost | null = null;
 
   constructor(@Inject(PLATFORM_ID) platformId: object) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -58,6 +64,26 @@ export class ManageCourses implements OnInit, OnDestroy {
     window.removeEventListener('storage', this.refreshTabs);
     window.removeEventListener('auth-user-updated', this.refreshTabs);
     window.removeEventListener('auth-session-cleared', this.refreshTabs);
+  }
+
+  onRouteComponentActivate(component: unknown): void {
+    this.activeFilterHost = this.isFilterToggleHost(component) ? component : null;
+  }
+
+  onRouteComponentDeactivate(): void {
+    this.activeFilterHost = null;
+  }
+
+  get hasFilterToggle(): boolean {
+    return this.activeFilterHost !== null;
+  }
+
+  get filtersVisible(): boolean {
+    return this.activeFilterHost?.showFilters ?? false;
+  }
+
+  toggleActiveFilters(): void {
+    this.activeFilterHost?.toggleFilters();
   }
 
   private loadTabs(): void {
@@ -140,5 +166,15 @@ export class ManageCourses implements OnInit, OnDestroy {
     }
 
     return route.startsWith('/') ? route : `/${route}`;
+  }
+
+  private isFilterToggleHost(component: unknown): component is FilterToggleHost {
+    const candidate = component as Partial<FilterToggleHost> | null;
+
+    return (
+      !!candidate &&
+      typeof candidate.showFilters === 'boolean' &&
+      typeof candidate.toggleFilters === 'function'
+    );
   }
 }

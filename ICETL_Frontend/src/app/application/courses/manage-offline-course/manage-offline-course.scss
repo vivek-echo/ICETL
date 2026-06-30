@@ -7,7 +7,9 @@
 }
 
 .offline-course-tabs {
+  flex: 1 1 auto;
   gap: 10px;
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: 4px;
 }
@@ -15,4 +17,69 @@
 .offline-course-tabs .tab-button {
   border-radius: 8px;
   white-space: nowrap;
+}
+
+.offline-course-tabbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.offline-course-tabbar__filter-toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 8px;
+  color: #1d4ed8;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+  white-space: nowrap;
+}
+
+.offline-course-tabbar__filter-toggle:hover {
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.offline-course-tabbar__filter-toggle i:last-child {
+  font-size: 10px;
+}
+
+:host ::ng-deep .offline-toolbar__header,
+:host ::ng-deep .student-toolbar__header {
+  display: none;
+}
+
+:host ::ng-deep .offline-toolbar:has(> .offline-toolbar__body[hidden]),
+:host ::ng-deep .student-toolbar:has(> .student-toolbar__body[hidden]) {
+  display: none;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+@media (max-width: 767px) {
+  .offline-course-tabbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .offline-course-tabs {
+    flex-basis: 100%;
+  }
+
+  .offline-course-tabbar__filter-toggle {
+    margin-left: auto;
+  }
 }
