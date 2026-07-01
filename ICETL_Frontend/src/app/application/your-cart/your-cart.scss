@@ -128,6 +128,11 @@
   line-height: 1;
 }
 
+.amount-free-label {
+  color: var(--success) !important;
+  font-weight: 900;
+}
+
 .cart-content-grid,
 .cart-skeleton-grid {
   align-items: start;

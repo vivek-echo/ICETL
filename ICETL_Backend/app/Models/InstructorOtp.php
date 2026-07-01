@@ -9,7 +9,7 @@ class InstructorOtp extends Model
 {
     use HasFactory;
 
-    protected $table = 'instructorOtps';
+    protected $table = 'instructorotps';
 
     public const CREATED_AT = 'createdAt';
     public const UPDATED_AT = 'updatedAt';

@@ -3,6 +3,7 @@ import { inject, PLATFORM_ID } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ROLE } from './constants.service';
+import { StoredMenu, normalizeStoredMenus } from './menu-utils';
 
 interface StoredUser {
   role?: number | string | null;
@@ -11,11 +12,6 @@ interface StoredUser {
     dashboardName?: string | null;
     dashboardUrl?: string | null;
   } | null;
-}
-
-interface StoredMenu {
-  url?: string | null;
-  deletedFlag?: number;
 }
 
 type AllowedRole = number | string;
@@ -130,15 +126,7 @@ function readMenusFromLocalStorage(): StoredMenu[] {
 }
 
 function normalizeMenus(value: unknown): StoredMenu[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((item): item is StoredMenu => {
-    const menu = item as StoredMenu;
-
-    return typeof menu.url === 'string' && menu.url.trim().length > 0;
-  });
+  return normalizeStoredMenus(value);
 }
 
 function resolveMenuRoute(url: string | null | undefined, dashboardSegment: string): string | null {

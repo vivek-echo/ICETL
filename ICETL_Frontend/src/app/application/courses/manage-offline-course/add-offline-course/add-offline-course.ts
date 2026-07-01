@@ -204,7 +204,7 @@ export class AddOfflineCourse implements OnInit {
     }
 
     if (selected.length === 1) {
-      return selected[0].name;
+      return this.instructorOptionLabel(selected[0]);
     }
 
     return `${selected.length} instructors selected`;
@@ -218,8 +218,15 @@ export class AddOfflineCourse implements OnInit {
     }
 
     return this.instructorList.filter((instructor) =>
-      `${instructor.name || ''}`.toLowerCase().includes(term),
+      this.instructorOptionLabel(instructor).toLowerCase().includes(term),
     );
+  }
+
+  instructorOptionLabel(instructor: OfflineCourseInstructor): string {
+    const name = `${instructor?.name || 'Instructor'}`.trim();
+    const code = this.getInstructorCode(instructor);
+
+    return code ? `${name} (${code})` : name;
   }
 
   get parentCoursePlaceholder(): string {
@@ -1239,5 +1246,9 @@ export class AddOfflineCourse implements OnInit {
       : null;
 
     return matchingInstructor || this.instructorList[0] || null;
+  }
+
+  private getInstructorCode(instructor: OfflineCourseInstructor): string {
+    return `${instructor?.code ?? instructor?.instructorCode ?? instructor?.instructor_code ?? ''}`.trim();
   }
 }

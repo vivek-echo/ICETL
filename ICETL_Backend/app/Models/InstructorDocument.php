@@ -9,7 +9,7 @@ class InstructorDocument extends Model
 {
     use HasFactory;
 
-    protected $table = 'instructorDocuments';
+    protected $table = 'instructordocuments';
 
     public const CREATED_AT = 'createdAt';
     public const UPDATED_AT = 'updatedAt';

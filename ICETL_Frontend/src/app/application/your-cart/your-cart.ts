@@ -106,6 +106,12 @@ export class YourCart implements OnInit {
     return this.indianNumberFormatter.format(Number(value) || 0);
   }
 
+  isZeroAmount(value: number | string | null): boolean {
+    const amount = Number(value);
+
+    return Number.isFinite(amount) && amount <= 0;
+  }
+
   isSelected(courseId: number): boolean {
     return this.selectedCourseIds.has(courseId);
   }

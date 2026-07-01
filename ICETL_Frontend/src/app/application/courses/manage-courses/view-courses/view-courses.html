@@ -420,7 +420,7 @@
                   <label class="instructor-option">
                     <input type="checkbox" [checked]="isEditInstructorSelected(instructor)"
                       (change)="toggleEditInstructor(instructor, $event)">
-                    <span>{{ instructor.name }}</span>
+                    <span>{{ instructorOptionLabel(instructor) }}</span>
                   </label>
                   }
                   } @else {

@@ -9,7 +9,7 @@ class InstructorCategory extends Model
 {
     use HasFactory;
 
-    protected $table = 'instructorCategories';
+    protected $table = 'instructorcategories';
 
     public const CREATED_AT = 'createdAt';
     public const UPDATED_AT = 'updatedAt';

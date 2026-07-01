@@ -1,15 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-
-interface StoredMenu {
-  id: number;
-  name: string;
-  url?: string | null;
-  parentId?: number | null;
-  deletedFlag?: number;
-  visiblity?: number;
-}
+import { StoredMenu, isStoredMenuVisible, normalizeStoredMenus } from '../../../commonServices/menu-utils';
 
 interface SeminarTab {
   id: number;
@@ -77,7 +69,7 @@ export class Seminar implements OnInit, OnDestroy {
     }
 
     const permittedTabs = menus
-      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && menu.visiblity === 1)
+      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && isStoredMenuVisible(menu))
       .map((menu) => this.toSeminarTab(menu))
       .filter((tab): tab is SeminarTab => tab !== null);
 
@@ -106,17 +98,7 @@ export class Seminar implements OnInit, OnDestroy {
   }
 
   private normalizeMenus(value: unknown): StoredMenu[] {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.filter((item): item is StoredMenu => {
-      const menu = item as Partial<StoredMenu>;
-
-      return (
-        typeof menu.id === 'number' && typeof menu.name === 'string' && menu.name.trim().length > 0
-      );
-    });
+    return normalizeStoredMenus(value);
   }
 
   private toSeminarTab(menu: StoredMenu): SeminarTab | null {

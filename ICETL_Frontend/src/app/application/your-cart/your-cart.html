@@ -16,11 +16,13 @@
 
       <article class="cart-stat-card">
         <span class="cart-stat-card__icon cart-stat-card__icon--amount">
-          <i class="fa-solid fa-indian-rupee-sign"></i>
+          <i [class]="isFreeCheckout ? 'fa-solid fa-gift' : 'fa-solid fa-indian-rupee-sign'"></i>
         </span>
         <div>
           <small >Total Amount</small>
-          <strong>{{ formatAmount(finalTotal) }}</strong>
+          <strong [class.amount-free-label]="isFreeCheckout">
+            {{ isFreeCheckout ? 'Free' : formatAmount(finalTotal) }}
+          </strong>
         </div>
       </article>
 
@@ -162,7 +164,13 @@
           </button>
 
           <div class="course-price">
-            <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}</strong>
+            <strong [class.amount-free-label]="isZeroAmount(item.price)">
+              @if (isZeroAmount(item.price)) {
+              Free
+              } @else {
+              <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}
+              }
+            </strong>
             @if (item.oldPrice) {
             <span><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.oldPrice) }}</span>
             }
@@ -189,7 +197,13 @@
         </div>
         <div>
           <span>Subtotal</span>
-          <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(subtotal) }}</strong>
+          <strong [class.amount-free-label]="isFreeCheckout">
+            @if (isFreeCheckout) {
+            Free
+            } @else {
+            <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(subtotal) }}
+            }
+          </strong>
         </div>
         <div class="summary-lines__success">
           <span>Discount</span>
@@ -203,7 +217,13 @@
 
       <div class="summary-total">
         <span>Final total</span>
-        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(finalTotal) }}</strong>
+        <strong [class.amount-free-label]="isFreeCheckout">
+          @if (isFreeCheckout) {
+          Free
+          } @else {
+          <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(finalTotal) }}
+          }
+        </strong>
       </div>
 
       <div class="summary-actions">

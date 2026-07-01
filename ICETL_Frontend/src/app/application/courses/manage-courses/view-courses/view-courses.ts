@@ -19,6 +19,9 @@ interface InstructorOption {
   id: number;
   name: string;
   email?: string;
+  code?: string | null;
+  instructorCode?: string | null;
+  instructor_code?: string | null;
 }
 
 interface CourseItem {
@@ -666,7 +669,7 @@ export class ViewCourses implements OnInit, OnDestroy {
     }
 
     if (selected.length === 1) {
-      return selected[0].name;
+      return this.instructorOptionLabel(selected[0]);
     }
 
     return `${selected.length} instructors selected`;
@@ -680,8 +683,19 @@ export class ViewCourses implements OnInit, OnDestroy {
     }
 
     return this.instructorList.filter((instructor) =>
-      `${instructor.name || ''}`.toLowerCase().includes(term),
+      this.instructorOptionLabel(instructor).toLowerCase().includes(term),
     );
+  }
+
+  instructorOptionLabel(instructor: InstructorOption): string {
+    const name = `${instructor?.name || 'Instructor'}`.trim();
+    const code = this.getInstructorCode(instructor);
+
+    return code ? `${name} (${code})` : name;
+  }
+
+  private getInstructorCode(instructor: InstructorOption): string {
+    return `${instructor?.code ?? instructor?.instructorCode ?? instructor?.instructor_code ?? ''}`.trim();
   }
 
   get filteredCategories(): CourseCategory[] {

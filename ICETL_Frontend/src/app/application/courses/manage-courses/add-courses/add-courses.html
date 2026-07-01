@@ -91,7 +91,7 @@
                                             <input type="checkbox" [checked]="isInstructorSelected(instructor)"
                                                 [disabled]="isInstructorUser"
                                                 (change)="toggleInstructor(instructor, $event)">
-                                            <span>{{ instructor.name }}</span>
+                                            <span>{{ instructorOptionLabel(instructor) }}</span>
                                         </label>
                                         }
                                         } @else {

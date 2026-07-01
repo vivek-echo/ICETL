@@ -133,7 +133,7 @@ export class AddCourses implements OnInit {
     }
 
     if (selected.length === 1) {
-      return selected[0].name;
+      return this.instructorOptionLabel(selected[0]);
     }
 
     return `${selected.length} instructors selected`;
@@ -147,8 +147,15 @@ export class AddCourses implements OnInit {
     }
 
     return this.instructorList.filter((instructor: any) =>
-      `${instructor.name || ''}`.toLowerCase().includes(term),
+      this.instructorOptionLabel(instructor).toLowerCase().includes(term),
     );
+  }
+
+  instructorOptionLabel(instructor: any): string {
+    const name = `${instructor?.name || 'Instructor'}`.trim();
+    const code = this.getInstructorCode(instructor);
+
+    return code ? `${name} (${code})` : name;
   }
 
   @HostListener('document:click', ['$event'])
@@ -599,5 +606,9 @@ export class AddCourses implements OnInit {
       : null;
 
     return matchingInstructor || this.instructorList[0] || null;
+  }
+
+  private getInstructorCode(instructor: any): string {
+    return `${instructor?.code ?? instructor?.instructorCode ?? instructor?.instructor_code ?? ''}`.trim();
   }
 }

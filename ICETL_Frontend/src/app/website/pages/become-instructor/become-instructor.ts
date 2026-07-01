@@ -125,10 +125,15 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
   private readonly stepSpinnerKey = 'become-instructor-step';
   private readonly submitSpinnerKey = 'become-instructor-submit';
   private readonly emailSectionFragment = 'enter-email';
+  private readonly emailScrollStateKey = 'scrollToEmail';
+  private readonly emailScrollEventName = 'become-instructor-scroll-email';
 
   private otpExpiryInterval?: ReturnType<typeof setInterval>;
   private resendInterval?: ReturnType<typeof setInterval>;
   private fragmentSubscription?: Subscription;
+  private readonly handleEmailScrollRequest = () => {
+    this.scrollToEmailSection();
+  };
 
   readonly currentYear = new Date().getFullYear();
   readonly calendarWeekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -436,6 +441,13 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     if (!this.isBrowser) {
       return;
+    }
+
+    window.addEventListener(this.emailScrollEventName, this.handleEmailScrollRequest);
+
+    if (this.shouldScrollToEmailFromState()) {
+      this.consumeEmailScrollState();
+      setTimeout(() => this.scrollToEmailSection(), 0);
     }
 
     this.fragmentSubscription = this.route.fragment.subscribe((fragment) => {
@@ -1155,6 +1167,10 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.isBrowser) {
+      window.removeEventListener(this.emailScrollEventName, this.handleEmailScrollRequest);
+    }
+
     this.fragmentSubscription?.unsubscribe();
     this.clearOtpTimers();
     this.revokeProfilePreviewIfNeeded(this.uploads.profilePhoto.previewUrl);
@@ -1681,6 +1697,27 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
 
   private isEmailSectionFragment(fragment: string | null): boolean {
     return `${fragment ?? ''}`.trim() === this.emailSectionFragment;
+  }
+
+  private shouldScrollToEmailFromState(): boolean {
+    return this.getNavigationState()[this.emailScrollStateKey] === true;
+  }
+
+  private consumeEmailScrollState(): void {
+    const state = this.getNavigationState();
+
+    if (state[this.emailScrollStateKey] !== true) {
+      return;
+    }
+
+    const { [this.emailScrollStateKey]: _scrollToEmail, ...nextState } = state;
+    window.history.replaceState(nextState, document.title, window.location.href);
+  }
+
+  private getNavigationState(): Record<string, unknown> {
+    const state = window.history.state;
+
+    return state && typeof state === 'object' ? state as Record<string, unknown> : {};
   }
 
   private revokeProfilePreviewIfNeeded(url: string | null): void {

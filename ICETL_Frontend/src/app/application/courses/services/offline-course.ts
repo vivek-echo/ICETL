@@ -5,6 +5,9 @@ export interface OfflineCourseInstructor {
   id: number;
   name: string;
   email?: string | null;
+  code?: string | null;
+  instructorCode?: string | null;
+  instructor_code?: string | null;
 }
 
 export interface OfflineCoursePayload {

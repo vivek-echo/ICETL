@@ -1,16 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-
-interface StoredMenu {
-  id: number;
-  name: string;
-  url?: string | null;
-  parentId?: number | null;
-  deletedFlag?: number;
-  visiblity?: number;
-  visibility?: number;
-}
+import { StoredMenu, isStoredMenuVisible, normalizeStoredMenus } from '../../../commonServices/menu-utils';
 
 interface CourseTab {
   id: number;
@@ -81,7 +72,7 @@ export class MyLearning implements OnInit, OnDestroy {
     }
 
     const permittedTabs = menus
-      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && this.isVisible(menu))
+      .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && isStoredMenuVisible(menu))
       .map((menu) => this.toCourseTab(menu))
       .filter((tab): tab is CourseTab => tab !== null);
 
@@ -110,17 +101,7 @@ export class MyLearning implements OnInit, OnDestroy {
   }
 
   private normalizeMenus(value: unknown): StoredMenu[] {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.filter((item): item is StoredMenu => {
-      const menu = item as Partial<StoredMenu>;
-
-      return (
-        typeof menu.id === 'number' && typeof menu.name === 'string' && menu.name.trim().length > 0
-      );
-    });
+    return normalizeStoredMenus(value);
   }
 
   private toCourseTab(menu: StoredMenu): CourseTab | null {
@@ -147,11 +128,4 @@ export class MyLearning implements OnInit, OnDestroy {
     return route.startsWith('/') ? route : `/${route}`;
   }
 
-  private isVisible(menu: StoredMenu): boolean {
-    return Number(menu.visiblity ?? menu.visibility ?? 1) === 1;
-  }
-
-
-
-  
 }

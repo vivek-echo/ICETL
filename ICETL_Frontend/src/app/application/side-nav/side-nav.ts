@@ -1,17 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-
-interface StoredMenu {
-  id: number;
-  name: string;
-  type?: number;
-  url?: string | null;
-  icon?: string | null;
-  parentId?: number | null;
-  sortOrder?: number | null;
-  deletedFlag?: number;
-}
+import { StoredMenu, normalizeStoredMenus } from '../../commonServices/menu-utils';
 
 interface DashboardSetting {
   dashboardName?: string;
@@ -129,17 +119,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   private normalizeMenus(value: unknown): StoredMenu[] {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.filter((item): item is StoredMenu => {
-      const menu = item as Partial<StoredMenu>;
-
-      return (
-        typeof menu.id === 'number' && typeof menu.name === 'string' && menu.name.trim().length > 0
-      );
-    });
+    return normalizeStoredMenus(value);
   }
 
   private loadDashboardSetting(): void {

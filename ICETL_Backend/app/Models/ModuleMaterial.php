@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ModuleMaterial extends Model
 {
-    protected $table = 'moduleMaterials';
+    protected $table = 'modulematerials';
 
     protected $fillable = [
         'moduleType',

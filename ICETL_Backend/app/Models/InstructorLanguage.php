@@ -9,7 +9,7 @@ class InstructorLanguage extends Model
 {
     use HasFactory;
 
-    protected $table = 'instructorLanguages';
+    protected $table = 'instructorlanguages';
 
     public const CREATED_AT = 'createdAt';
     public const UPDATED_AT = 'updatedAt';
