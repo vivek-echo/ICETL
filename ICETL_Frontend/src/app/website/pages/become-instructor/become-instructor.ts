@@ -204,7 +204,7 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       icon: 'fa-solid fa-sack-dollar',
       title: 'Earn Money',
       description:
-        'Turn your expertise into premium courses, cohort programs, and recurring learner revenue.',
+        'Turn your expertise into professional courses, cohort programs, and recurring learner revenue.',
     },
     {
       icon: 'fa-solid fa-lightbulb',

@@ -40,8 +40,8 @@
     </div>
   </section>
 
-  <div class="program-toolbar program-toolbar--all">
-    <div class="program-toolbar__header">
+  <div class="program-toolbar program-toolbar--all icetl-filter-panel">
+    <div class="program-toolbar__header icetl-filter-toolbar">
       <div class="program-toolbar__title">
         <span class="program-toolbar__icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -51,7 +51,7 @@
 
       <button
         type="button"
-        class="program-toolbar__toggle"
+        class="program-toolbar__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="allSeminarFiltersPanel">
@@ -66,7 +66,7 @@
       <p>Search by seminar, speaker, creator, city, timeline, and status.</p>
     </div> -->
 
-    <div id="allSeminarFiltersPanel" class="program-toolbar__body program-toolbar__body--all" [hidden]="!showFilters">
+    <div id="allSeminarFiltersPanel" class="program-toolbar__body program-toolbar__body--all icetl-filter-grid" [hidden]="!showFilters">
       <div class="rbt-form-group program-toolbar__field program-toolbar__field--search">
       <label for="allSeminarSearch">Search</label>
       <div class="program-field">
@@ -139,12 +139,12 @@
     </div>
 
     <div class="program-toolbar__actions">
-      <button type="button" class="program-action program-action--primary program-toolbar__button"
+      <button type="button" class="program-action program-action--primary program-toolbar__button icetl-btn icetl-btn-primary"
         (click)="onSearch()" [disabled]="loading">
         <i class="feather-filter"></i>
         Apply
       </button>
-      <button type="button" class="program-action program-toolbar__button" (click)="clearFilters()"
+      <button type="button" class="program-action program-toolbar__button icetl-btn icetl-btn-outline" (click)="clearFilters()"
         [disabled]="loading">
         <i class="feather-refresh-cw"></i>
         Reset
@@ -179,7 +179,7 @@
   }
 
   @if (!loading && seminars.length === 0) {
-  <div class="program-empty">
+  <div class="program-empty icetl-empty-state">
     <i class="feather-calendar"></i>
     <h5>No Seminars Found</h5>
     <p>No seminars are available for the selected filters.</p>
@@ -189,7 +189,7 @@
   @if (!loading && seminars.length > 0) {
   <div class="program-list">
     @for (seminar of seminars; track trackBySeminarId($index, seminar)) {
-    <article class="program-row">
+    <article class="program-row icetl-list-card">
       <div class="program-row__media" [class.program-row__media--empty]="!seminar.bannerImageUrl">
         @if (seminar.bannerImageUrl) {
         <img [src]="seminar.bannerImageUrl" [alt]="seminar.title + ' banner'"
@@ -201,11 +201,11 @@
 
       <div class="program-row__main">
         <div class="program-row__badges">
-          <span class="program-card__status" [class.program-card__status--inactive]="!isActive(seminar)">
+          <span class="program-card__status icetl-badge" [class.program-card__status--inactive]="!isActive(seminar)">
             {{ seminar.statusLabel }}
           </span>
           <span class="program-card__topic">{{ seminar.topic }}</span>
-          <span class="program-card__topic">{{ getScheduleLabel(seminar.scheduleStatus) }}</span>
+          <span class="program-card__topic icetl-badge">{{ getScheduleLabel(seminar.scheduleStatus) }}</span>
         </div>
 
         <div class="program-row__title">
@@ -265,7 +265,7 @@
             <strong>{{ seminar.createdByName }}</strong>
           </span>
         </div>
-        <button type="button" class="program-action program-action--primary program-row__enroll"
+        <button type="button" class="program-action program-action--primary program-row__enroll icetl-btn icetl-btn-primary"
           (click)="openEnrollment(seminar)" [disabled]="!canEnroll(seminar)">
           <i class="feather-user-plus"></i>
           Enroll Student
@@ -277,11 +277,11 @@
   }
 
   @if (!loading && meta.total > 0) {
-  <div class="program-pager">
+  <div class="program-pager icetl-pagination">
     <p>{{ getPaginationLabel() }}</p>
 
-    <div class="program-pager__controls">
-      <button type="button" class="program-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+    <div class="program-pager__controls icetl-pagination__controls">
+      <button type="button" class="program-action icetl-btn icetl-btn-outline" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
         <i class="feather-chevron-left"></i>
         Previous
       </button>
@@ -298,7 +298,7 @@
         <span>of {{ meta.lastPage }}</span>
       </div>
 
-      <button type="button" class="program-action program-action--primary" [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
+      <button type="button" class="program-action program-action--primary icetl-btn icetl-btn-primary" [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
         Next
         <i class="feather-chevron-right"></i>
       </button>
@@ -326,7 +326,7 @@
         </app-modal-window-controls>
       </header>
 
-      <form class="program-enrollment-form" (ngSubmit)="submitEnrollment()" #seminarEnrollmentForm="ngForm">
+      <form class="program-enrollment-form icetl-form-section" (ngSubmit)="submitEnrollment()" #seminarEnrollmentForm="ngForm">
         <div class="program-enrollment-modal__body" data-app-modal-body>
         <section class="program-enrollment-summary">
           <div>
@@ -483,11 +483,11 @@
         </div>
         </div>
 
-        <footer class="program-enrollment-modal__footer" data-app-modal-footer>
-          <button type="button" class="program-action" (click)="closeEnrollment()" [disabled]="enrollmentSaving">
+        <footer class="program-enrollment-modal__footer icetl-form-actions" data-app-modal-footer>
+          <button type="button" class="program-action icetl-btn icetl-btn-outline" (click)="closeEnrollment()" [disabled]="enrollmentSaving">
             Cancel
           </button>
-          <button type="submit" class="program-action program-action--primary" [disabled]="enrollmentSaving">
+          <button type="submit" class="program-action program-action--primary icetl-btn icetl-btn-primary" [disabled]="enrollmentSaving">
             <i class="feather-user-plus"></i>
             {{ enrollmentSaving ? 'Enrolling...' : 'Enroll Student' }}
           </button>

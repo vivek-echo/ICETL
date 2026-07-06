@@ -1,8 +1,8 @@
-<div class="course-builder">
+<div class="course-builder icetl-form-page">
     <div class="row g-5">
         <div class="col-xl-8">
             <div class="">
-                <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="row g-4">
+                <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="row g-4 icetl-form-card">
                     <div class="col-12">
                         <div class="rbt-form-group">
                             <label>Course Title</label>
@@ -43,7 +43,7 @@
                                 }
                             </select>
                             @if (parentCoursesMessage) {
-                            <small class="field-note">{{ parentCoursesMessage }}</small>
+                            <small class="field-note icetl-field-note">{{ parentCoursesMessage }}</small>
                             }
                         </div>
                     </div>
@@ -131,7 +131,7 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="upload-box">
+                        <div class="upload-box icetl-upload-zone">
                             <label for="thumbnailUpload">
                                 <i class="feather-upload"></i>
                                 <h6>Upload Thumbnail</h6>
@@ -182,7 +182,7 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <button class="rbt-btn btn-gradient w-100">
+                        <button class="rbt-btn btn-gradient w-100 icetl-btn icetl-btn-primary">
                             Publish Course
                         </button>
                     </div>
@@ -190,7 +190,7 @@
             </div>
         </div>
         <div class="col-xl-4">
-            <div class="course-preview-card">
+            <div class="course-preview-card icetl-form-preview">
                 <div class="preview-image">
                     <img [src]="previewImage">
                     <span *ngIf="discountPercentage" class="discount-badge">

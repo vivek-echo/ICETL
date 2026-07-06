@@ -1,18 +1,19 @@
 <section class="certificate-verification" aria-labelledby="certificate-verification-title">
   <div class="container">
-    <div class="certificate-verification__panel">
+    <div class="certificate-verification__panel icetl-card">
       <div class="certificate-verification__brand">
         <img src="assets/images/logo/ice_logo.png" alt="ICETL logo" />
         <span>ICETL</span>
       </div>
 
       <div class="certificate-verification__heading">
-        <span class="certificate-verification__eyebrow">Official Verification</span>
+        <span class="certificate-verification__eyebrow icetl-badge">Official Verification</span>
         <h1 id="certificate-verification-title">Certificate Verification</h1>
+        <p>Confirm the authenticity of an ICETL certificate using its secure verification code.</p>
       </div>
 
       @if (state() === 'loading') {
-      <div class="verification-status verification-status--loading" role="status" aria-live="polite">
+      <div class="verification-status verification-status--loading icetl-spinner-wrap" role="status" aria-live="polite">
         <span class="verification-status__icon">
           <i class="fa-solid fa-spinner fa-spin"></i>
         </span>
@@ -33,6 +34,14 @@
           <h2>Certificate Verified</h2>
           <p>{{ message() }}</p>
         </div>
+      </div>
+
+      <div class="certificate-verification__trust-row" aria-label="Certificate verification status">
+        <span class="icetl-badge icetl-badge--approved">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          Verified
+        </span>
+        <span>Verified against ICETL certificate records</span>
       </div>
 
       <dl class="certificate-details" aria-label="Verified certificate details">
@@ -87,6 +96,15 @@
           <dd>{{ displayValue(certificateData.issueDate) }}</dd>
         </div>
 
+        <div class="certificate-details__item">
+          <dt>Status</dt>
+          <dd>
+            <span class="icetl-badge icetl-badge--approved">
+              {{ displayValue(certificateData.status || 'Verified') }}
+            </span>
+          </dd>
+        </div>
+
         <div class="certificate-details__item certificate-details__item--wide">
           <dt>Verification Code</dt>
           <dd class="certificate-details__code">{{ displayValue(certificateData.verificationCode) }}</dd>
@@ -96,7 +114,7 @@
       }
 
       @if (state() === 'invalid') {
-      <div class="verification-status verification-status--invalid" role="status" aria-live="polite">
+      <div class="verification-status verification-status--invalid icetl-empty-state" role="status" aria-live="polite">
         <span class="verification-status__icon">
           <i class="fa-solid fa-circle-xmark"></i>
         </span>
@@ -108,7 +126,7 @@
       }
 
       @if (state() === 'error') {
-      <div class="verification-status verification-status--error" role="alert">
+      <div class="verification-status verification-status--error icetl-empty-state icetl-state--error" role="alert">
         <span class="verification-status__icon">
           <i class="fa-solid fa-triangle-exclamation"></i>
         </span>
@@ -120,7 +138,7 @@
       }
 
       <div class="certificate-verification__actions">
-        <a class="rbt-btn btn-gradient hover-icon-reverse" routerLink="/">
+        <a class="rbt-btn btn-gradient hover-icon-reverse icetl-btn icetl-btn-primary" routerLink="/">
           <span class="icon-reverse-wrapper">
             <span class="btn-text">Return Home</span>
             <span class="btn-icon"><i class="fa-solid fa-arrow-right"></i></span>

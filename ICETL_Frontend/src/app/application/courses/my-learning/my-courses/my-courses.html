@@ -1,4 +1,4 @@
-<section class="my-learning" aria-labelledby="my-learning-title">
+<section class="my-learning icetl-learning-page" aria-labelledby="my-learning-title">
   <header class="learning-hero">
     <div class="learning-hero__content">
       <span class="my-learning__eyebrow">Learner Workspace</span>
@@ -6,12 +6,12 @@
       <p>Resume your enrolled courses, review invoices, and keep your learning library organised in one place.</p>
 
       <div class="learning-hero__actions">
-        <a class="learning-hero__browse" routerLink="/application/courses/myLearning/browse">
+        <a class="learning-hero__browse icetl-btn" routerLink="/application/courses/myLearning/browse">
           <i class="fa-solid fa-compass"></i>
           Browse Courses
         </a>
 
-        <button type="button" class="my-learning__refresh" (click)="loadMyLearning()" [disabled]="loading"
+        <button type="button" class="my-learning__refresh icetl-btn" (click)="loadMyLearning()" [disabled]="loading"
           title="Refresh my learning">
           <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
           Refresh
@@ -52,7 +52,7 @@
     </div>
   </section> -->
 
-  <div class="learning-toolbar">
+  <div class="learning-toolbar icetl-filter-panel">
     <div class="learning-toolbar__header">
       <div class="learning-toolbar__title">
         <span class="learning-toolbar__icon">
@@ -99,12 +99,12 @@
   <div class="learning-list" aria-label="Loading purchased courses">
     @for (loader of skeletonRows; track loader) {
     <article class="learning-card learning-card--skeleton">
-      <span class="skeleton skeleton-image"></span>
+      <span class="skeleton skeleton-image icetl-skeleton"></span>
       <div class="learning-card__body">
-        <span class="skeleton skeleton-pill"></span>
-        <span class="skeleton skeleton-line skeleton-line--wide"></span>
-        <span class="skeleton skeleton-line"></span>
-        <span class="skeleton skeleton-button"></span>
+        <span class="skeleton skeleton-pill icetl-skeleton"></span>
+        <span class="skeleton skeleton-line skeleton-line--wide icetl-skeleton"></span>
+        <span class="skeleton skeleton-line icetl-skeleton"></span>
+        <span class="skeleton skeleton-button icetl-skeleton"></span>
       </div>
     </article>
     }
@@ -112,13 +112,13 @@
   }
 
   @if (!loading && courses.length === 0) {
-  <section class="learning-empty">
+  <section class="learning-empty icetl-empty-state icetl-learning-empty">
     <div class="learning-empty__icon">
       <i class="fa-solid fa-book-open-reader"></i>
     </div>
     <h2>No purchased courses yet</h2>
     <p>Courses you buy will appear here after payment verification.</p>
-    <a class="learning-empty__action" routerLink="/application/courses/myLearning/browse">
+    <a class="learning-empty__action icetl-btn icetl-btn-primary" routerLink="/application/courses/myLearning/browse">
       <i class="fa-solid fa-compass"></i>
       Browse Courses
     </a>
@@ -126,7 +126,7 @@
   }
 
   @if (!loading && courses.length > 0 && filteredCourses.length === 0) {
-  <section class="learning-empty">
+  <section class="learning-empty icetl-empty-state icetl-learning-empty">
     <div class="learning-empty__icon">
       <i class="fa-solid fa-magnifying-glass"></i>
     </div>
@@ -138,10 +138,11 @@
   @if (!loading && filteredCourses.length > 0) {
   <div class="learning-list">
     @for (course of filteredCourses; track trackByCourseId($index, course)) {
-    <article class="learning-card learning-card--list">
+    <article class="learning-card learning-card--list icetl-learning-card">
       <div class="learning-card__media">
         <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
-        <span class="learning-card__status" [class.learning-card__status--inactive]="course.status !== 1">
+        <span class="learning-card__status icetl-badge" [class.learning-card__status--inactive]="course.status !== 1"
+          [class.icetl-badge--active]="course.status === 1" [class.icetl-badge--inactive]="course.status !== 1">
           {{ course.statusLabel || (course.status === 1 ? 'Active' : 'Inactive') }}
         </span>
 
@@ -207,7 +208,7 @@
         <div class="learning-card__actions">
           @if (isAcademicCourse(course)) {
           @if (hasYoutubeLink(course)) {
-          <a class="learning-card__action learning-card__action--youtube" [href]="getYoutubeUrl(course)" target="_blank"
+          <a class="learning-card__action learning-card__action--youtube icetl-learning-action icetl-learning-action--soft" [href]="getYoutubeUrl(course)" target="_blank"
             rel="noopener noreferrer">
             <i class="fa-brands fa-youtube"></i>
             YouTube
@@ -215,14 +216,14 @@
           }
 
           @if (hasMeetingLink(course)) {
-          <a class="learning-card__action learning-card__action--meet" [href]="getMeetingUrl(course)" target="_blank"
+          <a class="learning-card__action learning-card__action--meet icetl-learning-action icetl-learning-action--soft" [href]="getMeetingUrl(course)" target="_blank"
             rel="noopener noreferrer">
             <i class="fa-solid fa-video"></i>
             Open Meet
           </a>
           }
 
-          <button type="button" class="learning-card__action learning-card__action--materials"
+          <button type="button" class="learning-card__action learning-card__action--materials icetl-learning-action icetl-learning-action--soft"
             (click)="openMaterials(course)">
             <i class="fa-regular fa-folder-open"></i>
             Materials
@@ -230,13 +231,13 @@
 
 
           @if (!hasYoutubeLink(course) && !hasMeetingLink(course)) {
-          <span class="learning-card__action learning-card__action--disabled">
+          <span class="learning-card__action learning-card__action--disabled icetl-learning-action icetl-learning-action--muted">
             <i class="fa-solid fa-link-slash"></i>
             Session link not available
           </span>
           }
           } @else {
-          <a class="learning-card__action learning-card__action--primary"
+          <a class="learning-card__action learning-card__action--primary icetl-learning-action icetl-learning-action--primary"
             [routerLink]="['/application/courses/myLearning/learn']" [state]="{ courseId: course.id }">
             <i class="fa-solid fa-play"></i>
             Continue
@@ -246,7 +247,7 @@
           }
 
           @if (canDownloadCourseCertificate(course)) {
-          <button type="button" class="learning-card__action learning-card__action--certificate"
+          <button type="button" class="learning-card__action learning-card__action--certificate icetl-learning-action icetl-learning-action--soft"
             [class.is-generating]="isCertificateGenerating(course.id)"
             [disabled]="certificateLoading"
             (click)="downloadCourseCertificate(course.id, course.courseType)">
@@ -260,7 +261,7 @@
             <i class="certificate-action__download fa-solid fa-download" aria-hidden="true"></i>
           </button>
           } @else {
-          <span class="learning-card__certificate-lock">
+          <span class="learning-card__certificate-lock icetl-learning-action icetl-learning-action--muted">
             <i class="fa-solid fa-lock"></i>
             Complete 75% to unlock certificate
           </span>

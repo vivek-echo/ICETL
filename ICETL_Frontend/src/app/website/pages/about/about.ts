@@ -154,7 +154,7 @@ export class AboutComponent {
 
   readonly timelineSteps: TimelineStep[] = [
     {
-      title: 'Join ICTEL',
+      title: 'Join ICETL',
       description: 'Choose the training path that matches your career goal.',
       iconClass: 'fa-solid fa-user-plus',
     },

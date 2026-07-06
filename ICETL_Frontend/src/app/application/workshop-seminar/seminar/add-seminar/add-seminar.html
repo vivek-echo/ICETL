@@ -19,16 +19,17 @@
 }
 
 @if (loading) {
-<div class="text-center py-5">
-  <div class="spinner-border text-primary"></div>
+<div class="icetl-spinner-wrap">
+  <span class="icetl-inline-spinner" aria-hidden="true"></span>
+  <span>Loading seminar form...</span>
 </div>
 }
 
 @if (!loading) {
-<div class="program-builder__grid">
+<div class="program-builder__grid icetl-form-page">
   <form [formGroup]="itemForm" (ngSubmit)="saveSeminar()" class="program-form">
-    <section class="program-form__section">
-      <div class="program-form__heading">
+    <section class="program-form__section icetl-form-section">
+      <div class="program-form__heading icetl-form-section-header">
         <span>01</span>
         <div>
           <h2>Seminar Details</h2>
@@ -78,7 +79,7 @@
         </div>
       </div>
 
-      <div class="program-banner-upload program-form__full">
+      <div class="program-banner-upload program-form__full icetl-upload-zone">
         <div class="program-banner-upload__preview" [class.program-banner-upload__preview--empty]="!bannerPreviewUrl">
           @if (bannerPreviewUrl) {
           <img [src]="bannerPreviewUrl" alt="Seminar banner preview">
@@ -109,8 +110,8 @@
       </div>
     </section>
 
-    <section class="program-form__section">
-      <div class="program-form__heading">
+    <section class="program-form__section icetl-form-section">
+      <div class="program-form__heading icetl-form-section-header">
         <span>02</span>
         <div>
           <h2>Venue & Schedule</h2>
@@ -224,8 +225,8 @@
       </div>
     </section>
 
-    <section class="program-form__section">
-      <div class="program-form__heading">
+    <section class="program-form__section icetl-form-section">
+      <div class="program-form__heading icetl-form-section-header">
         <span>03</span>
         <div>
           <h2>Speaker & Capacity</h2>
@@ -282,17 +283,17 @@
       </div>
     </section>
 
-    <div class="program-form__actions">
-      <button type="button" class="rbt-btn btn-border" (click)="modalMode ? closeModal() : resetForm()" [disabled]="saving">
+    <div class="program-form__actions icetl-form-actions">
+      <button type="button" class="rbt-btn btn-border icetl-btn icetl-btn-outline" (click)="modalMode ? closeModal() : resetForm()" [disabled]="saving">
         {{ modalMode ? 'Cancel' : 'Reset' }}
       </button>
-      <button type="submit" class="rbt-btn btn-gradient" [disabled]="saving">
+      <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="saving">
         {{ saving ? 'Saving...' : submitLabel }}
       </button>
     </div>
   </form>
 
-  <aside class="program-preview" aria-label="Seminar preview">
+  <aside class="program-preview icetl-form-preview" aria-label="Seminar preview">
     <div class="program-preview__banner" [class.program-preview__banner--empty]="!bannerPreviewUrl">
       @if (bannerPreviewUrl) {
       <img [src]="bannerPreviewUrl" alt="Seminar banner">

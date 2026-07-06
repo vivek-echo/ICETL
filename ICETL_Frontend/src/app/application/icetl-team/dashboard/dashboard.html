@@ -1,13 +1,13 @@
-<section class="icetl-team-dashboard">
-  <div class="dashboard-heading">
+<section class="icetl-team-dashboard icetl-dashboard-page">
+  <div class="dashboard-heading icetl-page-header icetl-card">
     <div class="heading-main">
       <span class="dashboard-kicker">ICETL Team Dashboard</span>
       <h4>Team operations overview</h4>
       <p>Monitor support requests, course coordination, events, and daily team activity.</p>
     </div>
     <div class="heading-meta">
-      <div class="heading-actions">
-        <a class="rbt-btn btn-sm btn-border dashboard-action" routerLink="/application/icetl-team">
+      <div class="heading-actions icetl-dashboard-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/icetl-team">
           <i class="feather-home"></i>
           <span>Welcome</span>
         </a>
@@ -15,9 +15,9 @@
     </div>
   </div>
 
-  <div class="metric-grid">
+  <div class="metric-grid icetl-metric-grid">
     @for (metric of metrics; track metric.label) {
-      <article class="metric-card">
+      <article class="metric-card icetl-metric-card">
         <i [class]="metric.icon"></i>
         <span>{{ metric.label }}</span>
         <strong>{{ metric.value }}</strong>
@@ -27,7 +27,7 @@
   </div>
 
   <div class="dashboard-grid dashboard-grid--charts">
-    <article class="dashboard-panel">
+    <article class="dashboard-panel icetl-card">
       <div class="panel-title">
         <h5>Weekly Activity</h5>
         <span>Handled items</span>
@@ -44,7 +44,7 @@
       </div>
     </article>
 
-    <article class="dashboard-panel">
+    <article class="dashboard-panel icetl-card">
       <div class="panel-title">
         <h5>Work Queues</h5>
         <span>Open items</span>
@@ -64,7 +64,7 @@
       </div>
     </article>
 
-    <article class="dashboard-panel">
+    <article class="dashboard-panel icetl-card">
       <div class="panel-title">
         <h5>Recent Updates</h5>
         <span>Today</span>

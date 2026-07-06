@@ -754,7 +754,7 @@ export class CoursesComponent {
       reviews: this.getReviewCount(course),
       price,
       originalPrice,
-      author: course.instructorName || 'ICTEL Instructor',
+      author: course.instructorName || 'ICETL Instructor',
       authorImage: this.placeholderAuthorImage,
       level: this.getLevelLabel(course),
       duration: this.getDurationLabel(course),

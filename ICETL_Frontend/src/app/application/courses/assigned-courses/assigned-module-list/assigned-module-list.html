@@ -1,6 +1,6 @@
 <section class="assigned-module-list" [attr.aria-label]="sectionTitle">
-  <div class="assigned-module-list__toolbar">
-    <div class="assigned-module-list__toolbar-header">
+  <div class="assigned-module-list__toolbar icetl-filter-panel">
+    <div class="assigned-module-list__toolbar-header icetl-filter-toolbar">
       <div class="assigned-module-list__toolbar-title">
         <span class="assigned-module-list__toolbar-icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -10,7 +10,7 @@
 
       <button
         type="button"
-        class="assigned-module-list__toolbar-toggle"
+        class="assigned-module-list__toolbar-toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="assignedModuleFiltersPanel">
@@ -20,7 +20,7 @@
       </button>
     </div>
 
-    <div id="assignedModuleFiltersPanel" class="assigned-module-list__toolbar-body" [hidden]="!showFilters">
+    <div id="assignedModuleFiltersPanel" class="assigned-module-list__toolbar-body icetl-filter-grid" [hidden]="!showFilters">
     <label>
       <span>Search</span>
       <div>
@@ -44,12 +44,12 @@
   @if (loading) {
   <div class="assigned-module-list__grid" aria-label="Loading assigned modules">
     @for (row of skeletonRows; track row) {
-    <article class="assigned-card assigned-card--skeleton">
-      <span></span>
+    <article class="assigned-card assigned-card--skeleton icetl-list-card">
+      <span class="icetl-skeleton"></span>
       <div>
-        <i></i>
-        <i></i>
-        <i></i>
+        <i class="icetl-skeleton"></i>
+        <i class="icetl-skeleton"></i>
+        <i class="icetl-skeleton"></i>
       </div>
     </article>
     }
@@ -57,7 +57,7 @@
   }
 
   @if (!loading && modules.length === 0) {
-  <section class="assigned-empty">
+  <section class="assigned-empty icetl-empty-state">
     <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
     <h2>No {{ emptyLabel }}</h2>
     <p>Assigned items will appear here.</p>
@@ -67,10 +67,10 @@
   @if (!loading && modules.length > 0) {
   <div class="assigned-module-list__grid">
     @for (module of modules; track trackByModuleId($index, module)) {
-    <article class="assigned-card">
+    <article class="assigned-card icetl-list-card">
       <div class="assigned-card__media">
         <img [src]="moduleImage(module)" [alt]="module.title" (error)="onModuleImageError(module)" loading="lazy">
-        <span [class.is-inactive]="module.status !== 1">{{ module.statusLabel || 'Active' }}</span>
+        <span class="icetl-badge" [class.is-inactive]="module.status !== 1">{{ module.statusLabel || 'Active' }}</span>
       </div>
 
       <div class="assigned-card__body">
@@ -80,7 +80,7 @@
           <small>{{ module.code }}</small>
           }
           @if (isSpecialCourse(module)) {
-          <small class="assigned-card__special">Special</small>
+          <small class="assigned-card__special icetl-badge icetl-badge--active">Special</small>
           }
         </div>
 
@@ -107,13 +107,13 @@
       <footer class="assigned-card__footer">
         <button
           type="button"
-          class="assigned-card__footer-button assigned-card__footer-button--secondary"
+          class="assigned-card__footer-button assigned-card__footer-button--secondary icetl-btn icetl-btn-outline"
           (click)="openStudents(module)"
           title="View enrolled students">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           Enrolled Students
         </button>
-        <button type="button" (click)="openMaterials(module)" title="Upload and manage materials">
+        <button type="button" class="icetl-btn icetl-btn-primary" (click)="openMaterials(module)" title="Upload and manage materials">
           <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
           Upload Materials
         </button>
@@ -123,13 +123,13 @@
   </div>
 
   @if (meta && meta.lastPage > 1) {
-  <nav class="assigned-pagination" aria-label="Assigned modules pagination">
-    <button type="button" (click)="previousPage()" [disabled]="!canGoPrevious || loading">
+  <nav class="assigned-pagination icetl-pagination" aria-label="Assigned modules pagination">
+    <button type="button" class="icetl-btn icetl-btn-outline" (click)="previousPage()" [disabled]="!canGoPrevious || loading">
       <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       Previous
     </button>
     <span>Page {{ meta.currentPage }} of {{ meta.lastPage }}</span>
-    <button type="button" (click)="nextPage()" [disabled]="!canGoNext || loading">
+    <button type="button" class="icetl-btn icetl-btn-primary" (click)="nextPage()" [disabled]="!canGoNext || loading">
       Next
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </button>

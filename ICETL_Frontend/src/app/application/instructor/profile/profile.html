@@ -6,13 +6,13 @@
     }
 
     @if (isLoading) {
-    <div class="profile-loading">
-      <div class="profile-loading__spinner"></div>
+    <div class="profile-loading icetl-spinner-wrap">
+      <div class="profile-loading__spinner icetl-inline-spinner"></div>
       <p>Loading your instructor profile...</p>
     </div>
     } @else {
-    <form class="profile-shell" [formGroup]="profileForm" (ngSubmit)="submitProfileUpdate()" novalidate>
-      <section class="profile-banner-card">
+    <form class="profile-shell icetl-form-page" [formGroup]="profileForm" (ngSubmit)="submitProfileUpdate()" novalidate>
+      <section class="profile-banner-card icetl-form-preview">
         <div class="profile-cover-stage" [class.profile-cover-stage--has-image]="coverImageSrc">
           @if (coverImageSrc) {
           <img class="profile-cover-stage__image" [src]="coverImageSrc" alt="Cover photo preview">
@@ -57,8 +57,8 @@
       </section>
 
       <div class="profile-grid profile-grid--enhanced">
-        <section class="profile-card">
-          <div class="profile-card__head">
+        <section class="profile-card icetl-form-section">
+          <div class="profile-card__head icetl-form-section-header">
             <span>Identity</span>
             <h4>Core Account Details</h4>
           </div>
@@ -177,8 +177,8 @@
           </div>
         </section>
 
-        <section class="profile-card profile-card--glass">
-          <div class="profile-card__head">
+        <section class="profile-card profile-card--glass icetl-form-section">
+          <div class="profile-card__head icetl-form-section-header">
             <span>Professional</span>
             <h4>Teaching Identity</h4>
           </div>
@@ -257,8 +257,8 @@
           </div>
         </section>
 
-        <section class="profile-card">
-          <div class="profile-card__head">
+        <section class="profile-card icetl-form-section">
+          <div class="profile-card__head icetl-form-section-header">
             <span>Expertise</span>
             <h4>Skills and Categories</h4>
           </div>
@@ -295,8 +295,8 @@
           </div>
         </section>
 
-        <section class="profile-card">
-          <div class="profile-card__head">
+        <section class="profile-card icetl-form-section">
+          <div class="profile-card__head icetl-form-section-header">
             <span>Trust Signals</span>
             <h4>Documents and Public Links</h4>
           </div>
@@ -430,8 +430,8 @@
         </section>
       </div>
 
-      <div class="profile-submit profile-submit--sticky">
-        <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSaving">
+      <div class="profile-submit profile-submit--sticky icetl-form-actions">
+        <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="isSaving">
           {{ isSaving ? 'Saving...' : 'Save Instructor Profile' }}
         </button>
       </div>

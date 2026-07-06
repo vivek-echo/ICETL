@@ -38,8 +38,8 @@
 
   <section class="program-browse__filters">
     <div class="container-fluid">
-      <div class="program-filter-panel">
-        <div class="program-filter-panel__header">
+      <div class="program-filter-panel icetl-filter-panel">
+        <div class="program-filter-panel__header icetl-filter-toolbar">
           <div class="program-filter-panel__title">
             <span class="program-filter-panel__icon">
               <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -49,7 +49,7 @@
 
           <button
             type="button"
-            class="program-filter-panel__toggle"
+            class="program-filter-panel__toggle icetl-btn icetl-btn-outline"
             (click)="toggleFilters()"
             [attr.aria-expanded]="showFilters"
             aria-controls="programBrowseFiltersPanel">
@@ -60,7 +60,7 @@
         </div>
 
         <div id="programBrowseFiltersPanel" class="program-filter-panel__body" [hidden]="!showFilters">
-          <div class="program-filter-bar">
+          <div class="program-filter-bar icetl-filter-grid">
             <label class="program-field program-field--search">
               <span>Search</span>
               <div>
@@ -110,22 +110,24 @@
             </label>
 
             <div class="program-filter-bar__buttons">
-              <button type="button" class="program-browse-btn program-browse-btn--primary" (click)="onSearch()">
+              <button type="button" class="program-browse-btn program-browse-btn--primary icetl-btn icetl-btn-primary" (click)="onSearch()">
                 <i class="feather-filter"></i>
                 Apply
               </button>
-              <button type="button" class="program-browse-btn" (click)="clearFilters()">
+              <button type="button" class="program-browse-btn icetl-btn icetl-btn-outline" (click)="clearFilters()">
                 <i class="feather-refresh-cw"></i>
                 Reset
               </button>
             </div>
           </div>
 
-          <div class="program-timeline-tabs" aria-label="Timeline filter">
+          <div class="program-timeline-tabs icetl-tab-list" aria-label="Timeline filter">
             @for (option of timelineOptions; track option.value) {
             <button
               type="button"
+              class="icetl-tab-button"
               [class.is-active]="timeline === option.value"
+              [attr.aria-pressed]="timeline === option.value"
               (click)="selectTimeline(option.value)">
               {{ option.label }}
             </button>
@@ -208,7 +210,7 @@
       }
 
       @if (!loading && programs.length === 0) {
-      <div class="program-empty-state">
+      <div class="program-empty-state icetl-empty-state">
         <i class="feather-calendar"></i>
         <h3>No {{ pluralLabelLower }} found</h3>
         <p>New active {{ pluralLabelLower }} will appear here once published.</p>
@@ -218,7 +220,7 @@
       @if (!loading && programs.length > 0 && viewMode === 'grid') {
       <div class="program-grid">
         @for (program of programs; track trackByProgramId($index, program)) {
-        <article class="program-card">
+        <article class="program-card icetl-list-card">
           <div class="program-card__image">
             <img
               [src]="programImage(program)"
@@ -226,8 +228,8 @@
               loading="lazy"
               decoding="async"
               (error)="onProgramImageError(program)">
-            <span class="program-card__type">{{ singularLabel }}</span>
-            <span class="program-card__status" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+            <span class="program-card__type icetl-badge icetl-badge--active">{{ singularLabel }}</span>
+            <span class="program-card__status icetl-badge" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
               {{ getScheduleLabel(program) }}
             </span>
           </div>
@@ -264,14 +266,14 @@
                 <strong>{{ formatPrice(program.price) }}</strong>
               </div>
               @if (isProgramEnrolled(program)) {
-              <span class="program-enrolled-badge">
+              <span class="program-enrolled-badge icetl-badge icetl-badge--completed">
                 <i class="feather-check-circle"></i>
                 Enrolled
               </span>
               } @else {
               <button
                 type="button"
-                class="program-buy-button"
+                class="program-buy-button icetl-btn icetl-btn-primary"
                 [disabled]="processingProgramId === program.id"
                 (click)="buyProgram(program)">
                 <i [class]="processingProgramId === program.id ? 'fa-solid fa-spinner fa-spin' : 'feather-credit-card'"></i>
@@ -288,7 +290,7 @@
       @if (!loading && programs.length > 0 && viewMode === 'list') {
       <div class="program-list">
         @for (program of programs; track trackByProgramId($index, program)) {
-        <article class="program-list-row">
+        <article class="program-list-row icetl-list-card">
           <div class="program-list-row__image">
             <img
               [src]="programImage(program)"
@@ -296,7 +298,7 @@
               loading="lazy"
               decoding="async"
               (error)="onProgramImageError(program)">
-            <span [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
+            <span class="icetl-badge" [class.is-ongoing]="program.scheduleStatus === 'ongoing'">
               {{ getScheduleLabel(program) }}
             </span>
           </div>
@@ -335,14 +337,14 @@
               <strong>{{ formatPrice(program.price) }}</strong>
             </div>
             @if (isProgramEnrolled(program)) {
-            <span class="program-enrolled-badge">
+            <span class="program-enrolled-badge icetl-badge icetl-badge--completed">
               <i class="feather-check-circle"></i>
               Enrolled
             </span>
             } @else {
             <button
               type="button"
-              class="program-buy-button"
+              class="program-buy-button icetl-btn icetl-btn-primary"
               [disabled]="processingProgramId === program.id"
               (click)="buyProgram(program)">
               <i [class]="processingProgramId === program.id ? 'fa-solid fa-spinner fa-spin' : 'feather-credit-card'"></i>
@@ -356,10 +358,10 @@
       }
 
       @if (!loading && meta.total > 0) {
-      <div class="program-pager">
+      <div class="program-pager icetl-pagination">
         <p>{{ getPaginationLabel() }}</p>
-        <div>
-          <button type="button" [disabled]="meta.currentPage <= 1" (click)="goToPreviousPage()">
+        <div class="icetl-pagination__controls">
+          <button type="button" class="icetl-btn icetl-btn-outline" [disabled]="meta.currentPage <= 1" (click)="goToPreviousPage()">
             <i class="feather-chevron-left"></i>
             Previous
           </button>
@@ -374,7 +376,7 @@
               (blur)="goToPageInput()">
             <span>of {{ meta.lastPage }}</span>
           </label>
-          <button type="button" [disabled]="meta.currentPage >= meta.lastPage" (click)="goToNextPage()">
+          <button type="button" class="icetl-btn icetl-btn-primary" [disabled]="meta.currentPage >= meta.lastPage" (click)="goToNextPage()">
             Next
             <i class="feather-chevron-right"></i>
           </button>

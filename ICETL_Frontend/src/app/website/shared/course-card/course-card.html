@@ -11,18 +11,12 @@
 
   <div class="rbt-card-body">
     <div class="rbt-card-top">
-      <div class="rbt-review">
-        <div class="rating">
-          @for (star of stars; track star) {
-            <i class="fas fa-star"></i>
-          }
-        </div>
-        <span class="rating-count">({{ course().reviews }} Reviews)</span>
+      <div class="course-card__signal">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <span>{{ course().category }}</span>
       </div>
 
-      <button type="button" class="rbt-round-btn course-card__save" title="Save course">
-        <i class="far fa-bookmark"></i>
-      </button>
+      <span class="course-card__level-pill">{{ course().level }}</span>
     </div>
 
     <span class="course-card__category">{{ course().category }}</span>

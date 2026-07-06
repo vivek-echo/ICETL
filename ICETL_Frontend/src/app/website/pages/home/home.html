@@ -14,7 +14,7 @@
             </h1>
             <p class="description">
               Learn through live projects, internships, and professional certification programs at
-              ICTEL.
+              ICETL.
             </p>
             <div class="slider-btn">
               <a class="rbt-btn btn-gradient hover-icon-reverse" [routerLink]="courseRoute">
@@ -42,7 +42,7 @@
               <div class="rbt-card variation-01 rbt-hover">
                 <div class="rbt-card-img">
                   <a [routerLink]="courseRoute">
-                    <img [src]="course.image" alt="Card image" (error)="onCourseImageError(course)" />
+                    <img [src]="course.image" [alt]="course.title" (error)="onCourseImageError(course)" />
                     <div class="rbt-badge-3 bg-white">
                       <span>{{ course.badge }}</span>
                       <span>{{ course.badgeSuffix }}</span>
@@ -100,7 +100,7 @@
       <div class="col-lg-12">
         <div class="section-title text-center">
           <span class="subtitle bg-primary-opacity">CATEGORIES</span>
-          <h2 class="title">Explore Top Courses Caterories <br /> That Change Yourself</h2>
+          <h2 class="title">Explore Top Course Categories <br /> Built For Career Growth</h2>
         </div>
       </div>
     </div>
@@ -110,7 +110,7 @@
         <a class="rbt-cat-box rbt-cat-box-1 text-center">
           <div class="inner">
             <div class="icons">
-              <img [src]="category.image" alt="Icons Images" />
+              <img [src]="category.image" [alt]="category.title + ' icon'" />
             </div>
             <div class="content">
               <h5 class="title">{{ category.title }}</h5>
@@ -133,7 +133,7 @@
     <div class="row mb--60">
       <div class="col-lg-12">
         <div class="section-title text-center">
-          <span class="subtitle bg-secondary-opacity">Popular ICTEL Courses</span>
+          <span class="subtitle bg-secondary-opacity">Popular ICETL Courses</span>
           <h2 class="title">Explore Professional IT Courses <br /> Designed for career growth.</h2>
         </div>
       </div>
@@ -153,20 +153,14 @@
           </div>
           <div class="rbt-card-body">
             <div class="rbt-card-top">
-              <div class="rbt-review">
-                <div class="rating">
-                  <i class="fas fa-star"></i>
-                  <i class="fas fa-star"></i>
-                  <i class="fas fa-star"></i>
-                  <i class="fas fa-star"></i>
-                  <i class="fas fa-star"></i>
+                <div class="rbt-review course-card-signal">
+                  <span class="course-card-signal__icon"><i class="feather-award"></i></span>
+                  <span class="rating-count">{{ course.category }}</span>
                 </div>
-                <span class="rating-count">({{ course.reviews }} Reviews)</span>
-              </div>
-              <div class="rbt-bookmark-btn">
-                <a class="rbt-round-btn" title="Bookmark" href="javascript:void(0)">
-                  <i class="feather-bookmark"></i>
-                </a>
+              <div class="rbt-bookmark-btn" aria-hidden="true">
+                <span class="rbt-round-btn">
+                  <i class="feather-book-open"></i>
+                </span>
               </div>
             </div>
 
@@ -233,15 +227,15 @@
       <div class="col-lg-6">
         <div class="thumbnail-wrapper about-style-1__media">
           <div class="thumbnail image-1 about-style-1__media-primary">
-            <img src="assets/images/about/1.png" alt="Education Images" />
+            <img src="assets/images/about/1.png" alt="ICETL practical training session" />
           </div>
 
           <div class="about-style-1__media-stack">
             <div class="thumbnail image-2 about-style-1__media-secondary">
-              <img src="assets/images/about/2.png" alt="Education Images" />
+              <img src="assets/images/about/2.png" alt="ICETL classroom mentoring" />
             </div>
             <div class="thumbnail image-3 about-style-1__media-tertiary">
-              <img src="assets/images/about/3.png" alt="Education Images" />
+              <img src="assets/images/about/3.png" alt="ICETL learner project work" />
             </div>
           </div>
         </div>
@@ -249,12 +243,12 @@
       <div class="col-lg-6">
         <div class="inner pl--50 pl_sm--0 pl_md--0 about-style-1__content">
           <div class="section-title text-start">
-            <span class="subtitle bg-coral-opacity">About ICTEL</span>
+            <span class="subtitle bg-coral-opacity">About ICETL</span>
             <h2 class="title">Build Industry-Ready Skills <br /> With Practical IT Training</h2>
           </div>
 
           <p class="description mt--30">
-            ICTEL equips learners with practical knowledge through hands-on training, live
+            ICETL equips learners with practical knowledge through hands-on training, live
             projects, internship-focused exposure, and certification programs designed to prepare
             them for real industry roles.
           </p>
@@ -319,7 +313,7 @@
 
       <article class="ictel-cta-card ictel-cta-card--secondary">
         <div class="ictel-cta-card__top">
-          <span class="ictel-cta-badge"><i class="feather-star"></i>ICTEL Advantage</span>
+          <span class="ictel-cta-badge"><i class="feather-star"></i>ICETL Advantage</span>
           <span class="ictel-cta-pill">Mentor led</span>
         </div>
         <h3>Practical learning with real experience</h3>
@@ -364,7 +358,7 @@
           <div class="top-circle-shape"></div>
           <div class="inner">
             <div class="rbt-round-icon">
-              <img [src]="counter.image" alt="Icons Images" />
+              <img [src]="counter.image" [alt]="counter.label + ' icon'" />
             </div>
             <div class="content">
               <h3 class="counter"><span class="odometer" [attr.data-count]="counter.value">{{counter.value}}</span></h3>
@@ -386,8 +380,8 @@
           <div class="section-title text-center mb--10">
             <span class="subtitle bg-primary-opacity">EDUCATION FOR EVERYONE</span>
             <h2 class="title">
-              People like histudy education. <br />
-              No joking - here's the proof!
+              Learners Trust ICETL Training. <br />
+              Here Is What They Say.
             </h2>
           </div>
         </div>
@@ -401,13 +395,13 @@
         <div class="rbt-testimonial-box style-2">
           <div class="inner">
             <div class="icons">
-              <img [src]="testimonial.icon" alt="Clint Images" />
+              <img [src]="testimonial.icon" alt="Review source icon" />
             </div>
             <div class="description">
               <p class="subtitle-3">{{ testimonial.quote }}</p>
               <div class="clint-info-wrapper">
                 <div class="thumb">
-                  <img [src]="testimonial.avatar" alt="Clint Images" />
+                  <img [src]="testimonial.avatar" [alt]="testimonial.name" />
                 </div>
                 <div class="client-info">
                   <h5 class="title">{{ testimonial.name }}, <span>{{ testimonial.role }}</span></h5>
@@ -428,13 +422,13 @@
         <div class="rbt-testimonial-box style-2">
           <div class="inner">
             <div class="icons">
-              <img [src]="testimonial.icon" alt="Clint Images" />
+              <img [src]="testimonial.icon" alt="Review source icon" />
             </div>
             <div class="description">
               <p class="subtitle-3">{{ testimonial.quote }}</p>
               <div class="clint-info-wrapper">
                 <div class="thumb">
-                  <img [src]="testimonial.avatar" alt="Clint Images" />
+                  <img [src]="testimonial.avatar" [alt]="testimonial.name" />
                 </div>
                 <div class="client-info">
                   <h5 class="title">{{ testimonial.name }}, <span>{{ testimonial.role }}</span></h5>
@@ -467,7 +461,7 @@
                   <div class="rbt-card event-grid-card variation-01 rbt-hover">
                     <div class="rbt-card-img">
                       <a [routerLink]="courseRoute">
-                        <img [src]="event.image" alt="Card image" />
+                        <img [src]="event.image" [alt]="event.title" />
                         <div class="rbt-badge-3 bg-white">
                           <span>{{ event.dayMonth }}</span>
                           <span>{{ event.year }}</span>
@@ -525,7 +519,7 @@
         <span class="subtitle bg-primary-opacity">Live Programs</span>
         <h2 class="title">Latest Workshops &amp; Seminars</h2>
         <p class="description mt--15">
-          Join active and upcoming practical sessions led by ICTEL trainers and industry mentors.
+          Join active and upcoming practical sessions led by ICETL trainers and industry mentors.
         </p>
       </div>
       <div class="home-programs-section__actions">
@@ -644,7 +638,7 @@
     <div class="home-program-empty">
       <span class="home-program-empty__icon"><i class="feather-calendar"></i></span>
       <h3>No upcoming workshops or seminars available right now.</h3>
-      <p>New ICTEL programs will appear here as soon as they are published.</p>
+      <p>New ICETL programs will appear here as soon as they are published.</p>
     </div>
     }
   </div>
@@ -721,7 +715,7 @@
         <span class="subtitle bg-primary-opacity">Student Placements</span>
         <h2 class="title">Our Students Placed In Top Companies</h2>
         <p class="description mt--15">
-          ICTEL learners are building careers across leading IT services, consulting, cloud,
+          ICETL learners are building careers across leading IT services, consulting, cloud,
           engineering, and digital transformation companies.
         </p>
       </div>
@@ -763,7 +757,7 @@
     <div class="ictel-newsletter">
       <div class="ictel-newsletter__content">
         <span class="ictel-newsletter__eyebrow">Career Updates</span>
-        <h2>Get ICTEL training, internship, and placement updates</h2>
+        <h2>Get ICETL training, internship, and placement updates</h2>
         <p>
           Stay informed about new course batches, live workshops, certification programs,
           placement preparation sessions, and practical project opportunities.
@@ -788,7 +782,7 @@
             <span class="btn-icon"><i class="feather-arrow-right"></i></span>
           </span>
         </button>
-        <span class="ictel-newsletter__note">No spam. Only useful ICTEL career updates.</span>
+        <span class="ictel-newsletter__note">No spam. Only useful ICETL career updates.</span>
       </form>
     </div>
 

@@ -5,7 +5,7 @@
         <div class="row align-items-center g-4">
           <div class="col-lg-7">
             <div class="section-title text-start mb--0">
-              <span class="subtitle bg-primary-opacity">ICTEL COURSE CATALOG</span>
+              <span class="subtitle bg-primary-opacity">ICETL COURSE CATALOG</span>
               <h1 id="courses-hero-title" class="title">Explore Professional IT Courses</h1>
               <p class="description courses-banner__description">
                 Learn industry-ready skills through practical training, live projects, and
@@ -30,7 +30,7 @@
           </div>
 
           <div class="col-lg-5">
-            <div class="courses-banner__visual" aria-label="ICTEL course catalog statistics">
+            <div class="courses-banner__visual" aria-label="ICETL course catalog statistics">
               <div class="courses-banner__glow courses-banner__glow--one"></div>
               <div class="courses-banner__glow courses-banner__glow--two"></div>
 
@@ -195,7 +195,7 @@
         <div class="col-lg-8">
           <div class="section-title text-start mb--0">
             <span class="subtitle bg-primary-opacity">Course Grid</span>
-            <h2 class="title">Browse ICTEL programs across skill levels and focus areas.</h2>
+            <h2 class="title">Browse ICETL programs across skill levels and focus areas.</h2>
           </div>
         </div>
 
@@ -213,7 +213,7 @@
             <i class="fa-solid fa-spinner fa-spin"></i>
           </div>
           <h4>Loading courses...</h4>
-          <p>Fetching the latest active courses from ICTEL.</p>
+          <p>Fetching the latest active courses from ICETL.</p>
         </div>
       } @else if (filteredCourses().length) {
         <div class="row g-5">
@@ -237,22 +237,14 @@
                   </a>
                 </div>
 
-                <div class="rbt-card-body courses-grid-card__body">
+                  <div class="rbt-card-body courses-grid-card__body">
                   <div class="rbt-card-top courses-grid-card__top">
-                    <div class="rbt-review">
-                      <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                      </div>
-                      <span class="rating-count">({{ course.reviews }} Reviews)</span>
+                    <div class="courses-grid-card__signal">
+                      <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                      <span>{{ course.category }}</span>
                     </div>
-                    <div class="rbt-bookmark-btn">
-                      <span class="rbt-round-btn" aria-hidden="true">
-                        <i class="feather-bookmark"></i>
-                      </span>
+                    <div class="courses-grid-card__level-pill">
+                      {{ course.level }}
                     </div>
                   </div>
 
@@ -325,9 +317,9 @@
         <div class="col-lg-12">
           <div class="section-title text-center">
             <span class="subtitle bg-primary-opacity">Course Features</span>
-            <h2 class="title">Why learners choose ICTEL for career-focused IT training.</h2>
+            <h2 class="title">Why learners choose ICETL for career-focused IT training.</h2>
             <p class="description courses-features__description mx-auto">
-              Every ICTEL course is designed to combine practical learning, industry exposure, and
+              Every ICETL course is designed to combine practical learning, industry exposure, and
               structured support for professional growth.
             </p>
           </div>
@@ -406,7 +398,7 @@
             <span class="courses-cta__eyebrow">Take The Next Step</span>
             <h2>Start Your Tech Career Today</h2>
             <p>
-              Join ICTEL and gain industry-ready skills with practical learning.
+              Join ICETL and gain industry-ready skills with practical learning.
             </p>
           </div>
 

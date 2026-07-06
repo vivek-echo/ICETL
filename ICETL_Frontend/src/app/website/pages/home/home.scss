@@ -204,6 +204,33 @@
   color: #5b6475;
 }
 
+.course-card-signal {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(31, 94, 255, 0.08);
+  color: var(--icetl-blue);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.course-card-signal__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.course-card-signal .rating-count {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rbt-card .rbt-meta,
 .rbt-card .rbt-card-bottom {
   font-size: 14px;
@@ -401,7 +428,7 @@
   z-index: 2;
   height: 4px;
   pointer-events: none;
-  background: linear-gradient(90deg, var(--icetl-blue), #7c5cff 52%, #12c8a8);
+  background: linear-gradient(90deg, var(--icetl-blue), #7c5cff 52%, #8b5cf6);
 }
 
 .ictel-cta-card::after {
@@ -413,7 +440,7 @@
   top: -72px;
   z-index: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(31, 94, 255, 0.16), rgba(18, 200, 168, 0.06) 48%, transparent 70%);
+  background: radial-gradient(circle, rgba(31, 94, 255, 0.16), rgba(124, 92, 255, 0.08) 48%, transparent 70%);
   opacity: 0.86;
   pointer-events: none;
   transition:
@@ -422,11 +449,11 @@
 }
 
 .ictel-cta-card--secondary::before {
-  background: linear-gradient(90deg, #12c8a8, #2f57ef 54%, #f9b64b);
+  background: linear-gradient(90deg, #6554f2, #2f57ef 54%, #8b5cf6);
 }
 
 .ictel-cta-card--secondary::after {
-  background: radial-gradient(circle, rgba(18, 200, 168, 0.18), rgba(249, 182, 75, 0.08) 48%, transparent 70%);
+  background: radial-gradient(circle, rgba(101, 84, 242, 0.16), rgba(31, 94, 255, 0.08) 48%, transparent 70%);
 }
 
 .ictel-cta-card:hover {
@@ -1367,7 +1394,7 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 10% 12%, rgba(18, 200, 168, 0.16), transparent 28%),
+    radial-gradient(circle at 10% 12%, rgba(101, 84, 242, 0.12), transparent 28%),
     linear-gradient(135deg, #f7fbff 0%, #eef4ff 52%, #f9fbff 100%);
 }
 
@@ -1446,7 +1473,7 @@
   gap: 8px;
   min-height: 36px;
   padding: 8px 12px;
-  border: 1px solid rgba(18, 200, 168, 0.16);
+  border: 1px solid rgba(101, 84, 242, 0.16);
   border-radius: 999px;
   background: #ffffff;
   color: #4b5565;
@@ -1456,7 +1483,7 @@
 }
 
 .ictel-newsletter__chips i {
-  color: #0f9f6e;
+  color: #6554f2;
 }
 
 .ictel-newsletter__form {

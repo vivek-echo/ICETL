@@ -1,17 +1,17 @@
-<section class="dashboard-page">
-  <div class="dashboard-heading">
+<section class="dashboard-page icetl-dashboard-page">
+  <div class="dashboard-heading icetl-page-header icetl-card">
     <div class="heading-main">
       <span class="dashboard-kicker">Instructor Dashboard</span>
       <h4>Course performance</h4>
       <p>Review learner traction, content status, and revenue across your courses.</p>
     </div>
     <div class="heading-meta">
-      <div class="heading-actions">
-        <a class="rbt-btn btn-sm btn-border dashboard-action" routerLink="/application/courses/manageCourses/view">
+      <div class="heading-actions icetl-dashboard-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/courses/manageCourses/view">
           <i class="feather-list"></i>
           <span>My Courses</span>
         </a>
-        <button type="button" class="rbt-btn btn-sm btn-border dashboard-action" (click)="loadDashboard()" [disabled]="loading">
+        <button type="button" class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" (click)="loadDashboard()" [disabled]="loading">
           <i class="feather-refresh-cw"></i>
           <span>{{ loading ? 'Loading' : 'Refresh' }}</span>
         </button>
@@ -24,26 +24,26 @@
   }
 
   @if (data) {
-    <div class="metric-grid">
-      <article class="metric-card">
+    <div class="metric-grid icetl-metric-grid">
+      <article class="metric-card icetl-metric-card">
         <i class="feather-book"></i>
         <span>Total Courses</span>
         <strong>{{ data.summary.totalCourses }}</strong>
         <small>Courses assigned to you</small>
       </article>
-      <article class="metric-card">
+      <article class="metric-card icetl-metric-card">
         <i class="feather-check-circle"></i>
         <span>Active Courses</span>
         <strong>{{ data.summary.activeCourses }}</strong>
         <small>Published and available</small>
       </article>
-      <article class="metric-card">
+      <article class="metric-card icetl-metric-card">
         <i class="feather-users"></i>
         <span>Enrolled Learners</span>
         <strong>{{ data.summary.enrolledLearners }}</strong>
         <small>Unique learners</small>
       </article>
-      <article class="metric-card">
+      <article class="metric-card icetl-metric-card">
         <i class="feather-trending-up"></i>
         <span>Revenue</span>
         <strong>Rs. {{ formatAmount(data.summary.totalRevenue) }}</strong>
@@ -52,7 +52,7 @@
     </div>
 
     <div class="dashboard-grid">
-      <article class="dashboard-panel">
+      <article class="dashboard-panel icetl-card">
         <div class="panel-title">
           <h5>Course Status</h5>
           <span>{{ data.summary.averageProgress }}% avg progress</span>
@@ -72,7 +72,7 @@
         </div>
       </article>
 
-      <article class="dashboard-panel">
+      <article class="dashboard-panel icetl-card">
         <div class="panel-title">
           <h5>Top Courses</h5>
           <span>{{ data.summary.pendingCourses }} inactive</span>
@@ -87,13 +87,13 @@
               <b>{{ course.students || 0 }} learners</b>
             </div>
           } @empty {
-            <p class="empty-state">No courses available yet.</p>
+            <p class="empty-state icetl-empty-state icetl-dashboard-empty">No courses available yet.</p>
           }
         </div>
       </article>
     </div>
 
-    <article class="dashboard-panel">
+    <article class="dashboard-panel icetl-card">
       <div class="panel-title">
         <h5>Recent Learners</h5>
         <span>Newest enrollments</span>
@@ -113,11 +113,14 @@
             <span>{{ learner.learnerEmail || 'N/A' }}</span>
           </div>
         } @empty {
-          <p class="empty-state">No learner enrollments yet.</p>
+          <p class="empty-state icetl-empty-state icetl-dashboard-empty">No learner enrollments yet.</p>
         }
       </div>
     </article>
   } @else if (loading) {
-    <div class="dashboard-panel empty-state">Loading dashboard...</div>
+    <div class="dashboard-panel empty-state icetl-spinner-wrap">
+      <span class="icetl-inline-spinner" aria-hidden="true"></span>
+      <span>Loading dashboard...</span>
+    </div>
   }
 </section>

@@ -181,7 +181,7 @@ export class HomeComponent {
       price: 70,
       originalPrice: 120,
       description:
-        'Learn through live projects, internships, and professional certification programs at ICTEL.',
+        'Learn through live projects, internships, and professional certification programs at ICETL.',
     },
     {
       id: 'professional-certification-programs',
@@ -195,7 +195,7 @@ export class HomeComponent {
       price: 64,
       originalPrice: 99,
       description:
-        'Learn through live projects, internships, and professional certification programs at ICTEL.',
+        'Learn through live projects, internships, and professional certification programs at ICETL.',
     },
     {
       id: 'live-projects-and-internships',
@@ -209,7 +209,7 @@ export class HomeComponent {
       price: 80,
       originalPrice: 140,
       description:
-        'Learn through live projects, internships, and professional certification programs at ICTEL.',
+        'Learn through live projects, internships, and professional certification programs at ICETL.',
     },
   ];
   readonly heroCourses = signal<BannerCourse[]>(this.defaultHeroCourses);
@@ -451,7 +451,7 @@ export class HomeComponent {
       reviews: this.getReviewCount(course),
       description:
         course.description || 'Build practical skills with a focused, instructor-led program.',
-      author: course.instructorName || 'ICTEL Instructor',
+      author: course.instructorName || 'ICETL Instructor',
       authorImage: this.placeholderAuthorImage,
       category: course.categoryName || 'Course',
       price,
@@ -566,7 +566,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/facebook.png',
       quote:
-        'ICTEL gave me practical training with live projects that helped me understand real development workflows.',
+        'ICETL gave me practical training with live projects that helped me understand real development workflows.',
       avatar: 'assets/images/testimonial/client-01.png',
       name: 'Aarav Menon',
       role: 'Full Stack Student',
@@ -582,7 +582,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/yelp.png',
       quote:
-        'Working on live projects at ICTEL helped me build practical skills that I could showcase in interviews.',
+        'Working on live projects at ICETL helped me build practical skills that I could showcase in interviews.',
       avatar: 'assets/images/testimonial/client-03.png',
       name: 'Rahul Das',
       role: 'Data Science Student',
@@ -598,7 +598,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/bing.png',
       quote:
-        'ICTEL supported my career growth with project-based training and guidance that matched current industry needs.',
+        'ICETL supported my career growth with project-based training and guidance that matched current industry needs.',
       avatar: 'assets/images/testimonial/client-05.png',
       name: 'Karthik Iyer',
       role: 'Networking Student',
@@ -614,7 +614,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/hubs.png',
       quote:
-        'I gained real exposure through practical assignments and internship preparation sessions at ICTEL.',
+        'I gained real exposure through practical assignments and internship preparation sessions at ICETL.',
       avatar: 'assets/images/testimonial/client-07.png',
       name: 'Vikram Nair',
       role: 'Ethical Hacking Student',
@@ -630,7 +630,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/yelp.png',
       quote:
-        'My internship experience through ICTEL helped me understand workplace expectations and improve my technical skills.',
+        'My internship experience through ICETL helped me understand workplace expectations and improve my technical skills.',
       avatar: 'assets/images/testimonial/client-06.png',
       name: 'Aditya Kumar',
       role: 'Software Development Student',
@@ -641,7 +641,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/facebook.png',
       quote:
-        'ICTEL gave me practical training with live projects that helped me understand real development workflows.',
+        'ICETL gave me practical training with live projects that helped me understand real development workflows.',
       avatar: 'assets/images/testimonial/client-01.png',
       name: 'Aarav Menon',
       role: 'Full Stack Student',
@@ -657,7 +657,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/yelp.png',
       quote:
-        'Working on live projects at ICTEL helped me build practical skills that I could showcase in interviews.',
+        'Working on live projects at ICETL helped me build practical skills that I could showcase in interviews.',
       avatar: 'assets/images/testimonial/client-03.png',
       name: 'Rahul Das',
       role: 'Data Science Student',
@@ -673,7 +673,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/hubs.png',
       quote:
-        'ICTEL supported my career growth with project-based training and guidance that matched current industry needs.',
+        'ICETL supported my career growth with project-based training and guidance that matched current industry needs.',
       avatar: 'assets/images/testimonial/client-05.png',
       name: 'Karthik Iyer',
       role: 'Networking Student',
@@ -689,7 +689,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/bing.png',
       quote:
-        'I gained real exposure through practical assignments and internship preparation sessions at ICTEL.',
+        'I gained real exposure through practical assignments and internship preparation sessions at ICETL.',
       avatar: 'assets/images/testimonial/client-07.png',
       name: 'Vikram Nair',
       role: 'Ethical Hacking Student',
@@ -705,7 +705,7 @@ export class HomeComponent {
     {
       icon: 'assets/images/icons/yelp.png',
       quote:
-        'My internship experience through ICTEL helped me understand workplace expectations and improve my technical skills.',
+        'My internship experience through ICETL helped me understand workplace expectations and improve my technical skills.',
       avatar: 'assets/images/testimonial/client-06.png',
       name: 'Aditya Kumar',
       role: 'Software Development Student',
@@ -719,7 +719,7 @@ export class HomeComponent {
       year: '2024',
       location: 'Vancouver',
       time: '8:00 am - 5:00 pm',
-      title: 'Painting Art Contest 2020 for histudy Clud',
+      title: 'ICETL Practical Technology Workshop',
     },
     {
       image: 'assets/images/event/grid-type-04.jpg',

@@ -27,42 +27,62 @@
               </div>
             </div>
 
-            <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-md w-100 rbt-btn btn-gradient" [disabled]="isLoading || loginForm.invalid">
+            <div class="form-submit-group icetl-form-actions">
+              <button type="submit" class="rbt-btn btn-md w-100 rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="isLoading || loginForm.invalid">
                 <i class="fa-solid fa-right-to-bracket me-1"></i> {{ isLoading ? 'Sending...' : 'Send OTP' }}
               </button>
             </div>
           </form>
 
-          <form *ngIf="currentStep === 'otp'" (submit)="onOtpSubmit($event)">
-            <fieldset class="otp-fieldset mb-3">
-              <legend class="sr-only">Enter the 6-digit OTP</legend>
-
-              <div class="otp-container text-center">
-                <input *ngFor="let digit of otpArray; let i = index" [id]="'otp-digit-' + i" [value]="otpValues[i]"
-                  maxlength="1" type="text" class="otp-input" inputmode="numeric" autocomplete="one-time-code"
-                  [attr.aria-label]="'OTP digit ' + (i + 1) + ' of ' + otpArray.length" (input)="onOtpInput($event, i)"
-                  (keydown)="onKeyDown($event, i)" #otpBox />
+          <form *ngIf="currentStep === 'otp'" class="otp-form" (submit)="onOtpSubmit($event)">
+            <div class="otp-verification">
+              <div class="otp-verification__status">
+                <span class="otp-verification__icon" aria-hidden="true">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </span>
+                <div class="otp-verification__copy">
+                  <span class="otp-verification__eyebrow">Secure code sent</span>
+                  <strong class="otp-verification__email">{{ loginForm.value.emailId }}</strong>
+                </div>
               </div>
-            </fieldset>
 
-            <div class="text-center mb-3">
-              <small *ngIf="timer > 0">Resend OTP in {{ timer }} sec</small>
+              <fieldset class="otp-fieldset">
+                <legend class="sr-only">Enter the 6-digit OTP</legend>
 
-              <button *ngIf="timer === 0" type="button" class="btn btn-link" [disabled]="isLoading" (click)="resendOtp()">
-                Resend OTP
-              </button>
+                <div class="otp-container">
+                  <input *ngFor="let digit of otpArray; let i = index" [id]="'otp-digit-' + i" [value]="otpValues[i]"
+                    maxlength="1" type="text" class="otp-input" [class.otp-input--filled]="otpValues[i]"
+                    inputmode="numeric" autocomplete="one-time-code"
+                    [attr.aria-label]="'OTP digit ' + (i + 1) + ' of ' + otpArray.length" (input)="onOtpInput($event, i)"
+                    (keydown)="onKeyDown($event, i)" #otpBox />
+                </div>
+              </fieldset>
+
+              <div class="otp-footer-row">
+                <div class="otp-timer" [class.otp-timer--ready]="timer === 0" aria-live="polite">
+                  <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                  <span *ngIf="timer > 0">Resend in <strong>{{ timer }}s</strong></span>
+                  <span *ngIf="timer === 0">New code available</span>
+                </div>
+
+                <button *ngIf="timer === 0" type="button" class="otp-resend-button" [disabled]="isLoading" (click)="resendOtp()">
+                  <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                  <span>Resend OTP</span>
+                </button>
+              </div>
             </div>
 
-            <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading || getOtp().length !== otpArray.length">
+            <div class="form-submit-group icetl-form-actions">
+              <button type="submit" class="rbt-btn btn-gradient w-100 otp-submit-button icetl-btn icetl-btn-primary" [disabled]="isLoading || getOtp().length !== otpArray.length">
+                <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>
                 {{ isLoading ? 'Verifying...' : 'Verify & Continue' }}
               </button>
             </div>
 
-            <div class="text-center mt-3">
-              <button type="button" class="btn btn-link login-link-button" (click)="backToUserInput()">
-                Change email ID
+            <div class="otp-change-wrapper">
+              <button type="button" class="btn btn-link login-link-button otp-change-button" (click)="backToUserInput()">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                <span>Change email ID</span>
               </button>
             </div>
           </form>
@@ -107,7 +127,7 @@
             </div>
           </div>
 
-          <form *ngIf="currentStep === 'profile'" [formGroup]="profileForm" (ngSubmit)="completeProfile()">
+          <form *ngIf="currentStep === 'profile'" class="icetl-form-page" [formGroup]="profileForm" (ngSubmit)="completeProfile()">
             <div class="form-group">
               <div
                 class="premium-field"
@@ -351,8 +371,8 @@
               </div>
             </div>
 
-            <div class="form-submit-group">
-              <button type="submit" class="rbt-btn btn-gradient w-100" [disabled]="isLoading || profileForm.invalid">
+            <div class="form-submit-group icetl-form-actions">
+              <button type="submit" class="rbt-btn btn-gradient w-100 icetl-btn icetl-btn-primary" [disabled]="isLoading || profileForm.invalid">
                 {{ isLoading ? 'Saving...' : 'Complete Profile' }}
               </button>
             </div>

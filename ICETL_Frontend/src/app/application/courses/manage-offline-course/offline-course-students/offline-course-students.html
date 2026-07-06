@@ -34,8 +34,8 @@
     </div>
   </section>
 
-  <div class="student-toolbar">
-    <div class="student-toolbar__header">
+  <div class="student-toolbar icetl-filter-panel">
+    <div class="student-toolbar__header icetl-filter-toolbar">
       <div class="student-toolbar__title">
         <span class="student-toolbar__icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -45,7 +45,7 @@
 
       <button
         type="button"
-        class="student-toolbar__toggle"
+        class="student-toolbar__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="offlineStudentFiltersPanel">
@@ -55,7 +55,7 @@
       </button>
     </div>
 
-    <div id="offlineStudentFiltersPanel" class="student-toolbar__body" [hidden]="!showFilters">
+    <div id="offlineStudentFiltersPanel" class="student-toolbar__body icetl-filter-grid" [hidden]="!showFilters">
     <div class="student-field student-field--search">
       <label for="offlineStudentSearch">Search</label>
       <div class="student-control">
@@ -123,12 +123,12 @@
       </div>
     </div>
 
-    <div class="student-toolbar__actions d-flex">
-      <button type="button" class="student-action student-action--primary" (click)="onSearch()" [disabled]="loading">
+    <div class="student-toolbar__actions d-flex icetl-filter-actions">
+      <button type="button" class="student-action student-action--primary icetl-btn icetl-btn-primary" (click)="onSearch()" [disabled]="loading">
         <i class="feather-filter"></i>
         Apply
       </button>
-      <button type="button" class="student-action" (click)="clearFilters()" [disabled]="loading">
+      <button type="button" class="student-action icetl-btn icetl-btn-outline" (click)="clearFilters()" [disabled]="loading">
         <i class="feather-refresh-cw"></i>
         Reset
       </button>
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <section class="student-table-shell">
+  <section class="student-table-shell icetl-card">
     @if (loading) {
     <div class="student-table-loader" aria-label="Loading enrolled students">
       @for (row of skeletonRows; track row) {
@@ -146,7 +146,7 @@
     }
 
     @if (!loading && students.length === 0) {
-    <div class="student-empty">
+    <div class="student-empty icetl-empty-state">
       <i class="feather-users"></i>
       <h5>No Students Found</h5>
       <p>No enrolled students match the selected filters.</p>
@@ -154,8 +154,8 @@
     }
 
     @if (!loading && students.length > 0) {
-    <div class="student-table-wrap">
-      <table class="student-table">
+    <div class="student-table-wrap icetl-table-shell">
+      <table class="student-table icetl-table">
         <thead>
           <tr>
             <th>Student</th>
@@ -205,14 +205,14 @@
             </td>
             <td data-label="Status">
               <span
-                class="student-badge"
+                class="student-badge icetl-badge"
                 [class.student-badge--paid]="student.paymentStatus === 'PAID'"
                 [class.student-badge--partial]="student.paymentStatus === 'PARTIAL'">
                 {{ student.paymentStatus === 'PAID' ? 'Paid' : 'Partial' }}
               </span>
             </td>
             <td data-label="Action">
-              <button type="button" class="student-icon-action" (click)="openPaymentDetails(student)" title="View payment">
+              <button type="button" class="student-icon-action icetl-btn icetl-btn-outline" (click)="openPaymentDetails(student)" title="View payment">
                 <i class="feather-eye"></i>
                 <span>View Payment</span>
               </button>
@@ -223,10 +223,10 @@
       </table>
     </div>
 
-    <footer class="student-pager">
+    <footer class="student-pager icetl-pagination">
       <p>{{ getPaginationLabel() }}</p>
-      <div class="student-pager__controls">
-        <button type="button" class="student-page-button" (click)="goToPreviousPage()" [disabled]="meta.currentPage <= 1">
+      <div class="student-pager__controls icetl-pagination__controls">
+        <button type="button" class="student-page-button icetl-icon-btn" (click)="goToPreviousPage()" [disabled]="meta.currentPage <= 1" title="Previous page">
           <i class="feather-chevron-left"></i>
         </button>
         <label>
@@ -239,7 +239,7 @@
             (keyup.enter)="goToPageInput()">
         </label>
         <span>of {{ meta.lastPage || 1 }}</span>
-        <button type="button" class="student-page-button" (click)="goToNextPage()" [disabled]="meta.currentPage >= meta.lastPage">
+        <button type="button" class="student-page-button icetl-icon-btn" (click)="goToNextPage()" [disabled]="meta.currentPage >= meta.lastPage" title="Next page">
           <i class="feather-chevron-right"></i>
         </button>
       </div>
@@ -535,7 +535,7 @@
         </div>
       </div>
 
-      <form class="student-pay-form" [formGroup]="payForm" (ngSubmit)="submitInstallmentPayment()">
+      <form class="student-pay-form icetl-form-section" [formGroup]="payForm" (ngSubmit)="submitInstallmentPayment()">
         <label>
           <span><i class="feather-calendar"></i> Payment Date</span>
           <input
@@ -595,11 +595,11 @@
           <textarea rows="3" maxlength="500" formControlName="remarks" placeholder="Optional note"></textarea>
         </label>
 
-        <footer class="student-payment-modal__footer student-pay-modal__footer">
-          <button type="button" class="student-action" (click)="closeInstallmentPayment()" [disabled]="paymentSubmitting">
+        <footer class="student-payment-modal__footer student-pay-modal__footer icetl-form-actions">
+          <button type="button" class="student-action icetl-btn icetl-btn-outline" (click)="closeInstallmentPayment()" [disabled]="paymentSubmitting">
             Cancel
           </button>
-          <button type="submit" class="student-action student-action--primary" [disabled]="paymentSubmitting">
+          <button type="submit" class="student-action student-action--primary icetl-btn icetl-btn-primary" [disabled]="paymentSubmitting">
             @if (paymentSubmitting) {
             <i class="feather-loader"></i>
             Saving

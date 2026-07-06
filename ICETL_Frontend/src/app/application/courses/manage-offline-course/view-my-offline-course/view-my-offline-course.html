@@ -50,8 +50,8 @@
   </section>
   }
 
-  <div class="offline-toolbar">
-    <div class="offline-toolbar__header">
+  <div class="offline-toolbar icetl-filter-panel">
+    <div class="offline-toolbar__header icetl-filter-toolbar">
       <div class="offline-toolbar__title">
         <span class="offline-toolbar__icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -61,7 +61,7 @@
 
       <button
         type="button"
-        class="offline-toolbar__toggle"
+        class="offline-toolbar__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="offlineCourseFiltersPanel">
@@ -71,7 +71,7 @@
       </button>
     </div>
 
-    <div id="offlineCourseFiltersPanel" class="offline-toolbar__body" [hidden]="!showFilters">
+    <div id="offlineCourseFiltersPanel" class="offline-toolbar__body icetl-filter-grid" [hidden]="!showFilters">
       <div class="rbt-form-group offline-toolbar__field offline-toolbar__field--search">
         <label for="offlineCourseSearch">Search</label>
         <div class="offline-field">
@@ -159,12 +159,12 @@
       </div>
 
       <div class="offline-toolbar__actions">
-        <button type="button" class="offline-action offline-action--primary offline-toolbar__button" (click)="onSearch()"
+        <button type="button" class="offline-action offline-action--primary offline-toolbar__button icetl-btn icetl-btn-primary" (click)="onSearch()"
           [disabled]="loading">
           <i class="feather-filter"></i>
           Apply
         </button>
-        <button type="button" class="offline-action offline-toolbar__button" (click)="clearFilters()"
+        <button type="button" class="offline-action offline-toolbar__button icetl-btn icetl-btn-outline" (click)="clearFilters()"
           [disabled]="loading">
           <i class="feather-refresh-cw"></i>
           Reset
@@ -199,7 +199,7 @@
   }
 
   @if (!loading && courses.length === 0) {
-  <div class="offline-empty">
+  <div class="offline-empty icetl-empty-state">
     <i class="feather-calendar"></i>
     <h5>No Offline Courses Found</h5>
     <p>No offline courses match the selected filters.</p>
@@ -208,8 +208,8 @@
   }
 
   @if (!loading && courses.length > 0) {
-  <div class="offline-table-wrap">
-    <table class="offline-course-table">
+  <div class="offline-table-wrap icetl-table-shell">
+    <table class="offline-course-table icetl-table">
       <thead>
         <tr>
           <th>Course</th>
@@ -246,7 +246,7 @@
                   <span class="entity-code-badge">{{ course.code }}</span>
                   }
                   @if (isSpecialCourse(course)) {
-                  <span class="offline-course-card__special">Special</span>
+                  <span class="offline-course-card__special icetl-badge icetl-badge--active">Special</span>
                   }
                 </div>
                 @if (isSpecialCourse(course) && getPrimaryCourseLabel(course)) {
@@ -264,54 +264,54 @@
           <td>{{ course.venue || 'N/A' }}</td>
           <td>{{ formatPrice(course.price) }}</td>
           <td>
-            <span class="offline-status-badge" [ngClass]="getApprovalBadgeClass(course)">
+            <span class="offline-status-badge icetl-badge" [ngClass]="getApprovalBadgeClass(course)">
               {{ getApprovalStatusLabel(course) }}
             </span>
           </td>
           <td>
-            <span class="offline-status-badge" [ngClass]="getPublishBadgeClass(course)">
+            <span class="offline-status-badge icetl-badge" [ngClass]="getPublishBadgeClass(course)">
               {{ getPublishStatusLabel(course) }}
             </span>
           </td>
           <td>{{ formatDateValue(course.createdOn) }}</td>
           <td>
-            <div class="offline-row-actions">
+            <div class="offline-row-actions icetl-table-actions">
               @if (canView(course)) {
-              <button type="button" class="offline-icon-action" (click)="viewCourse(course)" title="View course">
+              <button type="button" class="offline-icon-action icetl-icon-btn" (click)="viewCourse(course)" title="View course">
                 <i class="feather-eye"></i>
               </button>
               }
               @if (canEdit(course)) {
-              <button type="button" class="offline-icon-action" (click)="editCourse(course)" title="Edit course">
+              <button type="button" class="offline-icon-action icetl-icon-btn" (click)="editCourse(course)" title="Edit course">
                 <i class="feather-edit-2"></i>
               </button>
               }
               @if (canApprove(course)) {
-              <button type="button" class="offline-icon-action offline-icon-action--success"
+              <button type="button" class="offline-icon-action offline-icon-action--success icetl-icon-btn"
                 (click)="approveCourse(course)" title="Approve course">
                 <i class="feather-check"></i>
               </button>
               }
               @if (canReject(course)) {
-              <button type="button" class="offline-icon-action offline-icon-action--danger"
+              <button type="button" class="offline-icon-action offline-icon-action--danger icetl-icon-btn"
                 (click)="rejectCourse(course)" title="Reject course">
                 <i class="feather-x"></i>
               </button>
               }
               @if (canPublish(course)) {
-              <button type="button" class="offline-icon-action offline-icon-action--success"
+              <button type="button" class="offline-icon-action offline-icon-action--success icetl-icon-btn"
                 (click)="publishCourse(course, true)" title="Publish course">
                 <i class="feather-upload-cloud"></i>
               </button>
               }
               @if (canUnpublish(course)) {
-              <button type="button" class="offline-icon-action" (click)="publishCourse(course, false)"
+              <button type="button" class="offline-icon-action icetl-icon-btn" (click)="publishCourse(course, false)"
                 title="Unpublish course">
                 <i class="feather-slash"></i>
               </button>
               }
               @if (isAllCoursesView && isPublished(course)) {
-              <button type="button" class="offline-icon-action" (click)="openEnrollmentModal(course)"
+              <button type="button" class="offline-icon-action icetl-icon-btn" (click)="openEnrollmentModal(course)"
                 title="Enroll student">
                 <i class="feather-user-plus"></i>
               </button>
@@ -326,11 +326,11 @@
   }
 
   @if (!loading && meta.total > 0) {
-  <div class="offline-pager">
+  <div class="offline-pager icetl-pagination">
     <p>{{ getPaginationLabel() }}</p>
 
-    <div class="offline-pager__controls">
-      <button type="button" class="offline-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+    <div class="offline-pager__controls icetl-pagination__controls">
+      <button type="button" class="offline-action icetl-btn icetl-btn-outline" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
         <i class="feather-chevron-left"></i>
         Previous
       </button>
@@ -342,7 +342,7 @@
         <span>of {{ meta.lastPage }}</span>
       </div>
 
-      <button type="button" class="offline-action offline-action--primary"
+      <button type="button" class="offline-action offline-action--primary icetl-btn icetl-btn-primary"
         [disabled]="meta.currentPage === meta.lastPage" (click)="goToNextPage()">
         Next
         <i class="feather-chevron-right"></i>
@@ -378,7 +378,7 @@
         </app-modal-window-controls>
       </header>
 
-      <form class="offline-enrollment-form" (ngSubmit)="submitEnrollment()" novalidate>
+      <form class="offline-enrollment-form icetl-form-section" (ngSubmit)="submitEnrollment()" novalidate>
         <div class="offline-enrollment-modal__body" data-app-modal-body>
         <section class="offline-enrollment-summary-panel" aria-label="Enrollment payment summary">
           <div>
@@ -701,12 +701,12 @@
         }
         </div>
 
-        <footer class="offline-enrollment-modal__footer" data-app-modal-footer>
-          <button type="button" class="offline-action" (click)="closeEnrollmentModal()"
+        <footer class="offline-enrollment-modal__footer icetl-form-actions" data-app-modal-footer>
+          <button type="button" class="offline-action icetl-btn icetl-btn-outline" (click)="closeEnrollmentModal()"
             [disabled]="enrollmentSubmitting">
             Cancel
           </button>
-          <button type="submit" class="offline-action offline-action--primary" [disabled]="enrollmentSubmitting">
+          <button type="submit" class="offline-action offline-action--primary icetl-btn icetl-btn-primary" [disabled]="enrollmentSubmitting">
             @if (enrollmentSubmitting) {
             <span class="offline-button-spinner"></span>
             }

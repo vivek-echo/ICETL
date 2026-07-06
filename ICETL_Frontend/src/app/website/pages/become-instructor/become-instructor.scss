@@ -22,9 +22,8 @@
   position: relative;
   overflow: clip;
   background:
-    radial-gradient(circle at 12% 15%, rgba(96, 162, 255, 0.22), transparent 30%),
-    radial-gradient(circle at 88% 10%, rgba(28, 105, 245, 0.18), transparent 24%),
-    linear-gradient(180deg, #edf5ff 0%, #f9fbff 26%, #ffffff 56%, #edf4ff 100%);
+    linear-gradient(135deg, rgba(36, 87, 230, 0.07), rgba(101, 84, 242, 0.05) 42%, rgba(255, 255, 255, 0.96) 78%),
+    linear-gradient(180deg, #f7faff 0%, #ffffff 56%, #f7faff 100%);
   color: var(--text-strong);
 }
 
@@ -33,11 +32,7 @@
 }
 
 .bg-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(34px);
-  pointer-events: none;
-  opacity: 0.8;
+  display: none;
 }
 
 .bg-orb--one {

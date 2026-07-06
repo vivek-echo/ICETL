@@ -30,7 +30,7 @@
       </div>
 
       <div class="course-header-actions">
-        <button type="button" class="btn btn-soft back-btn" (click)="goBackToCourses()">
+        <button type="button" class="btn btn-soft back-btn icetl-btn icetl-btn-outline" (click)="goBackToCourses()">
           <i class="fa-solid fa-arrow-left"></i>
           Back
         </button>
@@ -42,7 +42,7 @@
           @if (isCourseDraft) {
             <button
               type="button"
-              class="btn publish-btn"
+              class="btn publish-btn icetl-btn icetl-btn-primary"
               [disabled]="publishing || saving"
               (click)="publishCourse()"
             >
@@ -108,8 +108,8 @@
       </div>
 
       @if (canEditCurriculum && showAddSectionForm) {
-        <div class="inline-card section-create-card">
-          <div class="inline-card-header">
+        <div class="inline-card section-create-card icetl-form-section">
+          <div class="inline-card-header icetl-form-section-header">
             <span class="card-icon"><i class="fa-solid fa-layer-group"></i></span>
             <div>
               <h2>{{ editingSectionId ? 'Edit Section' : 'Create Section' }}</h2>
@@ -143,11 +143,11 @@
             </div>
           </div>
 
-          <div class="form-actions">
-            <button type="button" class="btn btn-soft" (click)="cancelSection()">Cancel</button>
+          <div class="form-actions icetl-form-actions">
+            <button type="button" class="btn btn-soft icetl-btn icetl-btn-outline" (click)="cancelSection()">Cancel</button>
             <button
               type="button"
-              class="btn btn-primary-gradient"
+              class="btn btn-primary-gradient icetl-btn icetl-btn-primary"
               [disabled]="saving"
               (click)="saveSection()"
             >
@@ -338,7 +338,7 @@
               }
 
               @if (canEditCurriculum && selectedSectionId === section.id) {
-                <div class="inline-card item-create-card">
+                <div class="inline-card item-create-card icetl-form-section">
                   <div class="selector-header">
                     <div>
                       <h3>{{ editingItemId ? 'Edit Curriculum Item' : 'Add Curriculum Item' }}</h3>
@@ -462,7 +462,7 @@
 
                         @if (getLectureDraft(section.id).source === 'upload') {
                           <div class="col-12">
-                            <label class="upload-area" [for]="'upload-video-' + section.id">
+                            <label class="upload-area icetl-upload-zone" [for]="'upload-video-' + section.id">
                               <i class="fa-solid fa-cloud-arrow-up"></i>
                               <strong>
                                 {{
@@ -594,11 +594,11 @@
                         </div>
                       </div>
 
-                      <div class="form-actions">
-                        <button type="button" class="btn btn-soft" (click)="cancelAddItem(section)">Cancel</button>
+                      <div class="form-actions icetl-form-actions">
+                        <button type="button" class="btn btn-soft icetl-btn icetl-btn-outline" (click)="cancelAddItem(section)">Cancel</button>
                         <button
                           type="button"
-                          class="btn btn-primary-gradient"
+                          class="btn btn-primary-gradient icetl-btn icetl-btn-primary"
                           [disabled]="saving || isUploading"
                           (click)="saveLecture(section)"
                         >
@@ -727,9 +727,9 @@
                       </div>
 
                       <div class="quiz-question-actions">
-                        <button
-                          type="button"
-                          class="btn btn-soft"
+                            <button
+                              type="button"
+                              class="btn btn-soft icetl-btn icetl-btn-outline"
                           [disabled]="!canManageQuizQuestions() || showQuizQuestionForm[section.id] || isLoadingQuizQuestions(section.id)"
                           (click)="openQuizQuestionForm(section.id)"
                         >
@@ -966,11 +966,11 @@
                             </div>
                           </div>
 
-                          <div class="form-actions question-form-actions">
-                            <button type="button" class="btn btn-soft" (click)="cancelQuizQuestion(section.id)">Cancel</button>
+                          <div class="form-actions question-form-actions icetl-form-actions">
+                            <button type="button" class="btn btn-soft icetl-btn icetl-btn-outline" (click)="cancelQuizQuestion(section.id)">Cancel</button>
                             <button
                               type="button"
-                              class="btn btn-primary-gradient"
+                              class="btn btn-primary-gradient icetl-btn icetl-btn-primary"
                               [disabled]="saving"
                               (click)="saveQuizQuestion(section.id)"
                             >
@@ -986,11 +986,11 @@
                         </div>
                       }
 
-                      <div class="form-actions">
-                        <button type="button" class="btn btn-soft" (click)="cancelAddItem(section)">Cancel</button>
+                      <div class="form-actions icetl-form-actions">
+                        <button type="button" class="btn btn-soft icetl-btn icetl-btn-outline" (click)="cancelAddItem(section)">Cancel</button>
                         <button
                           type="button"
-                          class="btn btn-primary-gradient"
+                          class="btn btn-primary-gradient icetl-btn icetl-btn-primary"
                           [disabled]="saving"
                           (click)="saveQuiz(section)"
                         >

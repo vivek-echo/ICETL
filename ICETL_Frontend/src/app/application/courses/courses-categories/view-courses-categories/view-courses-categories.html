@@ -1,6 +1,6 @@
 <div class="category-browser">
 
-  <div class="category-browser__header">
+  <div class="category-browser__header icetl-page-header">
 
     <div>
 
@@ -14,7 +14,7 @@
 
     </div>
 
-    <button class="rbt-btn btn-gradient" routerLink="../add">
+    <button class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" routerLink="../add">
 
       <i class="feather-plus"></i>
 
@@ -30,7 +30,7 @@
 
     <div class="col-xl-4 col-md-6">
 
-      <div class="category-metric-card">
+      <div class="category-metric-card icetl-card">
 
         <div class="metric-value">
           {{ metric.value }}
@@ -52,8 +52,8 @@
 
   </div>
 
-  <div class="category-browser__toolbar">
-    <div class="category-browser__toolbar-header">
+  <div class="category-browser__toolbar icetl-filter-panel">
+    <div class="category-browser__toolbar-header icetl-filter-toolbar">
       <div class="category-browser__toolbar-title">
         <span class="category-browser__toolbar-icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -63,7 +63,7 @@
 
       <button
         type="button"
-        class="category-browser__toolbar-toggle"
+        class="category-browser__toolbar-toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="categoryFiltersPanel">
@@ -73,7 +73,7 @@
       </button>
     </div>
 
-    <div id="categoryFiltersPanel" class="category-browser__toolbar-body" [hidden]="!showFilters">
+    <div id="categoryFiltersPanel" class="category-browser__toolbar-body icetl-filter-grid" [hidden]="!showFilters">
     <div class="rbt-form-group">
 
       <label>Search Categories</label>
@@ -115,9 +115,9 @@
 
   @if (loading) {
 
-  <div class="text-center py-5">
+  <div class="icetl-spinner-wrap">
 
-    <div class="spinner-border text-primary"></div>
+    <span class="icetl-inline-spinner" aria-hidden="true"></span>
 
   </div>
 
@@ -125,7 +125,7 @@
 
   @if (!loading && categories.length === 0) {
 
-  <div class="empty-state">
+  <div class="empty-state icetl-empty-state">
 
     <i class="feather-folder"></i>
 
@@ -147,7 +147,7 @@
 
     <div class="col-xl-3 col-lg-4 col-md-6 col-12">
 
-      <div class="category-card-view">
+      <div class="category-card-view icetl-list-card">
 
         <div class="category-card-view__top">
 
@@ -170,7 +170,7 @@
 
           </div>
 
-          <span class="category-status" [class.review]="!isActive(category.status)">
+          <span class="category-status icetl-badge" [class.review]="!isActive(category.status)">
 
             {{ getStatusLabel(category.status) }}
 
@@ -214,15 +214,15 @@
 
         </div>
 
-        <div class="category-card-view__actions">
+        <div class="category-card-view__actions icetl-table-actions">
 
-          <button type="button" class="edit-btn" (click)="openEditModal(category)">
+          <button type="button" class="edit-btn icetl-icon-btn" (click)="openEditModal(category)" title="Edit category">
 
             <i class="feather-edit-2"></i>
 
           </button>
 
-          <button type="button" class="delete-btn" (click)="confirmDeleteCategory(category)">
+          <button type="button" class="delete-btn icetl-icon-btn" (click)="confirmDeleteCategory(category)" title="Delete category">
 
             <i class="feather-trash-2"></i>
 
@@ -263,7 +263,7 @@
       </app-modal-window-controls>
     </header>
 
-    <div class="category-modal-card" data-app-modal-body>
+    <div class="category-modal-card icetl-form-card" data-app-modal-body>
       <div class="category-modal-card__content">
         <div class="section-title mb--20">
           <h4 class="rbt-title-style-3">Category Details</h4>
@@ -295,7 +295,7 @@
             <div class="rbt-form-group">
               <label>Category Icon</label>
 
-              <div class="upload-box">
+              <div class="upload-box icetl-upload-zone">
                 <input
                   type="file"
                   class="upload-input"
@@ -327,12 +327,12 @@
           </div>
 
           <div class="col-12">
-            <div class="category-modal__actions">
-              <button type="button" class="rbt-btn btn-border" (click)="closeEditModal()" [disabled]="isSavingEdit">
+            <div class="category-modal__actions icetl-form-actions">
+              <button type="button" class="rbt-btn btn-border icetl-btn icetl-btn-outline" (click)="closeEditModal()" [disabled]="isSavingEdit">
                 Cancel
               </button>
 
-              <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingEdit">
+              <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="isSavingEdit">
                 {{ isSavingEdit ? 'Updating...' : 'Update Category' }}
               </button>
             </div>

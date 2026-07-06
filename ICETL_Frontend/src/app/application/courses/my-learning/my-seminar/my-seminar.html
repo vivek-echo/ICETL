@@ -1,42 +1,42 @@
-<section class="my-program-library my-program-library--seminar" aria-labelledby="my-program-title">
-  <header class="program-library-head">
+<section class="my-program-library my-program-library--seminar icetl-learning-page" aria-labelledby="my-program-title">
+  <header class="program-library-head icetl-card">
     <div>
       <span class="program-library-head__eyebrow">My Learning</span>
       <h1 id="my-program-title">My {{ pluralLabel }}</h1>
       <p>{{ programs.length }} enrolled {{ programs.length === 1 ? singularLabel.toLowerCase() : pluralLabel.toLowerCase() }}</p>
     </div>
 
-    <div class="program-library-head__actions">
-      <a class="program-library-btn program-library-btn--light" [routerLink]="browseRoute">
+    <div class="program-library-head__actions icetl-learning-actions">
+      <a class="program-library-btn program-library-btn--light icetl-btn icetl-btn-outline" [routerLink]="browseRoute">
         <i class="feather-compass"></i>
         Browse {{ pluralLabel }}
       </a>
-      <button type="button" class="program-library-btn" (click)="loadPrograms()" [disabled]="loading">
+      <button type="button" class="program-library-btn icetl-btn icetl-btn-outline" (click)="loadPrograms()" [disabled]="loading">
         <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'feather-refresh-cw'"></i>
         Refresh
       </button>
     </div>
   </header>
 
-  <section class="program-library-summary" aria-label="Program summary">
-    <div>
+  <section class="program-library-summary icetl-metric-grid" aria-label="Program summary">
+    <div class="icetl-metric-card">
       <i class="feather-book-open"></i>
       <span>Total Enrolled</span>
       <strong>{{ programs.length }}</strong>
     </div>
-    <div>
+    <div class="icetl-metric-card">
       <i class="feather-calendar"></i>
       <span>Current</span>
       <strong>{{ activeProgramsCount }}</strong>
     </div>
-    <div>
+    <div class="icetl-metric-card">
       <i class="feather-check-circle"></i>
       <span>Completed</span>
       <strong>{{ completedProgramsCount }}</strong>
     </div>
   </section>
 
-  <div class="program-library-toolbar">
+  <div class="program-library-toolbar icetl-filter-panel">
     <div class="program-library-toolbar__header">
       <div class="program-library-toolbar__title">
         <span class="program-library-toolbar__icon">
@@ -85,15 +85,15 @@
   <div class="program-library-list" aria-label="Loading enrolled programs">
     @for (loader of skeletonRows; track loader) {
     <article class="program-library-row program-library-row--skeleton">
-      <span class="program-skeleton program-skeleton--image"></span>
+      <span class="program-skeleton program-skeleton--image icetl-skeleton"></span>
       <div>
-        <span class="program-skeleton program-skeleton--pill"></span>
-        <span class="program-skeleton program-skeleton--line program-skeleton--wide"></span>
-        <span class="program-skeleton program-skeleton--line"></span>
+        <span class="program-skeleton program-skeleton--pill icetl-skeleton"></span>
+        <span class="program-skeleton program-skeleton--line program-skeleton--wide icetl-skeleton"></span>
+        <span class="program-skeleton program-skeleton--line icetl-skeleton"></span>
       </div>
       <div>
-        <span class="program-skeleton program-skeleton--line"></span>
-        <span class="program-skeleton program-skeleton--button"></span>
+        <span class="program-skeleton program-skeleton--line icetl-skeleton"></span>
+        <span class="program-skeleton program-skeleton--button icetl-skeleton"></span>
       </div>
     </article>
     }
@@ -101,11 +101,11 @@
   }
 
   @if (!loading && programs.length === 0) {
-  <section class="program-library-empty">
+  <section class="program-library-empty icetl-empty-state icetl-learning-empty">
     <i class="feather-calendar"></i>
     <h2>No enrolled {{ pluralLabel.toLowerCase() }} yet</h2>
     <p>{{ pluralLabel }} you buy will appear here after payment verification.</p>
-    <a class="program-library-btn program-library-btn--primary" [routerLink]="browseRoute">
+    <a class="program-library-btn program-library-btn--primary icetl-btn icetl-btn-primary" [routerLink]="browseRoute">
       <i class="feather-compass"></i>
       Browse {{ pluralLabel }}
     </a>
@@ -113,7 +113,7 @@
   }
 
   @if (!loading && programs.length > 0 && filteredPrograms.length === 0) {
-  <section class="program-library-empty">
+  <section class="program-library-empty icetl-empty-state icetl-learning-empty">
     <i class="feather-search"></i>
     <h2>No matching {{ pluralLabel.toLowerCase() }}</h2>
     <p>Try a different search term or schedule filter.</p>
@@ -123,7 +123,7 @@
   @if (!loading && filteredPrograms.length > 0) {
   <div class="program-library-list">
     @for (program of filteredPrograms; track trackByProgramId($index, program)) {
-    <article class="program-library-row">
+    <article class="program-library-row icetl-learning-card">
       <div class="program-library-row__media">
         <img
           [src]="programImage(program)"
@@ -132,7 +132,7 @@
           decoding="async"
           (error)="onProgramImageError(program)">
         <span
-          class="program-library-row__status"
+          class="program-library-row__status icetl-badge"
           [class.is-ongoing]="program.scheduleStatus === 'ongoing'"
           [class.is-completed]="program.scheduleStatus === 'completed'">
           {{ getScheduleLabel(program) }}
@@ -189,12 +189,12 @@
           }
         </div>
 
-        <a class="program-library-row__action" routerLink="/application/paymentLog">
+        <a class="program-library-row__action icetl-learning-action icetl-learning-action--primary" routerLink="/application/paymentLog">
           <i class="feather-file-text"></i>
           Payment Log
         </a>
 
-        <button type="button" class="program-library-row__action program-library-row__action--materials"
+        <button type="button" class="program-library-row__action program-library-row__action--materials icetl-learning-action icetl-learning-action--soft"
           (click)="openMaterials(program)">
           <i class="fa-regular fa-folder-open"></i>
           Materials

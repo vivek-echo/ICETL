@@ -30,8 +30,16 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  margin: 14px 0 6px;
+  margin: var(--application-sidebar-section-margin, 14px 0 6px);
+  max-height: var(--application-sidebar-section-max-height, 44px);
+  opacity: var(--application-sidebar-section-opacity, 1);
+  overflow: hidden;
   text-transform: uppercase;
+  transition:
+    margin 220ms ease,
+    max-height 220ms ease,
+    opacity 160ms ease;
+  white-space: nowrap;
 }
 
 .side-nav-section__title--nested {
@@ -44,10 +52,11 @@
   border: 1px solid transparent;
   color: var(--text-secondary);
   display: flex;
-  gap: 8px;
-  justify-content: flex-start;
-  min-height: 36px;
-  padding: 7px 9px;
+  gap: var(--application-sidebar-link-gap, 8px);
+  justify-content: var(--application-sidebar-link-justify, flex-start);
+  min-height: var(--application-sidebar-link-min-height, 36px);
+  overflow: hidden;
+  padding: var(--application-sidebar-link-padding, 7px 9px);
   width: 100%;
   border-radius: var(--radius-button);
   text-decoration: none;
@@ -56,6 +65,7 @@
 
 .side-nav-link i {
   color: var(--text-secondary);
+  flex: 0 0 18px;
   font-size: 14px;
   margin-right: 0;
   min-width: 18px;
@@ -65,10 +75,18 @@
 
 .side-nav-link span {
   color: inherit;
+  display: inline-block;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
-  transition: all .3s ease;
+  max-width: var(--application-sidebar-label-width, 190px);
+  opacity: var(--application-sidebar-label-opacity, 1);
+  overflow: hidden;
+  transition:
+    max-width 220ms ease,
+    opacity 160ms ease,
+    color .3s ease;
+  white-space: nowrap;
 }
 
 .side-nav-link:hover,

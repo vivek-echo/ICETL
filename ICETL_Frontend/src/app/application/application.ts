@@ -40,6 +40,7 @@ export class Application implements OnInit, OnDestroy {
   private readonly formValidationService = inject(FormValidationService);
   private profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private hasCheckedEnquiryAlert = false;
+  private readonly sidebarPreferenceKey = 'icetl.sidebar.collapsed';
 
   readonly defaultProfileImage = 'assets/images/team/avatar-2.jpg';
   readonly enquiriesRoute = '/application/enquiries';
@@ -57,6 +58,7 @@ export class Application implements OnInit, OnDestroy {
   profileImageFile: File | null = null;
   coverImageFile: File | null = null;
   profileErrorMessage = '';
+  isSidebarCollapsed = false;
 
   readonly profileForm = this.fb.group({
     name: ['', FormValidationRules.requiredName()],
@@ -80,6 +82,8 @@ export class Application implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.loadSidebarPreference();
+
     this.subscriptions.add(
       this.userProfileService.profile$.subscribe((profile) => {
         this.scheduleProfileSync(profile);
@@ -139,6 +143,15 @@ export class Application implements OnInit, OnDestroy {
    
 
     this.openUpdateProfileModal();
+  }
+
+  toggleSidebar(event?: Event): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    this.saveSidebarPreference();
+
+    if (this.isSidebarCollapsed) {
+      (event?.currentTarget as HTMLElement | null)?.blur();
+    }
   }
 
   openUpdateProfileModal(): void {
@@ -298,6 +311,34 @@ export class Application implements OnInit, OnDestroy {
     };
 
     return map[field] || field;
+  }
+
+  private loadSidebarPreference(): void {
+    if (!this.canUseLocalStorage()) {
+      return;
+    }
+
+    try {
+      this.isSidebarCollapsed = localStorage.getItem(this.sidebarPreferenceKey) === 'true';
+    } catch {
+      this.isSidebarCollapsed = false;
+    }
+  }
+
+  private saveSidebarPreference(): void {
+    if (!this.canUseLocalStorage()) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(this.sidebarPreferenceKey, `${this.isSidebarCollapsed}`);
+    } catch {
+      // Ignore storage failures so navigation remains usable.
+    }
+  }
+
+  private canUseLocalStorage(): boolean {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
   }
 
   private scheduleProfileSync(profile: UserProfile | null): void {

@@ -11,7 +11,7 @@
 .learning-hero {
   align-items: stretch;
   background:
-    linear-gradient(135deg, rgba(47, 87, 239, 0.95), rgba(20, 184, 166, 0.9)),
+    linear-gradient(135deg, rgba(36, 87, 230, 0.95), rgba(101, 84, 242, 0.9)),
     url('/assets/images/bg/bg-image-10.jpg') center / cover;
   border-radius: 8px;
   color: #ffffff;
@@ -385,9 +385,9 @@
 
 .learning-card__points li::before {
   align-items: center;
-  background: #dcfce7;
+  background: #eef3ff;
   border-radius: 50%;
-  color: #15803d;
+  color: #2457e6;
   content: "\f00c";
   display: inline-flex;
   font: var(--fa-font-solid);
@@ -437,7 +437,7 @@
 }
 
 .learning-card__progress i {
-  background: linear-gradient(135deg, #2f57ef, #14b8a6);
+  background: linear-gradient(135deg, #2457e6, #6554f2);
   min-width: 0;
   position: relative;
   z-index: 1;
@@ -538,8 +538,8 @@
 }
 
 .learning-card__action--meet {
-  background: #ecfdf5;
-  color: #047857;
+  background: #f2f0ff;
+  color: #6554f2;
 }
 
 .learning-card__action--materials {
@@ -559,9 +559,9 @@
 }
 
 .learning-card__status {
-  background: #dcfce7;
+  background: #eef3ff;
   border-radius: 6px;
-  color: #15803d;
+  color: #2457e6;
   font-size: 12px;
   font-weight: 850;
   padding: 7px 11px;
@@ -760,10 +760,10 @@
   }
 }
 .learning-card__action--certificate {
-  background: linear-gradient(135deg, #fff7ed 0%, #ecfeff 100%);
-  border: 1px solid #fed7aa;
-  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.1);
-  color: #134e4a;
+  background: linear-gradient(135deg, #eef3ff 0%, #f2f0ff 100%);
+  border: 1px solid rgba(101, 84, 242, 0.2);
+  box-shadow: 0 10px 22px rgba(36, 87, 230, 0.1);
+  color: #4f46e5;
   justify-content: flex-start;
   min-height: 52px;
   padding: 7px 10px;
@@ -771,9 +771,9 @@
 
 .learning-card__action--certificate:hover:not(:disabled),
 .learning-card__action--certificate:focus-visible {
-  border-color: #f59e0b;
-  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.18);
-  color: #0f3f3a;
+  border-color: rgba(101, 84, 242, 0.36);
+  box-shadow: 0 14px 28px rgba(101, 84, 242, 0.18);
+  color: #4338ca;
   outline: none;
   transform: translateY(-1px);
 }
@@ -791,7 +791,7 @@
 
 .certificate-action__icon {
   align-items: center;
-  background: #f59e0b;
+  background: linear-gradient(135deg, #2457e6, #6554f2);
   border-radius: 8px;
   color: #ffffff;
   display: inline-flex;
@@ -803,7 +803,7 @@
 }
 
 .learning-card__action--certificate.is-generating .certificate-action__icon {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2457e6, #6554f2);
 }
 
 .certificate-action__copy {
@@ -835,7 +835,7 @@
 }
 
 .certificate-action__download {
-  color: #0f766e;
+  color: #2457e6;
   font-size: 13px;
   margin-left: auto;
 }

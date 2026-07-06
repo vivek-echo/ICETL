@@ -11,10 +11,10 @@
   </a>
 </header> -->
 
-<div class="offline-builder__grid">
+<div class="offline-builder__grid icetl-form-page">
   <form [formGroup]="courseForm" (ngSubmit)="submitCourse()" class="offline-form">
-    <section class="offline-form__section">
-      <div class="offline-form__heading">
+    <section class="offline-form__section icetl-form-section">
+      <div class="offline-form__heading icetl-form-section-header">
         <span>01</span>
         <div>
           <h2>{{ isEditMode ? 'Edit Course Details' : 'Course Details' }}</h2>
@@ -95,7 +95,7 @@
         </div>
       </div>
 
-      <div class="offline-banner-upload offline-form__full">
+      <div class="offline-banner-upload offline-form__full icetl-upload-zone">
         <div class="offline-banner-upload__preview" [class.offline-banner-upload__preview--empty]="!bannerPreviewUrl">
           @if (bannerPreviewUrl) {
           <img [src]="bannerPreviewUrl" alt="Offline course banner preview">
@@ -126,8 +126,8 @@
       </div>
     </section>
 
-    <section class="offline-form__section">
-      <div class="offline-form__heading">
+    <section class="offline-form__section icetl-form-section">
+      <div class="offline-form__heading icetl-form-section-header">
         <span>02</span>
         <div>
           <h2>Venue & Schedule</h2>
@@ -330,8 +330,8 @@
       </div>
     </section>
 
-    <section class="offline-form__section">
-      <div class="offline-form__heading">
+    <section class="offline-form__section icetl-form-section">
+      <div class="offline-form__heading icetl-form-section-header">
         <span>03</span>
         <div>
           <h2>Capacity & Outcomes</h2>
@@ -424,17 +424,17 @@
       </div>
     </section>
 
-    <div class="offline-form__actions">
-      <button type="button" class="rbt-btn btn-border" (click)="resetForm()">
+    <div class="offline-form__actions icetl-form-actions">
+      <button type="button" class="rbt-btn btn-border icetl-btn icetl-btn-outline" (click)="resetForm()">
         Reset
       </button>
-      <button type="submit" class="rbt-btn btn-gradient">
+      <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary">
         {{ isEditMode ? 'Update Offline Course' : 'Save Offline Course' }}
       </button>
     </div>
   </form>
 
-  <aside class="offline-preview" aria-label="Offline course preview">
+  <aside class="offline-preview icetl-form-preview" aria-label="Offline course preview">
     <div class="offline-preview__banner" [class.offline-preview__banner--empty]="!bannerPreviewUrl">
       @if (bannerPreviewUrl) {
       <img [src]="bannerPreviewUrl" alt="Offline course banner">

@@ -502,7 +502,44 @@
 }
 
 .courses-grid-card__top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
+}
+
+.courses-grid-card__signal,
+.courses-grid-card__level-pill {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 30px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.courses-grid-card__signal {
+  gap: 7px;
+  max-width: calc(100% - 88px);
+  padding: 6px 10px;
+  background: var(--icetl-blue-soft);
+  color: var(--icetl-blue);
+}
+
+.courses-grid-card__signal span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.courses-grid-card__level-pill {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  background: #f2f0ff;
+  color: #6554f2;
 }
 
 .courses-grid-card__title {
@@ -790,6 +827,15 @@
   .courses-grid-card__footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .courses-grid-card__top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .courses-grid-card__signal {
+    max-width: 100%;
   }
 
   .courses-search__clear-btn {

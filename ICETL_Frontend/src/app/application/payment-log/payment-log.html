@@ -1,12 +1,12 @@
 <section class="payment-log" aria-labelledby="payment-log-title">
-  <header class="payment-log__header">
+  <header class="payment-log__header icetl-page-header">
     <div class="payment-log__title">
       <span class="payment-log__eyebrow">Billing Center</span>
       <h1 id="payment-log-title">Transaction History</h1>
       <p>Purchases, payment status, invoices, and refund state in one place.</p>
     </div>
 
-    <div class="payment-log__header-actions">
+    <div class="payment-log__header-actions icetl-page-actions">
       <div class="payment-log__summary" aria-label="Payment summary">
         <div class="payment-metric">
           <span>Total Records</span>
@@ -24,7 +24,7 @@
 
       <button
         type="button"
-        class="payment-log__refresh"
+        class="payment-log__refresh icetl-btn icetl-btn-outline"
         (click)="loadPaymentLogs()"
         [disabled]="loading"
         title="Refresh payment log">
@@ -34,8 +34,8 @@
     </div>
   </header>
 
-  <div class="payment-filters">
-    <div class="payment-filters__header">
+  <div class="payment-filters icetl-filter-panel">
+    <div class="payment-filters__header icetl-filter-toolbar">
       <div class="payment-filters__title">
         <span class="payment-filters__icon">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
@@ -45,7 +45,7 @@
 
       <button
         type="button"
-        class="payment-filters__toggle"
+        class="payment-filters__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="paymentFiltersPanel">
@@ -55,7 +55,7 @@
       </button>
     </div>
 
-    <div id="paymentFiltersPanel" class="payment-filters__body" [hidden]="!showFilters">
+    <div id="paymentFiltersPanel" class="payment-filters__body icetl-filter-grid" [hidden]="!showFilters">
       <label class="payment-filter payment-filter--search">
         <span>Search</span>
         <div class="payment-field">
@@ -81,11 +81,11 @@
       </label>
 
       <div class="payment-filters__actions">
-        <button type="button" class="payment-filter-btn" (click)="applyFilters()">
+        <button type="button" class="payment-filter-btn icetl-btn icetl-btn-primary" (click)="applyFilters()">
           <i class="fa-solid fa-filter"></i>
           Filter
         </button>
-        <button type="button" class="payment-filter-btn payment-filter-btn--ghost" (click)="clearFilters()">
+        <button type="button" class="payment-filter-btn payment-filter-btn--ghost icetl-btn icetl-btn-outline" (click)="clearFilters()">
           <i class="fa-solid fa-rotate-left"></i>
           Reset
         </button>
@@ -94,14 +94,14 @@
   </div>
 
   @if (loading) {
-  <div class="payment-log__state">
-    <i class="fa-solid fa-spinner fa-spin"></i>
+  <div class="payment-log__state icetl-spinner-wrap">
+    <span class="icetl-inline-spinner" aria-hidden="true"></span>
     Loading payment logs...
   </div>
   }
 
   @if (!loading && logs.length === 0) {
-  <div class="payment-log__empty">
+  <div class="payment-log__empty icetl-empty-state">
     <i class="fa-solid fa-receipt"></i>
     <h2>No payments yet</h2>
     <p>Your completed purchases will appear here.</p>
@@ -109,8 +109,8 @@
   }
 
   @if (!loading && logs.length > 0) {
-  <div class="payment-table-wrap">
-    <table class="payment-table">
+  <div class="payment-table-wrap icetl-table-shell">
+    <table class="payment-table icetl-table">
       <thead>
         <tr>
           <th>Invoice</th>
@@ -154,7 +154,7 @@
           </td>
           <td data-label="Status">
             <span
-              class="payment-status"
+              class="payment-status icetl-badge"
               [class.payment-status--paid]="log.status === 'paid'"
               [class.payment-status--failed]="log.status === 'failed'"
               [class.payment-status--cancelled]="log.status === 'cancelled'"
@@ -175,21 +175,23 @@
             </div>
           </td>
           <td data-label="Invoice Action">
+            <div class="icetl-table-actions">
             @if (log.status === 'paid') {
             <button
               type="button"
-              class="payment-table__action"
+              class="payment-table__action icetl-btn icetl-btn-outline"
               (click)="viewInvoice(log.id)"
               [disabled]="invoiceLoadingOrderId === log.id">
               <i [class]="invoiceLoadingOrderId === log.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-invoice'"></i>
               {{ invoiceLoadingOrderId === log.id ? 'Opening' : 'View Invoice' }}
             </button>
             } @else {
-            <button type="button" class="payment-table__action payment-table__action--disabled" disabled>
+            <button type="button" class="payment-table__action payment-table__action--disabled icetl-btn icetl-btn-outline" disabled>
               <i class="fa-solid fa-file-circle-xmark"></i>
               No Invoice
             </button>
             }
+            </div>
           </td>
         </tr>
         }
@@ -197,14 +199,14 @@
     </table>
   </div>
 
-  <footer class="payment-pagination">
+  <footer class="payment-pagination icetl-pagination">
     <span>Showing {{ resultStart }}-{{ resultEnd }} of {{ total }} transaction{{ total === 1 ? '' : 's' }}</span>
-    <div>
-      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1" title="Previous page">
+    <div class="icetl-pagination__controls">
+      <button type="button" class="icetl-icon-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1" title="Previous page">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
       <strong>{{ currentPage }} / {{ lastPage }}</strong>
-      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage" title="Next page">
+      <button type="button" class="icetl-icon-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage" title="Next page">
         <i class="fa-solid fa-chevron-right"></i>
       </button>
     </div>

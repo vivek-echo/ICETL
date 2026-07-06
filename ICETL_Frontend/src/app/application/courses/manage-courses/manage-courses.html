@@ -2,11 +2,11 @@
   <div class="content">
     @if (tabs.length) {
       <div class="advance-tab-button course-tabbar mb--30">
-        <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs" role="tablist">
+        <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs icetl-tab-list" role="tablist">
           @for (tab of tabs; track tab.id) {
             <li role="presentation">
               <a
-                class="tab-button"
+                class="tab-button icetl-tab-button"
                 role="tab"
                 [routerLink]="[tab.route]"
                 routerLinkActive="active"

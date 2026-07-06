@@ -3,7 +3,7 @@
   --surface: #ffffff;
   --surface-soft: #f8fafc;
   --surface-blue: #eef5ff;
-  --surface-green: #e9f8f4;
+  --surface-green: #e8f7f4;
   --surface-amber: #fff7ed;
   --ink: #111827;
   --ink-soft: #344054;
@@ -12,6 +12,7 @@
   --line-strong: #c7d3e4;
   --blue: #2557d6;
   --blue-dark: #173c9f;
+  --purple: #6554f2;
   --green: #0f766e;
   --amber: #a85a09;
   --danger: #b42318;
@@ -27,6 +28,7 @@
 .course-player {
   min-height: 100vh;
   padding: 28px 0 48px;
+  overflow-x: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(243, 246, 251, 0.9) 260px),
     var(--player-bg);
@@ -130,7 +132,7 @@
 
 .player-header__meta i,
 .quiz-summary i {
-  color: var(--green);
+  color: var(--blue);
 }
 
 .player-header__actions,
@@ -161,7 +163,7 @@
 }
 
 .course-progress strong {
-  color: var(--green);
+  color: var(--blue);
   font-size: 1.48rem;
 }
 
@@ -185,7 +187,7 @@
 .course-progress > i {
   position: relative;
   z-index: 1;
-  background: linear-gradient(90deg, var(--green), var(--blue));
+  background: linear-gradient(90deg, var(--blue), var(--purple));
   transition: width 0.25s ease;
 }
 
@@ -313,11 +315,16 @@
 .curriculum-row__index {
   width: 38px;
   height: 38px;
-  color: var(--green);
-  background: var(--surface-green);
+  color: var(--blue);
+  background: var(--surface-blue);
   border-radius: 999px;
   font-size: 1rem;
   font-weight: 900;
+}
+
+.curriculum-row.completed .curriculum-row__index {
+  color: var(--green);
+  background: var(--surface-green);
 }
 
 .curriculum-row__icon {
@@ -498,9 +505,9 @@
 
 .primary-action {
   color: #ffffff;
-  background: linear-gradient(135deg, var(--green), var(--blue));
+  background: linear-gradient(135deg, var(--blue), var(--purple));
   border: 0;
-  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.22);
+  box-shadow: 0 16px 30px rgba(37, 87, 214, 0.22);
 }
 
 .ghost-action {
@@ -916,7 +923,7 @@
 
   .player-layout,
   .player-loading__grid {
-    grid-template-columns: minmax(320px, 370px) minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 350px) minmax(0, 1fr);
   }
 
   .lecture-frame,
@@ -942,7 +949,7 @@
 
   .curriculum-panel {
     position: static;
-    max-height: none;
+    max-height: 430px;
   }
 
   .stage-heading {
@@ -972,7 +979,7 @@
   .player-header,
   .player-layout,
   .player-loading {
-    width: min(100% - 20px, 1760px);
+    width: min(100% - 16px, 1760px);
   }
 
   .player-header,
@@ -984,11 +991,28 @@
   }
 
   .player-header h1 {
-    font-size: 1.78rem;
+    font-size: 1.68rem;
   }
 
   .stage-heading h2 {
-    font-size: 1.6rem;
+    font-size: 1.48rem;
+  }
+
+  .player-header__meta span,
+  .quiz-summary span,
+  .curriculum-row__copy strong,
+  .curriculum-row__copy small,
+  .option-row span {
+    white-space: normal;
+  }
+
+  .curriculum-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .curriculum-row__icon {
+    display: none;
   }
 
   .stage-actions,

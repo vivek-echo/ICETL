@@ -40,8 +40,8 @@
     </div>
   </section> -->
 
-  <section class="academic-toolbar" aria-label="Academic course filters">
-    <div class="academic-toolbar__top">
+  <section class="academic-toolbar icetl-filter-panel" aria-label="Academic course filters">
+    <div class="academic-toolbar__top icetl-filter-toolbar">
       <div>
         <h2>Academic Course Catalog</h2>
         <p>Active offline courses, sorted by latest creation.</p>
@@ -49,7 +49,7 @@
 
       <button
         type="button"
-        class="academic-toolbar__toggle"
+        class="academic-toolbar__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="academicCourseFiltersPanel">
@@ -71,7 +71,7 @@
         }
       </div>
 
-      <div class="academic-filter-grid">
+      <div class="academic-filter-grid icetl-filter-grid">
       <div class="rbt-form-group academic-field academic-field--search">
         <label for="academicCourseSearch">Search</label>
         <div class="academic-field__control">
@@ -142,11 +142,11 @@
       </div>
 
       <div class="academic-toolbar__actions">
-        <button type="button" class="academic-action academic-action--primary" (click)="onSearch()" [disabled]="loading">
+        <button type="button" class="academic-action academic-action--primary icetl-btn icetl-btn-primary" (click)="onSearch()" [disabled]="loading">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
           Apply
         </button>
-        <button type="button" class="academic-action" (click)="clearFilters()" [disabled]="loading">
+        <button type="button" class="academic-action icetl-btn icetl-btn-outline" (click)="clearFilters()" [disabled]="loading">
           <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
           Reset
         </button>
@@ -165,24 +165,24 @@
   @if (loading) {
   <div class="academic-grid" aria-label="Loading academic courses">
     @for (loader of skeletonRows; track loader) {
-    <article class="academic-card academic-card--skeleton">
-      <span class="academic-skeleton academic-skeleton--media"></span>
+    <article class="academic-card academic-card--skeleton icetl-list-card">
+      <span class="academic-skeleton academic-skeleton--media icetl-skeleton"></span>
       <div class="academic-card__body">
-        <span class="academic-skeleton academic-skeleton--pill"></span>
-        <span class="academic-skeleton academic-skeleton--title"></span>
-        <span class="academic-skeleton academic-skeleton--line"></span>
-        <span class="academic-skeleton academic-skeleton--line academic-skeleton--short"></span>
+        <span class="academic-skeleton academic-skeleton--pill icetl-skeleton"></span>
+        <span class="academic-skeleton academic-skeleton--title icetl-skeleton"></span>
+        <span class="academic-skeleton academic-skeleton--line icetl-skeleton"></span>
+        <span class="academic-skeleton academic-skeleton--line academic-skeleton--short icetl-skeleton"></span>
         <div class="academic-skeleton-grid">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
+          <span class="icetl-skeleton"></span>
+          <span class="icetl-skeleton"></span>
+          <span class="icetl-skeleton"></span>
+          <span class="icetl-skeleton"></span>
         </div>
       </div>
       <aside class="academic-card__purchase">
-        <span class="academic-skeleton academic-skeleton--price"></span>
-        <span class="academic-skeleton academic-skeleton--button"></span>
-        <span class="academic-skeleton academic-skeleton--button"></span>
+        <span class="academic-skeleton academic-skeleton--price icetl-skeleton"></span>
+        <span class="academic-skeleton academic-skeleton--button icetl-skeleton"></span>
+        <span class="academic-skeleton academic-skeleton--button icetl-skeleton"></span>
       </aside>
     </article>
     }
@@ -190,13 +190,13 @@
   }
 
   @if (!loading && courses.length === 0) {
-  <section class="academic-empty">
+  <section class="academic-empty icetl-empty-state">
     <div aria-hidden="true">
       <i class="fa-solid fa-book-open-reader"></i>
     </div>
     <h2>No academic courses found</h2>
     <p>Adjust the current filters and refresh the catalog.</p>
-    <button type="button" class="academic-action academic-action--primary" (click)="clearFilters()">
+    <button type="button" class="academic-action academic-action--primary icetl-btn icetl-btn-primary" (click)="clearFilters()">
       <i class="fa-solid fa-compass" aria-hidden="true"></i>
       Browse Current Courses
     </button>
@@ -206,15 +206,15 @@
   @if (!loading && courses.length > 0) {
   <div class="academic-grid">
     @for (course of courses; track trackByCourseId($index, course)) {
-    <article class="academic-card">
+    <article class="academic-card icetl-list-card">
       <div class="academic-card__media">
         <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
-        <span class="academic-card__badge">Active</span>
-        <span class="academic-card__timeline" [ngClass]="getScheduleClass(course)">
+        <span class="academic-card__badge icetl-badge icetl-badge--active">Active</span>
+        <span class="academic-card__timeline icetl-badge" [ngClass]="getScheduleClass(course)">
           {{ getScheduleLabel(course) }}
         </span>
         @if (isEnrolled(course)) {
-        <span class="academic-card__enrolled">
+        <span class="academic-card__enrolled icetl-badge icetl-badge--completed">
           <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
           Already Enrolled
         </span>
@@ -229,7 +229,7 @@
             Classroom
           </span>
           @if (isSpecialCourse(course)) {
-          <span class="academic-card__special">Special</span>
+          <span class="academic-card__special icetl-badge icetl-badge--active">Special</span>
           }
         </div>
 
@@ -296,14 +296,14 @@
 
         <div class="academic-card__actions">
           @if (isEnrolled(course)) {
-          <span class="academic-enrolled-state" role="status">
+          <span class="academic-enrolled-state icetl-badge icetl-badge--completed" role="status">
             <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
             Already Enrolled
           </span>
           } @else {
           <button
             type="button"
-            class="academic-action academic-action--cart"
+            class="academic-action academic-action--cart icetl-btn icetl-btn-outline"
             [disabled]="isInCart(course.id) || isAdding(course.id)"
             (click)="addToCart(course)">
             <i
@@ -313,7 +313,7 @@
           </button>
           <button
             type="button"
-            class="academic-action academic-action--primary"
+            class="academic-action academic-action--primary icetl-btn icetl-btn-primary"
             [disabled]="isAdding(course.id)"
             (click)="buyNow(course)">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
@@ -328,11 +328,11 @@
   }
 
   @if (!loading && meta.total > 0) {
-  <footer class="academic-pager">
+  <footer class="academic-pager icetl-pagination">
     <p>{{ getPaginationLabel() }}</p>
 
-    <div class="academic-pager__controls" aria-label="Pagination">
-      <button type="button" class="academic-action" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+    <div class="academic-pager__controls icetl-pagination__controls" aria-label="Pagination">
+      <button type="button" class="academic-action icetl-btn icetl-btn-outline" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
         <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
         Previous
       </button>
@@ -351,7 +351,7 @@
 
       <button
         type="button"
-        class="academic-action academic-action--primary"
+        class="academic-action academic-action--primary icetl-btn icetl-btn-primary"
         [disabled]="meta.currentPage === meta.lastPage"
         (click)="goToNextPage()">
         Next

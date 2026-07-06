@@ -184,7 +184,6 @@
 }
 
 .program-browse-btn,
-.program-timeline-tabs button,
 .program-pager button,
 .program-buy-button {
   display: inline-flex;
@@ -219,7 +218,6 @@
 }
 
 .program-browse-btn:hover,
-.program-timeline-tabs button:hover,
 .program-pager button:hover,
 .program-buy-button:hover {
   transform: translateY(-1px);
@@ -233,21 +231,7 @@
 }
 
 .program-timeline-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.program-timeline-tabs button {
-  min-height: 34px;
-  padding: 0 13px;
-}
-
-.program-timeline-tabs button.is-active {
-  border-color: rgba(8, 145, 178, 0.28);
-  background: #ecfeff;
-  color: var(--program-cyan);
+  margin-top: 12px !important;
 }
 
 .program-browse__grid-section {

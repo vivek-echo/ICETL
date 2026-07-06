@@ -22,7 +22,7 @@
 
     <div class="module-materials-modal__body" data-app-modal-body>
       @if (canUpload) {
-      <form class="materials-upload" [formGroup]="form" (ngSubmit)="uploadMaterial(fileInput)">
+      <form class="materials-upload icetl-form-section" [formGroup]="form" (ngSubmit)="uploadMaterial(fileInput)">
         <div class="materials-upload__grid">
           <label>
             <span>Material Title *</span>
@@ -32,7 +32,7 @@
               placeholder="Enter material title"
               [class.is-invalid]="titleControlInvalid">
             @if (titleControlInvalid) {
-            <small>Title is required and must be 2 to 150 characters.</small>
+            <small class="icetl-error-text">Title is required and must be 2 to 150 characters.</small>
             }
           </label>
 
@@ -49,12 +49,12 @@
               placeholder="Short note for learners"
               [class.is-invalid]="descriptionControlInvalid"></textarea>
             @if (descriptionControlInvalid) {
-            <small>Description must be 2000 characters or fewer.</small>
+            <small class="icetl-error-text">Description must be 2000 characters or fewer.</small>
             }
           </label>
         </div>
 
-        <div class="materials-file">
+        <div class="materials-file icetl-upload-zone">
           <div class="materials-file__field">
             <span class="materials-file__caption">File *</span>
             <div class="materials-file__picker-row">
@@ -93,7 +93,7 @@
           </div>
 
           @if (fileError) {
-          <p class="materials-file__error">{{ fileError }}</p>
+          <p class="materials-file__error icetl-error-text">{{ fileError }}</p>
           }
         </div>
 
@@ -104,9 +104,9 @@
         </div>
         }
 
-        <div class="materials-upload__actions">
+        <div class="materials-upload__actions icetl-form-actions">
           <span>PDF, Office, image, and ZIP files up to 20 MB</span>
-          <button type="submit" [disabled]="uploading">
+          <button type="submit" class="icetl-btn icetl-btn-primary" [disabled]="uploading">
             <i [class]="uploading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'"></i>
             {{ uploading ? 'Uploading' : 'Upload' }}
           </button>

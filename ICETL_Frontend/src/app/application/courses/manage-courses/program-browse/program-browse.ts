@@ -385,8 +385,8 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
 
   get pageDescription(): string {
     return this.programType === 'seminar'
-      ? 'Browse active ICTEL seminars, reserve your seat, and receive an invoice after payment.'
-      : 'Browse active ICTEL workshops, reserve your seat, and receive an invoice after payment.';
+      ? 'Browse active ICETL seminars, reserve your seat, and receive an invoice after payment.'
+      : 'Browse active ICETL workshops, reserve your seat, and receive an invoice after payment.';
   }
 
   get alternateRoute(): string {

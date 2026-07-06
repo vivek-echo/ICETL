@@ -1,25 +1,29 @@
 <div class="rbt-dashboard-content bg-color-white rbt-shadow-box mb--60 course-categories-page">
   <div class="content">
     <div class="advance-tab-button mb--30">
-      <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs" role="tablist">
+      <ul class="nav nav-tabs tab-button-style-2 justify-content-start course-categories-tabs icetl-tab-list" role="tablist">
         <li role="presentation">
           <a
-            class="tab-button"
+            class="tab-button icetl-tab-button"
+            role="tab"
             [routerLink]="['add']"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             #addTab="routerLinkActive"
+            [attr.aria-current]="addTab.isActive ? 'page' : null"
             [attr.aria-selected]="addTab.isActive">
             <span class="title">Add Categories</span>
           </a>
         </li>
         <li role="presentation">
           <a
-            class="tab-button"
+            class="tab-button icetl-tab-button"
+            role="tab"
             [routerLink]="['view']"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             #viewTab="routerLinkActive"
+            [attr.aria-current]="viewTab.isActive ? 'page' : null"
             [attr.aria-selected]="viewTab.isActive">
             <span class="title">View Categories</span>
           </a>

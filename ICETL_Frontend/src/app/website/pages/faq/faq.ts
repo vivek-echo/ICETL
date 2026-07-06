@@ -69,13 +69,13 @@ export class FaqComponent {
       id: 'course-training',
       eyebrow: 'Group 01',
       title: 'Course & Training',
-      description: 'Understand ICTEL programs, learning formats, projects, and training depth.',
+      description: 'Understand ICETL programs, learning formats, projects, and training depth.',
       iconClass: 'fa-solid fa-graduation-cap',
       items: [
         {
-          question: 'What courses does ICTEL offer?',
+          question: 'What courses does ICETL offer?',
           answer:
-            'ICTEL offers programs in programming, web development, AI and data science, cloud computing, cyber security, networking, digital marketing, CAD, and related IT domains.',
+            'ICETL offers programs in programming, web development, AI and data science, cloud computing, cyber security, networking, digital marketing, CAD, and related IT domains.',
         },
         {
           question: 'Are the courses beginner friendly?',
@@ -85,7 +85,7 @@ export class FaqComponent {
         {
           question: 'Do you provide practical training?',
           answer:
-            'Yes. ICTEL focuses on hands-on sessions, guided practice, assignments, and real-world skill development.',
+            'Yes. ICETL focuses on hands-on sessions, guided practice, assignments, and real-world skill development.',
         },
         {
           question: 'Are live projects included?',
@@ -114,7 +114,7 @@ export class FaqComponent {
         {
           question: 'Do you provide internship support?',
           answer:
-            'ICTEL provides internship guidance and support for selected programs based on the learner path and availability.',
+            'ICETL provides internship guidance and support for selected programs based on the learner path and availability.',
         },
         {
           question: 'Are certifications industry-oriented?',
@@ -138,7 +138,7 @@ export class FaqComponent {
         {
           question: 'How can I enroll in a course?',
           answer:
-            'You can enroll by contacting ICTEL through the contact page, phone, or institute visit. Our team will guide you through the next steps.',
+            'You can enroll by contacting ICETL through the contact page, phone, or institute visit. Our team will guide you through the next steps.',
         },
         {
           question: 'Do you offer online classes?',
@@ -148,7 +148,7 @@ export class FaqComponent {
         {
           question: 'What payment methods are accepted?',
           answer:
-            'ICTEL accepts common payment methods shared by the admissions team during enrollment confirmation.',
+            'ICETL accepts common payment methods shared by the admissions team during enrollment confirmation.',
         },
         {
           question: 'Are installment options available?',
@@ -167,10 +167,10 @@ export class FaqComponent {
         {
           question: 'Do you provide placement assistance?',
           answer:
-            'ICTEL provides placement-oriented guidance to help learners prepare for career opportunities in their chosen domain.',
+            'ICETL provides placement-oriented guidance to help learners prepare for career opportunities in their chosen domain.',
         },
         {
-          question: 'Will ICTEL help with interview preparation?',
+          question: 'Will ICETL help with interview preparation?',
           answer:
             'Yes. Learners can receive guidance on interview readiness, resumes, portfolios, and practical skill presentation.',
         },
@@ -182,7 +182,7 @@ export class FaqComponent {
         {
           question: 'Is career guidance available?',
           answer:
-            'Yes. ICTEL helps learners understand suitable learning paths, career options, and practical next steps.',
+            'Yes. ICETL helps learners understand suitable learning paths, career options, and practical next steps.',
         },
       ],
     },

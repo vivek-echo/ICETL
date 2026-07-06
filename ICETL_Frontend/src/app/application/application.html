@@ -1,4 +1,7 @@
-<div class="website-shell">
+<div
+  class="website-shell application-shell"
+  [class.application-shell--sidebar-collapsed]="isSidebarCollapsed"
+  [class.sidebar-collapsed]="isSidebarCollapsed">
   <app-header></app-header>
   <main class="rbt-main-wrapper website-shell__content">
     <div class="rbt-page-banner-wrapper">
@@ -52,7 +55,18 @@
             <div class="row g-5 application-layout-row" >
               <div class="col-lg-2 application-sidebar-column" >
                 <!-- Start Dashboard Sidebar  -->
-                <div class="rbt-default-sidebar sticky-top rbt-shadow-box rbt-gradient-border application-sidebar">
+                <div class="rbt-default-sidebar sticky-top rbt-shadow-box rbt-gradient-border application-sidebar sidebar">
+                  <button
+                    type="button"
+                    class="application-sidebar-toggle"
+                    [attr.aria-label]="isSidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'"
+                    [attr.title]="isSidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'"
+                    [attr.aria-expanded]="!isSidebarCollapsed"
+                    [attr.aria-pressed]="isSidebarCollapsed"
+                    (click)="toggleSidebar($event)">
+                    <i [class]="isSidebarCollapsed ? 'feather-chevrons-right' : 'feather-chevrons-left'"></i>
+                  </button>
+
                   <div class="inner">
                     <div class="content-item-content">
 
@@ -94,7 +108,7 @@
                 <!-- End Dashboard Sidebar  -->
               </div>
 
-              <div class="col-lg-10 application-content-column" >
+              <div class="col-lg-10 application-content-column main-content" >
                 <router-outlet />
               </div>
             </div>
@@ -130,7 +144,7 @@
         </app-modal-window-controls>
       </header>
 
-      <div class="rbt-dashboard-content bg-color-white rbt-shadow-box profile-update-card" data-app-modal-body>
+      <div class="rbt-dashboard-content bg-color-white rbt-shadow-box profile-update-card icetl-form-card" data-app-modal-body>
         <div class="content">
           <div class="section-title">
             <h4 class="rbt-title-style-3">Settings</h4>
@@ -185,7 +199,7 @@
                 <label for="profile-update-name">Name *</label>
                 <input id="profile-update-name" type="text" formControlName="name" autocomplete="name">
                 @if (profileForm.get('name')?.touched && profileForm.get('name')?.errors) {
-                <small class="text-danger">Minimum 3 characters required</small>
+                <small class="text-danger icetl-error-text">Minimum 3 characters required</small>
                 }
               </div>
             </div>
@@ -194,7 +208,7 @@
               <div class="rbt-form-group">
                 <label for="profile-update-email">Email ID</label>
                 <input id="profile-update-email" type="email" formControlName="email">
-                <small class="profile-form-note">Email ID cannot be changed.</small>
+                <small class="profile-form-note icetl-field-note">Email ID cannot be changed.</small>
               </div>
             </div>
 
@@ -204,7 +218,7 @@
                 <input id="profile-update-phone" type="tel" formControlName="phone" maxlength="10" inputmode="numeric"
                   autocomplete="tel" (keypress)="onlyNumbers($event)">
                 @if (profileForm.get('phone')?.touched && profileForm.get('phone')?.errors) {
-                <small class="text-danger">Enter a valid 10 digit phone number</small>
+                <small class="text-danger icetl-error-text">Enter a valid 10 digit phone number</small>
                 }
               </div>
             </div>
@@ -238,12 +252,12 @@
             }
 
             <div class="col-12 mt--20">
-              <div class="profile-modal__actions">
-                <button type="button" class="rbt-btn btn-border" (click)="closeUpdateProfileModal()"
+              <div class="profile-modal__actions icetl-form-actions">
+                <button type="button" class="rbt-btn btn-border icetl-btn icetl-btn-outline" (click)="closeUpdateProfileModal()"
                   [disabled]="isSavingProfile">
                   Cancel
                 </button>
-                <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingProfile">
+                <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="isSavingProfile">
                   {{ isSavingProfile ? 'Saving...' : 'Update Info' }}
                 </button>
               </div>

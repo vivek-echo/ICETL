@@ -1,5 +1,5 @@
-<div class="category-workspace">
-  <form class="rbt-profile-row row g-4" [formGroup]="categoryForm" (ngSubmit)="submitCategory()">
+<div class="category-workspace icetl-form-page">
+  <form class="rbt-profile-row row g-4 icetl-form-card" [formGroup]="categoryForm" (ngSubmit)="submitCategory()">
 
     <!-- Category Name -->
     <div class="col-lg-6">
@@ -9,7 +9,7 @@
         <input type="text" formControlName="categoryName" placeholder="Enter category name" name="categoryName">
         @if (categoryForm.get('categoryName')?.touched &&
         categoryForm.get('categoryName')?.invalid) {
-        <small class="text-danger">
+        <small class="text-danger icetl-error-text">
           Category name is required
         </small>
         }
@@ -20,7 +20,7 @@
     <div class="col-12">
       <div class="rbt-form-group">
         <label>Category banner</label>
-        <div class="upload-box">
+        <div class="upload-box icetl-upload-zone">
           <!-- FILE INPUT -->
           <input type="file" class="upload-input" accept="image/png,image/jpeg,image/jpg,image/svg+xml"
             (change)="onFileChange($event)">
@@ -59,7 +59,7 @@
 
         @if (categoryForm.get('categoryIcon')?.touched &&
         categoryForm.get('categoryIcon')?.invalid) {
-        <small class="text-danger">
+        <small class="text-danger icetl-error-text">
           Category icon is required
         </small>
         }
@@ -80,9 +80,9 @@
 
     <!-- Submit -->
     <div class="col-12">
-      <div class="category-actions">
+      <div class="category-actions icetl-form-actions">
 
-        <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse">
+        <button type="submit" class="rbt-btn btn-gradient hover-icon-reverse icetl-btn icetl-btn-primary">
 
           <span class="icon-reverse-wrapper">
             <span class="btn-text">Add Category</span>

@@ -1,16 +1,16 @@
 <section class="enquiries-page" aria-labelledby="enquiries-title">
-  <div class="enquiries-page__header">
+  <div class="enquiries-page__header icetl-page-header">
     <div>
       <span class="enquiries-page__eyebrow">Contact Desk</span>
       <h1 id="enquiries-title">Enquiries</h1>
       <p>Review contact form enquiries and clear new items after follow-up.</p>
     </div>
 
-    <div class="enquiries-page__actions">
+    <div class="enquiries-page__actions icetl-page-actions">
       @if (unreadCount > 0) {
       <button
         type="button"
-        class="enquiries-page__mark-all"
+        class="enquiries-page__mark-all icetl-btn icetl-btn-primary"
         (click)="markAllRead()"
         [disabled]="markingRead">
         <i class="fa-solid fa-check-double"></i>
@@ -20,7 +20,7 @@
 
       <button
         type="button"
-        class="enquiries-page__refresh"
+        class="enquiries-page__refresh icetl-btn icetl-btn-outline"
         (click)="loadEnquiries()"
         [disabled]="loading"
         title="Refresh enquiries">
@@ -41,8 +41,8 @@
     </article>
   </div>
 
-  <div class="enquiry-filters" aria-label="Enquiry filters">
-    <div class="enquiry-filters__header">
+  <div class="enquiry-filters icetl-filter-panel" aria-label="Enquiry filters">
+    <div class="enquiry-filters__header icetl-filter-toolbar">
       <div class="enquiry-filters__title">
         <span class="enquiry-filters__icon">
           <i class="fa-solid fa-sliders"></i>
@@ -52,12 +52,12 @@
 
       <div class="enquiry-filters__header-actions">
         @if (hasActiveFilters) {
-        <span class="enquiry-filters__active">Active</span>
+        <span class="enquiry-filters__active icetl-badge icetl-badge--active">Active</span>
         }
 
         <button
           type="button"
-          class="enquiry-filters__toggle"
+          class="enquiry-filters__toggle icetl-btn icetl-btn-outline"
           (click)="toggleFilters()"
           [attr.aria-expanded]="showFilters"
           aria-controls="enquiryFiltersPanel">
@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <div id="enquiryFiltersPanel" class="enquiry-filters__body" [hidden]="!showFilters">
+    <div id="enquiryFiltersPanel" class="enquiry-filters__body icetl-filter-grid" [hidden]="!showFilters">
       <label class="enquiry-filter-field enquiry-filter-field--search">
         <span>Search</span>
         <div class="enquiry-filter-field__control">
@@ -109,13 +109,13 @@
       </div>
 
       <div class="enquiry-filters__actions">
-        <button type="button" class="enquiry-filter-btn" (click)="applyFilters()" [disabled]="loading">
+        <button type="button" class="enquiry-filter-btn icetl-btn icetl-btn-primary" (click)="applyFilters()" [disabled]="loading">
           <i class="fa-solid fa-filter"></i>
           Filter
         </button>
         <button
           type="button"
-          class="enquiry-filter-btn enquiry-filter-btn--ghost"
+          class="enquiry-filter-btn enquiry-filter-btn--ghost icetl-btn icetl-btn-outline"
           (click)="clearFilters()"
           [disabled]="loading || !hasActiveFilters">
           <i class="fa-solid fa-rotate-left"></i>
@@ -126,14 +126,14 @@
   </div>
 
   @if (loading) {
-  <div class="enquiries-page__state">
-    <i class="fa-solid fa-spinner fa-spin"></i>
+  <div class="enquiries-page__state icetl-spinner-wrap">
+    <span class="icetl-inline-spinner" aria-hidden="true"></span>
     Loading enquiries...
   </div>
   }
 
   @if (!loading && enquiries.length === 0) {
-  <div class="enquiries-page__empty">
+  <div class="enquiries-page__empty icetl-empty-state">
     <i class="fa-solid fa-inbox"></i>
     <h2>No enquiries found</h2>
     <p>New contact form submissions will appear here.</p>
@@ -141,8 +141,8 @@
   }
 
   @if (!loading && enquiries.length > 0) {
-  <div class="enquiry-table-wrap">
-    <table class="enquiry-table">
+  <div class="enquiry-table-wrap icetl-table-shell">
+    <table class="enquiry-table icetl-table">
       <thead>
         <tr>
           <th>Visitor</th>
@@ -174,7 +174,7 @@
           <td>{{ formatDate(enquiry.createdOn) }}</td>
           <td>
             <span
-              class="enquiry-status"
+              class="enquiry-status icetl-badge"
               [class.enquiry-status--read]="enquiry.isRead"
               [class.enquiry-status--new]="!enquiry.isRead">
               {{ enquiry.statusLabel }}
@@ -184,14 +184,16 @@
             }
           </td>
           <td>
+            <div class="icetl-table-actions">
             <button
               type="button"
-              class="enquiry-table__action"
+              class="enquiry-table__action icetl-btn icetl-btn-outline"
               (click)="markAsRead(enquiry)"
               [disabled]="enquiry.isRead || markingRead">
               <i class="fa-solid fa-check"></i>
               {{ enquiry.isRead ? 'Read' : 'Mark Read' }}
             </button>
+            </div>
           </td>
         </tr>
         }
@@ -199,14 +201,14 @@
     </table>
   </div>
 
-  <footer class="enquiry-pagination">
+  <footer class="enquiry-pagination icetl-pagination">
     <span>{{ total }} enquiry{{ total === 1 ? '' : 's' }}</span>
-    <div>
-      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">
+    <div class="icetl-pagination__controls">
+      <button type="button" class="icetl-icon-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1" title="Previous page">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
       <strong>{{ currentPage }} / {{ lastPage }}</strong>
-      <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage">
+      <button type="button" class="icetl-icon-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= lastPage" title="Next page">
         <i class="fa-solid fa-chevron-right"></i>
       </button>
     </div>

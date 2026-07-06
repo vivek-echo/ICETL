@@ -43,9 +43,9 @@
   </section> -->
 
   <!-- TOOLBAR -->
-  <div class="course-toolbar">
+  <div class="course-toolbar icetl-filter-panel">
 
-    <div class="course-toolbar__header">
+    <div class="course-toolbar__header icetl-filter-toolbar">
       <div class="course-toolbar__title">
         <span class="course-toolbar__icon">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -55,7 +55,7 @@
 
       <button
         type="button"
-        class="course-toolbar__toggle"
+        class="course-toolbar__toggle icetl-btn icetl-btn-outline"
         (click)="toggleFilters()"
         [attr.aria-expanded]="showFilters"
         aria-controls="viewCourseFiltersPanel">
@@ -65,7 +65,7 @@
       </button>
     </div>
 
-    <div id="viewCourseFiltersPanel" class="course-toolbar__body" [hidden]="!showFilters">
+    <div id="viewCourseFiltersPanel" class="course-toolbar__body icetl-filter-grid" [hidden]="!showFilters">
     <div class="rbt-form-group">
       <label>Search Course</label>
       <div class="course-field">
@@ -144,7 +144,7 @@
       </div>
     </div>
 
-    <button type="button" class="course-toolbar__reset" (click)="clearFilters()">
+    <button type="button" class="course-toolbar__reset icetl-btn icetl-btn-outline" (click)="clearFilters()">
       <i class="feather-refresh-cw"></i>
       Reset
     </button>
@@ -155,21 +155,21 @@
   @if (loading) {
   <div class="course-list course-list--loading" aria-label="Loading courses">
     @for (loader of skeletonRows; track loader) {
-    <article class="course-row course-row--skeleton">
-      <div class="course-skeleton-media"></div>
+    <article class="course-row course-row--skeleton icetl-list-card">
+      <div class="course-skeleton-media icetl-skeleton"></div>
       <div class="course-skeleton-content">
-        <div class="course-skeleton-line course-skeleton-line--short"></div>
-        <div class="course-skeleton-line course-skeleton-line--title"></div>
-        <div class="course-skeleton-line"></div>
+        <div class="course-skeleton-line course-skeleton-line--short icetl-skeleton"></div>
+        <div class="course-skeleton-line course-skeleton-line--title icetl-skeleton"></div>
+        <div class="course-skeleton-line icetl-skeleton"></div>
         <div class="course-skeleton-meta">
-          <span></span>
-          <span></span>
-          <span></span>
+          <span class="icetl-skeleton"></span>
+          <span class="icetl-skeleton"></span>
+          <span class="icetl-skeleton"></span>
         </div>
       </div>
       <div class="course-skeleton-side">
-        <div class="course-skeleton-line course-skeleton-line--short"></div>
-        <div class="course-skeleton-line"></div>
+        <div class="course-skeleton-line course-skeleton-line--short icetl-skeleton"></div>
+        <div class="course-skeleton-line icetl-skeleton"></div>
       </div>
     </article>
     }
@@ -177,7 +177,7 @@
   }
 
   @if (!loading && courses.length === 0) {
-  <div class="empty-state">
+  <div class="empty-state icetl-empty-state">
     <i class="feather-book-open"></i>
     <h5>No Courses Found</h5>
     <p>No courses are available for the selected filters.</p>
@@ -188,13 +188,13 @@
   @if (!loading && courses.length > 0) {
   <div class="course-list">
     @for (course of courses; track trackByCourseId($index, course)) {
-    <article class="course-row">
+    <article class="course-row icetl-list-card">
       <div class="course-row__media">
         <img [src]="courseImage(course)" [alt]="course.title" (error)="onCourseImageError(course)">
         @if (getDiscount(course)) {
         <span class="discount-badge">{{ getDiscount(course) }}</span>
         }
-        <span class="status-badge" [class.status-badge--inactive]="!isActive(course)">
+        <span class="status-badge icetl-badge" [class.status-badge--inactive]="!isActive(course)">
           {{ course.statusLabel }}
         </span>
       </div>
@@ -239,10 +239,8 @@
 
         <div class="course-badges">
           @if (isSpecialCourse(course)) {
-          <span class="special-course-badge"><i class="fa-solid fa-star"></i> Special</span>
+          <span class="special-course-badge icetl-badge icetl-badge--active"><i class="fa-solid fa-star"></i> Special</span>
           }
-          <span class="premium-badge"><i class="fa-solid fa-gem"></i> Premium</span>
-          <span class="bestseller-badge">Bestseller</span>
         </div>
 
         @if (getCourseHighlights(course, 3).length > 0) {
@@ -272,11 +270,11 @@
         </div>
 
         <div class="course-actions">
-          <button type="button" class="action-btn action-btn--curriculum" (click)="goToCurriculum(course)"
+          <button type="button" class="action-btn action-btn--curriculum icetl-icon-btn" (click)="goToCurriculum(course)"
             title="Manage Curriculum">
             <i class="feather-list"></i>
           </button>
-          <button type="button" class="action-btn" (click)="openEditModal(course)" title="Edit Course">
+          <button type="button" class="action-btn icetl-icon-btn" (click)="openEditModal(course)" title="Edit Course">
             <i class="feather-edit-2"></i>
           </button>
         </div>
@@ -287,13 +285,13 @@
   }
 
   @if (!loading && meta.total > 0) {
-  <div class="course-pager">
+  <div class="course-pager icetl-pagination">
     <p>
       Showing {{ meta.from }}-{{ meta.to }} of {{ meta.total }} courses
     </p>
 
-    <div class="course-pager__controls">
-      <button type="button" class="pager-btn" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
+    <div class="course-pager__controls icetl-pagination__controls">
+      <button type="button" class="pager-btn icetl-btn icetl-btn-outline" [disabled]="meta.currentPage === 1" (click)="goToPreviousPage()">
         <i class="feather-chevron-left"></i>
         Previous
       </button>
@@ -305,7 +303,7 @@
         <span>of {{ meta.lastPage }}</span>
       </div>
 
-      <button type="button" class="pager-btn pager-btn--primary" [disabled]="meta.currentPage === meta.lastPage"
+      <button type="button" class="pager-btn pager-btn--primary icetl-btn icetl-btn-primary" [disabled]="meta.currentPage === meta.lastPage"
         (click)="goToNextPage()">
         Next
         <i class="feather-chevron-right"></i>
@@ -357,7 +355,7 @@
           <p>Update the course details and save your changes.</p>
         </div>
 
-        <form class="course-edit-form" (ngSubmit)="submitEditCourse()">
+        <form class="course-edit-form icetl-form-card" (ngSubmit)="submitEditCourse()">
           <div class="rbt-form-group course-edit-form__full">
             <label for="edit-course-title-input">Course Title</label>
             <input id="edit-course-title-input" name="editCourseTitle" type="text" placeholder="Enter course title"
@@ -466,7 +464,7 @@
           </div>
 
           <div class="rbt-form-group course-edit-form__full">
-            <div class="edit-highlights-card">
+            <div class="edit-highlights-card icetl-form-section">
               <div class="edit-highlights-card__header">
                 <label>What You'll Learn</label>
                 <button type="button" class="highlight-icon-btn highlight-icon-btn--add" (click)="addEditHighlight()"
@@ -490,12 +488,12 @@
             </div>
           </div>
 
-          <div class="course-modal__actions course-edit-form__full">
-            <button type="button" class="rbt-btn btn-border" (click)="closeEditModal()" [disabled]="isSavingEdit">
+          <div class="course-modal__actions course-edit-form__full icetl-form-actions">
+            <button type="button" class="rbt-btn btn-border icetl-btn icetl-btn-outline" (click)="closeEditModal()" [disabled]="isSavingEdit">
               Cancel
             </button>
 
-            <button type="submit" class="rbt-btn btn-gradient" [disabled]="isSavingEdit">
+            <button type="submit" class="rbt-btn btn-gradient icetl-btn icetl-btn-primary" [disabled]="isSavingEdit">
               @if (isSavingEdit) {
               Saving...
               } @else {

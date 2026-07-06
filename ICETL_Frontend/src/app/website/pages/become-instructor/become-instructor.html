@@ -11,12 +11,12 @@
             <div class="hero-copy">
               <span class="hero-kicker">
                 <i class="fa-solid fa-star"></i>
-                Premium Instructor Network
+                Professional Instructor Network
               </span>
-              <h1>Design a world-class instructor profile that feels as strong as your expertise.</h1>
+              <h1>Build an instructor profile that clearly reflects your expertise.</h1>
               <p>
-                Verify your email, build a premium teaching identity, and move through a polished
-                ICETL onboarding flow inspired by the best modern learning platforms.
+                Verify your email, complete your teaching profile, and move through a guided
+                ICETL onboarding flow designed for trusted instructors.
               </p>
 
               <div class="hero-actions">
@@ -71,7 +71,7 @@
               </div>
               <div class="floating-badge floating-badge--bottom">
                 <i class="fa-solid fa-sparkles"></i>
-                Premium profile builder
+                Profile builder
               </div>
 
               <div class="hero-showcase__card glass-panel">
@@ -90,7 +90,7 @@
                       <i class="fa-solid fa-user-tie"></i>
                     </div>
                     <div class="preview-profile__content">
-                      <strong>Premium Instructor Identity</strong>
+                      <strong>Instructor Identity</strong>
                       <span>Headline, proof, expertise, and trust signals in one flow.</span>
                     </div>
                   </div>
@@ -116,7 +116,7 @@
                     </div>
                     <div class="preview-grid__item">
                       <span class="preview-grid__eyebrow">Profile</span>
-                      <strong>Glassmorphism UI</strong>
+                      <strong>Review ready</strong>
                     </div>
                     <div class="preview-grid__item">
                       <span class="preview-grid__eyebrow">Status</span>
@@ -140,7 +140,7 @@
         <span class="section-badge">Why Teach With ICETL</span>
         <h2>Built for instructors who want elegance, scale, and credibility from day one.</h2>
         <p>
-          Launch a premium instructor presence with an onboarding flow that feels intentional,
+          Launch a professional instructor presence with an onboarding flow that feels intentional,
           trusted, and built for long-term growth.
         </p>
       </div>
@@ -169,7 +169,7 @@
           <span class="section-badge">Platform Momentum</span>
           <h2>Join a fast-growing learning ecosystem built for trusted, modern educators.</h2>
           <p>
-            Publish courses, verify your expertise, and manage a premium teaching brand through a
+            Publish courses, verify your expertise, and manage your teaching profile through a
             secure, design-led instructor onboarding experience.
           </p>
         </div>
@@ -232,7 +232,7 @@
                 <aside class="progress-sidebar glass-panel">
                   <div class="progress-sidebar__head">
                     <span class="section-badge">Application Progress</span>
-                    <h3>Track every milestone in one premium progress rail.</h3>
+                    <h3>Track every milestone in one clear progress panel.</h3>
                     <p>
                       Your instructor draft is saved after each successful step, so you can return
                       anytime and continue seamlessly.
@@ -294,7 +294,7 @@
               <form
                 id="instructor-email-section"
                 #emailEntrySection
-                class="stage-card stage-card--entry glass-panel"
+                class="stage-card stage-card--entry glass-panel icetl-form-card"
                 [formGroup]="emailEntryForm"
                 (ngSubmit)="submitEmail()"
               >
@@ -302,7 +302,7 @@
                   <span class="section-badge">Step 0 of 5</span>
                   <h2>Verify your email to unlock the instructor onboarding workspace.</h2>
                   <p>
-                    We’ll check your instructor status, send a secure 6-digit OTP, and restore any
+                    We'll check your instructor status, send a secure 6-digit OTP, and restore any
                     saved draft automatically.
                   </p>
                 </div>
@@ -350,7 +350,7 @@
                     <div class="stage-card__footer">
                       <button
                         type="submit"
-                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse icetl-btn icetl-btn-primary"
                         [disabled]="isEmailSubmitting"
                       >
                         <span class="icon-reverse-wrapper">
@@ -390,7 +390,7 @@
                 </div>
               </form>
             } @else if (stage === 'otp') {
-              <form class="stage-card stage-card--otp glass-panel" (submit)="handleOtpSubmit($event)">
+              <form class="stage-card stage-card--otp glass-panel icetl-form-card" (submit)="handleOtpSubmit($event)">
                 <div class="stage-card__header">
                   <span class="section-badge">OTP Verification</span>
                   <h2>Enter the 6-digit code sent to {{ onboardingEmail }}.</h2>
@@ -444,7 +444,7 @@
                   <div class="otp-actions">
                     <button
                       type="submit"
-                      class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                      class="rbt-btn btn-gradient btn-xl hover-icon-reverse icetl-btn icetl-btn-primary"
                       [disabled]="isOtpSubmitting || isOtpResending || otpCode.length !== 6 || otpExpiresIn === 0"
                     >
                       <span class="icon-reverse-wrapper">
@@ -454,7 +454,7 @@
                       </span>
                     </button>
 
-                    <button type="button" class="rbt-btn btn-border btn-xl" (click)="backToEmail()">
+                    <button type="button" class="rbt-btn btn-border btn-xl icetl-btn icetl-btn-outline" (click)="backToEmail()">
                       Change Email
                     </button>
                   </div>
@@ -510,7 +510,7 @@
               </div>
 
               <form
-                class="registration-card glass-panel"
+                class="registration-card glass-panel icetl-form-card icetl-form-page"
                 #formCard
                 [formGroup]="registrationForm"
                 (ngSubmit)="submitApplication()"
@@ -1495,7 +1495,7 @@
                       <span class="step-panel__eyebrow">Final review</span>
                       <h3>Confirm your accuracy, accept the platform policies, and submit with confidence.</h3>
                       <p>
-                        This is the final step before your premium instructor application moves into
+                        This is the final step before your instructor application moves into
                         review.
                       </p>
                     </div>
@@ -1565,10 +1565,10 @@
                   </div>
                 </div>
 
-                <div class="registration-card__footer">
+                <div class="registration-card__footer icetl-form-actions">
                   <button
                     type="button"
-                    class="rbt-btn btn-border btn-xl"
+                    class="rbt-btn btn-border btn-xl icetl-btn icetl-btn-outline"
                     (click)="previousStep()"
                     [disabled]="currentStep === 0 || isStepSaving || isSubmitting"
                   >
@@ -1580,7 +1580,7 @@
                     @if (currentStep < stepMeta.length - 1) {
                       <button
                         type="button"
-                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse icetl-btn icetl-btn-primary"
                         (click)="nextStep()"
                         [disabled]="isStepSaving || isSubmitting"
                       >
@@ -1593,7 +1593,7 @@
                     } @else {
                       <button
                         type="submit"
-                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse"
+                        class="rbt-btn btn-gradient btn-xl hover-icon-reverse icetl-btn icetl-btn-primary"
                         [disabled]="isSubmitting"
                       >
                         <span class="icon-reverse-wrapper">

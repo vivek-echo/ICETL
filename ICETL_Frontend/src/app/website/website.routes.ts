@@ -43,7 +43,7 @@ export const websiteRoutes: Routes = [
       {
         path: 'faq',
         loadComponent: () => import('./pages/faq/faq').then((m) => m.FaqComponent),
-        title: 'FAQ | ICTEL',
+        title: 'FAQ | ICETL',
       },
       {
         path: 'courses',
