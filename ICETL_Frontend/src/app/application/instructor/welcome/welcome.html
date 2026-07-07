@@ -31,7 +31,7 @@
 
           <a
             class="rbt-btn btn-gradient hover-icon-reverse icetl-btn icetl-btn-primary"
-            [routerLink]="['/application/instructorDashboard']"
+            [routerLink]="['/application/instructor/dashboard']"
           >
             <span class="icon-reverse-wrapper">
               <span class="btn-text">Go to Dashboard</span>
@@ -44,7 +44,7 @@
             </span>
           </a>
 
-          <a class="secondary-btn icetl-btn icetl-btn-outline" [routerLink]="['/application/instructorProfile']">
+          <a class="secondary-btn icetl-btn icetl-btn-outline" [routerLink]="['/application/instructor/profile']">
             <i class="feather-edit-3"></i>
             Update Profile
           </a>
@@ -60,8 +60,8 @@
             </div>
 
             <div>
-              <h5>24</h5>
-              <span>Active Courses</span>
+              <h5>Assigned</h5>
+              <span>Courses and materials</span>
             </div>
           </div>
 
@@ -71,8 +71,8 @@
             </div>
 
             <div>
-              <h5>1.2k</h5>
-              <span>Total Students</span>
+              <h5>Students</h5>
+              <span>Enrollment lists</span>
             </div>
           </div>
 
@@ -82,8 +82,8 @@
             </div>
 
             <div>
-              <h5>4.9</h5>
-              <span>Instructor Rating</span>
+              <h5>Profile</h5>
+              <span>Teaching details</span>
             </div>
           </div>
 
@@ -108,7 +108,7 @@
 
           <div class="floating-badge badge-two">
             <i class="feather-users"></i>
-            <span>120 New Students</span>
+            <span>Student Lists</span>
           </div>
 
         </div>
@@ -120,7 +120,7 @@
     <!-- FEATURE CARDS -->
     <div class="instructor-features">
 
-      <div class="feature-card icetl-card">
+      <a class="feature-card icetl-card" routerLink="/application/courses/assignedCourses">
 
         <div class="feature-icon">
           <i class="feather-upload-cloud"></i>
@@ -134,39 +134,39 @@
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="feature-card icetl-card">
+      <a class="feature-card icetl-card" routerLink="/application/courses/manageCourses/view">
 
         <div class="feature-icon">
           <i class="feather-bar-chart-2"></i>
         </div>
 
         <div>
-          <h6>Track Analytics</h6>
+          <h6>Manage Courses</h6>
 
           <p>
-            Monitor learner engagement, completion rates, and performance insights.
+            Review your courses and continue curriculum management from existing course pages.
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="feature-card icetl-card">
+      <a class="feature-card icetl-card" routerLink="/application/workshopSeminar/workshop/viewMyWorkshop">
 
         <div class="feature-icon">
           <i class="feather-message-circle"></i>
         </div>
 
         <div>
-          <h6>Engage Students</h6>
+          <h6>Workshops</h6>
 
           <p>
-            Interact with learners through discussions, announcements, and feedback.
+            Review workshop sessions and enrolled learners from the workshop workspace.
           </p>
         </div>
 
-      </div>
+      </a>
 
     </div>
 

@@ -686,12 +686,13 @@ export class ViewMyOfflineCourse implements OnInit {
         <p><strong>Category:</strong> ${this.escapeHtml(course.categoryName || 'Uncategorized')}</p>
         <p><strong>Instructor:</strong> ${this.escapeHtml(course.instructorName || 'Instructor')}</p>
         <p><strong>Venue:</strong> ${this.escapeHtml(course.venue || 'N/A')}</p>
-        <p><strong>Schedule:</strong> ${this.escapeHtml(this.formatDateRange(course))}</p>
-        <p><strong>Approval:</strong> ${this.escapeHtml(this.getApprovalStatusLabel(course))}</p>
-        <p><strong>Publish:</strong> ${this.escapeHtml(this.getPublishStatusLabel(course))}</p>
-        ${primaryCourse ? `<p><strong>Primary Course:</strong> ${this.escapeHtml(primaryCourse)}</p>` : ''}
-        ${course.rejectionReason ? `<p><strong>Rejection Reason:</strong> ${this.escapeHtml(course.rejectionReason)}</p>` : ''}
-      </div>
+      <p><strong>Schedule:</strong> ${this.escapeHtml(this.formatDateRange(course))}</p>
+      <p><strong>Approval:</strong> ${this.escapeHtml(this.getApprovalStatusLabel(course))}</p>
+      <p><strong>Publish:</strong> ${this.escapeHtml(this.getPublishStatusLabel(course))}</p>
+      ${this.getWorkflowTimelineHtml(course)}
+      ${primaryCourse ? `<p><strong>Primary Course:</strong> ${this.escapeHtml(primaryCourse)}</p>` : ''}
+      ${course.rejectionReason ? `<p><strong>Rejection Reason:</strong> ${this.escapeHtml(course.rejectionReason)}</p>` : ''}
+    </div>
     `;
 
     await this.alertHelper.viewAlertHtml('info', course.title || 'Offline Course', html);
@@ -884,6 +885,36 @@ export class ViewMyOfflineCourse implements OnInit {
       : 'offline-status-badge--unpublished';
   }
 
+  getApprovalHelper(course: OfflineCourseItem): string {
+    const status = this.getApprovalStatus(course);
+
+    if (status === 'APPROVED') {
+      return course.approvedOn
+        ? `Approved ${this.formatDateValue(course.approvedOn)}`
+        : 'Approved and ready for publish review';
+    }
+
+    if (status === 'REJECTED') {
+      return course.rejectedOn
+        ? `Rejected ${this.formatDateValue(course.rejectedOn)}`
+        : 'Rejected with feedback';
+    }
+
+    return 'Pending admin/team approval';
+  }
+
+  getPublishHelper(course: OfflineCourseItem): string {
+    if (this.isPublished(course)) {
+      return course.publishedOn
+        ? `Published ${this.formatDateValue(course.publishedOn)}`
+        : 'Visible to learners';
+    }
+
+    return this.getApprovalStatus(course) === 'APPROVED'
+      ? 'Approved but not published'
+      : 'Publish after approval';
+  }
+
   canView(course: OfflineCourseItem): boolean {
     return course.actions?.view !== false;
   }
@@ -1023,6 +1054,49 @@ export class ViewMyOfflineCourse implements OnInit {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  private getWorkflowTimelineHtml(course: OfflineCourseItem): string {
+    const approvalStatus = this.getApprovalStatus(course);
+    const approvalDetail =
+      approvalStatus === 'APPROVED'
+        ? this.workflowDetail('Approved', course.approvedOn, course.approvedByName)
+        : approvalStatus === 'REJECTED'
+          ? this.workflowDetail('Rejected', course.rejectedOn, course.rejectedByName)
+          : 'Waiting for admin/team review';
+    const publishDetail = this.isPublished(course)
+      ? this.workflowDetail('Published', course.publishedOn, course.publishedByName)
+      : this.getApprovalStatus(course) === 'APPROVED'
+        ? 'Ready to publish'
+        : 'Publish is locked until approval';
+
+    return `
+      <div class="offline-workflow-timeline">
+        <div>
+          <span>Created</span>
+          <strong>${this.escapeHtml(this.formatDateValue(course.createdOn))}</strong>
+        </div>
+        <div class="is-${approvalStatus.toLowerCase()}">
+          <span>${this.escapeHtml(this.getApprovalStatusLabel(course))}</span>
+          <strong>${this.escapeHtml(approvalDetail)}</strong>
+        </div>
+        <div class="${this.isPublished(course) ? 'is-published' : 'is-unpublished'}">
+          <span>${this.escapeHtml(this.getPublishStatusLabel(course))}</span>
+          <strong>${this.escapeHtml(publishDetail)}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  private workflowDetail(label: string, date: string | null | undefined, actor: string | null | undefined): string {
+    const dateLabel = this.formatDateValue(date);
+    const actorLabel = `${actor || ''}`.trim();
+
+    if (dateLabel !== 'N/A' && actorLabel) {
+      return `${label} ${dateLabel} by ${actorLabel}`;
+    }
+
+    return dateLabel !== 'N/A' ? `${label} ${dateLabel}` : label;
   }
 
   private createEmptyEnrollmentForm(totalFee = 0): OfflineEnrollmentForm {

@@ -60,7 +60,7 @@
   <section class="assigned-empty icetl-empty-state">
     <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
     <h2>No {{ emptyLabel }}</h2>
-    <p>Assigned items will appear here.</p>
+    <p>Assigned items will appear here when courses, workshops, or seminars are mapped to you.</p>
   </section>
   }
 
@@ -75,7 +75,7 @@
 
       <div class="assigned-card__body">
         <div class="assigned-card__topline">
-          <small>{{ module.moduleTypeLabel }}</small>
+          <small class="assigned-card__type">{{ module.moduleTypeLabel }}</small>
           @if (module.code) {
           <small>{{ module.code }}</small>
           }
@@ -101,6 +101,7 @@
           <span><i class="fa-regular fa-calendar"></i>{{ getDateRange(module) }}</span>
           <span><i class="fa-solid fa-signal"></i>{{ scheduleLabel(module) }}</span>
           <span><i class="fa-regular fa-file-lines"></i>{{ module.materialsCount }} material{{ module.materialsCount === 1 ? '' : 's' }}</span>
+          <span><i class="fa-solid fa-circle-info"></i>{{ getModuleWorkflowHint(module) }}</span>
         </div>
       </div>
 
@@ -115,7 +116,7 @@
         </button>
         <button type="button" class="icetl-btn icetl-btn-primary" (click)="openMaterials(module)" title="Upload and manage materials">
           <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-          Upload Materials
+          View / Upload Materials
         </button>
       </footer>
     </article>

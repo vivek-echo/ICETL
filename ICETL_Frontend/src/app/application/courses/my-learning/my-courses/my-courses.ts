@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyLearningCourse, PaymentService } from '../../services/payment';
-import { CertificateService } from '../../services/certificate.service';
+import { CertificateHistoryItem, CertificateService } from '../../services/certificate.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
@@ -63,6 +63,7 @@ export class MyCourses implements OnInit {
     }
 
     const moduleType = courseType == 1 ? 'COURSE' : 'ACADEMIC_COURSE';
+    const course = this.courses.find((item) => Number(item.id) === Number(courseId));
 
     const payload = {
       moduleType: moduleType,
@@ -74,12 +75,20 @@ export class MyCourses implements OnInit {
     this.certificateLoadingCourseId = courseId;
 
     try {
-      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
-
-      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+      let downloadUrl = course?.certificateDownloadUrl || '';
+      let certificateNo = course?.certificateNo || '';
 
       if (!downloadUrl) {
-        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
+        const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
+        downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+        certificateNo = res?.certificateNo || res?.data?.certificateNo || certificateNo;
+      }
+
+      if (!downloadUrl) {
+        await this.alertHelper.error(
+          'Certificate was prepared, but the download link was not returned.',
+          'Certificate',
+        );
         return;
       }
 
@@ -93,7 +102,7 @@ export class MyCourses implements OnInit {
       const blob = fileResponse.body;
 
       if (!blob) {
-        // Swal.fire('Error', 'Certificate file not found.', 'error');
+        await this.alertHelper.error('Certificate file could not be downloaded.', 'Certificate');
         return;
       }
 
@@ -114,11 +123,17 @@ export class MyCourses implements OnInit {
 
       document.body.removeChild(anchor);
       window.URL.revokeObjectURL(blobUrl);
+
+      if (course) {
+        course.certificateNo = certificateNo || course.certificateNo;
+        course.certificateDownloadUrl = downloadUrl;
+        course.certificateStatus = 'active';
+      }
     } catch (error: any) {
       const message =
         error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
 
-      // Swal.fire('Error', message, 'error');
+      await this.alertHelper.error(message, 'Certificate');
     } finally {
       this.certificateLoading = false;
       this.certificateLoadingCourseId = null;
@@ -134,6 +149,7 @@ export class MyCourses implements OnInit {
     try {
       const response = await lastValueFrom(this.paymentService.getMyLearning());
       this.courses = response.success ? (response.data ?? []) : [];
+      await this.applyCertificateHistory();
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch your purchased courses',
@@ -177,6 +193,52 @@ export class MyCourses implements OnInit {
 
   hasMeetingLink(course: MyLearningCourse): boolean {
     return this.normalizeExternalUrl(course.meetingLink).length > 0;
+  }
+
+  getCourseActionLabel(course: MyLearningCourse): string {
+    const progress = Number(course.progressPercent) || 0;
+
+    if (progress >= 100) {
+      return 'View Course';
+    }
+
+    return progress > 0 ? 'Continue Learning' : 'Start Learning';
+  }
+
+  getProgressLabel(course: MyLearningCourse): string {
+    const progress = Number(course.progressPercent) || 0;
+
+    if (progress >= 100) {
+      return 'Completed';
+    }
+
+    return progress > 0 ? 'In progress' : 'Not started';
+  }
+
+  getResumeLabel(course: MyLearningCourse): string {
+    if (course.lastWatchedAt) {
+      return `Last accessed ${this.formatDate(course.lastWatchedAt)}`;
+    }
+
+    const progress = Number(course.progressPercent) || 0;
+
+    if (progress > 0) {
+      return 'Resume from your saved progress';
+    }
+
+    return this.isAcademicCourse(course) ? 'Open session links and materials' : 'Begin the first available lesson';
+  }
+
+  getCertificateStatusLabel(course: MyLearningCourse): string {
+    if (course.certificateNo) {
+      return course.certificateIssueDate
+        ? `Issued ${this.formatDate(course.certificateIssueDate)}`
+        : `Issued ${course.certificateNo}`;
+    }
+
+    return this.canDownloadCourseCertificate(course)
+      ? 'Certificate download available'
+      : 'Certificate unlocks after the required progress';
   }
 
   openMaterials(course: MyLearningCourse): void {
@@ -248,6 +310,53 @@ export class MyCourses implements OnInit {
     );
 
     return Math.round(totalProgress / this.courses.length);
+  }
+
+  get latestEnrollmentLabel(): string {
+    return this.courses.length ? this.formatDate(this.courses[0].enrolledAt) : 'N/A';
+  }
+
+  private async applyCertificateHistory(): Promise<void> {
+    if (!this.courses.length) {
+      return;
+    }
+
+    try {
+      const response = await lastValueFrom(this.certificateService.getCertificateHistory());
+      const certificates = response.data?.items ?? [];
+
+      this.courses = this.courses.map((course) => {
+        const certificate = this.findCourseCertificate(course, certificates);
+
+        if (!certificate) {
+          return course;
+        }
+
+        return {
+          ...course,
+          certificateNo: certificate.certificateNo,
+          certificateDownloadUrl: certificate.downloadUrl,
+          certificateStatus: certificate.status,
+          certificateIssueDate: certificate.issueDate,
+        };
+      });
+    } catch {
+      // Certificate history is supportive only; keep My Learning usable if it fails.
+    }
+  }
+
+  private findCourseCertificate(
+    course: MyLearningCourse,
+    certificates: CertificateHistoryItem[],
+  ): CertificateHistoryItem | undefined {
+    const moduleTypes = Number(course.courseType) === 1
+      ? ['COURSE', 'ACADEMIC_COURSE']
+      : ['ACADEMIC_COURSE', 'COURSE'];
+
+    return certificates.find((certificate) =>
+      Number(certificate.moduleId) === Number(course.id) &&
+      moduleTypes.includes(`${certificate.moduleType || ''}`.toUpperCase()),
+    );
   }
 
   private normalizeExternalUrl(value: string | null | undefined): string {

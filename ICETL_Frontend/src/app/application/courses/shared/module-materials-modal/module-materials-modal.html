@@ -149,58 +149,71 @@
         @if (!loadingMaterials && !listError && materials.length === 0) {
         <div class="materials-state">
           <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
-          <p>No materials have been uploaded yet.</p>
+          <p>No materials have been uploaded yet. Uploaded files will appear here with their date and file type.</p>
         </div>
         }
 
         @if (!loadingMaterials && !listError && materials.length > 0) {
         <div class="materials-list__items">
-          @for (material of materials; track trackByMaterialId($index, material)) {
-          <article class="material-row">
-            <div class="material-row__type">{{ extensionLabel(material) }}</div>
+          @for (group of groupedMaterials; track trackByMaterialGroup($index, group)) {
+          <section class="materials-date-group">
+            <div class="materials-date-group__head">
+              <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+              <strong>{{ group.label }}</strong>
+              <span>{{ group.materials.length }} item{{ group.materials.length === 1 ? '' : 's' }}</span>
+            </div>
 
-            <div class="material-row__content">
-              <div class="material-row__title">
-                <h4>{{ material.title }}</h4>
-                <span>{{ material.fileSizeLabel || 'N/A' }}</span>
+            @for (material of group.materials; track trackByMaterialId($index, material)) {
+            <article class="material-row">
+              <div class="material-row__type">
+                <i [class]="fileIconClass(material)" aria-hidden="true"></i>
+                <span>{{ extensionLabel(material) }}</span>
               </div>
 
-              @if (material.description) {
-              <p>{{ material.description }}</p>
-              }
+              <div class="material-row__content">
+                <div class="material-row__title">
+                  <h4>{{ material.title }}</h4>
+                  <span>{{ material.fileSizeLabel || 'N/A' }}</span>
+                </div>
 
-              <div class="material-row__meta">
-                <span><i class="fa-regular fa-file-lines"></i>{{ material.originalFileName }}</span>
-                <span><i class="fa-regular fa-calendar"></i>{{ formatDate(material.materialDate) }}</span>
-                <span><i class="fa-regular fa-clock"></i>{{ formatDateTime(material.createdAt) }}</span>
-                @if (material.uploadedBy?.name) {
-                <span><i class="fa-solid fa-user-tie"></i>{{ material.uploadedBy?.name }}</span>
+                @if (material.description) {
+                <p>{{ material.description }}</p>
+                }
+
+                <div class="material-row__meta">
+                  <span><i class="fa-regular fa-file-lines"></i>{{ material.originalFileName }}</span>
+                  <span><i class="fa-regular fa-calendar"></i>{{ formatDate(material.materialDate) }}</span>
+                  <span><i class="fa-regular fa-clock"></i>Uploaded {{ formatDateTime(material.createdAt) }}</span>
+                  @if (material.uploadedBy?.name) {
+                  <span><i class="fa-solid fa-user-tie"></i>{{ material.uploadedBy?.name }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="material-row__actions">
+                <button type="button" (click)="openMaterial(material)" title="Preview material">
+                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                  Preview
+                </button>
+                <button type="button" (click)="saveMaterial(material)" title="Download material">
+                  <i class="fa-solid fa-download" aria-hidden="true"></i>
+                  Download
+                </button>
+                @if (canDelete) {
+                <button
+                  type="button"
+                  class="material-row__delete"
+                  (click)="deleteMaterial(material)"
+                  [disabled]="deletingMaterialId === material.id"
+                  title="Delete material">
+                  <i [class]="deletingMaterialId === material.id ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-trash-can'"></i>
+                  Delete
+                </button>
                 }
               </div>
-            </div>
-
-            <div class="material-row__actions">
-              <button type="button" (click)="openMaterial(material)" title="View material">
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-                View
-              </button>
-              <button type="button" (click)="saveMaterial(material)" title="Download material">
-                <i class="fa-solid fa-download" aria-hidden="true"></i>
-                Download
-              </button>
-              @if (canDelete) {
-              <button
-                type="button"
-                class="material-row__delete"
-                (click)="deleteMaterial(material)"
-                [disabled]="deletingMaterialId === material.id"
-                title="Delete material">
-                <i [class]="deletingMaterialId === material.id ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-trash-can'"></i>
-                Delete
-              </button>
-              }
-            </div>
-          </article>
+            </article>
+            }
+          </section>
           }
         </div>
         }

@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
-import { AlertHelperService } from '../../../commonServices/alert-helper-service';
-import { AdminPaymentDashboard, PaymentService } from '../../courses/services/payment';
+import { AlertHelperService } from '../../commonServices/alert-helper-service';
+import { AdminPaymentDashboard, PaymentService } from '../courses/services/payment';
 
 @Component({
   selector: 'app-payment-management',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './payment-management.html',
   styleUrl: './payment-management.scss',
 })
@@ -16,6 +17,15 @@ export class PaymentManagement implements OnInit {
 
   dashboard: AdminPaymentDashboard | null = null;
   loading = false;
+  exporting = false;
+  showFilters = false;
+  search = '';
+  status = 'all';
+  fromDate = '';
+  toDate = '';
+  user = '';
+  moduleType = 'all';
+  paymentMethod = 'all';
 
   constructor(
     private readonly paymentService: PaymentService,
@@ -32,7 +42,7 @@ export class PaymentManagement implements OnInit {
     this.cdr.detectChanges();
 
     try {
-      const response = await lastValueFrom(this.paymentService.getAdminPayments());
+      const response = await lastValueFrom(this.paymentService.getAdminPayments(this.filterParams()));
       this.dashboard = response.data;
     } catch (error: any) {
       await this.alertHelper.error(
@@ -45,36 +55,52 @@ export class PaymentManagement implements OnInit {
     }
   }
 
-  exportCsv(): void {
-    const rows = this.dashboard?.recentTransactions ?? [];
-    const header = ['Order', 'Student', 'Email', 'Amount', 'Status', 'Transaction No', 'Invoice', 'Entity Code', 'Entity Title', 'Date'];
-    const csv = [
-      header.join(','),
-      ...rows.map((row) =>
-        [
-          row.orderReference,
-          row.userName || '',
-          row.userEmail || '',
-          row.totalAmount,
-          row.status,
-          this.transactionIdentifier(row),
-          row.invoiceNumber || '',
-          row.entityCode || '',
-          row.entityTitle || '',
-          row.created_at,
-        ]
-          .map((value) => `"${`${value}`.replace(/"/g, '""')}"`)
-          .join(','),
-      ),
-    ].join('\n');
+  async exportCsv(): Promise<void> {
+    this.exporting = true;
+    this.cdr.detectChanges();
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `payment-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const response = await lastValueFrom(this.paymentService.exportAdminPayments(this.filterParams()));
+      const blob = response.body;
+
+      if (!blob) {
+        throw new Error('Export file was empty.');
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = this.exportFileName(response.headers.get('content-disposition'));
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to export payment transactions',
+        'Admin Payments',
+      );
+    } finally {
+      this.exporting = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  applyFilters(): void {
+    void this.loadDashboard();
+  }
+
+  clearFilters(): void {
+    this.search = '';
+    this.status = 'all';
+    this.fromDate = '';
+    this.toDate = '';
+    this.user = '';
+    this.moduleType = 'all';
+    this.paymentMethod = 'all';
+    void this.loadDashboard();
   }
 
   formatAmount(value: number | string | null | undefined): string {
@@ -112,5 +138,23 @@ export class PaymentManagement implements OnInit {
     };
 
     return labels[normalized] || value || '';
+  }
+
+  private filterParams(): Record<string, string> {
+    return {
+      search: this.search.trim(),
+      status: this.status,
+      fromDate: this.fromDate,
+      toDate: this.toDate,
+      user: this.user.trim(),
+      moduleType: this.moduleType,
+      paymentMethod: this.paymentMethod,
+    };
+  }
+
+  private exportFileName(contentDisposition: string | null): string {
+    const match = /filename="?([^"]+)"?/i.exec(contentDisposition || '');
+
+    return match?.[1] || `payment-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
   }
 }

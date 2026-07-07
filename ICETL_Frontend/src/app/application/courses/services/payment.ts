@@ -28,6 +28,66 @@ export interface PaymentLog {
   refundStatus?: string | null;
 }
 
+export interface PaymentWorkflowInstallment {
+  id: number;
+  paymentLogId: number;
+  userId: number;
+  userName?: string | null;
+  userEmail?: string | null;
+  courseId: number;
+  courseTitle?: string | null;
+  enrollmentId?: number | null;
+  installmentNo: number;
+  amount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  status: string;
+  dueStatus: 'paid' | 'overdue' | 'due_today' | 'upcoming' | string;
+  expectedDate?: string | null;
+  paidDate?: string | null;
+  paymentBy?: string | null;
+  transactionNo?: string | null;
+  invoiceId?: number | null;
+  invoiceNumber?: string | null;
+  invoiceOrderId?: number | null;
+  invoiceDownloadUrl?: string | null;
+  createdAt?: string | null;
+}
+
+export interface PaymentWorkflowOrder {
+  id: number;
+  userId: number;
+  userName?: string | null;
+  userEmail?: string | null;
+  orderReference?: string | null;
+  totalAmount: number;
+  currency?: string | null;
+  status: string;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
+  paymentReference?: string | null;
+  failureReason?: string | null;
+  invoiceId?: number | null;
+  invoiceNumber?: string | null;
+  invoiceDownloadUrl?: string | null;
+  createdAt?: string | null;
+}
+
+export interface PaymentWorkflow {
+  summary: {
+    orders: number;
+    paidOrders: number;
+    failedOrders: number;
+    pendingOrders: number;
+    totalPaid: number;
+    pendingInstallments: number;
+    overdueInstallments: number;
+    balanceAmount: number;
+  };
+  orders: PaymentWorkflowOrder[];
+  installments: PaymentWorkflowInstallment[];
+}
+
 export interface InvoiceItem {
   courseId: number;
   code?: string | null;
@@ -101,6 +161,10 @@ export interface MyLearningCourse {
   razorpayOrderId?: string | null;
   progressPercent?: number;
   lastWatchedAt?: string | null;
+  certificateNo?: string | null;
+  certificateDownloadUrl?: string | null;
+  certificateStatus?: string | null;
+  certificateIssueDate?: string | null;
 }
 
 export type MyProgramType = 'workshop' | 'seminar';
@@ -139,6 +203,10 @@ export interface MyProgram {
   razorpayPaymentId?: string | null;
   paymentReference?: string | null;
   paymentDisplayId?: string | null;
+  certificateNo?: string | null;
+  certificateDownloadUrl?: string | null;
+  certificateStatus?: string | null;
+  certificateIssueDate?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -264,9 +332,36 @@ export class PaymentService {
     );
   }
 
-  getAdminPayments(): Observable<{ success: boolean; message: string; data: AdminPaymentDashboard }> {
+  getPaymentWorkflow(limit = 20): Observable<{ success: boolean; message: string; data: PaymentWorkflow }> {
+    return this.http.get<{ success: boolean; message: string; data: PaymentWorkflow }>(
+      `${this.API_URL}/workflow/payments`,
+      {
+        params: { limit },
+      },
+    );
+  }
+
+  getAdminPayments(params: Record<string, string | number> = {}): Observable<{ success: boolean; message: string; data: AdminPaymentDashboard }> {
     return this.http.get<{ success: boolean; message: string; data: AdminPaymentDashboard }>(
       `${this.API_URL}/admin/payments`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params).filter(([, value]) => value !== '' && value !== undefined && value !== null),
+        ) as Record<string, string>,
+      },
+    );
+  }
+
+  exportAdminPayments(params: Record<string, string | number> = {}): Observable<HttpResponse<Blob>> {
+    return this.http.get(
+      `${this.API_URL}/admin/payments/export`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params).filter(([, value]) => value !== '' && value !== undefined && value !== null),
+        ) as Record<string, string>,
+        observe: 'response',
+        responseType: 'blob',
+      },
     );
   }
 }

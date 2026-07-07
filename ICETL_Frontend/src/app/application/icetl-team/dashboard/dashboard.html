@@ -7,79 +7,98 @@
     </div>
     <div class="heading-meta">
       <div class="heading-actions icetl-dashboard-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/enquiries">
+          <i class="feather-message-circle"></i>
+          <span>Enquiries</span>
+        </a>
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+          <i class="feather-check-square"></i>
+          <span>Approvals</span>
+        </a>
         <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/icetl-team">
           <i class="feather-home"></i>
           <span>Welcome</span>
         </a>
+        <button type="button" class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" (click)="loadDashboard()" [disabled]="loading">
+          <i class="feather-refresh-cw"></i>
+          <span>{{ loading ? 'Loading' : 'Refresh' }}</span>
+        </button>
       </div>
     </div>
   </div>
 
-  <div class="metric-grid icetl-metric-grid">
-    @for (metric of metrics; track metric.label) {
-      <article class="metric-card icetl-metric-card">
-        <i [class]="metric.icon"></i>
-        <span>{{ metric.label }}</span>
-        <strong>{{ metric.value }}</strong>
-        <small>{{ metric.helper }}</small>
-      </article>
-    }
-  </div>
+  @if (errorMessage) {
+    <div class="dashboard-alert">{{ errorMessage }}</div>
+  }
 
-  <div class="dashboard-grid dashboard-grid--charts">
-    <article class="dashboard-panel icetl-card">
-      <div class="panel-title">
-        <h5>Weekly Activity</h5>
-        <span>Handled items</span>
-      </div>
-      <div class="column-chart">
-        @for (point of weeklyActivity; track point.label) {
-          <div class="column-chart__item">
-            <div class="column-chart__bar">
-              <span [style.height.%]="chartHeight(point)"></span>
-            </div>
-            <small>{{ point.label }}</small>
-          </div>
-        }
-      </div>
-    </article>
+  @if (data?.workflow) {
+  <article class="dashboard-panel icetl-card">
+    <div class="panel-title">
+      <h5>Team Workflow Summary</h5>
+      <span>Authorized backend data</span>
+    </div>
+    <div class="dashboard-shortcuts">
+      <a class="dashboard-shortcut" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+        <i class="feather-check-square"></i>
+        <span><strong>{{ data?.workflow?.summary?.pendingApprovals || 0 }} Pending Approval{{ (data?.workflow?.summary?.pendingApprovals || 0) === 1 ? '' : 's' }}</strong><span>Offline and special courses</span></span>
+        <i class="feather-arrow-right"></i>
+      </a>
+      <a class="dashboard-shortcut" routerLink="/application/admin/payments">
+        <i class="feather-credit-card"></i>
+        <span><strong>{{ data?.workflow?.summary?.failedOrPendingPayments || 0 }} Payment Follow-up{{ (data?.workflow?.summary?.failedOrPendingPayments || 0) === 1 ? '' : 's' }}</strong><span>{{ data?.workflow?.summary?.overdueInstallments || 0 }} overdue installment{{ (data?.workflow?.summary?.overdueInstallments || 0) === 1 ? '' : 's' }}</span></span>
+        <i class="feather-arrow-right"></i>
+      </a>
+      <a class="dashboard-shortcut" routerLink="/application/courses/assignedCourses">
+        <i class="feather-file-text"></i>
+        <span><strong>{{ data?.workflow?.summary?.recentMaterialUploads || 0 }} Recent Upload{{ (data?.workflow?.summary?.recentMaterialUploads || 0) === 1 ? '' : 's' }}</strong><span>{{ data?.workflow?.summary?.recentCertificates || 0 }} recent certificate{{ (data?.workflow?.summary?.recentCertificates || 0) === 1 ? '' : 's' }}</span></span>
+        <i class="feather-arrow-right"></i>
+      </a>
+    </div>
+  </article>
 
-    <article class="dashboard-panel icetl-card">
-      <div class="panel-title">
-        <h5>Work Queues</h5>
-        <span>Open items</span>
-      </div>
-      <div class="bar-list">
-        @for (point of workQueues; track point.label) {
-          <div class="bar-row">
-            <div class="bar-row__label">
-              <span>{{ point.label }}</span>
-              <strong>{{ point.value }}</strong>
-            </div>
-            <div class="bar-track bar-track--accent">
-              <span [style.width.%]="chartWidth(point)"></span>
-            </div>
+  <article class="dashboard-panel icetl-card">
+    <div class="panel-title">
+      <h5>Recent Workflow Activity</h5>
+      <span>Existing records only</span>
+    </div>
+    <div class="activity-list">
+      @for (activity of data?.workflow?.activity || []; track activity.id) {
+        <div class="activity-item">
+          <div>
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.description }}</span>
           </div>
-        }
-      </div>
-    </article>
+          <b>{{ formatDate(activity.createdAt) }}</b>
+        </div>
+      } @empty {
+        <p class="empty-state icetl-empty-state icetl-dashboard-empty">No recent workflow activity found.</p>
+      }
+    </div>
+  </article>
+  } @else if (loading) {
+    <div class="dashboard-panel empty-state icetl-spinner-wrap">
+      <span class="icetl-inline-spinner" aria-hidden="true"></span>
+      <span>Loading workflow summary...</span>
+    </div>
+  }
 
-    <article class="dashboard-panel icetl-card">
-      <div class="panel-title">
-        <h5>Recent Updates</h5>
-        <span>Today</span>
-      </div>
-      <div class="activity-list">
-        @for (activity of recentActivity; track activity.title) {
-          <div class="activity-item">
-            <div>
-              <strong>{{ activity.title }}</strong>
-              <span>{{ activity.detail }}</span>
-            </div>
-            <b>{{ activity.status }}</b>
-          </div>
-        }
-      </div>
-    </article>
-  </div>
+  <article class="dashboard-panel icetl-card">
+    <div class="panel-title">
+      <h5>Team Workflow Shortcuts</h5>
+      <span>Existing operational pages</span>
+    </div>
+    <div class="dashboard-shortcuts">
+      @for (shortcut of shortcuts; track shortcut.route) {
+        <a class="dashboard-shortcut" [routerLink]="shortcut.route">
+          <i [class]="shortcut.icon"></i>
+          <span><strong>{{ shortcut.label }}</strong><span>{{ shortcut.helper }}</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+      }
+    </div>
+  </article>
+
+  <article class="dashboard-panel empty-state icetl-empty-state">
+    Workflow data is shown when this team role has the existing offline-course permission. Use the shortcuts above for operational follow-up.
+  </article>
 </section>

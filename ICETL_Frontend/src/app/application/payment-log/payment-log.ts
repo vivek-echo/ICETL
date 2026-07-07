@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../commonServices/alert-helper-service';
-import { Invoice, PaymentLog, PaymentService } from '../courses/services/payment';
+import { Invoice, PaymentLog, PaymentService, PaymentWorkflow } from '../courses/services/payment';
 import { ModalWindowControlsComponent, ModalWindowDirective } from '../../shared/modal-window';
 
 @Component({
@@ -28,6 +28,7 @@ export class PaymentLogComponent implements OnInit {
   downloadingInvoice = false;
   search = '';
   status = 'all';
+  workflow: PaymentWorkflow | null = null;
   currentPage = 1;
   lastPage = 1;
   total = 0;
@@ -61,6 +62,7 @@ export class PaymentLogComponent implements OnInit {
       this.currentPage = response.meta?.currentPage ?? 1;
       this.lastPage = response.meta?.lastPage ?? 1;
       this.total = response.meta?.total ?? this.logs.length;
+      await this.loadPaymentWorkflow();
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch payment logs',
@@ -101,6 +103,15 @@ export class PaymentLogComponent implements OnInit {
 
   closeInvoice(): void {
     this.selectedInvoice = null;
+  }
+
+  private async loadPaymentWorkflow(): Promise<void> {
+    try {
+      const response = await lastValueFrom(this.paymentService.getPaymentWorkflow());
+      this.workflow = response.success ? response.data : null;
+    } catch {
+      this.workflow = null;
+    }
   }
 
   toggleFilters(): void {
@@ -240,6 +251,36 @@ export class PaymentLogComponent implements OnInit {
       (record?.razorpayPaymentId ? 'RAZORPAY' : '');
 
     return this.formatPaymentMethod(value);
+  }
+
+  getPaymentStatusLabel(log: PaymentLog): string {
+    const status = `${log.status || ''}`.trim().toLowerCase();
+    const labels: Record<string, string> = {
+      paid: 'Paid',
+      failed: 'Failed',
+      cancelled: 'Cancelled',
+      pending: 'Pending',
+    };
+
+    return labels[status] || log.status || 'Pending';
+  }
+
+  getPaymentNextStep(log: PaymentLog): string {
+    const status = `${log.status || ''}`.trim().toLowerCase();
+
+    if (status === 'paid') {
+      return log.invoiceNo ? 'Invoice is ready to view or download.' : 'Payment is paid; invoice is not linked yet.';
+    }
+
+    if (status === 'failed') {
+      return log.failureReason || 'Payment failed. Start checkout again from the course or cart page.';
+    }
+
+    if (status === 'cancelled') {
+      return 'Checkout was cancelled. Start a new checkout when you are ready.';
+    }
+
+    return 'Payment is pending. Refresh this page after completing payment.';
   }
 
   private formatPaymentMethod(value: string | null | undefined): string {

@@ -1,0 +1,164 @@
+<section class="admin-payments" aria-labelledby="admin-payments-title">
+  <header class="admin-payments__header">
+    <div>
+      <span>Revenue Operations</span>
+      <h1 id="admin-payments-title">Payment Management</h1>
+      <p>Monitor revenue, failed transactions, refunds, and recent invoices.</p>
+    </div>
+
+    <div class="admin-payments__actions">
+      <button type="button" (click)="loadDashboard()" [disabled]="loading">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+        Refresh
+      </button>
+      <button type="button" (click)="toggleFilters()">
+        <i class="fa-solid fa-filter"></i>
+        {{ showFilters ? 'Hide Filters' : 'Filters' }}
+      </button>
+      <button type="button" (click)="exportCsv()" [disabled]="exporting">
+        <i [class]="exporting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-csv'"></i>
+        {{ exporting ? 'Exporting' : 'Export CSV' }}
+      </button>
+    </div>
+  </header>
+
+  @if (showFilters) {
+  <section class="admin-payment-filters" aria-label="Payment filters">
+    <label>
+      <span>Search</span>
+      <input type="search" [(ngModel)]="search" (keyup.enter)="applyFilters()" placeholder="Order, invoice, code, transaction">
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="status" (change)="applyFilters()">
+        <option value="all">All statuses</option>
+        <option value="paid">Paid</option>
+        <option value="pending">Pending</option>
+        <option value="failed">Failed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="success">Gateway success</option>
+      </select>
+    </label>
+    <label>
+      <span>From</span>
+      <input type="date" [(ngModel)]="fromDate" (change)="applyFilters()">
+    </label>
+    <label>
+      <span>To</span>
+      <input type="date" [(ngModel)]="toDate" (change)="applyFilters()">
+    </label>
+    <label>
+      <span>User</span>
+      <input type="search" [(ngModel)]="user" (keyup.enter)="applyFilters()" placeholder="Name, email, code">
+    </label>
+    <label>
+      <span>Module</span>
+      <select [(ngModel)]="moduleType" (change)="applyFilters()">
+        <option value="all">All modules</option>
+        <option value="course">Course</option>
+        <option value="academic_course">Academic course</option>
+        <option value="workshop">Workshop</option>
+        <option value="seminar">Seminar</option>
+      </select>
+    </label>
+    <label>
+      <span>Method</span>
+      <select [(ngModel)]="paymentMethod" (change)="applyFilters()">
+        <option value="all">All methods</option>
+        <option value="razorpay">Razorpay</option>
+        <option value="cash">Cash</option>
+        <option value="upi">UPI</option>
+        <option value="netbanking">Netbanking</option>
+      </select>
+    </label>
+    <div class="admin-payment-filters__actions">
+      <button type="button" (click)="applyFilters()">
+        <i class="fa-solid fa-filter"></i>
+        Apply
+      </button>
+      <button type="button" (click)="clearFilters()">
+        <i class="fa-solid fa-rotate-left"></i>
+        Reset
+      </button>
+    </div>
+  </section>
+  }
+
+  @if (loading) {
+  <div class="admin-payments__loading">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    Loading payment analytics...
+  </div>
+  }
+
+  @if (!loading && dashboard) {
+  <section class="admin-payment-stats" aria-label="Payment summary">
+    <article>
+      <span>Total Revenue</span>
+      <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(dashboard.summary.revenue) }}</strong>
+    </article>
+    <article>
+      <span>Successful</span>
+      <strong>{{ dashboard.summary.successfulPayments }}</strong>
+    </article>
+    <article>
+      <span>Failed</span>
+      <strong>{{ dashboard.summary.failedPayments }}</strong>
+    </article>
+    <article>
+      <span>Refunds</span>
+      <strong>{{ dashboard.summary.refundRequests }}</strong>
+    </article>
+  </section>
+
+  @if (dashboard.recentTransactions.length === 0) {
+  <div class="admin-payments__empty icetl-empty-state">
+    <i class="fa-solid fa-receipt"></i>
+    <h2>No recent payment records</h2>
+    <p>Successful, failed, and refund records will appear here after payment activity is available.</p>
+  </div>
+  } @else {
+  <div class="admin-payment-table-wrap">
+    <table class="admin-payment-table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Student</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Transaction No</th>
+          <th>Invoice</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of dashboard.recentTransactions; track row.id) {
+        <tr>
+          <td><strong>{{ row.orderReference }}</strong></td>
+          <td>
+            <strong>{{ row.userName || 'Student' }}</strong>
+            <span>{{ row.userEmail || 'No email' }}</span>
+          </td>
+          <td><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(row.totalAmount) }}</td>
+          <td><span class="admin-payment-chip" [class.admin-payment-chip--failed]="row.status !== 'paid'">{{ row.status }}</span></td>
+          <td>
+            <strong>{{ transactionIdentifier(row) }}</strong>
+            @if (paymentMethodLabel(row)) {
+            <span>{{ paymentMethodLabel(row) }}</span>
+            }
+          </td>
+          <td>
+            <strong>{{ row.invoiceNumber || 'Not generated' }}</strong>
+            @if (row.entityCode) {
+            <span class="entity-code-badge">{{ row.entityCode }}</span>
+            }
+          </td>
+          <td>{{ formatDate(row.created_at) }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+  }
+</section>

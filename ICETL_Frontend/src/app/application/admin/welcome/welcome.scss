@@ -375,6 +375,12 @@
   border: 1px solid var(--border);
 
   transition: all 0.3s ease;
+  color: inherit;
+  text-decoration: none;
+}
+
+.welcome-step:hover {
+  color: inherit;
 }
 
 .welcome-step:hover {

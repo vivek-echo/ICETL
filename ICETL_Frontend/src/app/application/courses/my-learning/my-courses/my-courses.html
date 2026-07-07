@@ -29,7 +29,7 @@
     </aside>
   </header>
 
-  <!-- <section class="learning-summary" aria-label="Learning summary">
+  <section class="learning-summary" aria-label="Learning summary">
     <div>
       <i class="fa-solid fa-layer-group"></i>
       <span>Total Courses</span>
@@ -48,9 +48,9 @@
     <div>
       <i class="fa-regular fa-calendar-check"></i>
       <span>Latest Enrollment</span>
-      <strong>{{ courses.length ? formatDate(courses[0].enrolledAt) : 'N/A' }}</strong>
+      <strong>{{ latestEnrollmentLabel }}</strong>
     </div>
-  </section> -->
+  </section>
 
   <div class="learning-toolbar icetl-filter-panel">
     <div class="learning-toolbar__header">
@@ -173,6 +173,10 @@
             <i class="fa-regular fa-calendar-check"></i>
             Enrolled {{ formatDate(course.enrolledAt) }}
           </span>
+          <span>
+            <i class="fa-solid fa-rotate"></i>
+            {{ getResumeLabel(course) }}
+          </span>
           @if (course.invoiceNo) {
           <span>
             <i class="fa-solid fa-receipt"></i>
@@ -194,7 +198,7 @@
 
       <aside class="learning-card__panel">
         <div class="learning-card__panel-head">
-          <span>Course Progress</span>
+          <span>{{ getProgressLabel(course) }}</span>
           <strong>{{ course.progressPercent || 0 }}%</strong>
         </div>
 
@@ -240,7 +244,7 @@
           <a class="learning-card__action learning-card__action--primary icetl-learning-action icetl-learning-action--primary"
             [routerLink]="['/application/courses/myLearning/learn']" [state]="{ courseId: course.id }">
             <i class="fa-solid fa-play"></i>
-            Continue
+            {{ getCourseActionLabel(course) }}
           </a>
 
 
@@ -256,7 +260,7 @@
             </span>
             <span class="certificate-action__copy">
               <strong>{{ isCertificateGenerating(course.id) ? 'Preparing' : 'Certificate' }}</strong>
-              <small>{{ isCertificateGenerating(course.id) ? 'Opening PDF' : 'Download PDF' }}</small>
+              <small>{{ isCertificateGenerating(course.id) ? 'Opening PDF' : getCertificateStatusLabel(course) }}</small>
             </span>
             <i class="certificate-action__download fa-solid fa-download" aria-hidden="true"></i>
           </button>

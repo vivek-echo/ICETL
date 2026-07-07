@@ -32,7 +32,7 @@
 
           <a
             class="rbt-btn btn-gradient hover-icon-reverse icetl-btn icetl-btn-primary"
-            
+            routerLink="/application/admin/dashboard"
           >
             <span class="icon-reverse-wrapper">
 
@@ -51,10 +51,10 @@
             </span>
           </a>
 
-          <button class="explore-btn icetl-btn icetl-btn-outline" type="button">
-            <i class="feather-users"></i>
-            Manage Users
-          </button>
+          <a class="explore-btn icetl-btn icetl-btn-outline" routerLink="/application/courses/manageCourses/viewAll">
+            <i class="feather-book-open"></i>
+            Manage Courses
+          </a>
 
         </div>
 
@@ -68,8 +68,8 @@
             </div>
 
             <div>
-              <h5>12K+</h5>
-              <span>Students</span>
+              <h5>Approvals</h5>
+              <span>Offline course queue</span>
             </div>
 
           </div>
@@ -81,8 +81,8 @@
             </div>
 
             <div>
-              <h5>320+</h5>
-              <span>Courses</span>
+              <h5>Payments</h5>
+              <span>Revenue operations</span>
             </div>
 
           </div>
@@ -94,8 +94,8 @@
             </div>
 
             <div>
-              <h5>450+</h5>
-              <span>Instructors</span>
+              <h5>Enquiries</h5>
+              <span>Learner follow-up</span>
             </div>
 
           </div>
@@ -133,53 +133,53 @@
     <!-- FEATURE CARDS -->
     <div class="welcome-steps">
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/enquiries">
 
         <div class="step-icon">
           <i class="feather-users"></i>
         </div>
 
         <div>
-          <h6>Manage Users</h6>
+          <h6>Enquiry Follow-up</h6>
 
           <p>
-            Control student and instructor accounts with secure role-based access.
+            Review incoming learner and instructor requests from the enquiry workspace.
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
 
         <div class="step-icon">
           <i class="feather-book-open"></i>
         </div>
 
         <div>
-          <h6>Course Administration</h6>
+          <h6>Offline Approvals</h6>
 
           <p>
-            Review, publish, and organize platform learning content efficiently.
+            Check pending offline and special courses before publish actions.
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/admin/payments">
 
         <div class="step-icon">
           <i class="feather-pie-chart"></i>
         </div>
 
         <div>
-          <h6>Platform Analytics</h6>
+          <h6>Payment Management</h6>
 
           <p>
-            Monitor growth, enrollments, engagement, and overall platform performance.
+            Review successful and failed payments using the admin payment dashboard.
           </p>
         </div>
 
-      </div>
+      </a>
 
     </div>
 

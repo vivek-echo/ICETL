@@ -6,7 +6,7 @@ import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { CertificateService } from '../../services/certificate.service';
+import { CertificateHistoryItem, CertificateService } from '../../services/certificate.service';
 import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
   selector: 'app-my-seminar',
@@ -35,6 +35,7 @@ export class MySeminar implements OnInit {
     maximumFractionDigits: 0,
   });
   certificateLoading = false;
+  certificateLoadingProgramId: number | null = null;
   constructor(
     private readonly paymentService: PaymentService,
     private readonly alertHelper: AlertHelperService,
@@ -56,6 +57,7 @@ export class MySeminar implements OnInit {
       return;
     }
 
+    const program = this.programs.find((item) => Number(item.id) === Number(courseId));
     const payload = {
       moduleType: 'SEMINAR',
       moduleId: courseId,
@@ -63,14 +65,23 @@ export class MySeminar implements OnInit {
 
     this.spinner.show();
     this.certificateLoading = true;
+    this.certificateLoadingProgramId = courseId;
 
     try {
-      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
-
-      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+      let downloadUrl = program?.certificateDownloadUrl || '';
+      let certificateNo = program?.certificateNo || '';
 
       if (!downloadUrl) {
-        // Swal.fire('Error', 'Certificate generated, but download link not found.', 'error');
+        const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
+        downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+        certificateNo = res?.certificateNo || res?.data?.certificateNo || certificateNo;
+      }
+
+      if (!downloadUrl) {
+        await this.alertHelper.error(
+          'Certificate was prepared, but the download link was not returned.',
+          'Certificate',
+        );
         return;
       }
 
@@ -84,7 +95,7 @@ export class MySeminar implements OnInit {
       const blob = fileResponse.body;
 
       if (!blob) {
-        // Swal.fire('Error', 'Certificate file not found.', 'error');
+        await this.alertHelper.error('Certificate file could not be downloaded.', 'Certificate');
         return;
       }
 
@@ -102,13 +113,20 @@ export class MySeminar implements OnInit {
 
       document.body.removeChild(anchor);
       window.URL.revokeObjectURL(blobUrl);
+
+      if (program) {
+        program.certificateNo = certificateNo || program.certificateNo;
+        program.certificateDownloadUrl = downloadUrl;
+        program.certificateStatus = 'active';
+      }
     } catch (error: any) {
       const message =
         error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
 
-      // Swal.fire('Error', message, 'error');
+      await this.alertHelper.error(message, 'Certificate');
     } finally {
       this.certificateLoading = false;
+      this.certificateLoadingProgramId = null;
       this.spinner.hide();
       this.cdr.detectChanges();
     }
@@ -121,6 +139,7 @@ export class MySeminar implements OnInit {
     try {
       const response = await lastValueFrom(this.paymentService.getMyPrograms(this.programType));
       this.programs = response.success ? (response.data ?? []) : [];
+      await this.applyCertificateHistory();
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || `Unable to fetch your enrolled ${this.pluralLabel.toLowerCase()}.`,
@@ -183,6 +202,28 @@ export class MySeminar implements OnInit {
     return labels[program.scheduleStatus] ?? 'Upcoming';
   }
 
+  isCertificateGenerating(programId: number): boolean {
+    return this.certificateLoadingProgramId === programId;
+  }
+
+  getProgramNextStep(program: MyProgram): string {
+    if (program.certificateNo) {
+      return program.certificateIssueDate
+        ? `Certificate issued ${this.formatDate(program.certificateIssueDate)}`
+        : `Certificate issued ${program.certificateNo}`;
+    }
+
+    if (program.scheduleStatus === 'completed') {
+      return 'Download certificate when available';
+    }
+
+    if (program.scheduleStatus === 'ongoing') {
+      return 'Open materials and attend the current session';
+    }
+
+    return 'Review schedule and materials before the session';
+  }
+
   getTakeaways(program: MyProgram, limit = 3): string[] {
     return (program.takeaways ?? []).slice(0, limit);
   }
@@ -242,5 +283,44 @@ export class MySeminar implements OnInit {
 
   get completedProgramsCount(): number {
     return this.programs.filter((program) => program.scheduleStatus === 'completed').length;
+  }
+
+  private async applyCertificateHistory(): Promise<void> {
+    if (!this.programs.length) {
+      return;
+    }
+
+    try {
+      const response = await lastValueFrom(this.certificateService.getCertificateHistory());
+      const certificates = response.data?.items ?? [];
+
+      this.programs = this.programs.map((program) => {
+        const certificate = this.findProgramCertificate(program, certificates);
+
+        if (!certificate) {
+          return program;
+        }
+
+        return {
+          ...program,
+          certificateNo: certificate.certificateNo,
+          certificateDownloadUrl: certificate.downloadUrl,
+          certificateStatus: certificate.status,
+          certificateIssueDate: certificate.issueDate,
+        };
+      });
+    } catch {
+      // Certificate history is supportive only; keep enrolled seminars visible if it fails.
+    }
+  }
+
+  private findProgramCertificate(
+    program: MyProgram,
+    certificates: CertificateHistoryItem[],
+  ): CertificateHistoryItem | undefined {
+    return certificates.find((certificate) =>
+      Number(certificate.moduleId) === Number(program.id) &&
+      `${certificate.moduleType || ''}`.toUpperCase() === 'SEMINAR',
+    );
   }
 }

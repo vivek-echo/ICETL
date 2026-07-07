@@ -2004,28 +2004,110 @@ class PaymentController extends Controller
         }
 
         $hasOfflinePaymentColumns = $this->hasOfflinePaymentLogColumns();
-        $paidTotal = (float) DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->sum('totalAmount');
-        $successfulPayments = DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->count();
-        $failedPayments = DB::table('payments')->whereIn('status', ['failed', 'cancelled'])->where('deletedFlag', 0)->count();
-        $refunds = DB::table('refund_requests')->where('deletedFlag', 0)->count();
+        $summary = $this->adminPaymentSummary($request, $hasOfflinePaymentColumns);
 
-        $recentQuery = DB::table('orders as o')
+        $recent = $this->adminPaymentRowsQuery($request, $hasOfflinePaymentColumns)
+            ->select(...$this->adminPaymentSelectColumns($hasOfflinePaymentColumns))
+            ->orderByDesc('o.id')
+            ->limit(20)
+            ->get()
+            ->map(fn($row) => $this->formatAdminPaymentRow($row));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Admin payment dashboard fetched successfully.',
+            'data' => [
+                'summary' => $summary,
+                'recentTransactions' => $recent,
+            ],
+        ]);
+    }
+
+    public function exportAdminPayments(Request $request)
+    {
+        if (!$this->isAdmin($request)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $hasOfflinePaymentColumns = $this->hasOfflinePaymentLogColumns();
+        $fileName = 'payment-transactions-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($request, $hasOfflinePaymentColumns) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Order',
+                'Student',
+                'Email',
+                'Amount',
+                'Status',
+                'Payment Method',
+                'Transaction No',
+                'Invoice',
+                'Entity Type',
+                'Entity Code',
+                'Entity Title',
+                'Date',
+            ]);
+
+            $rows = $this->adminPaymentRowsQuery($request, $hasOfflinePaymentColumns)
+                ->select(...$this->adminPaymentSelectColumns($hasOfflinePaymentColumns))
+                ->orderByDesc('o.id')
+                ->cursor();
+
+            foreach ($rows as $row) {
+                $formatted = $this->formatAdminPaymentRow($row);
+
+                fputcsv($handle, [
+                    $formatted->orderReference,
+                    $formatted->userName,
+                    $formatted->userEmail,
+                    $formatted->totalAmount,
+                    $formatted->status,
+                    $formatted->paymentMethod,
+                    $formatted->paymentDisplayId,
+                    $formatted->invoiceNumber,
+                    $formatted->entityType,
+                    $formatted->entityCode,
+                    $formatted->entityTitle,
+                    $formatted->created_at,
+                ]);
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function adminPaymentRowsQuery(Request $request, bool $hasOfflinePaymentColumns)
+    {
+        $query = DB::table('orders as o')
             ->leftJoin('users as u', 'u.id', '=', 'o.userId')
             ->leftJoin('payments as p', function ($join) {
                 $join->on('p.orderId', '=', 'o.id')->where('p.deletedFlag', 0);
             })
-            ->leftJoin('invoices as i', 'i.orderId', '=', 'o.id')
+            ->leftJoin('invoices as i', function ($join) {
+                $join->on('i.orderId', '=', 'o.id')->where('i.deletedFlag', 0);
+            })
             ->where('o.deletedFlag', 0);
 
         if ($hasOfflinePaymentColumns) {
-            $recentQuery->leftJoin('payment_logs as pl', function ($join) {
+            $query->leftJoin('payment_logs as pl', function ($join) {
                 $join->on('pl.orderId', '=', 'o.id')
                     ->where('pl.eventType', 'offline.manual_enrollment')
                     ->where('pl.deletedFlag', 0);
             });
         }
 
-        $recentSelectColumns = [
+        $this->applyAdminPaymentFilters($query, $request, $hasOfflinePaymentColumns);
+
+        return $query;
+    }
+
+    private function adminPaymentSelectColumns(bool $hasOfflinePaymentColumns): array
+    {
+        $columns = [
             'o.id',
             'o.orderReference',
             'o.totalAmount',
@@ -2044,53 +2126,231 @@ class PaymentController extends Controller
             'i.paymentReference as invoicePaymentReference',
         ];
 
-        $recent = $recentQuery
-            ->select(...array_merge(
-                $recentSelectColumns,
-                $this->offlinePaymentLogSelects($hasOfflinePaymentColumns)
-            ))
-            ->orderByDesc('o.id')
-            ->limit(20)
-            ->get()
-            ->map(function ($row) {
-                $invoiceEntity = $this->invoiceEntityFromJson($row->invoiceData ?? null);
-                $paymentMethod = $this->paymentMethodLabel(
-                    $row->paymentMethod,
-                    $row->offlinePaymentBy,
-                    $row->razorpayPaymentId
-                );
+        return array_merge($columns, $this->offlinePaymentLogSelects($hasOfflinePaymentColumns));
+    }
 
-                $row->paymentMethod = $paymentMethod;
-                $row->paymentBy = $paymentMethod;
-                $row->transactionNo = $row->offlineTransactionNo;
-                $row->paymentDisplayId = $this->paymentDisplayId(
-                    $row->razorpayPaymentId,
-                    $row->offlineTransactionNo,
-                    $row->invoicePaymentReference,
-                    $row->paymentReference,
-                    $row->offlineReferenceNo
-                );
-                $row->entityType = $row->offlineEntityType ?? $row->entityType ?? ($invoiceEntity['entityType'] ?? null);
-                $row->entityCode = $row->offlineEntityCode ?? $row->entityCode ?? ($invoiceEntity['entityCode'] ?? null);
-                $row->entityTitle = $row->offlineEntityTitle ?? $row->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null);
-                unset($row->invoiceData);
+    private function formatAdminPaymentRow(object $row): object
+    {
+        $invoiceEntity = $this->invoiceEntityFromJson($row->invoiceData ?? null);
+        $paymentMethod = $this->paymentMethodLabel(
+            $row->paymentMethod,
+            $row->offlinePaymentBy,
+            $row->razorpayPaymentId
+        );
 
-                return $row;
+        $row->paymentMethod = $paymentMethod;
+        $row->paymentBy = $paymentMethod;
+        $row->transactionNo = $row->offlineTransactionNo;
+        $row->paymentDisplayId = $this->paymentDisplayId(
+            $row->razorpayPaymentId,
+            $row->offlineTransactionNo,
+            $row->invoicePaymentReference,
+            $row->paymentReference,
+            $row->offlineReferenceNo
+        );
+        $row->entityType = $row->offlineEntityType ?? $row->entityType ?? ($invoiceEntity['entityType'] ?? null);
+        $row->entityCode = $row->offlineEntityCode ?? $row->entityCode ?? ($invoiceEntity['entityCode'] ?? null);
+        $row->entityTitle = $row->offlineEntityTitle ?? $row->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null);
+        unset($row->invoiceData);
+
+        return $row;
+    }
+
+    private function adminPaymentSummary(Request $request, bool $hasOfflinePaymentColumns): array
+    {
+        if (!$this->hasAdminPaymentFilters($request)) {
+            return [
+                'revenue' => (float) DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->sum('totalAmount'),
+                'successfulPayments' => DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->count(),
+                'failedPayments' => DB::table('payments')->whereIn('status', ['failed', 'cancelled'])->where('deletedFlag', 0)->count(),
+                'refundRequests' => Schema::hasTable('refund_requests')
+                    ? DB::table('refund_requests')->where('deletedFlag', 0)->count()
+                    : 0,
+            ];
+        }
+
+        $base = $this->adminPaymentRowsQuery($request, $hasOfflinePaymentColumns);
+
+        return [
+            'revenue' => (float) (clone $base)->where(function ($query) {
+                $query->where('o.status', 'paid')->orWhere('p.status', 'success');
+            })->sum('o.totalAmount'),
+            'successfulPayments' => (clone $base)->where(function ($query) {
+                $query->where('o.status', 'paid')->orWhere('p.status', 'success');
+            })->count('o.id'),
+            'failedPayments' => (clone $base)->where(function ($query) {
+                $query->whereIn('o.status', ['failed', 'cancelled'])
+                    ->orWhereIn('p.status', ['failed', 'cancelled']);
+            })->count('o.id'),
+            'refundRequests' => Schema::hasTable('refund_requests')
+                ? DB::table('refund_requests')->where('deletedFlag', 0)->count()
+                : 0,
+        ];
+    }
+
+    private function applyAdminPaymentFilters($query, Request $request, bool $hasOfflinePaymentColumns): void
+    {
+        $fromDate = trim((string) $request->query('fromDate', ''));
+        $toDate = trim((string) $request->query('toDate', ''));
+        $status = strtolower(trim((string) $request->query('status', '')));
+        $userSearch = trim((string) $request->query('user', ''));
+        $search = trim((string) $request->query('search', ''));
+        $moduleType = strtolower(trim((string) $request->query('moduleType', '')));
+        $moduleId = (int) $request->query('moduleId', 0);
+        $paymentMethod = strtolower(trim((string) $request->query('paymentMethod', '')));
+        $orderReference = trim((string) $request->query('orderReference', ''));
+
+        if ($fromDate !== '') {
+            $query->whereDate('o.created_at', '>=', $fromDate);
+        }
+
+        if ($toDate !== '') {
+            $query->whereDate('o.created_at', '<=', $toDate);
+        }
+
+        if ($status !== '' && $status !== 'all') {
+            $query->where(function ($statusQuery) use ($status) {
+                $statusQuery->where('o.status', $status)
+                    ->orWhere('p.status', $status);
             });
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Admin payment dashboard fetched successfully.',
-            'data' => [
-                'summary' => [
-                    'revenue' => $paidTotal,
-                    'successfulPayments' => $successfulPayments,
-                    'failedPayments' => $failedPayments,
-                    'refundRequests' => $refunds,
-                ],
-                'recentTransactions' => $recent,
-            ],
-        ]);
+        if ($userSearch !== '') {
+            $query->where(function ($userQuery) use ($userSearch) {
+                $userQuery->where('u.name', 'like', "%{$userSearch}%")
+                    ->orWhere('u.email', 'like', "%{$userSearch}%");
+
+                if (Schema::hasColumn('users', 'code')) {
+                    $userQuery->orWhere('u.code', 'like', "%{$userSearch}%");
+                }
+            });
+        }
+
+        if ($search !== '') {
+            $query->where(function ($searchQuery) use ($search, $hasOfflinePaymentColumns) {
+                $searchQuery->where('o.orderReference', 'like', "%{$search}%")
+                    ->orWhere('o.razorpayOrderId', 'like', "%{$search}%")
+                    ->orWhere('p.razorpayPaymentId', 'like', "%{$search}%")
+                    ->orWhere('p.paymentReference', 'like', "%{$search}%")
+                    ->orWhere('i.invoiceNumber', 'like', "%{$search}%")
+                    ->orWhere('i.paymentReference', 'like', "%{$search}%");
+
+                if (Schema::hasColumn('invoices', 'entityCode')) {
+                    $searchQuery->orWhere('i.entityCode', 'like', "%{$search}%");
+                }
+
+                if (Schema::hasColumn('invoices', 'entityTitle')) {
+                    $searchQuery->orWhere('i.entityTitle', 'like', "%{$search}%");
+                }
+
+                if ($hasOfflinePaymentColumns) {
+                    $searchQuery->orWhere('pl.transactionNo', 'like', "%{$search}%")
+                        ->orWhere('pl.referenceNo', 'like', "%{$search}%");
+                }
+            });
+        }
+
+        if ($orderReference !== '') {
+            $query->where(function ($orderQuery) use ($orderReference) {
+                $orderQuery->where('o.orderReference', 'like', "%{$orderReference}%")
+                    ->orWhere('o.razorpayOrderId', 'like', "%{$orderReference}%");
+            });
+        }
+
+        if (in_array($moduleType, ['course', 'academic_course', 'workshop', 'seminar'], true)) {
+            $query->where(function ($moduleQuery) use ($moduleType) {
+                $isCourseType = in_array($moduleType, ['course', 'academic_course'], true);
+
+                if (Schema::hasColumn('invoices', 'entityType')) {
+                    if ($isCourseType) {
+                        $moduleQuery->whereRaw("LOWER(COALESCE(i.entityType, '')) IN (?, ?)", ['course', 'academic_course']);
+                    } else {
+                        $moduleQuery->whereRaw("LOWER(COALESCE(i.entityType, '')) = ?", [$moduleType]);
+                    }
+                }
+
+                if (Schema::hasTable('order_items')) {
+                    $moduleQuery->orWhereExists(function ($exists) use ($moduleType) {
+                        $exists->select(DB::raw(1))
+                            ->from('order_items as oi_filter')
+                            ->whereColumn('oi_filter.orderId', 'o.id')
+                            ->where('oi_filter.deletedFlag', 0)
+                            ->where(function ($itemQuery) use ($moduleType) {
+                                if (in_array($moduleType, ['course', 'academic_course'], true)) {
+                                    $itemQuery->whereNotNull('oi_filter.courseId');
+
+                                    if (Schema::hasColumn('order_items', 'entityType')) {
+                                        $itemQuery->where(function ($entityQuery) {
+                                            $entityQuery->whereNull('oi_filter.entityType')
+                                                ->orWhereRaw('LOWER(oi_filter.entityType) IN (?, ?)', ['course', 'academic_course']);
+                                        });
+                                    }
+
+                                    return;
+                                }
+
+                                if (Schema::hasColumn('order_items', 'entityType')) {
+                                    $itemQuery->whereRaw('LOWER(oi_filter.entityType) = ?', [$moduleType]);
+                                } else {
+                                    $itemQuery->whereRaw('1 = 0');
+                                }
+                            });
+                    });
+                }
+            });
+        }
+
+        if ($moduleId > 0) {
+            $query->where(function ($moduleQuery) use ($moduleId) {
+                if (Schema::hasColumn('invoices', 'entityId')) {
+                    $moduleQuery->where('i.entityId', $moduleId);
+                }
+
+                if (Schema::hasColumn('invoices', 'courseId')) {
+                    $moduleQuery->orWhere('i.courseId', $moduleId);
+                }
+
+                if (Schema::hasTable('order_items')) {
+                    $moduleQuery->orWhereExists(function ($exists) use ($moduleId) {
+                        $exists->select(DB::raw(1))
+                            ->from('order_items as oi_filter')
+                            ->whereColumn('oi_filter.orderId', 'o.id')
+                            ->where('oi_filter.deletedFlag', 0)
+                            ->where(function ($itemQuery) use ($moduleId) {
+                                $itemQuery->where('oi_filter.courseId', $moduleId);
+
+                                if (Schema::hasColumn('order_items', 'entityId')) {
+                                    $itemQuery->orWhere('oi_filter.entityId', $moduleId);
+                                }
+                            });
+                    });
+                }
+            });
+        }
+
+        if ($paymentMethod !== '' && $paymentMethod !== 'all') {
+            $query->where(function ($methodQuery) use ($paymentMethod, $hasOfflinePaymentColumns) {
+                $methodQuery->whereRaw("LOWER(COALESCE(p.paymentMethod, '')) = ?", [$paymentMethod]);
+
+                if ($hasOfflinePaymentColumns) {
+                    $methodQuery->orWhereRaw("LOWER(COALESCE(pl.paymentBy, '')) = ?", [$paymentMethod])
+                        ->orWhereRaw("LOWER(COALESCE(pl.paymentType, '')) = ?", [$paymentMethod]);
+                }
+            });
+        }
+    }
+
+    private function hasAdminPaymentFilters(Request $request): bool
+    {
+        foreach (['fromDate', 'toDate', 'status', 'user', 'search', 'moduleType', 'moduleId', 'paymentMethod', 'orderReference'] as $filter) {
+            $value = trim((string) $request->query($filter, ''));
+
+            if ($value !== '' && $value !== 'all') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function createOrFetchInvoice(int $orderId, int $paymentId, int $userId): ?array

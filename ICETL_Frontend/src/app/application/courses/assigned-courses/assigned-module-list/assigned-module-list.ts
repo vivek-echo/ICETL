@@ -213,6 +213,18 @@ export class AssignedModuleList implements OnInit, OnDestroy {
     return labels[module.scheduleStatus ?? ''] ?? 'Upcoming';
   }
 
+  getModuleWorkflowHint(module: AssignedModule): string {
+    if (module.materialsCount > 0) {
+      return 'Materials are available to view or update';
+    }
+
+    if (module.scheduleStatus === 'completed') {
+      return 'Review students and upload final resources';
+    }
+
+    return 'Upload materials before learners need access';
+  }
+
   isSpecialCourse(module: AssignedModule): boolean {
     return module.isSpecial === true || Number(module.isSpecial ?? 0) === 1;
   }

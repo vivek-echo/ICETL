@@ -1,23 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { lastValueFrom } from 'rxjs';
+import { AdminDashboardData, DashboardService } from '../../services/dashboard.service';
 
 interface TeamMetric {
   icon: string;
   label: string;
-  value: string;
   helper: string;
-}
-
-interface TeamChartPoint {
-  label: string;
-  value: number;
-}
-
-interface TeamActivity {
-  title: string;
-  detail: string;
-  status: string;
+  route: string;
 }
 
 @Component({
@@ -26,77 +17,72 @@ interface TeamActivity {
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class Dashboard {
-  readonly metrics: TeamMetric[] = [
+export class Dashboard implements OnInit {
+  data: AdminDashboardData | null = null;
+  loading = false;
+  errorMessage = '';
+
+  readonly shortcuts: TeamMetric[] = [
     {
       icon: 'feather-message-circle',
-      label: 'Open Requests',
-      value: '48',
-      helper: 'Learner and instructor support items',
+      label: 'Enquiries',
+      helper: 'Review learner and instructor enquiries',
+      route: '/application/enquiries',
     },
     {
       icon: 'feather-check-circle',
-      label: 'Resolved Today',
-      value: '31',
-      helper: 'Completed operational follow-ups',
+      label: 'Offline Approvals',
+      helper: 'Review offline and special course workflow',
+      route: '/application/courses/manageOfflineCourses/viewAllOfflineCourses',
     },
     {
       icon: 'feather-calendar',
-      label: 'Scheduled Sessions',
-      value: '12',
-      helper: 'Upcoming course and workshop sessions',
+      label: 'Workshops',
+      helper: 'Coordinate workshop sessions',
+      route: '/application/workshopSeminar/workshop/viewAllWorkshop',
     },
     {
       icon: 'feather-activity',
-      label: 'SLA Health',
-      value: '96%',
-      helper: 'Requests handled within target time',
+      label: 'Seminars',
+      helper: 'Coordinate seminar sessions',
+      route: '/application/workshopSeminar/seminar/viewAllSeminar',
     },
   ];
 
-  readonly weeklyActivity: TeamChartPoint[] = [
-    { label: 'Mon', value: 42 },
-    { label: 'Tue', value: 54 },
-    { label: 'Wed', value: 47 },
-    { label: 'Thu', value: 63 },
-    { label: 'Fri', value: 58 },
-    { label: 'Sat', value: 36 },
-  ];
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
 
-  readonly workQueues: TeamChartPoint[] = [
-    { label: 'Admissions', value: 28 },
-    { label: 'Courses', value: 18 },
-    { label: 'Workshops', value: 13 },
-    { label: 'Payments', value: 9 },
-  ];
-
-  readonly recentActivity: TeamActivity[] = [
-    {
-      title: 'Offline course batch updated',
-      detail: 'Schedule reviewed for the upcoming weekend batch.',
-      status: 'Ready',
-    },
-    {
-      title: 'Workshop enquiry follow-up',
-      detail: 'Learner support team assigned pending callbacks.',
-      status: 'In Progress',
-    },
-    {
-      title: 'Seminar attendance report',
-      detail: 'Participant list checked and shared for review.',
-      status: 'Completed',
-    },
-  ];
-
-  chartHeight(point: TeamChartPoint): number {
-    const max = Math.max(...this.weeklyActivity.map((item) => item.value), 1);
-
-    return Math.max(8, Math.round((point.value / max) * 100));
+  ngOnInit(): void {
+    void this.loadDashboard();
   }
 
-  chartWidth(point: TeamChartPoint): number {
-    const max = Math.max(...this.workQueues.map((item) => item.value), 1);
+  async loadDashboard(): Promise<void> {
+    this.loading = true;
+    this.errorMessage = '';
+    this.cdr.detectChanges();
 
-    return Math.max(4, Math.round((point.value / max) * 100));
+    try {
+      const response = await lastValueFrom(this.dashboardService.getAdminDashboard());
+      this.data = response.data;
+    } catch (error: any) {
+      this.errorMessage = error?.error?.message || 'Workflow summary is not available for this role.';
+    } finally {
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  formatDate(value: string | null | undefined): string {
+    if (!value) {
+      return 'N/A';
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(value));
   }
 }

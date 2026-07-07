@@ -20,6 +20,16 @@
           <span>Paid</span>
           <strong>{{ pagePaidCount }}</strong>
         </div>
+        @if (workflow) {
+        <div class="payment-metric">
+          <span>Balance</span>
+          <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(workflow.summary.balanceAmount) }}</strong>
+        </div>
+        <div class="payment-metric">
+          <span>Due</span>
+          <strong>{{ workflow.summary.pendingInstallments }}</strong>
+        </div>
+        }
       </div>
 
       <button
@@ -104,11 +114,51 @@
   <div class="payment-log__empty icetl-empty-state">
     <i class="fa-solid fa-receipt"></i>
     <h2>No payments yet</h2>
-    <p>Your completed purchases will appear here.</p>
+    <p>Your completed, pending, or failed purchases will appear here after checkout starts.</p>
   </div>
   }
 
   @if (!loading && logs.length > 0) {
+  @if (workflow && (workflow.installments.length > 0 || workflow.summary.pendingOrders > 0 || workflow.summary.failedOrders > 0)) {
+  <section class="payment-workflow icetl-card" aria-label="Payment workflow summary">
+    <div class="payment-workflow__summary">
+      <div>
+        <span>Pending Orders</span>
+        <strong>{{ workflow.summary.pendingOrders }}</strong>
+      </div>
+      <div>
+        <span>Failed Orders</span>
+        <strong>{{ workflow.summary.failedOrders }}</strong>
+      </div>
+      <div>
+        <span>Pending Installments</span>
+        <strong>{{ workflow.summary.pendingInstallments }}</strong>
+      </div>
+      <div>
+        <span>Overdue Installments</span>
+        <strong>{{ workflow.summary.overdueInstallments }}</strong>
+      </div>
+    </div>
+
+    @if (workflow.installments.length > 0) {
+    <div class="payment-workflow__installments">
+      @for (installment of workflow.installments; track installment.id) {
+        <div class="payment-workflow__item">
+          <div>
+            <strong>{{ installment.courseTitle }}</strong>
+            <span>Installment {{ installment.installmentNo }} &middot; {{ installment.expectedDate ? formatDate(installment.expectedDate) : 'Due date N/A' }}</span>
+          </div>
+          <div>
+            <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(installment.balanceAmount) }}</strong>
+            <span>{{ installment.dueStatus }}</span>
+          </div>
+        </div>
+      }
+    </div>
+    }
+  </section>
+  }
+
   <div class="payment-table-wrap icetl-table-shell">
     <table class="payment-table icetl-table">
       <thead>
@@ -160,11 +210,11 @@
               [class.payment-status--cancelled]="log.status === 'cancelled'"
               [class.payment-status--pending]="log.status === 'pending'">
               <span class="payment-status__dot"></span>
-              {{ log.status }}
+              {{ getPaymentStatusLabel(log) }}
             </span>
-            @if (log.failureReason) {
-            <small class="payment-failure-reason">{{ log.failureReason }}</small>
-            }
+            <small class="payment-failure-reason" [class.payment-failure-reason--alert]="log.status === 'failed'">
+              {{ getPaymentNextStep(log) }}
+            </small>
           </td>
           <td data-label="Transaction No">
             <div class="payment-transaction">

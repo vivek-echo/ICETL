@@ -31,7 +31,7 @@
 
           <a
             class="rbt-btn btn-gradient hover-icon-reverse icetl-btn icetl-btn-primary"
-            [routerLink]="['/application/learnerDashboard']"
+            [routerLink]="['/application/learner/dashboard']"
           >
             <span class="icon-reverse-wrapper">
               <span class="btn-text">Go to Dashboard</span>
@@ -44,10 +44,10 @@
             </span>
           </a>
 
-          <button class="explore-btn icetl-btn icetl-btn-outline" type="button">
+          <a class="explore-btn icetl-btn icetl-btn-outline" routerLink="/application/courses/manageCourses/browse">
             <i class="feather-play-circle"></i>
             Explore Courses
-          </button>
+          </a>
 
         </div>
 
@@ -60,8 +60,8 @@
             </div>
 
             <div>
-              <h5>120+</h5>
-              <span>Courses</span>
+              <h5>My Learning</h5>
+              <span>Resume courses</span>
             </div>
           </div>
 
@@ -71,8 +71,8 @@
             </div>
 
             <div>
-              <h5>45+</h5>
-              <span>Certificates</span>
+              <h5>Payments</h5>
+              <span>Invoices and history</span>
             </div>
           </div>
 
@@ -82,8 +82,8 @@
             </div>
 
             <div>
-              <h5>98%</h5>
-              <span>Success Rate</span>
+              <h5>Programs</h5>
+              <span>Workshops and seminars</span>
             </div>
           </div>
 
@@ -120,7 +120,7 @@
     <!-- FEATURE CARDS -->
     <div class="welcome-steps">
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/courses/manageCourses/browse">
 
         <div class="step-icon">
           <i class="feather-book-open"></i>
@@ -134,9 +134,9 @@
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/courses/myLearning">
 
         <div class="step-icon">
           <i class="feather-check-circle"></i>
@@ -150,23 +150,23 @@
           </p>
         </div>
 
-      </div>
+      </a>
 
-      <div class="welcome-step icetl-card">
+      <a class="welcome-step icetl-card" routerLink="/application/paymentLog">
 
         <div class="step-icon">
           <i class="feather-award"></i>
         </div>
 
         <div>
-          <h6>Earn Certificates</h6>
+          <h6>Invoices & Certificates</h6>
 
           <p>
-            Complete courses successfully and unlock verified achievements.
+            Review invoices and download available certificates from enrolled learning pages.
           </p>
         </div>
 
-      </div>
+      </a>
 
     </div>
 

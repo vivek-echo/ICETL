@@ -35,7 +35,7 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'admin',
-        canActivate: [roleGuard],
+        // canActivate: [roleGuard],
         data: { roles: [ROLE.ADMIN, 'admin'] },
         loadChildren: () =>
           import('./admin/admin.routes').then(
@@ -105,6 +105,13 @@ export const applicationRoutes: Routes = [
         loadComponent: () =>
           import('./payment-log/payment-log').then((m) => m.PaymentLogComponent),
         title: 'Payment Log | ICETL',
+      },
+      {
+        path: 'payment',
+        data: { authOnly: true },
+        loadComponent: () =>
+          import('./payment-management/payment-management').then((m) => m.PaymentManagement),
+        title: 'Payment Management | ICETL',
       },
       {
         path: 'myLearning',

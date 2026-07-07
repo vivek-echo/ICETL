@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\WorkflowDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -9,6 +10,10 @@ use Throwable;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly WorkflowDataService $workflowData)
+    {
+    }
+
     public function learner(Request $request)
     {
         $userId = (int) $request->user()->id;
@@ -92,6 +97,7 @@ class DashboardController extends Controller
             ],
             'recentCourses' => $recentCourses,
             'recentPayments' => $recentPayments,
+            'workflow' => $this->workflowData->learnerDashboardWorkflow($request),
         ], 'Learner dashboard fetched successfully.');
     }
 
@@ -178,12 +184,13 @@ class DashboardController extends Controller
             ],
             'topCourses' => $topCourses,
             'recentLearners' => $recentLearners,
+            'workflow' => $this->workflowData->instructorDashboardWorkflow($request),
         ], 'Instructor dashboard fetched successfully.');
     }
 
     public function admin(Request $request)
     {
-        if ((int) ($request->user()->role ?? 0) !== 1) {
+        if (!$this->workflowData->canViewAdminWorkflow($request->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -221,6 +228,7 @@ class DashboardController extends Controller
             'courseCategories' => $this->categoryBreakdown(),
             'recentTransactions' => $this->recentTransactions(),
             'recentCourses' => $this->recentCourses(),
+            'workflow' => $this->workflowData->adminDashboardWorkflow($request),
         ], 'Admin dashboard fetched successfully.');
     }
 

@@ -267,11 +267,13 @@
             <span class="offline-status-badge icetl-badge" [ngClass]="getApprovalBadgeClass(course)">
               {{ getApprovalStatusLabel(course) }}
             </span>
+            <small class="offline-status-helper">{{ getApprovalHelper(course) }}</small>
           </td>
           <td>
             <span class="offline-status-badge icetl-badge" [ngClass]="getPublishBadgeClass(course)">
               {{ getPublishStatusLabel(course) }}
             </span>
+            <small class="offline-status-helper">{{ getPublishHelper(course) }}</small>
           </td>
           <td>{{ formatDateValue(course.createdOn) }}</td>
           <td>

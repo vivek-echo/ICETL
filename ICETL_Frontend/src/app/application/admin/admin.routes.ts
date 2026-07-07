@@ -21,12 +21,12 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./dashboard/dashboard').then((m) => m.Dashboard),
         title: 'Admin Dashboard | ICETL',
       },
-      {
-        path: 'payments',
-        loadComponent: () =>
-          import('./payment-management/payment-management').then((m) => m.PaymentManagement),
-        title: 'Payment Management | ICETL',
-      },
+      // {
+      //   path: 'payments',
+      //   loadComponent: () =>
+      //     import('./payment-management/payment-management').then((m) => m.PaymentManagement),
+      //   title: 'Payment Management | ICETL',
+      // },
     ],
   },
 ];

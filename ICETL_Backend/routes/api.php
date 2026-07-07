@@ -16,6 +16,7 @@ use App\Http\Controllers\SeminarController;
 use App\Http\Controllers\ContactEnquiryController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ModuleMaterialController;
+use App\Http\Controllers\WorkflowController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -54,6 +55,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->whereNumber('id');
     Route::delete('/module-materials/{id}', [ModuleMaterialController::class, 'destroy'])
         ->whereNumber('id');
+    Route::get('/workflow/activity', [WorkflowController::class, 'activity']);
+    Route::get('/workflow/certificates', [WorkflowController::class, 'certificates']);
+    Route::get('/workflow/payments', [WorkflowController::class, 'payments']);
+    Route::get('/workflow/materials', [WorkflowController::class, 'materials']);
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);
@@ -146,6 +151,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/invoice/{orderId}/download', [PaymentController::class, 'downloadInvoice']);
     Route::get('/course-access/{courseId}', [PaymentController::class, 'checkCourseAccess']);
     Route::get('/admin/payments', [PaymentController::class, 'adminPayments']);
+    Route::get('/admin/payments/export', [PaymentController::class, 'exportAdminPayments']);
 
     // learner course player routes
     Route::get('/learning/course/{courseId}', [LearningController::class, 'course']);

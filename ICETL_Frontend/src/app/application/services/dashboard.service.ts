@@ -37,6 +37,136 @@ export interface DashboardTransaction {
   createdAt?: string | null;
 }
 
+export interface WorkflowActivity {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  moduleType?: string | null;
+  moduleId?: number | null;
+  createdAt?: string | null;
+  routeKey?: string | null;
+  status?: string | null;
+}
+
+export interface WorkflowMaterial {
+  id: number;
+  moduleType: string;
+  moduleId: number;
+  title: string;
+  originalFileName: string;
+  fileExtension?: string | null;
+  fileSizeLabel?: string | null;
+  materialDate?: string | null;
+  createdAt?: string | null;
+  downloadUrl?: string | null;
+  viewUrl?: string | null;
+  uploadedBy?: {
+    id?: number | null;
+    name?: string | null;
+    email?: string | null;
+  };
+}
+
+export interface WorkflowCertificate {
+  id: number;
+  certificateNo?: string | null;
+  moduleType?: string | null;
+  moduleId: number;
+  moduleTitle?: string | null;
+  issueDate?: string | null;
+  verificationUrl?: string | null;
+  downloadAvailable: boolean;
+  downloadUrl?: string | null;
+  verificationStatus?: string | null;
+  status?: string | null;
+}
+
+export interface PaymentWorkflowSummary {
+  orders: number;
+  paidOrders: number;
+  failedOrders: number;
+  pendingOrders: number;
+  totalPaid: number;
+  pendingInstallments: number;
+  overdueInstallments: number;
+  balanceAmount: number;
+}
+
+export interface LearnerWorkflowData {
+  summary: {
+    continueLearning: number;
+    certificateReadyCourses: number;
+    generatedCertificates: number;
+    pendingPayments: number;
+    pendingInstallments: number;
+    overdueInstallments: number;
+    recentMaterials: number;
+  };
+  continueLearning: Array<{
+    enrollmentId: number;
+    courseId: number;
+    title: string;
+    progressPercent: number;
+    lastWatchedAt?: string | null;
+  }>;
+  certificates: WorkflowCertificate[];
+  recentMaterials: WorkflowMaterial[];
+  activity: WorkflowActivity[];
+  paymentSummary: PaymentWorkflowSummary;
+}
+
+export interface InstructorWorkflowData {
+  summary: {
+    assignedCourses: number;
+    assignedWorkshops: number;
+    assignedSeminars: number;
+    recentMaterialUploads: number;
+    offlinePending: number;
+    offlineApproved: number;
+    offlineRejected: number;
+    recentEnrolledStudents: number;
+  };
+  offlineCourseStatus: DashboardChartPoint[];
+  recentMaterials: WorkflowMaterial[];
+  activity: WorkflowActivity[];
+}
+
+export interface AdminWorkflowData {
+  summary: {
+    pendingApprovals: number;
+    recentEnrollments: number;
+    recentPayments: number;
+    failedOrPendingPayments: number;
+    pendingInstallments: number;
+    overdueInstallments: number;
+    recentCertificates: number;
+    recentMaterialUploads: number;
+  };
+  pendingApprovals: Array<{
+    id: number;
+    title: string;
+    creatorName?: string | null;
+    createdAt?: string | null;
+    status?: string | null;
+  }>;
+  recentEnrollments: Array<{
+    id: number;
+    userId: number;
+    courseId: number;
+    courseTitle?: string | null;
+    userName?: string | null;
+    userEmail?: string | null;
+    status?: string | null;
+    createdAt?: string | null;
+  }>;
+  recentPayments: DashboardTransaction[];
+  recentCertificates: WorkflowCertificate[];
+  recentMaterials: WorkflowMaterial[];
+  activity: WorkflowActivity[];
+  paymentSummary: PaymentWorkflowSummary;
+}
+
 export interface LearnerDashboardData {
   summary: {
     enrolledCourses: number;
@@ -49,6 +179,7 @@ export interface LearnerDashboardData {
   progressBreakdown: DashboardChartPoint[];
   recentCourses: DashboardCourse[];
   recentPayments: DashboardTransaction[];
+  workflow?: LearnerWorkflowData;
 }
 
 export interface InstructorDashboardData {
@@ -63,6 +194,7 @@ export interface InstructorDashboardData {
   courseStatus: DashboardChartPoint[];
   topCourses: DashboardCourse[];
   recentLearners: Array<DashboardCourse & { learnerName?: string | null; learnerEmail?: string | null }>;
+  workflow?: InstructorWorkflowData;
 }
 
 export interface AdminDashboardData {
@@ -81,6 +213,7 @@ export interface AdminDashboardData {
   courseCategories: DashboardChartPoint[];
   recentTransactions: DashboardTransaction[];
   recentCourses: DashboardCourse[];
+  workflow?: AdminWorkflowData;
 }
 
 interface DashboardResponse<T> {

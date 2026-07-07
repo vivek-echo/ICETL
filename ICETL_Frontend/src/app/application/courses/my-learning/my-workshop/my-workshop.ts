@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { MyProgram, MyProgramType, PaymentService } from '../../services/payment';
-import { CertificateService } from '../../services/certificate.service';
+import { CertificateHistoryItem, CertificateService } from '../../services/certificate.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ModuleMaterialsModalComponent } from '../../shared/module-materials-modal/module-materials-modal';
 @Component({
@@ -22,6 +22,7 @@ export class MyWorkshop implements OnInit {
   readonly placeholderImage = 'assets/images/event/grid-type-02.jpg';
   readonly skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   certificateLoading = false;
+  certificateLoadingProgramId: number | null = null;
   programs: MyProgram[] = [];
   loading = false;
   showFilters = false;
@@ -62,6 +63,7 @@ export class MyWorkshop implements OnInit {
       return;
     }
 
+    const program = this.programs.find((item) => Number(item.id) === Number(courseId));
     const payload = {
       moduleType: 'WORKSHOP',
       moduleId: courseId,
@@ -69,13 +71,23 @@ export class MyWorkshop implements OnInit {
 
     this.spinner.show();
     this.certificateLoading = true;
+    this.certificateLoadingProgramId = courseId;
 
     try {
-      const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
-
-      const downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+      let downloadUrl = program?.certificateDownloadUrl || '';
+      let certificateNo = program?.certificateNo || '';
 
       if (!downloadUrl) {
+        const res: any = await lastValueFrom(this.certificateService.generateCertificate(payload));
+        downloadUrl = res?.downloadUrl || res?.data?.downloadUrl;
+        certificateNo = res?.certificateNo || res?.data?.certificateNo || certificateNo;
+      }
+
+      if (!downloadUrl) {
+        await this.alertHelper.error(
+          'Certificate was prepared, but the download link was not returned.',
+          'Certificate',
+        );
         return;
       }
 
@@ -86,6 +98,7 @@ export class MyWorkshop implements OnInit {
       const blob = fileResponse.body;
 
       if (!blob) {
+        await this.alertHelper.error('Certificate file could not be downloaded.', 'Certificate');
         return;
       }
 
@@ -103,13 +116,20 @@ export class MyWorkshop implements OnInit {
 
       document.body.removeChild(anchor);
       window.URL.revokeObjectURL(blobUrl);
+
+      if (program) {
+        program.certificateNo = certificateNo || program.certificateNo;
+        program.certificateDownloadUrl = downloadUrl;
+        program.certificateStatus = 'active';
+      }
     } catch (error: any) {
       const message =
         error?.error?.message || error?.error?.msg || 'Unable to generate certificate.';
 
-      // Swal.fire('Error', message, 'error');
+      await this.alertHelper.error(message, 'Certificate');
     } finally {
       this.certificateLoading = false;
+      this.certificateLoadingProgramId = null;
       this.spinner.hide();
       this.cdr.detectChanges();
     }
@@ -123,6 +143,7 @@ export class MyWorkshop implements OnInit {
     try {
       const response = await lastValueFrom(this.paymentService.getMyPrograms(this.programType));
       this.programs = response.success ? (response.data ?? []) : [];
+      await this.applyCertificateHistory();
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || `Unable to fetch your enrolled ${this.pluralLabel.toLowerCase()}.`,
@@ -185,6 +206,28 @@ export class MyWorkshop implements OnInit {
     return labels[program.scheduleStatus] ?? 'Upcoming';
   }
 
+  isCertificateGenerating(programId: number): boolean {
+    return this.certificateLoadingProgramId === programId;
+  }
+
+  getProgramNextStep(program: MyProgram): string {
+    if (program.certificateNo) {
+      return program.certificateIssueDate
+        ? `Certificate issued ${this.formatDate(program.certificateIssueDate)}`
+        : `Certificate issued ${program.certificateNo}`;
+    }
+
+    if (program.scheduleStatus === 'completed') {
+      return 'Download certificate when available';
+    }
+
+    if (program.scheduleStatus === 'ongoing') {
+      return 'Open materials and attend the current session';
+    }
+
+    return 'Review schedule and materials before the session';
+  }
+
   getTakeaways(program: MyProgram, limit = 3): string[] {
     return (program.takeaways ?? []).slice(0, limit);
   }
@@ -244,5 +287,44 @@ export class MyWorkshop implements OnInit {
 
   get completedProgramsCount(): number {
     return this.programs.filter((program) => program.scheduleStatus === 'completed').length;
+  }
+
+  private async applyCertificateHistory(): Promise<void> {
+    if (!this.programs.length) {
+      return;
+    }
+
+    try {
+      const response = await lastValueFrom(this.certificateService.getCertificateHistory());
+      const certificates = response.data?.items ?? [];
+
+      this.programs = this.programs.map((program) => {
+        const certificate = this.findProgramCertificate(program, certificates);
+
+        if (!certificate) {
+          return program;
+        }
+
+        return {
+          ...program,
+          certificateNo: certificate.certificateNo,
+          certificateDownloadUrl: certificate.downloadUrl,
+          certificateStatus: certificate.status,
+          certificateIssueDate: certificate.issueDate,
+        };
+      });
+    } catch {
+      // Certificate history is supportive only; keep enrolled workshops visible if it fails.
+    }
+  }
+
+  private findProgramCertificate(
+    program: MyProgram,
+    certificates: CertificateHistoryItem[],
+  ): CertificateHistoryItem | undefined {
+    return certificates.find((certificate) =>
+      Number(certificate.moduleId) === Number(program.id) &&
+      `${certificate.moduleType || ''}`.toUpperCase() === 'WORKSHOP',
+    );
   }
 }

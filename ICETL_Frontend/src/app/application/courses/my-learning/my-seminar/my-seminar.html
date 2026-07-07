@@ -187,9 +187,19 @@
           @if (program.paymentDisplayId) {
           <span><i class="feather-credit-card"></i>{{ program.paymentDisplayId }}</span>
           }
+          <span><i class="feather-info"></i>{{ getProgramNextStep(program) }}</span>
         </div>
 
-        <a class="program-library-row__action icetl-learning-action icetl-learning-action--primary" routerLink="/application/paymentLog">
+        <button
+          type="button"
+          class="program-library-row__action icetl-learning-action icetl-learning-action--primary"
+          [disabled]="certificateLoading"
+          (click)="downloadWorkshopCertificate(program.id,'SEMINAR')">
+          <i [class]="isCertificateGenerating(program.id) ? 'fa-solid fa-spinner fa-spin' : 'feather-file-text'"></i>
+          {{ isCertificateGenerating(program.id) ? 'Preparing Certificate' : 'Download Certificate' }}
+        </button>
+
+        <a class="program-library-row__action program-library-row__action--payment icetl-learning-action icetl-learning-action--soft" routerLink="/application/paymentLog">
           <i class="feather-file-text"></i>
           Payment Log
         </a>

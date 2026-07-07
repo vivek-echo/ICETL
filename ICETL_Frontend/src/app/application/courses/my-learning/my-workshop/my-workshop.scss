@@ -430,6 +430,16 @@
   color: var(--program-primary);
 }
 
+.program-library-row__action--payment {
+  background: #f8fafc;
+  color: var(--program-primary);
+}
+
+.program-library-row__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .program-library-empty {
   display: grid;
   justify-items: center;

@@ -128,7 +128,10 @@ export class Application implements OnInit, OnDestroy {
   }
 
   get isInstructorProfileRoute(): boolean {
-    return this.router.url.includes('/application/instructorProfile');
+    return (
+      this.router.url.includes('/application/instructorProfile') ||
+      this.router.url.includes('/application/instructor/profile')
+    );
   }
 
   get canManageEnquiries(): boolean {

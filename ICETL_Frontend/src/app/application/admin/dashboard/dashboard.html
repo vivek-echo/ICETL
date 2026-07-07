@@ -7,6 +7,14 @@
     </div>
     <div class="heading-meta">
       <div class="heading-actions icetl-dashboard-actions">
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+          <i class="feather-check-square"></i>
+          <span>Approvals</span>
+        </a>
+        <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/courses/manageCourses/viewAll">
+          <i class="feather-book-open"></i>
+          <span>Courses</span>
+        </a>
         <a class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" routerLink="/application/admin/payments">
           <i class="feather-credit-card"></i>
           <span>Payments</span>
@@ -25,55 +33,165 @@
 
   @if (data) {
     <div class="metric-grid icetl-metric-grid">
-      <article class="metric-card metric-card--revenue icetl-metric-card">
+      <a class="metric-card metric-card--revenue icetl-metric-card" routerLink="/application/admin/payments" aria-label="View payment management">
         <i class="feather-dollar-sign"></i>
         <span>Total Revenue</span>
         <strong>Rs. {{ formatAmount(data.summary.revenue) }}</strong>
         <small>Successful paid orders</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">View details <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/courses/manageCourses/viewAll" aria-label="Review learner course activity">
         <i class="feather-users"></i>
         <span>Learners</span>
         <strong>{{ data.summary.learners }}</strong>
         <small>Registered learner accounts</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">Review courses <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/courses/assignedCourses" aria-label="Review instructor assignments">
         <i class="feather-user-check"></i>
         <span>Instructors</span>
         <strong>{{ data.summary.instructors }}</strong>
         <small>Teaching accounts</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">Assignments <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/courses/manageCourses/viewAll" aria-label="View all courses">
         <i class="feather-book-open"></i>
         <span>Courses</span>
         <strong>{{ data.summary.courses }}</strong>
         <small>Total course catalog</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">Manage <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/courses/manageCourses/viewAll" aria-label="View active courses">
         <i class="feather-check-circle"></i>
         <span>Active Courses</span>
         <strong>{{ data.summary.activeCourses }}</strong>
         <small>Visible to learners</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">View details <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/courses/manageOfflineCourses/enrolledStudents" aria-label="View enrollments">
         <i class="feather-layers"></i>
         <span>Enrollments</span>
         <strong>{{ data.summary.enrollments }}</strong>
         <small>Purchased course access</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">Enrollment ledger <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/admin/payments" aria-label="View successful payments">
         <i class="feather-credit-card"></i>
         <span>Successful Payments</span>
         <strong>{{ data.summary.successfulPayments }}</strong>
         <small>Completed transactions</small>
-      </article>
-      <article class="metric-card icetl-metric-card">
+        <em class="metric-card__link-label">Payment report <i class="feather-arrow-right"></i></em>
+      </a>
+      <a class="metric-card icetl-metric-card" routerLink="/application/admin/payments" aria-label="Review failed payments">
         <i class="feather-alert-circle"></i>
         <span>Failed Payments</span>
         <strong>{{ data.summary.failedPayments }}</strong>
         <small>Needs payment review</small>
+        <em class="metric-card__link-label">Review <i class="feather-arrow-right"></i></em>
+      </a>
+    </div>
+
+    <article class="dashboard-panel icetl-card">
+      <div class="panel-title">
+        <h5>Admin Quick Actions</h5>
+        <span>Existing workspaces</span>
+      </div>
+      <div class="dashboard-shortcuts">
+        <a class="dashboard-shortcut" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+          <i class="feather-check-square"></i>
+          <span><strong>Approval Queue</strong><span>Review offline and special courses</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/workshopSeminar/workshop/viewAllWorkshop">
+          <i class="feather-calendar"></i>
+          <span><strong>Workshops</strong><span>Manage workshop listings</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/workshopSeminar/seminar/viewAllSeminar">
+          <i class="feather-mic"></i>
+          <span><strong>Seminars</strong><span>Review seminar programs</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/enquiries">
+          <i class="feather-message-circle"></i>
+          <span><strong>Enquiries</strong><span>Follow up learner requests</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+      </div>
+    </article>
+
+    @if (data.workflow) {
+    <article class="dashboard-panel icetl-card">
+      <div class="panel-title">
+        <h5>Workflow Summary</h5>
+        <span>Live backend state</span>
+      </div>
+      <div class="dashboard-shortcuts">
+        <a class="dashboard-shortcut" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+          <i class="feather-check-square"></i>
+          <span><strong>{{ data.workflow.summary.pendingApprovals }} Pending Approval{{ data.workflow.summary.pendingApprovals === 1 ? '' : 's' }}</strong><span>Offline and special course queue</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/admin/payments">
+          <i class="feather-alert-circle"></i>
+          <span><strong>{{ data.workflow.summary.failedOrPendingPayments }} Payment Follow-up{{ data.workflow.summary.failedOrPendingPayments === 1 ? '' : 's' }}</strong><span>Failed or pending payment records</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/admin/payments">
+          <i class="feather-clock"></i>
+          <span><strong>{{ data.workflow.summary.overdueInstallments }} Overdue Installment{{ data.workflow.summary.overdueInstallments === 1 ? '' : 's' }}</strong><span>{{ data.workflow.summary.pendingInstallments }} pending installment{{ data.workflow.summary.pendingInstallments === 1 ? '' : 's' }}</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+        <a class="dashboard-shortcut" routerLink="/application/courses/assignedCourses">
+          <i class="feather-file-text"></i>
+          <span><strong>{{ data.workflow.summary.recentMaterialUploads }} Recent Material Upload{{ data.workflow.summary.recentMaterialUploads === 1 ? '' : 's' }}</strong><span>{{ data.workflow.summary.recentCertificates }} recent certificate{{ data.workflow.summary.recentCertificates === 1 ? '' : 's' }}</span></span>
+          <i class="feather-arrow-right"></i>
+        </a>
+      </div>
+    </article>
+
+    <div class="dashboard-grid">
+      <article class="dashboard-panel icetl-card">
+        <div class="panel-title">
+          <h5>Pending Approval Queue</h5>
+          <span>Latest pending items</span>
+        </div>
+        <div class="activity-list">
+          @for (approval of data.workflow.pendingApprovals; track approval.id) {
+            <a class="activity-item" routerLink="/application/courses/manageOfflineCourses/viewAllOfflineCourses">
+              <div>
+                <strong>{{ approval.title }}</strong>
+                <span>{{ approval.creatorName || 'Instructor' }} &middot; {{ formatDate(approval.createdAt) }}</span>
+              </div>
+              <b>{{ approval.status }}</b>
+            </a>
+          } @empty {
+            <p class="empty-state icetl-empty-state icetl-dashboard-empty">No pending approvals right now.</p>
+          }
+        </div>
+      </article>
+
+      <article class="dashboard-panel icetl-card">
+        <div class="panel-title">
+          <h5>Recent Activity</h5>
+          <span>Existing records only</span>
+        </div>
+        <div class="activity-list">
+          @for (activity of data.workflow.activity; track activity.id) {
+            <div class="activity-item">
+              <div>
+                <strong>{{ activity.title }}</strong>
+                <span>{{ activity.description }}</span>
+              </div>
+              <b>{{ formatDate(activity.createdAt) }}</b>
+            </div>
+          } @empty {
+            <p class="empty-state icetl-empty-state icetl-dashboard-empty">No recent workflow activity found.</p>
+          }
+        </div>
       </article>
     </div>
+    }
 
     <div class="dashboard-grid dashboard-grid--charts">
       <article class="dashboard-panel icetl-card">

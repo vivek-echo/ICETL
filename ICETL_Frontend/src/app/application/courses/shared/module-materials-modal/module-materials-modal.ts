@@ -25,6 +25,12 @@ import {
   ModalWindowDirective,
 } from '../../../../shared/modal-window';
 
+interface MaterialGroup {
+  key: string;
+  label: string;
+  materials: ModuleMaterial[];
+}
+
 @Component({
   selector: 'app-module-materials-modal',
   standalone: true,
@@ -320,8 +326,62 @@ export class ModuleMaterialsModalComponent implements OnChanges {
     return extension ? extension.toUpperCase() : 'FILE';
   }
 
+  fileIconClass(material: ModuleMaterial): string {
+    const extension = `${material.fileExtension || this.fileExtension(material.originalFileName)}`.toLowerCase();
+
+    if (extension === 'pdf') {
+      return 'fa-regular fa-file-pdf';
+    }
+
+    if (['doc', 'docx'].includes(extension)) {
+      return 'fa-regular fa-file-word';
+    }
+
+    if (['ppt', 'pptx'].includes(extension)) {
+      return 'fa-regular fa-file-powerpoint';
+    }
+
+    if (['xls', 'xlsx'].includes(extension)) {
+      return 'fa-regular fa-file-excel';
+    }
+
+    if (['jpg', 'jpeg', 'png'].includes(extension)) {
+      return 'fa-regular fa-file-image';
+    }
+
+    if (extension === 'zip') {
+      return 'fa-regular fa-file-zipper';
+    }
+
+    return 'fa-regular fa-file-lines';
+  }
+
+  get groupedMaterials(): MaterialGroup[] {
+    const groups = new Map<string, MaterialGroup>();
+    const sortedMaterials = [...this.materials].sort(
+      (first, second) => this.materialSortTime(second) - this.materialSortTime(first),
+    );
+
+    sortedMaterials.forEach((material) => {
+      const key = this.materialGroupKey(material);
+      const label = key === 'undated' ? 'Date not set' : this.formatDate(key);
+
+      if (!groups.has(key)) {
+        groups.set(key, { key, label, materials: [] });
+      }
+
+      groups.get(key)?.materials.push(material);
+    });
+
+    return Array.from(groups.values());
+  }
+
   trackByMaterialId(_: number, material: ModuleMaterial): number {
     return material.id;
+  }
+
+  trackByMaterialGroup(_: number, group: MaterialGroup): string {
+    return group.key;
   }
 
   private resetUploadForm(fileInput?: HTMLInputElement): void {
@@ -423,6 +483,26 @@ export class ModuleMaterialsModalComponent implements OnChanges {
     const date = new Date(normalized);
 
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private materialGroupKey(material: ModuleMaterial): string {
+    const date = this.parseDate(`${material.materialDate || material.createdAt || ''}`);
+
+    if (!date) {
+      return 'undated';
+    }
+
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private materialSortTime(material: ModuleMaterial): number {
+    const date = this.parseDate(`${material.materialDate || material.createdAt || ''}`);
+
+    return date?.getTime() ?? 0;
   }
 
   private todayString(): string {

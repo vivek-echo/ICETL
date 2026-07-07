@@ -362,9 +362,12 @@ nstructor-dashboard.component.scss scss:host {
     border: 1px solid #edf2f7;
 
     transition: all 0.3s ease;
+    color: inherit;
+    text-decoration: none;
 }
 
 .feature-card:hover {
+    color: inherit;
     transform: translateY(-5px);
 
     box-shadow:

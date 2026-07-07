@@ -109,6 +109,57 @@
   font-size: 14px;
 }
 
+.payment-workflow {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+.payment-workflow__summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.payment-workflow__summary > div,
+.payment-workflow__item {
+  background: #ffffff;
+  border: 1px solid var(--billing-line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.payment-workflow__summary span,
+.payment-workflow__item span {
+  color: var(--billing-muted);
+  display: block;
+  font-size: 12px;
+}
+
+.payment-workflow__summary strong,
+.payment-workflow__item strong {
+  color: var(--billing-ink);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.payment-workflow__installments {
+  display: grid;
+  gap: 10px;
+}
+
+.payment-workflow__item {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.payment-workflow__item > div:last-child {
+  text-align: right;
+}
+
 .payment-log__refresh,
 .payment-filter-btn,
 .payment-table__action,
@@ -540,13 +591,17 @@
 }
 
 .payment-failure-reason {
-  color: var(--billing-danger);
+  color: #64748b;
   display: block;
   font-size: 11px;
   font-weight: 750;
   line-height: 1.4;
   margin-top: 7px;
   max-width: 260px;
+}
+
+.payment-failure-reason--alert {
+  color: var(--billing-danger);
 }
 
 .payment-transaction {
