@@ -1,0 +1,166 @@
+<section class="dynamic-dashboard">
+  <header class="dashboard-heading">
+    <div class="heading-main">
+      <span class="dashboard-eyebrow">{{ roleName }}</span>
+      <h4>Dashboard</h4>
+    </div>
+
+    <button type="button" class="rbt-btn btn-sm btn-border dashboard-action icetl-btn icetl-btn-outline" (click)="reloadDashboard()" [disabled]="loading">
+      <i class="feather-refresh-cw"></i>
+      <span>{{ loading ? 'Refreshing' : 'Refresh' }}</span>
+    </button>
+  </header>
+
+  @if (errorMessage) {
+    <div class="dashboard-panel dynamic-dashboard__notice" role="status">
+      <i class="feather-alert-circle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  @if (loading && !data) {
+    <div class="dynamic-dashboard__skeleton-grid" aria-hidden="true">
+      @for (item of [1, 2, 3, 4]; track item) {
+        <span class="dynamic-dashboard__skeleton"></span>
+      }
+    </div>
+  } @else {
+    @if (summaryCards.length) {
+      <section class="metric-grid icetl-metric-grid" aria-label="Dashboard summary">
+        @for (metric of summaryCards; track metric.label) {
+          @if (metric.route) {
+            <a class="metric-card icetl-metric-card" [routerLink]="metric.route">
+              <i [class]="metric.icon || 'feather-activity'"></i>
+              <span>{{ metric.label }}</span>
+              <strong>{{ formatValue(metric.value) }}</strong>
+              @if (metric.helper) {
+                <small>{{ metric.helper }}</small>
+              }
+            </a>
+          } @else {
+            <article class="metric-card icetl-metric-card">
+              <i [class]="metric.icon || 'feather-activity'"></i>
+              <span>{{ metric.label }}</span>
+              <strong>{{ formatValue(metric.value) }}</strong>
+              @if (metric.helper) {
+                <small>{{ metric.helper }}</small>
+              }
+            </article>
+          }
+        }
+      </section>
+    }
+
+    <div class="dynamic-dashboard__grid">
+      <section class="dashboard-panel dynamic-dashboard__chart-panel">
+        <div class="panel-title dynamic-dashboard__panel-title">
+          <div>
+            <h5>{{ activeChart?.label || 'Insights' }}</h5>
+            @if (activeChart?.helper) {
+              <span>{{ activeChart?.helper }}</span>
+            }
+          </div>
+
+          @if (chartSeries.length > 1) {
+            <div class="dynamic-dashboard__chart-tabs" role="tablist" aria-label="Dashboard charts">
+              @for (chart of chartSeries; track chart.id) {
+                <button
+                  type="button"
+                  [class.is-active]="chart.id === activeChart?.id"
+                  (click)="selectChart(chart.id)">
+                  {{ chart.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        @if (activeChart; as chart) {
+          @if (chart.kind === 'donut') {
+            <div class="dynamic-dashboard__donut-layout">
+              <div class="dynamic-dashboard__donut" [style.background]="donutGradient(chart)">
+                <span>{{ formatValue(chartTotal(chart)) }}</span>
+              </div>
+
+              <div class="dynamic-dashboard__legend">
+                @for (point of chart.points; track point.label; let index = $index) {
+                  <div class="dynamic-dashboard__legend-row">
+                    <i [style.background-color]="pointColor(index)"></i>
+                    <span>{{ point.label }}</span>
+                    <strong>{{ pointPercent(point, chart) }}%</strong>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else if (chart.kind === 'column') {
+            <div class="dynamic-dashboard__columns">
+              @for (point of chart.points; track point.label; let index = $index) {
+                <div class="dynamic-dashboard__column">
+                  <div class="dynamic-dashboard__column-track">
+                    <span
+                      [style.height.%]="barSize(point, chart)"
+                      [style.background]="pointColor(index)">
+                    </span>
+                  </div>
+                  <strong>{{ formatValue(point.value) }}</strong>
+                  <small>{{ point.label }}</small>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="dynamic-dashboard__bars">
+              @for (point of chart.points; track point.label; let index = $index) {
+                <div class="dynamic-dashboard__bar-row">
+                  <div class="dynamic-dashboard__bar-label">
+                    <span>{{ point.label }}</span>
+                    <strong>{{ formatValue(point.value) }}</strong>
+                  </div>
+                  <div class="dynamic-dashboard__bar-track">
+                    <span
+                      [style.width.%]="barSize(point, chart)"
+                      [style.background]="pointColor(index)">
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        } @else {
+          <div class="dynamic-dashboard__empty">
+            <i class="feather-bar-chart-2"></i>
+            <span>No chart data is available yet.</span>
+          </div>
+        }
+      </section>
+
+      <section class="dashboard-panel dynamic-dashboard__activity">
+        <div class="panel-title dynamic-dashboard__panel-title">
+          <div>
+            <h5>Recent Activity</h5>
+            @if (activityItems.length) {
+              <span>{{ activityItems.length }} latest updates</span>
+            }
+          </div>
+        </div>
+
+        @if (activityItems.length) {
+          @for (activity of activityItems; track activity.id) {
+            <div class="activity-item">
+              <i class="feather-clock"></i>
+              <div>
+                <strong>{{ activity.title }}</strong>
+                <span>{{ activity.description }}</span>
+              </div>
+              <time>{{ formatDate(activity.createdAt) }}</time>
+            </div>
+          }
+        } @else {
+          <div class="dynamic-dashboard__empty">
+            <i class="feather-inbox"></i>
+            <span>No recent activity is available.</span>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</section>

@@ -17,6 +17,7 @@ use App\Http\Controllers\ContactEnquiryController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ModuleMaterialController;
 use App\Http\Controllers\WorkflowController;
+use App\Http\Controllers\AdministrationController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -59,6 +60,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/workflow/certificates', [WorkflowController::class, 'certificates']);
     Route::get('/workflow/payments', [WorkflowController::class, 'payments']);
     Route::get('/workflow/materials', [WorkflowController::class, 'materials']);
+
+    // administration routes
+    Route::get('/administration/states', [AdministrationController::class, 'states']);
+    Route::get('/administration/districts', [AdministrationController::class, 'districts']);
+    Route::post('/administration/branches', [AdministrationController::class, 'storeBranch']);
+    Route::get('/administration/branches', [AdministrationController::class, 'branches']);
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);
@@ -144,6 +151,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/programCheckoutInit', [PaymentController::class, 'programCheckoutInit']);
     Route::post('/verifyPayment', [PaymentController::class, 'verifyPayment']);
     Route::post('/paymentFailure', [PaymentController::class, 'paymentFailure']);
+    Route::get('/paymentStatus', [PaymentController::class, 'paymentStatus']);
     Route::get('/paymentLogs', [PaymentController::class, 'paymentLogs']);
     Route::get('/myLearning', [PaymentController::class, 'myLearning']);
     Route::get('/myPrograms', [PaymentController::class, 'myPrograms']);
@@ -160,6 +168,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/learning/quiz/{quizId}/submit', [LearningController::class, 'submitQuiz']);
 
     // dashboard routes
+    Route::get('/dashboard', [DashboardController::class, 'current']);
     Route::get('/dashboard/learner', [DashboardController::class, 'learner']);
     Route::get('/dashboard/instructor', [DashboardController::class, 'instructor']);
     Route::get('/dashboard/admin', [DashboardController::class, 'admin']);

@@ -1,7 +1,13 @@
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { Router, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../layout/header/header';
 import { FooterComponent } from '../layout/footer/footer';
 import { Subscription } from 'rxjs';
@@ -13,7 +19,7 @@ import { ProfileModalService } from '../commonServices/profile-modal.service';
 import { FormValidationService } from '../commonServices/form-validation-service';
 import { FormValidationRules } from '../commonServices/form-validation-rules';
 import { ContactEnquiryService } from '../commonServices/contact-enquiry.service';
-import { ROLE } from '../commonServices/constants.service';
+import { canAccessApplicationRoute } from '../commonServices/auth-navigation';
 import { ModalWindowControlsComponent, ModalWindowDirective } from '../shared/modal-window';
 
 @Component({
@@ -21,8 +27,6 @@ import { ModalWindowControlsComponent, ModalWindowDirective } from '../shared/mo
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
-    RouterLinkActive,
     RouterOutlet,
     HeaderComponent,
     FooterComponent,
@@ -49,6 +53,9 @@ export class Application implements OnInit, OnDestroy {
     { label: 'Female', value: '2' },
     { label: 'Others', value: '3' },
   ];
+  private readonly allowedProfileImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly maxProfileImageBytes = 4 * 1024 * 1024;
+  private readonly maxCoverImageBytes = 6 * 1024 * 1024;
 
   userProfile: UserProfile | null = null;
   isProfileModalOpen = false;
@@ -64,8 +71,8 @@ export class Application implements OnInit, OnDestroy {
     name: ['', FormValidationRules.requiredName()],
     email: [{ value: '', disabled: true }],
     phone: ['', FormValidationRules.requiredMobile()],
-    dob: ['', Validators.required],
-    gender: ['', Validators.required],
+    dob: ['', [Validators.required, this.dateBeforeTodayValidator]],
+    gender: ['', [Validators.required, Validators.pattern(/^[123]$/)]],
   });
 
   private readonly subscriptions = new Subscription();
@@ -120,24 +127,8 @@ export class Application implements OnInit, OnDestroy {
     return this.userProfile?.name?.trim() || 'Learner';
   }
 
-  get isInstructorRole(): boolean {
-    const dashboardUrl = `${this.authService.getUser()?.dashboard?.dashboardUrl ?? ''}`
-      .trim()
-      .toLowerCase();
-    return dashboardUrl === 'instructor';
-  }
-
-  get isInstructorProfileRoute(): boolean {
-    return (
-      this.router.url.includes('/application/instructorProfile') ||
-      this.router.url.includes('/application/instructor/profile')
-    );
-  }
-
   get canManageEnquiries(): boolean {
-    const role = Number(this.authService.getUser()?.role);
-
-    return role === ROLE.ADMIN || role === ROLE.ICETL_TEAM;
+    return this.canAccessRoute(this.enquiriesRoute);
   }
 
   openProfileSettings(event?: Event): void {
@@ -155,6 +146,10 @@ export class Application implements OnInit, OnDestroy {
     if (this.isSidebarCollapsed) {
       (event?.currentTarget as HTMLElement | null)?.blur();
     }
+  }
+
+  canAccessRoute(route: string): boolean {
+    return canAccessApplicationRoute(this.authService.getUser(), route, false);
   }
 
   openUpdateProfileModal(): void {
@@ -211,6 +206,21 @@ export class Application implements OnInit, OnDestroy {
       return;
     }
 
+    const validationMessage = this.validateProfileImageFile(
+      file,
+      'Profile image',
+      this.maxProfileImageBytes,
+    );
+
+    if (validationMessage) {
+      this.profileImageFile = null;
+      input.value = '';
+      this.profileErrorMessage = validationMessage;
+      return;
+    }
+
+    this.profileErrorMessage = '';
+
     const reader = new FileReader();
     reader.onload = () => {
       const preview = typeof reader.result === 'string' ? reader.result : '';
@@ -230,6 +240,21 @@ export class Application implements OnInit, OnDestroy {
     if (!file) {
       return;
     }
+
+    const validationMessage = this.validateProfileImageFile(
+      file,
+      'Cover image',
+      this.maxCoverImageBytes,
+    );
+
+    if (validationMessage) {
+      this.coverImageFile = null;
+      input.value = '';
+      this.profileErrorMessage = validationMessage;
+      return;
+    }
+
+    this.profileErrorMessage = '';
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -314,6 +339,39 @@ export class Application implements OnInit, OnDestroy {
     };
 
     return map[field] || field;
+  }
+
+  private dateBeforeTodayValidator(control: AbstractControl): ValidationErrors | null {
+    const value = `${control.value ?? ''}`.trim();
+
+    if (!value) {
+      return null;
+    }
+
+    const selectedDate = new Date(value);
+
+    if (Number.isNaN(selectedDate.getTime())) {
+      return { dateBeforeToday: true };
+    }
+
+    selectedDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return selectedDate < today ? null : { dateBeforeToday: true };
+  }
+
+  private validateProfileImageFile(file: File, label: string, maxBytes: number): string {
+    if (!this.allowedProfileImageTypes.includes(file.type)) {
+      return `${label} must be a PNG, JPG, or WEBP image.`;
+    }
+
+    if (file.size > maxBytes) {
+      return `${label} must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller.`;
+    }
+
+    return '';
   }
 
   private loadSidebarPreference(): void {

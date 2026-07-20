@@ -74,8 +74,8 @@ class AdminConsoleController extends Controller
                 'type' => ['required', 'in:1,2,3'],
 
                 // 2️⃣ CONDITIONAL FIELDS
-                'globalLink' => ['required_if:type,primary', 'nullable', 'integer'],
-                'primaryLink' => ['required_if:type,tabs', 'nullable', 'integer'],
+                'globalLink' => ['required_if:type,2', 'nullable', 'integer', 'exists:menus,id'],
+                'primaryLink' => ['required_if:type,3', 'nullable', 'integer', 'exists:menus,id'],
 
                 // 3️⃣ MAIN FIELD (NAME)
                 'name' => ['required', 'string', 'max:255'],
@@ -88,8 +88,8 @@ class AdminConsoleController extends Controller
 
                 'type.required' => 'Menu type is required',
 
-                'globalLink.required_if' => 'Select global link for primary menu',
-                'primaryLink.required_if' => 'Select primary link for tabs',
+                'globalLink.required_if' => 'Select parent menu',
+                'primaryLink.required_if' => 'Select primary menu',
 
                 'name.required' => 'Menu name is required',
             ]);
@@ -441,13 +441,50 @@ class AdminConsoleController extends Controller
     {
         try {
 
-            $request->validate([
-                'roleId' => 'required|integer',
-                'menuIds' => 'required|array'
+            $validator = Validator::make($request->all(), [
+                'roleId' => 'required|integer|exists:roles,id',
+                'menuIds' => 'required|array',
+                'menuIds.*' => 'integer'
             ]);
 
-            $roleId = $request->roleId;
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $roleId = (int) $request->roleId;
             $menuIds = $this->sanitizeIdList($request->menuIds);
+            $roleExists = DB::table('roles')
+                ->where('id', $roleId)
+                ->where('deletedFlag', 0)
+                ->exists();
+
+            if (!$roleExists) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Role not found'
+                ], 404);
+            }
+
+            $validMenuIds = DB::table('menus')
+                ->whereIn('id', $menuIds)
+                ->where('deletedFlag', 0)
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->all();
+
+            if (count($validMenuIds) !== count($menuIds)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'menuIds' => ['Please select only valid menus.']
+                    ]
+                ], 422);
+            }
 
             // Convert to key-value like Node (optional)
             $permissions = [];

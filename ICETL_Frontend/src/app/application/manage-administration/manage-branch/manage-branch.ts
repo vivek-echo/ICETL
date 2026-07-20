@@ -1,9 +1,13 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { StoredMenu, isStoredMenuVisible, normalizeStoredMenus } from '../../../commonServices/menu-utils';
+import {
+  StoredMenu,
+  isStoredMenuVisible,
+  normalizeStoredMenus,
+} from '../../../commonServices/menu-utils';
 
-interface CourseTab {
+interface BranchTab {
   id: number;
   label: string;
   route: string;
@@ -15,21 +19,32 @@ interface FilterToggleHost {
 }
 
 @Component({
-  selector: 'app-manage-courses',
+  selector: 'app-manage-branch',
+  standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
-  templateUrl: './manage-courses.html',
-  styleUrl: './manage-courses.scss',
+  templateUrl: './manage-branch.html',
+  styleUrl: './manage-branch.scss',
 })
-export class ManageCourses implements OnInit, OnDestroy {
-  private readonly parentRoute = '/application/courses/manageCourses';
-  private readonly fallbackTabs: CourseTab[] = [
+export class ManageBranch implements OnInit, OnDestroy {
+  private readonly parentRoute = '/application/administration/manageBranch';
+  private readonly fallbackTabs: BranchTab[] = [
+    {
+      id: -1,
+      label: 'Add Branch',
+      route: 'addBranch',
+    },
+    {
+      id: -2,
+      label: 'View Branch',
+      route: 'viewBranch',
+    },
   ];
   private readonly isBrowser: boolean;
   private readonly refreshTabs = () => {
     this.loadTabs();
   };
 
-  tabs: CourseTab[] = this.fallbackTabs;
+  tabs: BranchTab[] = this.fallbackTabs;
   activeFilterHost: FilterToggleHost | null = null;
 
   constructor(@Inject(PLATFORM_ID) platformId: object) {
@@ -95,8 +110,8 @@ export class ManageCourses implements OnInit, OnDestroy {
 
     const permittedTabs = menus
       .filter((menu) => menu.deletedFlag !== 1 && menu.parentId === parentId && isStoredMenuVisible(menu))
-      .map((menu) => this.toCourseTab(menu))
-      .filter((tab): tab is CourseTab => tab !== null);
+      .map((menu) => this.toBranchTab(menu))
+      .filter((tab): tab is BranchTab => tab !== null);
 
     this.tabs = permittedTabs.length ? permittedTabs : this.fallbackTabs;
   }
@@ -126,7 +141,7 @@ export class ManageCourses implements OnInit, OnDestroy {
     return normalizeStoredMenus(value);
   }
 
-  private toCourseTab(menu: StoredMenu): CourseTab | null {
+  private toBranchTab(menu: StoredMenu): BranchTab | null {
     const route = this.normalizeRoute(menu.url);
 
     if (!route.startsWith(`${this.parentRoute}/`)) {
@@ -135,21 +150,25 @@ export class ManageCourses implements OnInit, OnDestroy {
 
     return {
       id: menu.id,
-      label: this.getCourseTabLabel(route, menu.name),
+      label: this.getBranchTabLabel(route, menu.name),
       route: route.replace(`${this.parentRoute}/`, ''),
     };
   }
 
-  private getCourseTabLabel(route: string, fallbackLabel: string): string {
-    if (route === `${this.parentRoute}/browseAcademicCourses`) {
-      return 'Browse Academic Courses';
-    }
+  private getBranchTabLabel(route: string, fallbackLabel: string): string {
+    const labels: Record<string, string> = {
+      [`${this.parentRoute}/addBranch`]: 'Add Branch',
+      [`${this.parentRoute}/viewBranch`]: 'View Branch',
+    };
 
-    return fallbackLabel;
+    return labels[route] || fallbackLabel;
   }
 
   private normalizeRoute(url?: string | null): string {
-    const route = url?.trim();
+    const route = url
+      ?.trim()
+      .replace(/\/+$/g, '')
+      .replace('/application/adminstration', '/application/administration');
 
     if (!route) {
       return '';

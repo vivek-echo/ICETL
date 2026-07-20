@@ -20,6 +20,8 @@ import { NgxSpinnerService } from 'ngx-spinner';
 })
 export class AddCourses implements OnInit {
   courseForm!: FormGroup;
+  private readonly allowedThumbnailTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly maxThumbnailSizeBytes = 2 * 1024 * 1024;
 
   categories: any[] = [];
   parentAcademicCourses: OfflineCourseItem[] = [];
@@ -54,7 +56,7 @@ export class AddCourses implements OnInit {
     private alertHelper: AlertHelperService,
   ) {
     this.courseForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(50)]],
+      title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       isSpecial: [false],
       category: ['', Validators.required],
       parentCourseId: [''],
@@ -358,6 +360,14 @@ export class AddCourses implements OnInit {
     }
 
     const file = input.files[0];
+    const validationMessage = this.validateThumbnailFile(file);
+
+    if (validationMessage) {
+      input.value = '';
+      this.courseForm.patchValue({ thumbnail: null });
+      void this.alertHelper.error(validationMessage);
+      return;
+    }
 
     // Save file in form
     this.courseForm.patchValue({
@@ -374,6 +384,18 @@ export class AddCourses implements OnInit {
     };
 
     reader.readAsDataURL(file);
+  }
+
+  private validateThumbnailFile(file: File): string {
+    if (!this.allowedThumbnailTypes.includes(file.type)) {
+      return 'Course thumbnail must be a PNG, JPG, or WEBP image.';
+    }
+
+    if (file.size > this.maxThumbnailSizeBytes) {
+      return 'Course thumbnail must be 2 MB or smaller.';
+    }
+
+    return '';
   }
 
   async submitCourse(): Promise<void> {

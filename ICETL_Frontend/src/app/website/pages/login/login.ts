@@ -32,6 +32,7 @@ import { SpinnerService } from '../../../commonServices/spinner/spinner.service'
 import { UserProfileService } from '../../../commonServices/user-profile.service';
 import { FormValidationService } from '../../../commonServices/form-validation-service';
 import { FormValidationRules } from '../../../commonServices/form-validation-rules';
+import { getApplicationDashboardUrlTreeCommands } from '../../../commonServices/auth-navigation';
 
 type LoginStep = 'identify' | 'otp' | 'role' | 'profile';
 
@@ -763,7 +764,7 @@ export class Login implements OnDestroy {
     localStorage.setItem('dashboardsetting', JSON.stringify(data.user.dashboard));
     this.NavigationService.loadNavigation();
     this.userProfileService.loadProfileFromStorage();
-    void this.router.navigate(['/application', data.user.dashboard?.dashboardUrl]);
+    void this.router.navigate(getApplicationDashboardUrlTreeCommands());
   }
 
   private getFieldName(field: string): string {

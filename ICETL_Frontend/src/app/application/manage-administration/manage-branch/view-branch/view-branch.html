@@ -1,0 +1,296 @@
+<section class="branch-view" aria-labelledby="view-branch-title">
+  <header class="branch-view__header icetl-page-header">
+    <div>
+      <span class="branch-view__eyebrow">Manage Administration</span>
+      <h1 id="view-branch-title">View Branch</h1>
+      <p>Search branches by name, state, district/city, and status.</p>
+    </div>
+
+    <div class="icetl-page-actions">
+      <button
+        type="button"
+        class="icetl-btn icetl-btn-outline"
+        (click)="loadBranches()"
+        [disabled]="loading"
+        title="Refresh branches">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'" aria-hidden="true"></i>
+        <span>Refresh</span>
+      </button>
+
+      <a class="icetl-btn icetl-btn-primary" routerLink="../addBranch">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        <span>Add Branch</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="branch-view__metrics icetl-metric-grid">
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+      <span>Total Branches</span>
+      <strong>{{ summary.totalBranches }}</strong>
+      <small>Available branch records</small>
+    </article>
+
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+      <span>Active</span>
+      <strong>{{ summary.activeBranches }}</strong>
+      <small>Currently enabled</small>
+    </article>
+
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-circle-pause" aria-hidden="true"></i>
+      <span>Inactive</span>
+      <strong>{{ summary.inactiveBranches }}</strong>
+      <small>Hidden from active use</small>
+    </article>
+  </div>
+
+  <div class="branch-filters icetl-filter-panel">
+    <div class="icetl-filter-toolbar">
+      <div class="branch-filters__title">
+        <span class="branch-filters__icon">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+    </div>
+
+    <div class="icetl-filter-grid" [hidden]="!showFilters">
+      <label class="branch-filter">
+        <span>Branch Name</span>
+        <div class="icetl-search-field">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input
+            type="search"
+            [(ngModel)]="filters.branchName"
+            (keyup.enter)="applyFilters()"
+            placeholder="Search branch name">
+        </div>
+      </label>
+
+      <label class="branch-filter">
+        <span>State</span>
+        <select [(ngModel)]="filters.stateCode" (change)="onFilterStateChange()">
+          <option value="">{{ loadingStates ? 'Loading states...' : 'All states' }}</option>
+          @for (state of states; track state.stateCode) {
+          <option [value]="state.stateCode">{{ state.stateName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="branch-filter">
+        <span>District/City</span>
+        <select
+          [(ngModel)]="filters.districtCode"
+          [disabled]="!filters.stateCode || loadingDistricts">
+          <option value="">
+            @if (loadingDistricts) {
+            Loading districts/cities...
+            } @else if (!filters.stateCode) {
+            Select state first
+            } @else {
+            All districts/cities
+            }
+          </option>
+          @for (district of districts; track district.districtCode) {
+          <option [value]="district.districtCode">{{ district.districtName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="branch-filter">
+        <span>Status</span>
+        <select [(ngModel)]="filters.status">
+          @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="branch-filter">
+        <span>Per Page</span>
+        <select [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="branch-filters__actions icetl-filter-actions">
+        <button type="button" class="icetl-btn icetl-btn-primary" (click)="applyFilters()" [disabled]="loading">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          <span>Search</span>
+        </button>
+
+        <button type="button" class="icetl-btn icetl-btn-outline" (click)="resetFilters()" [disabled]="loading">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          <span>Reset</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="icetl-spinner-wrap">
+    <span class="icetl-inline-spinner" aria-hidden="true"></span>
+    Loading branches...
+  </div>
+  }
+
+  @if (!loading && apiError) {
+  <div class="icetl-state icetl-state--error">
+    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+    <strong>Unable to load branches</strong>
+    <p>{{ apiError }}</p>
+  </div>
+  }
+
+  @if (!loading && !apiError && branches.length === 0) {
+  <div class="icetl-empty-state">
+    <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+    <h2>No branches found</h2>
+    <p>Add a branch or adjust the current filters.</p>
+  </div>
+  }
+
+  @if (!loading && !apiError && branches.length > 0) {
+  <div class="branch-table-wrap icetl-table-shell">
+    <table class="branch-table icetl-table">
+      <thead>
+        <tr>
+          <th>Serial No.</th>
+          <th>Branch Name</th>
+          <th>State</th>
+          <th>District/City</th>
+          <th>Branch Address</th>
+          <th>Status</th>
+          <th>Created Date</th>
+          <th aria-label="Actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (branch of branches; track trackByBranchId($index, branch)) {
+        <tr>
+          <td data-label="Serial No.">
+            <strong>{{ getSerialNumber($index) }}</strong>
+          </td>
+          <td data-label="Branch Name">
+            <div class="branch-name-cell">
+              <span class="branch-name-cell__icon">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+              </span>
+              <strong>{{ branch.branchName }}</strong>
+            </div>
+          </td>
+          <td data-label="State">{{ branch.stateName || 'N/A' }}</td>
+          <td data-label="District/City">{{ branch.districtName || 'N/A' }}</td>
+          <td data-label="Branch Address">
+            <span class="branch-address">{{ branch.branchAddress }}</span>
+          </td>
+          <td data-label="Status">
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="isActive(branch)"
+              [class.icetl-badge--inactive]="!isActive(branch)">
+              {{ branch.statusLabel }}
+            </span>
+          </td>
+          <td data-label="Created Date">{{ formatDate(branch.createdOn) }}</td>
+          <td data-label="Actions">
+            <div class="icetl-table-actions">
+              <button
+                type="button"
+                class="icetl-icon-btn"
+                (click)="openBranchDetails(branch)"
+                title="View branch details">
+                <i class="feather-eye" aria-hidden="true"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="icetl-pagination">
+    <span>Showing {{ resultStart }}-{{ resultEnd }} of {{ meta.total }} branch{{ meta.total === 1 ? '' : 'es' }}</span>
+    <div class="icetl-pagination__controls">
+      <button
+        type="button"
+        class="icetl-icon-btn"
+        (click)="goToPage(meta.currentPage - 1)"
+        [disabled]="meta.currentPage <= 1"
+        title="Previous page">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      <strong>{{ meta.currentPage }} / {{ meta.lastPage }}</strong>
+      <button
+        type="button"
+        class="icetl-icon-btn"
+        (click)="goToPage(meta.currentPage + 1)"
+        [disabled]="meta.currentPage >= meta.lastPage"
+        title="Next page">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </footer>
+  }
+</section>
+
+@if (selectedBranch) {
+<div class="branch-details-backdrop" (click)="closeBranchDetails()"></div>
+<section class="branch-details" role="dialog" aria-modal="true" aria-labelledby="branch-details-title">
+  <div
+    class="branch-details__dialog"
+    appModalWindow
+    #branchDetailsWindow="appModalWindow"
+    appModalWindowTitle="Branch details">
+    <header class="branch-details__header app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title">
+        <span>Branch</span>
+        <h2 id="branch-details-title">{{ selectedBranch.branchName }}</h2>
+      </div>
+      <app-modal-window-controls
+        [modal]="branchDetailsWindow"
+        closeLabel="Close branch details"
+        (closed)="closeBranchDetails()">
+      </app-modal-window-controls>
+    </header>
+
+    <div class="branch-details__body" data-app-modal-body>
+      <dl>
+        <div>
+          <dt>State</dt>
+          <dd>{{ selectedBranch.stateName || 'N/A' }}</dd>
+        </div>
+        <div>
+          <dt>District/City</dt>
+          <dd>{{ selectedBranch.districtName || 'N/A' }}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="isActive(selectedBranch)"
+              [class.icetl-badge--inactive]="!isActive(selectedBranch)">
+              {{ selectedBranch.statusLabel }}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt>Created Date</dt>
+          <dd>{{ formatDate(selectedBranch.createdOn) }}</dd>
+        </div>
+        <div class="branch-details__address">
+          <dt>Branch Address</dt>
+          <dd>{{ selectedBranch.branchAddress }}</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</section>
+}

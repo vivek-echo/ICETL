@@ -121,15 +121,15 @@ export class AddWorkshop implements OnInit {
   ) {
     this.itemForm = this.fb.group(
       {
-        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(48)]],
-        topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(48)]],
-        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(48)]],
+        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(120)]],
+        topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
+        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
+        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
         startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         endDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
         endTime: [''],
-        speakerName: ['', FormValidationRules.requiredName()],
+        speakerName: ['', FormValidationRules.requiredName(120)],
         price: [0, [Validators.required, Validators.min(0)]],
         description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(300)]],
         takeaways: this.fb.array([this.fb.control('')]),

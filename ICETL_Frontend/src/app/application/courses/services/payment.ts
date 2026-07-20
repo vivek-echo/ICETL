@@ -88,6 +88,42 @@ export interface PaymentWorkflow {
   installments: PaymentWorkflowInstallment[];
 }
 
+export type NormalizedPaymentStatus = 'pending' | 'success' | 'failed';
+
+export interface PaymentStatusItem {
+  moduleType: string;
+  moduleId?: number | null;
+  moduleCode?: string | null;
+  moduleTitle: string;
+  categoryName?: string | null;
+  amount: number;
+}
+
+export interface PaymentStatusDetails {
+  orderId: number;
+  orderReference?: string | null;
+  razorpayOrderId?: string | null;
+  totalAmount: number;
+  currency?: string | null;
+  orderStatus: string;
+  paymentStatus: NormalizedPaymentStatus;
+  paymentTableStatus?: string | null;
+  razorpayPaymentId?: string | null;
+  paymentReference?: string | null;
+  paymentMethod?: string | null;
+  paymentDisplayId?: string | null;
+  failureReason?: string | null;
+  hasSignature: boolean;
+  items: PaymentStatusItem[];
+  invoice?: Invoice | null;
+  enrollmentAccess: {
+    hasAccess: boolean;
+    status: string;
+    activeCourseIds: number[];
+  };
+  nextAction: 'go_to_learning' | 'retry_payment' | 'check_status' | string;
+}
+
 export interface InvoiceItem {
   courseId: number;
   code?: string | null;
@@ -283,6 +319,21 @@ export class PaymentService {
     return this.http.post(
       `${this.API_URL}/paymentFailure`,
       payload,
+    );
+  }
+
+  getPaymentStatus(params: {
+    orderId?: number;
+    orderReference?: string;
+    razorpayOrderId?: string;
+  }): Observable<{ success: boolean; message: string; paymentStatus: NormalizedPaymentStatus; data: PaymentStatusDetails }> {
+    return this.http.get<{ success: boolean; message: string; paymentStatus: NormalizedPaymentStatus; data: PaymentStatusDetails }>(
+      `${this.API_URL}/paymentStatus`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params).filter(([, value]) => value !== '' && value !== undefined && value !== null),
+        ) as Record<string, string>,
+      },
     );
   }
 

@@ -1,6 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { getApplicationDashboardRoute, readJsonFromStorage, resolveApplicationRoute } from '../../commonServices/auth-navigation';
 import { StoredMenu, normalizeStoredMenus } from '../../commonServices/menu-utils';
 
 interface DashboardSetting {
@@ -21,15 +22,6 @@ interface MenuNode extends StoredMenu {
 })
 export class SideNav implements OnInit, OnDestroy {
   readonly defaultMenuIcon = 'feather-circle';
-  private readonly applicationRootSegments = new Set([
-    'admin',
-    'courses',
-    'icetl-team',
-    'instructor',
-    'learner',
-    'workshopSeminar',
-    'workshop-seminar',
-  ]);
   private readonly parentActiveRoutes = new Set([
     '/application/courses/coursesCategories',
     '/application/courses/manageCourses',
@@ -38,6 +30,7 @@ export class SideNav implements OnInit, OnDestroy {
     '/application/courses/myLearning',
     '/application/workshopSeminar/workshop',
     '/application/workshopSeminar/seminar',
+    '/application/administration/manageBranch',
   ]);
   menuItems: MenuNode[] = [];
   dashboardSetting: DashboardSetting | null = null;
@@ -109,13 +102,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   private readJson<T>(key: string): T | null {
-    try {
-      const raw = localStorage.getItem(key);
-
-      return raw ? (JSON.parse(raw) as T) : null;
-    } catch {
-      return null;
-    }
+    return readJsonFromStorage<T>(key);
   }
 
   private normalizeMenus(value: unknown): StoredMenu[] {
@@ -147,6 +134,7 @@ export class SideNav implements OnInit, OnDestroy {
     sortedMenus.forEach((menu) => {
       menuMap.set(menu.id, {
         ...menu,
+        name: this.normalizeKnownMenuName(menu.name),
         route: this.normalizeKnownRoute(this.resolveMenuRoute(menu.url)),
         children: [],
       });
@@ -232,47 +220,18 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   private resolveMenuRoute(url?: string | null): string | null {
-    const route = url?.trim();
-
-    if (!route) {
-      return null;
-    }
-
-    if (route.startsWith('/')) {
-      return route;
-    }
-
-    if (route.startsWith('application/')) {
-      return `/${route}`;
-    }
-
-    const rootSegment = route.split('/')[0];
-
-    if (this.applicationRootSegments.has(rootSegment)) {
-      return `/application/${route}`;
-    }
-
-    const dashboardSegment = this.dashboardSetting?.dashboardUrl?.trim().replace(/^\/+|\/+$/g, '');
-
-    if (!dashboardSegment) {
-      return `/application/${route}`;
-    }
-
-    if (route === dashboardSegment || route.startsWith(`${dashboardSegment}/`)) {
-      return `/application/${route}`;
-    }
-
-    return `/application/${dashboardSegment}/${route}`;
+    return resolveApplicationRoute(url);
   }
 
   private normalizeKnownRoute(route: string | null): string | null {
-    return route?.replace(
-      /\/application\/courses\/manageOfflineCourse(\/|$)/,
-      '/application/courses/manageOfflineCourses$1',
-    ) ?? null;
+    return route?.replace(/\/application\/adminstration(\/|$)/, '/application/administration$1') ?? null;
+  }
+
+  private normalizeKnownMenuName(name: string): string {
+    return this.normalizeMenuName(name) === 'adminstration' ? 'Administration' : name;
   }
 
   getDashboardRoute(): string | null {
-    return this.normalizeKnownRoute(this.resolveMenuRoute(this.dashboardSetting?.dashboardUrl ?? null));
+    return this.dashboardSetting ? getApplicationDashboardRoute() : null;
   }
 }

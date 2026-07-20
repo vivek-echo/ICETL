@@ -82,11 +82,7 @@ class PaymentController extends Controller
 
             DB::beginTransaction();
 
-            DB::table('orders')
-                ->where('userId', $userId)
-                ->where('status', 'pending')
-                ->where('deletedFlag', 0)
-                ->update(['status' => 'cancelled', 'updated_at' => now()]);
+            $this->expireStalePendingOrders($userId);
 
             $orderId = DB::table('orders')->insertGetId([
                 'userId' => $userId,
@@ -114,6 +110,7 @@ class PaymentController extends Controller
             ])->all();
 
             DB::table('order_items')->insert($orderItems);
+            $this->updateOrderItemsPaymentStatus($orderId, 'pending');
 
             $razorpayOrder = $api->order->create([
                 'receipt' => 'order_' . $orderId,
@@ -130,11 +127,22 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $paymentId = $this->createPendingPayment(
+                $orderId,
+                $userId,
+                $razorpayOrder['id'],
+                $subtotal,
+                $taxAmount,
+                $totalAmount,
+                self::CURRENCY
+            );
+
             $order = DB::table('orders')->where('id', $orderId)->first();
 
             $this->logPaymentEvent($request, 'checkout.order_created', [
                 'userId' => $userId,
                 'orderId' => $orderId,
+                'paymentId' => $paymentId,
                 'status' => 'pending',
                 'requestPayload' => ['courseIds' => $courseIds],
                 'responsePayload' => ['razorpayOrderId' => $razorpayOrder['id'], 'amount' => $totalAmount],
@@ -145,6 +153,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Checkout initialized successfully.',
+                'paymentStatus' => 'pending',
                 'orderId' => (int) $order->id,
                 'orderReference' => $order->orderReference,
                 'razorpayOrderId' => $razorpayOrder['id'],
@@ -237,11 +246,7 @@ class PaymentController extends Controller
 
             DB::beginTransaction();
 
-            DB::table('orders')
-                ->where('userId', $userId)
-                ->where('status', 'pending')
-                ->where('deletedFlag', 0)
-                ->update(['status' => 'cancelled', 'updated_at' => now()]);
+            $this->expireStalePendingOrders($userId);
 
             $orderId = DB::table('orders')->insertGetId([
                 'userId' => $userId,
@@ -271,6 +276,7 @@ class PaymentController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]));
+            $this->updateOrderItemsPaymentStatus($orderId, 'pending');
 
             $razorpayOrder = $api->order->create([
                 'receipt' => strtolower($entityType) . '_' . $orderId,
@@ -289,11 +295,22 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $paymentId = $this->createPendingPayment(
+                $orderId,
+                $userId,
+                $razorpayOrder['id'],
+                $subtotal,
+                $taxAmount,
+                $totalAmount,
+                self::CURRENCY
+            );
+
             $order = DB::table('orders')->where('id', $orderId)->first();
 
             $this->logPaymentEvent($request, 'checkout.program_order_created', [
                 'userId' => $userId,
                 'orderId' => $orderId,
+                'paymentId' => $paymentId,
                 'status' => 'pending',
                 'entityType' => $entityLabel,
                 'entityId' => $entityId,
@@ -312,6 +329,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "{$entityLabel} checkout initialized successfully.",
+                'paymentStatus' => 'pending',
                 'orderId' => (int) $order->id,
                 'orderReference' => $order->orderReference,
                 'razorpayOrderId' => $razorpayOrder['id'],
@@ -353,11 +371,7 @@ class PaymentController extends Controller
     ) {
         DB::beginTransaction();
 
-        DB::table('orders')
-            ->where('userId', $userId)
-            ->where('status', 'pending')
-            ->where('deletedFlag', 0)
-            ->update(['status' => 'cancelled', 'updated_at' => now()]);
+        $this->expireStalePendingOrders($userId);
 
         $orderReference = $this->reference('ORD');
         $orderId = DB::table('orders')->insertGetId([
@@ -386,6 +400,7 @@ class PaymentController extends Controller
         ])->all();
 
         DB::table('order_items')->insert($orderItems);
+        $this->updateOrderItemsPaymentStatus($orderId, 'success');
 
         $paymentReference = $this->reference('FREE');
         $paymentId = DB::table('payments')->insertGetId([
@@ -458,6 +473,7 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Free course enrollment completed successfully.',
+            'paymentStatus' => 'success',
             'paymentRequired' => false,
             'freeEnrollment' => true,
             'orderId' => $orderId,
@@ -809,18 +825,22 @@ class PaymentController extends Controller
         }
 
         $userId = (int) $request->user()->id;
+        $razorpayPaymentId = (string) $request->input('razorpay_payment_id');
+        $razorpayOrderId = (string) $request->input('razorpay_order_id');
+        $razorpaySignature = (string) $request->input('razorpay_signature');
 
         try {
             $this->razorpay()->utility->verifyPaymentSignature([
-                'razorpay_order_id' => $request->input('razorpay_order_id'),
-                'razorpay_payment_id' => $request->input('razorpay_payment_id'),
-                'razorpay_signature' => $request->input('razorpay_signature'),
+                'razorpay_order_id' => $razorpayOrderId,
+                'razorpay_payment_id' => $razorpayPaymentId,
+                'razorpay_signature' => $razorpaySignature,
             ]);
         } catch (SignatureVerificationError $e) {
             $this->recordFailedVerification($request, $userId, $e->getMessage());
 
             return response()->json([
                 'success' => false,
+                'paymentStatus' => 'failed',
                 'message' => 'Payment verification failed. Please contact support if money was debited.',
             ], 400);
         }
@@ -831,7 +851,7 @@ class PaymentController extends Controller
             $order = DB::table('orders')
                 ->where('id', (int) $request->input('orderId'))
                 ->where('userId', $userId)
-                ->where('razorpayOrderId', $request->input('razorpay_order_id'))
+                ->where('razorpayOrderId', $razorpayOrderId)
                 ->where('deletedFlag', 0)
                 ->lockForUpdate()
                 ->first();
@@ -842,27 +862,30 @@ class PaymentController extends Controller
             }
 
             if ($order->status === 'paid') {
+                $payment = $this->latestPaymentForOrder((int) $order->id);
                 $invoice = $this->buildInvoice((int) $order->id, $userId);
                 DB::commit();
 
                 return response()->json([
                     'success' => true,
+                    'paymentStatus' => 'success',
                     'message' => 'Payment already verified.',
-                    'payment_id' => $request->input('razorpay_payment_id'),
+                    'payment_id' => $payment->razorpayPaymentId ?? $razorpayPaymentId,
                     'invoice' => $invoice,
                 ]);
             }
 
-            if (!in_array($order->status, ['pending', 'failed'], true)) {
+            if ($order->status !== 'pending') {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'This order can no longer be verified.',
+                    'paymentStatus' => $this->normalizePaymentStatus($order->status, null),
+                    'message' => 'This order can no longer be verified. Please start a fresh checkout.',
                 ], 409);
             }
 
             $existingPayment = DB::table('payments')
-                ->where('razorpayPaymentId', $request->input('razorpay_payment_id'))
+                ->where('razorpayPaymentId', $razorpayPaymentId)
                 ->where('deletedFlag', 0)
                 ->lockForUpdate()
                 ->first();
@@ -875,32 +898,68 @@ class PaymentController extends Controller
                 ], 409);
             }
 
-            $paymentId = $existingPayment
-                ? (int) $existingPayment->id
-                : DB::table('payments')->insertGetId([
+            $pendingPayment = null;
+            if (!$existingPayment) {
+                $pendingPayment = DB::table('payments')
+                    ->where('orderId', $order->id)
+                    ->where('status', 'pending')
+                    ->where('deletedFlag', 0)
+                    ->orderByDesc('id')
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            $paymentId = (int) ($existingPayment->id ?? $pendingPayment->id ?? 0);
+            $paymentPayload = [
+                'orderId' => $order->id,
+                'userId' => $userId,
+                'razorpayPaymentId' => $razorpayPaymentId,
+                'razorpayOrderId' => $razorpayOrderId,
+                'razorpaySignature' => $razorpaySignature,
+                'amount' => $order->subtotalAmount ?? $order->totalAmount,
+                'taxAmount' => $order->taxAmount ?? 0,
+                'totalAmount' => $order->totalAmount,
+                'currency' => $order->currency ?? self::CURRENCY,
+                'paymentMethod' => 'RAZORPAY',
+                'status' => 'success',
+                'failureReason' => null,
+                'paidAt' => now(),
+                'deletedFlag' => 0,
+                'updated_at' => now(),
+            ];
+
+            if ($paymentId > 0) {
+                DB::table('payments')
+                    ->where('id', $paymentId)
+                    ->update($this->filterExistingColumns('payments', $paymentPayload));
+            } else {
+                $paymentId = DB::table('payments')->insertGetId($this->filterExistingColumns('payments', array_merge(
+                    [
+                        'paymentReference' => $this->reference('PAY'),
+                        'created_at' => now(),
+                    ],
+                    $paymentPayload
+                )));
+            }
+
+            if ($paymentId <= 0) {
+                $paymentId = DB::table('payments')->insertGetId([
                     'orderId' => $order->id,
                     'userId' => $userId,
                     'paymentReference' => $this->reference('PAY'),
-                    'razorpayPaymentId' => $request->input('razorpay_payment_id'),
-                    'razorpayOrderId' => $request->input('razorpay_order_id'),
-                    'razorpaySignature' => $request->input('razorpay_signature'),
+                    'razorpayPaymentId' => $razorpayPaymentId,
+                    'razorpayOrderId' => $razorpayOrderId,
+                    'razorpaySignature' => $razorpaySignature,
                     'amount' => $order->subtotalAmount ?? $order->totalAmount,
                     'taxAmount' => $order->taxAmount ?? 0,
                     'totalAmount' => $order->totalAmount,
                     'currency' => $order->currency ?? self::CURRENCY,
-                    'status' => 'success',
-                    'paidAt' => now(),
-                    'deletedFlag' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-            if ($existingPayment) {
-                DB::table('payments')->where('id', $paymentId)->update([
-                    'razorpaySignature' => $request->input('razorpay_signature'),
+                    'paymentMethod' => 'RAZORPAY',
                     'status' => 'success',
                     'failureReason' => null,
                     'paidAt' => now(),
+                    'deletedFlag' => 0,
+                    'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
@@ -929,6 +988,7 @@ class PaymentController extends Controller
                 'status' => 'paid',
                 'updated_at' => now(),
             ]);
+            $this->updateOrderItemsPaymentStatus((int) $order->id, 'success');
 
             $courseIds = $courseItems->pluck('courseId')->all();
             if (!empty($courseIds)) {
@@ -963,8 +1023,9 @@ class PaymentController extends Controller
 
             return response()->json([
                 'success' => true,
+                'paymentStatus' => 'success',
                 'message' => "Payment verified successfully. {$verifiedEntityLabel} purchase is complete.",
-                'payment_id' => $request->input('razorpay_payment_id'),
+                'payment_id' => $razorpayPaymentId,
                 'invoice' => $invoice,
             ]);
         } catch (Throwable $e) {
@@ -1024,32 +1085,21 @@ class PaymentController extends Controller
                     'status' => $status,
                     'updated_at' => now(),
                 ]);
+                $this->updateOrderItemsPaymentStatus((int) $order->id, $status);
 
-                $paymentLookup = ['razorpayPaymentId' => $request->input('razorpay_payment_id')];
-                if (!$request->filled('razorpay_payment_id')) {
-                    $paymentLookup = ['orderId' => $order->id, 'status' => 'pending'];
-                }
-
-                DB::table('payments')->updateOrInsert($paymentLookup, [
-                    'orderId' => $order->id,
-                    'userId' => $userId,
-                    'paymentReference' => $this->reference('PAY'),
-                    'razorpayOrderId' => $request->input('razorpay_order_id') ?: $order->razorpayOrderId,
-                    'razorpayPaymentId' => $request->input('razorpay_payment_id'),
-                    'amount' => $order->subtotalAmount ?? $order->totalAmount,
-                    'taxAmount' => $order->taxAmount ?? 0,
-                    'totalAmount' => $order->totalAmount,
-                    'currency' => $order->currency ?? self::CURRENCY,
-                    'status' => $status,
-                    'failureReason' => $reason,
-                    'deletedFlag' => 0,
-                    'updated_at' => now(),
-                    'created_at' => now(),
-                ]);
+                $paymentId = $this->markOrderPaymentAttempt(
+                    $order,
+                    $userId,
+                    $status,
+                    $reason,
+                    $request->input('razorpay_payment_id'),
+                    $request->input('razorpay_order_id') ?: $order->razorpayOrderId
+                );
 
                 $this->logPaymentEvent($request, 'payment.' . $status, [
                     'userId' => $userId,
                     'orderId' => (int) $order->id,
+                    'paymentId' => $paymentId,
                     'status' => $status,
                     'entityType' => $entity['entityType'] ?? null,
                     'entityId' => $entity['entityId'] ?? null,
@@ -1064,6 +1114,7 @@ class PaymentController extends Controller
 
             return response()->json([
                 'success' => true,
+                'paymentStatus' => $order->status === 'paid' ? 'success' : $this->normalizePaymentStatus($status ?? $order->status, null),
                 'message' => 'Payment status recorded.',
             ]);
         } catch (Throwable $e) {
@@ -1075,6 +1126,51 @@ class PaymentController extends Controller
                 'message' => 'Unable to record payment status.',
             ], 500);
         }
+    }
+
+    public function paymentStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'orderId' => 'nullable|required_without_all:orderReference,razorpayOrderId|integer|min:1',
+            'orderReference' => 'nullable|required_without_all:orderId,razorpayOrderId|string|max:120',
+            'razorpayOrderId' => 'nullable|required_without_all:orderId,orderReference|string|max:120',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        $userId = (int) $request->user()->id;
+
+        $query = DB::table('orders')
+            ->where('userId', $userId)
+            ->where('deletedFlag', 0);
+
+        if ($request->filled('orderId')) {
+            $query->where('id', (int) $request->input('orderId'));
+        } elseif ($request->filled('orderReference')) {
+            $query->where('orderReference', (string) $request->input('orderReference'));
+        } else {
+            $query->where('razorpayOrderId', (string) $request->input('razorpayOrderId'));
+        }
+
+        $order = $query->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ], 404);
+        }
+
+        $data = $this->paymentStatusPayload($request, $order, $userId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment status fetched successfully.',
+            'paymentStatus' => $data['paymentStatus'],
+            'data' => $data,
+        ]);
     }
 
     public function webhook(Request $request)
@@ -1111,24 +1207,25 @@ class PaymentController extends Controller
                 : null;
 
             if ($eventType === 'payment.failed' && $order && $order->status !== 'paid') {
+                $reason = $paymentEntity['error_description'] ?? $paymentEntity['error_reason'] ?? 'Gateway reported payment failure.';
+
                 DB::table('orders')->where('id', $order->id)->update(['status' => 'failed', 'updated_at' => now()]);
-                DB::table('payments')->updateOrInsert(
-                    ['razorpayPaymentId' => $razorpayPaymentId],
-                    [
-                        'orderId' => $order->id,
-                        'userId' => $order->userId,
-                        'paymentReference' => $this->reference('PAY'),
-                        'razorpayOrderId' => $razorpayOrderId,
-                        'amount' => ($paymentEntity['amount'] ?? 0) / 100,
-                        'totalAmount' => ($paymentEntity['amount'] ?? 0) / 100,
-                        'currency' => $paymentEntity['currency'] ?? self::CURRENCY,
-                        'status' => 'failed',
-                        'failureReason' => $paymentEntity['error_description'] ?? $paymentEntity['error_reason'] ?? 'Gateway reported payment failure.',
-                        'deletedFlag' => 0,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
+                $this->updateOrderItemsPaymentStatus((int) $order->id, 'failed');
+                $paymentId = $this->markOrderPaymentAttempt(
+                    $order,
+                    (int) $order->userId,
+                    'failed',
+                    $reason,
+                    $razorpayPaymentId,
+                    $razorpayOrderId,
+                    null,
+                    (float) (($paymentEntity['amount'] ?? 0) / 100),
+                    (string) ($paymentEntity['currency'] ?? self::CURRENCY)
                 );
+
+                $payment = $paymentId
+                    ? DB::table('payments')->where('id', $paymentId)->where('deletedFlag', 0)->first()
+                    : $payment;
             }
 
             if ($eventType === 'refund.processed' && $payment) {
@@ -1259,9 +1356,13 @@ class PaymentController extends Controller
         $courseCounts = empty($orderIds)
             ? collect()
             : DB::table('order_items')->whereIn('orderId', $orderIds)->where('deletedFlag', 0)->select('orderId', DB::raw('COUNT(*) as total'))->groupBy('orderId')->pluck('total', 'orderId');
+        $orderEntities = collect($orderIds)->mapWithKeys(fn($orderId) => [
+            (int) $orderId => $this->orderEntitySummary((int) $orderId),
+        ]);
 
-        $data = collect($page->items())->map(function ($order) use ($courseCounts) {
+        $data = collect($page->items())->map(function ($order) use ($courseCounts, $orderEntities) {
             $invoiceEntity = $this->invoiceEntityFromJson($order->invoiceData ?? null);
+            $orderEntity = $orderEntities->get((int) $order->id) ?? [];
             $paymentMethod = $this->paymentMethodLabel(
                 $order->paymentMethod,
                 $order->offlinePaymentBy,
@@ -1290,9 +1391,9 @@ class PaymentController extends Controller
                     $order->paymentReference,
                     $order->offlineReferenceNo
                 ),
-                'entityType' => $order->offlineEntityType ?? $order->entityType ?? ($invoiceEntity['entityType'] ?? null),
-                'entityCode' => $order->offlineEntityCode ?? $order->entityCode ?? ($invoiceEntity['entityCode'] ?? null),
-                'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? ($invoiceEntity['entityTitle'] ?? null),
+                'entityType' => $order->offlineEntityType ?? $order->entityType ?? ($invoiceEntity['entityType'] ?? ($orderEntity['entityType'] ?? null)),
+                'entityCode' => $order->offlineEntityCode ?? $order->entityCode ?? ($invoiceEntity['entityCode'] ?? ($orderEntity['entityCode'] ?? null)),
+                'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? ($invoiceEntity['entityTitle'] ?? ($orderEntity['entityTitle'] ?? null)),
                 'failureReason' => $order->failureReason,
                 'created_at' => $order->created_at,
                 'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
@@ -2353,6 +2454,334 @@ class PaymentController extends Controller
         return false;
     }
 
+    private function expireStalePendingOrders(int $userId): void
+    {
+        if (!Schema::hasTable('orders')) {
+            return;
+        }
+
+        $expiredOrderIds = DB::table('orders')
+            ->where('userId', $userId)
+            ->where('status', 'pending')
+            ->where('deletedFlag', 0)
+            ->whereNotNull('expiresAt')
+            ->where('expiresAt', '<', now())
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        if (empty($expiredOrderIds)) {
+            return;
+        }
+
+        DB::table('orders')
+            ->whereIn('id', $expiredOrderIds)
+            ->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+        if (Schema::hasTable('payments')) {
+            DB::table('payments')
+                ->whereIn('orderId', $expiredOrderIds)
+                ->where('status', 'pending')
+                ->where('deletedFlag', 0)
+                ->update($this->filterExistingColumns('payments', [
+                    'status' => 'cancelled',
+                    'failureReason' => 'Payment session expired.',
+                    'updated_at' => now(),
+                ]));
+        }
+
+        foreach ($expiredOrderIds as $orderId) {
+            $this->updateOrderItemsPaymentStatus($orderId, 'cancelled');
+        }
+    }
+
+    private function createPendingPayment(
+        int $orderId,
+        int $userId,
+        string $razorpayOrderId,
+        float $amount,
+        float $taxAmount,
+        float $totalAmount,
+        string $currency
+    ): ?int {
+        if (!Schema::hasTable('payments')) {
+            return null;
+        }
+
+        return DB::table('payments')->insertGetId($this->filterExistingColumns('payments', [
+            'orderId' => $orderId,
+            'userId' => $userId,
+            'paymentReference' => $this->reference('PAY'),
+            'razorpayPaymentId' => null,
+            'razorpayOrderId' => $razorpayOrderId,
+            'razorpaySignature' => null,
+            'amount' => $amount,
+            'taxAmount' => $taxAmount,
+            'totalAmount' => $totalAmount,
+            'currency' => $currency,
+            'paymentMethod' => 'RAZORPAY',
+            'status' => 'pending',
+            'failureReason' => null,
+            'deletedFlag' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]));
+    }
+
+    private function markOrderPaymentAttempt(
+        object $order,
+        int $userId,
+        string $status,
+        ?string $reason = null,
+        ?string $razorpayPaymentId = null,
+        ?string $razorpayOrderId = null,
+        ?string $razorpaySignature = null,
+        ?float $gatewayAmount = null,
+        ?string $gatewayCurrency = null
+    ): ?int {
+        if (!Schema::hasTable('payments')) {
+            return null;
+        }
+
+        $razorpayPaymentId = trim((string) ($razorpayPaymentId ?? '')) ?: null;
+        $razorpayOrderId = trim((string) ($razorpayOrderId ?? ($order->razorpayOrderId ?? ''))) ?: null;
+        $status = strtolower($status);
+        $payment = null;
+
+        if ($razorpayPaymentId) {
+            $payment = DB::table('payments')
+                ->where('razorpayPaymentId', $razorpayPaymentId)
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            if ($payment && (int) $payment->orderId !== (int) $order->id) {
+                return null;
+            }
+        }
+
+        if (!$payment) {
+            $payment = DB::table('payments')
+                ->where('orderId', $order->id)
+                ->where('status', 'pending')
+                ->where('deletedFlag', 0)
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+        }
+
+        $paymentId = (int) ($payment->id ?? 0);
+        $payload = [
+            'orderId' => $order->id,
+            'userId' => $userId,
+            'razorpayOrderId' => $razorpayOrderId,
+            'amount' => $gatewayAmount ?? ($order->subtotalAmount ?? $order->totalAmount),
+            'taxAmount' => $order->taxAmount ?? 0,
+            'totalAmount' => $gatewayAmount ?? $order->totalAmount,
+            'currency' => $gatewayCurrency ?? ($order->currency ?? self::CURRENCY),
+            'paymentMethod' => 'RAZORPAY',
+            'status' => $status,
+            'failureReason' => $status === 'success' ? null : $reason,
+            'deletedFlag' => 0,
+            'updated_at' => now(),
+        ];
+
+        if ($razorpayPaymentId) {
+            $payload['razorpayPaymentId'] = $razorpayPaymentId;
+        }
+
+        if ($razorpaySignature) {
+            $payload['razorpaySignature'] = $razorpaySignature;
+        }
+
+        if ($status === 'success') {
+            $payload['paidAt'] = now();
+        }
+
+        if ($paymentId > 0) {
+            DB::table('payments')
+                ->where('id', $paymentId)
+                ->update($this->filterExistingColumns('payments', $payload));
+
+            return $paymentId;
+        }
+
+        return DB::table('payments')->insertGetId($this->filterExistingColumns('payments', array_merge([
+            'paymentReference' => $this->reference('PAY'),
+            'created_at' => now(),
+        ], $payload)));
+    }
+
+    private function updateOrderItemsPaymentStatus(int $orderId, string $status): void
+    {
+        if (!Schema::hasTable('order_items') || !Schema::hasColumn('order_items', 'paymentStatus')) {
+            return;
+        }
+
+        $paymentStatus = match ($status) {
+            'success', 'paid' => 'PAID',
+            'pending' => 'PENDING',
+            default => 'FAILED',
+        };
+
+        DB::table('order_items')
+            ->where('orderId', $orderId)
+            ->where('deletedFlag', 0)
+            ->update($this->filterExistingColumns('order_items', [
+                'paymentStatus' => $paymentStatus,
+                'updated_at' => now(),
+            ]));
+    }
+
+    private function latestPaymentForOrder(int $orderId): ?object
+    {
+        if (!Schema::hasTable('payments')) {
+            return null;
+        }
+
+        return DB::table('payments')
+            ->where('orderId', $orderId)
+            ->where('deletedFlag', 0)
+            ->orderByRaw("CASE WHEN status = 'success' THEN 0 WHEN status = 'pending' THEN 1 ELSE 2 END")
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function normalizePaymentStatus(?string $orderStatus, ?string $paymentStatus): string
+    {
+        $orderStatus = strtolower(trim((string) $orderStatus));
+        $paymentStatus = strtolower(trim((string) $paymentStatus));
+
+        if ($orderStatus === 'paid' || $paymentStatus === 'success') {
+            return 'success';
+        }
+
+        if (in_array($orderStatus, ['failed', 'cancelled'], true) || in_array($paymentStatus, ['failed', 'cancelled'], true)) {
+            return 'failed';
+        }
+
+        return 'pending';
+    }
+
+    private function paymentStatusPayload(Request $request, object $order, int $userId): array
+    {
+        $payment = $this->latestPaymentForOrder((int) $order->id);
+        $paymentStatus = $this->normalizePaymentStatus($order->status ?? null, $payment->status ?? null);
+        $items = $this->paymentStatusItems((int) $order->id);
+        $courseIds = collect($items)
+            ->filter(fn(array $item) => in_array($item['moduleType'], ['course', 'academic_course'], true) && (int) ($item['moduleId'] ?? 0) > 0)
+            ->pluck('moduleId')
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $activeCourseIds = collect();
+        if ($courseIds->isNotEmpty() && Schema::hasTable('enrollments')) {
+            $activeCourseIds = DB::table('enrollments')
+                ->where('userId', $userId)
+                ->whereIn('courseId', $courseIds->all())
+                ->where('status', 'active')
+                ->where('deletedFlag', 0)
+                ->pluck('courseId')
+                ->map(fn($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        $hasAccess = $paymentStatus === 'success'
+            && ($courseIds->isEmpty() || $activeCourseIds->count() === $courseIds->count());
+
+        $invoice = $paymentStatus === 'success'
+            ? $this->buildInvoice((int) $order->id, $userId)
+            : null;
+
+        return [
+            'orderId' => (int) $order->id,
+            'orderReference' => $order->orderReference,
+            'razorpayOrderId' => $order->razorpayOrderId,
+            'totalAmount' => (float) $order->totalAmount,
+            'currency' => $order->currency ?: self::CURRENCY,
+            'orderStatus' => $order->status,
+            'paymentStatus' => $paymentStatus,
+            'paymentTableStatus' => $payment->status ?? null,
+            'razorpayPaymentId' => $payment->razorpayPaymentId ?? null,
+            'paymentReference' => $payment->paymentReference ?? null,
+            'paymentMethod' => $this->paymentMethodLabel($payment->paymentMethod ?? null, null, $payment->razorpayPaymentId ?? null),
+            'paymentDisplayId' => $this->paymentDisplayId(
+                $payment->razorpayPaymentId ?? null,
+                $payment->paymentReference ?? null
+            ),
+            'failureReason' => $payment->failureReason ?? ($paymentStatus === 'failed' ? 'Payment was not completed successfully.' : null),
+            'hasSignature' => !empty($payment->razorpaySignature ?? null),
+            'items' => $items,
+            'invoice' => $invoice,
+            'enrollmentAccess' => [
+                'hasAccess' => $hasAccess,
+                'status' => $hasAccess ? 'unlocked' : ($paymentStatus === 'success' ? 'not_found' : 'locked'),
+                'activeCourseIds' => $activeCourseIds->all(),
+            ],
+            'nextAction' => match ($paymentStatus) {
+                'success' => 'go_to_learning',
+                'failed' => 'retry_payment',
+                default => 'check_status',
+            },
+        ];
+    }
+
+    private function paymentStatusItems(int $orderId): array
+    {
+        if (!Schema::hasTable('order_items')) {
+            return [];
+        }
+
+        return DB::table('order_items as oi')
+            ->leftJoin('courses as c', 'c.id', '=', 'oi.courseId')
+            ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
+            ->where('oi.orderId', $orderId)
+            ->where('oi.deletedFlag', 0)
+            ->select(...array_merge([
+                'oi.courseId',
+                'oi.price',
+                'oi.taxAmount',
+                'oi.totalAmount',
+                'c.title as courseTitle',
+                'c.courseType',
+                EntityCodeService::codeSelect('courses', 'c'),
+                'cc.categoryName',
+            ], $this->orderItemEntitySelects()))
+            ->get()
+            ->map(function ($item) {
+                $courseId = (int) ($item->courseId ?? 0);
+
+                if ($courseId > 0) {
+                    $isAcademicCourse = (int) ($item->courseType ?? 1) === 2;
+
+                    return [
+                        'moduleType' => $isAcademicCourse ? 'academic_course' : 'course',
+                        'moduleId' => $courseId,
+                        'moduleCode' => $item->code ?? null,
+                        'moduleTitle' => $item->courseTitle ?: 'Course',
+                        'categoryName' => $item->categoryName ?: 'Course',
+                        'amount' => (float) ($item->totalAmount ?? $item->price ?? 0),
+                    ];
+                }
+
+                $entityType = $item->itemEntityType ?? 'program';
+                $programType = $this->resolveProgramEntityType($entityType);
+
+                return [
+                    'moduleType' => $programType ?: strtolower(trim((string) $entityType)),
+                    'moduleId' => $item->itemEntityId ? (int) $item->itemEntityId : null,
+                    'moduleCode' => $item->itemEntityCode ?? null,
+                    'moduleTitle' => $item->itemEntityTitle ?? 'Program Purchase',
+                    'categoryName' => $entityType,
+                    'amount' => (float) ($item->totalAmount ?? $item->price ?? 0),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function createOrFetchInvoice(int $orderId, int $paymentId, int $userId): ?array
     {
         $existing = DB::table('invoices')->where('orderId', $orderId)->where('deletedFlag', 0)->first();
@@ -2716,29 +3145,52 @@ class PaymentController extends Controller
 
     private function recordFailedVerification(Request $request, int $userId, string $reason): void
     {
-        $order = DB::table('orders')
-            ->where('id', (int) $request->input('orderId'))
-            ->where('userId', $userId)
-            ->where('deletedFlag', 0)
-            ->first();
+        DB::beginTransaction();
 
-        if ($order && $order->status !== 'paid') {
-            DB::table('orders')->where('id', $order->id)->update(['status' => 'failed', 'updated_at' => now()]);
+        try {
+            $order = DB::table('orders')
+                ->where('id', (int) $request->input('orderId'))
+                ->where('userId', $userId)
+                ->where('deletedFlag', 0)
+                ->lockForUpdate()
+                ->first();
+
+            $paymentId = null;
+
+            if ($order && $order->status !== 'paid') {
+                DB::table('orders')->where('id', $order->id)->update(['status' => 'failed', 'updated_at' => now()]);
+                $this->updateOrderItemsPaymentStatus((int) $order->id, 'failed');
+                $paymentId = $this->markOrderPaymentAttempt(
+                    $order,
+                    $userId,
+                    'failed',
+                    $reason,
+                    $request->input('razorpay_payment_id'),
+                    $request->input('razorpay_order_id') ?: $order->razorpayOrderId,
+                    $request->input('razorpay_signature')
+                );
+            }
+
+            $entity = $order ? $this->orderEntitySummary((int) $order->id) : null;
+
+            $this->logPaymentEvent($request, 'payment.signature_failed', [
+                'userId' => $userId,
+                'orderId' => $order->id ?? null,
+                'paymentId' => $paymentId,
+                'status' => 'failed',
+                'entityType' => $entity['entityType'] ?? null,
+                'entityId' => $entity['entityId'] ?? null,
+                'entityCode' => $entity['entityCode'] ?? null,
+                'entityTitle' => $entity['entityTitle'] ?? null,
+                'requestPayload' => $request->all(),
+                'verificationResult' => ['signature' => 'invalid', 'reason' => $reason],
+            ]);
+
+            DB::commit();
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Unable to record failed payment verification', ['error' => $e->getMessage()]);
         }
-
-        $entity = $order ? $this->orderEntitySummary((int) $order->id) : null;
-
-        $this->logPaymentEvent($request, 'payment.signature_failed', [
-            'userId' => $userId,
-            'orderId' => $order->id ?? null,
-            'status' => 'failed',
-            'entityType' => $entity['entityType'] ?? null,
-            'entityId' => $entity['entityId'] ?? null,
-            'entityCode' => $entity['entityCode'] ?? null,
-            'entityTitle' => $entity['entityTitle'] ?? null,
-            'requestPayload' => $request->all(),
-            'verificationResult' => ['signature' => 'invalid', 'reason' => $reason],
-        ]);
     }
 
     private function normalizeProgramEntityType(mixed $value): string

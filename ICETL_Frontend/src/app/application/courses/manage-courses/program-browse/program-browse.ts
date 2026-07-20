@@ -448,7 +448,14 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
 
   private async openRazorpay(response: any): Promise<void> {
     if (typeof Razorpay === 'undefined') {
-      await this.alertHelper.error('Payment gateway is not loaded. Please refresh and try again.', 'Payment');
+      await this.recordPaymentFailure(
+        response.orderId,
+        response.razorpayOrderId,
+        null,
+        'failed',
+        'Payment gateway is not loaded. Please refresh and try again.',
+        true,
+      );
       return;
     }
 
@@ -519,8 +526,8 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
             response.razorpayOrderId,
             null,
             'cancelled',
-            'Payment window closed before completion',
-            false,
+            'Payment was cancelled. You can retry with a fresh checkout.',
+            true,
           );
         },
       },
@@ -568,7 +575,10 @@ export class ProgramBrowseComponent implements OnInit, OnDestroy {
       localStorage.removeItem('programCheckoutData');
 
       if (showMessage) {
-        await this.alertHelper.error(reason, 'Payment Failed');
+        await this.alertHelper.error(
+          reason,
+          status === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed',
+        );
       }
     } catch (error: any) {
       console.error(error);

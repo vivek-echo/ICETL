@@ -97,6 +97,8 @@ export class ViewCourses implements OnInit, OnDestroy {
   readonly placeholderImage = 'assets/images/course/course-01.png';
   readonly perPageOptions: Array<number | 'all'> = [10, 20, 50, 100, 'all'];
   readonly skeletonRows = [1, 2, 3, 4];
+  private readonly allowedThumbnailTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly maxThumbnailSizeBytes = 2 * 1024 * 1024;
   readonly sortOptions: Array<{ value: CourseSortOption; label: string }> = [
     { value: 'newest', label: 'Newest' },
     { value: 'popular', label: 'Popular' },
@@ -470,6 +472,20 @@ export class ViewCourses implements OnInit, OnDestroy {
     }
 
     const file = input.files[0];
+    const validationMessage = this.validateThumbnailFile(file);
+
+    if (validationMessage) {
+      input.value = '';
+      this.selectedEditThumbnail = null;
+      this.clearEditPreviewObjectUrl();
+      this.editPreviewImage = this.editingCourse
+        ? this.courseImage(this.editingCourse)
+        : this.placeholderImage;
+      void this.alertHelper.error(validationMessage);
+      this.markViewForRefresh();
+      return;
+    }
+
     this.selectedEditThumbnail = file;
     this.clearEditPreviewObjectUrl();
     this.editPreviewObjectUrl = URL.createObjectURL(file);
@@ -808,6 +824,18 @@ export class ViewCourses implements OnInit, OnDestroy {
       ],
       editCourseStatus: [this.editCourseForm.status, Validators.required],
     });
+  }
+
+  private validateThumbnailFile(file: File): string {
+    if (!this.allowedThumbnailTypes.includes(file.type)) {
+      return 'Course thumbnail must be a PNG, JPG, or WEBP image.';
+    }
+
+    if (file.size > this.maxThumbnailSizeBytes) {
+      return 'Course thumbnail must be 2 MB or smaller.';
+    }
+
+    return '';
   }
 
   private getEditHighlightsValidationMessage(): string {

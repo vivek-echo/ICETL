@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { getApplicationDashboardRoute } from './auth-navigation';
 
 export interface NavItem {
   label: string;
@@ -68,7 +69,7 @@ export class NavigationService {
     if (dashboard) {
       nav.push({
         label: dashboard.dashboardName || '',
-        route: '/application/' + (dashboard.dashboardUrl || ''),
+        route: getApplicationDashboardRoute(),
       });
     }
 

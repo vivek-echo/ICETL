@@ -4,11 +4,11 @@ export class FormValidationRules {
   static readonly namePattern = /^[A-Za-z](?:[A-Za-z ]*[A-Za-z])?$/;
   static readonly mobilePattern = /^[0-9]{10}$/;
 
-  static requiredName(): ValidatorFn[] {
+  static requiredName(maxLength = 150): ValidatorFn[] {
     return [
       Validators.required,
       Validators.minLength(3),
-      Validators.maxLength(50),
+      Validators.maxLength(maxLength),
       FormValidationRules.nameOnly(),
     ];
   }

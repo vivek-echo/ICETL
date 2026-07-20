@@ -1,3 +1,5 @@
+import { getApplicationDashboardRoute } from '../commonServices/auth-navigation';
+
 export interface NavChild {
   label: string;
   route: string;
@@ -138,7 +140,7 @@ export const MAIN_NAVIGATION: NavItem[] = [
     ? [
         {
           label: dashboardSetting.dashboardName || '',
-          route: '/application/' + (dashboardSetting.dashboardUrl || ''),
+          route: getApplicationDashboardRoute(),
         },
       ]
     : []),

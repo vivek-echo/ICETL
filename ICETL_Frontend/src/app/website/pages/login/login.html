@@ -174,7 +174,7 @@
                 <div *ngIf="profileForm.get('name')?.errors?.['maxlength']">
                   Maximum 150 characters allowed
                 </div>
-                <div *ngIf="profileForm.get('name')?.errors?.['pattern']">
+                <div *ngIf="profileForm.get('name')?.errors?.['nameOnly']">
                   Name can contain only alphabets and spaces
                 </div>
               </div>
@@ -221,7 +221,7 @@
               <div id="profile-phone-error" class="text-danger small mt-1"
                 *ngIf="profileForm.get('phone')?.touched && profileForm.get('phone')?.errors">
                 <div *ngIf="profileForm.get('phone')?.errors?.['required']">Phone number is required</div>
-                <div *ngIf="profileForm.get('phone')?.errors?.['pattern']">Enter a valid 10 digit phone number</div>
+                <div *ngIf="profileForm.get('phone')?.errors?.['mobileOnly']">Enter a valid 10 digit phone number</div>
               </div>
             </div>
 

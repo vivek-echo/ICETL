@@ -829,7 +829,7 @@ class AuthController extends Controller
 
     private function dashboardUrlFromRoleName(?string $roleName): string
     {
-        return strtolower(trim((string) $roleName));
+        return 'dashboard';
     }
 
     private function storedProfileFileUrl(string $type, ?string $fileName): ?string

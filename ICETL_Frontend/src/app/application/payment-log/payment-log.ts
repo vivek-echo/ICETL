@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
+import { Router } from '@angular/router';
 import { AlertHelperService } from '../../commonServices/alert-helper-service';
 import { Invoice, PaymentLog, PaymentService, PaymentWorkflow } from '../courses/services/payment';
 import { ModalWindowControlsComponent, ModalWindowDirective } from '../../shared/modal-window';
@@ -26,6 +27,7 @@ export class PaymentLogComponent implements OnInit {
   invoiceLoading = false;
   invoiceLoadingOrderId: number | null = null;
   downloadingInvoice = false;
+  statusCheckingOrderId: number | null = null;
   search = '';
   status = 'all';
   workflow: PaymentWorkflow | null = null;
@@ -39,6 +41,7 @@ export class PaymentLogComponent implements OnInit {
     private readonly paymentService: PaymentService,
     private readonly alertHelper: AlertHelperService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -99,6 +102,67 @@ export class PaymentLogComponent implements OnInit {
       this.invoiceLoadingOrderId = null;
       this.cdr.detectChanges();
     }
+  }
+
+  async checkPaymentStatus(log: PaymentLog): Promise<void> {
+    if (this.statusCheckingOrderId === log.id) {
+      return;
+    }
+
+    this.statusCheckingOrderId = log.id;
+    this.cdr.detectChanges();
+
+    try {
+      const response = await lastValueFrom(
+        this.paymentService.getPaymentStatus({ orderId: log.id }),
+      );
+      const status = response.paymentStatus || response.data?.paymentStatus;
+
+      if (status === 'success') {
+        await this.alertHelper.success(
+          response.data?.enrollmentAccess?.hasAccess
+            ? 'Payment is verified and access is unlocked.'
+            : 'Payment is verified. Please refresh My Learning if access is not visible yet.',
+          'Payment Verified',
+        );
+      } else if (status === 'failed') {
+        await this.alertHelper.error(
+          response.data?.failureReason || 'Payment was not completed successfully.',
+          'Payment Failed',
+        );
+      } else {
+        await this.alertHelper.info(
+          'Payment is still pending. Complete the Razorpay payment or retry from checkout.',
+          'Payment Pending',
+        );
+      }
+
+      await this.loadPaymentLogs();
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to check payment status',
+        'Payment Status',
+      );
+    } finally {
+      this.statusCheckingOrderId = null;
+      this.cdr.detectChanges();
+    }
+  }
+
+  retryPayment(log: PaymentLog): void {
+    const entityType = `${log.entityType || ''}`.toLowerCase();
+
+    if (entityType.includes('workshop')) {
+      void this.router.navigate(['/application/courses/manageCourses/browseWorkshop']);
+      return;
+    }
+
+    if (entityType.includes('seminar')) {
+      void this.router.navigate(['/application/courses/manageCourses/browseSeminars']);
+      return;
+    }
+
+    void this.router.navigate(['/application/yourCart']);
   }
 
   closeInvoice(): void {
@@ -273,14 +337,14 @@ export class PaymentLogComponent implements OnInit {
     }
 
     if (status === 'failed') {
-      return log.failureReason || 'Payment failed. Start checkout again from the course or cart page.';
+      return log.failureReason || 'Payment failed. Use Retry Payment to start a fresh checkout.';
     }
 
     if (status === 'cancelled') {
-      return 'Checkout was cancelled. Start a new checkout when you are ready.';
+      return 'Checkout was cancelled. Use Retry Payment when you are ready.';
     }
 
-    return 'Payment is pending. Refresh this page after completing payment.';
+    return 'Payment is pending. Use Check Status after completing payment.';
   }
 
   private formatPaymentMethod(value: string | null | undefined): string {

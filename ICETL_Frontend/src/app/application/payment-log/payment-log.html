@@ -235,6 +235,23 @@
               <i [class]="invoiceLoadingOrderId === log.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-file-invoice'"></i>
               {{ invoiceLoadingOrderId === log.id ? 'Opening' : 'View Invoice' }}
             </button>
+            } @else if (log.status === 'pending') {
+            <button
+              type="button"
+              class="payment-table__action icetl-btn icetl-btn-outline"
+              (click)="checkPaymentStatus(log)"
+              [disabled]="statusCheckingOrderId === log.id">
+              <i [class]="statusCheckingOrderId === log.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate'"></i>
+              {{ statusCheckingOrderId === log.id ? 'Checking' : 'Check Status' }}
+            </button>
+            } @else if (log.status === 'failed' || log.status === 'cancelled') {
+            <button
+              type="button"
+              class="payment-table__action icetl-btn icetl-btn-outline"
+              (click)="retryPayment(log)">
+              <i class="fa-solid fa-arrow-rotate-right"></i>
+              Retry Payment
+            </button>
             } @else {
             <button type="button" class="payment-table__action payment-table__action--disabled icetl-btn icetl-btn-outline" disabled>
               <i class="fa-solid fa-file-circle-xmark"></i>

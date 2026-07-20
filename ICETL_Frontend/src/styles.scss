@@ -2229,7 +2229,7 @@ body {
   min-height: var(--icetl-control-height) !important;
   height: auto !important;
   border-color: var(--icetl-border) !important;
-  border-radius: var(--icetl-radius) !important;
+  // border-radius: var(--icetl-radius) !important;
   font-size: 13px !important;
 }
 
@@ -2370,7 +2370,7 @@ button.rbt-btn,
 .rbt-dashboard-area :is(.card, .rbt-card, .course-card, .program-card, .program-list-row, .metric-card, .dashboard-panel, .payment-metric, .enquiry-summary article),
 .website-shell__content :is(.courses-search__card, .courses-category-card, .courses-feature-card, .courses-grid-card, .courses-cta__card, .contact-card, .login-card) {
   border-color: var(--icetl-border) !important;
-  border-radius: var(--icetl-radius-lg) !important;
+  // border-radius: var(--icetl-radius-lg) !important;
   box-shadow: var(--icetl-shadow-soft) !important;
 }
 
@@ -2480,7 +2480,7 @@ button.rbt-btn,
 .rbt-dashboard-area :is(.badge, [class*='status'], [class*='Status'], [class*='badge'], [class*='Badge']) {
   min-height: 24px;
   padding: 5px 9px !important;
-  border-radius: 999px !important;
+  // border-radius: 999px !important;
   font-size: 11px !important;
   font-weight: 750 !important;
 }

@@ -349,12 +349,24 @@ export class YourCart implements OnInit {
               response.razorpayOrderId,
               null,
               'cancelled',
-              'Payment window closed before completion',
-              false,
+              'Payment was cancelled. You can retry with a fresh checkout.',
+              true,
             );
           },
         },
       };
+
+      if (typeof Razorpay === 'undefined') {
+        await this.recordPaymentFailure(
+          response.orderId,
+          response.razorpayOrderId,
+          null,
+          'failed',
+          'Payment gateway is not loaded. Please refresh and try again.',
+          true,
+        );
+        return;
+      }
 
       const razorpay = new Razorpay(options);
 
@@ -409,7 +421,10 @@ export class YourCart implements OnInit {
       localStorage.removeItem('checkoutData');
 
       if (showMessage) {
-        await this.alertHelper.error(reason, 'Payment Failed');
+        await this.alertHelper.error(
+          reason,
+          status === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed',
+        );
       }
     } catch (error: any) {
       console.error(error);

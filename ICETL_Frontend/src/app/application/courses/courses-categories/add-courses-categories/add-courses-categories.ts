@@ -20,6 +20,8 @@ export class AddCoursesCategories implements OnDestroy {
   iconPreview: string | null = null;
 
   private previewObjectUrl: string | null = null;
+  private readonly allowedIconTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
+  private readonly maxIconSizeBytes = 2 * 1024 * 1024;
 
   constructor(
     private fb: FormBuilder,
@@ -30,7 +32,7 @@ export class AddCoursesCategories implements OnDestroy {
     private alertHelper: AlertHelperService,
   ) {
     this.categoryForm = this.fb.group({
-      categoryName: ['', FormValidationRules.requiredName()],
+      categoryName: ['', FormValidationRules.requiredName(50)],
       status: ['1', Validators.required],
       categoryIcon: ['', [Validators.required, Validators.pattern(/^fa-[a-z]+ fa-[a-z-]+$/)]],
       icon: [null],
@@ -46,6 +48,14 @@ export class AddCoursesCategories implements OnDestroy {
     }
 
     const file = input.files[0];
+    const validationMessage = this.validateIconFile(file);
+
+    if (validationMessage) {
+      input.value = '';
+      this.clearPreview();
+      void this.alertHelper.error(validationMessage);
+      return;
+    }
 
     this.selectedFile = file;
 
@@ -66,6 +76,7 @@ export class AddCoursesCategories implements OnDestroy {
     const formData = new FormData();
     formData.append('categoryName', this.categoryForm.value.categoryName);
     formData.append('status', this.categoryForm.value.status);
+    formData.append('categoryIcon', this.categoryForm.value.categoryIcon);
     if (this.selectedFile) {
       formData.append('icon', this.selectedFile);
     }
@@ -117,5 +128,17 @@ export class AddCoursesCategories implements OnDestroy {
         icon: null,
       });
     }
+  }
+
+  private validateIconFile(file: File): string {
+    if (!this.allowedIconTypes.includes(file.type)) {
+      return 'Category banner must be a PNG, JPG, or SVG image.';
+    }
+
+    if (file.size > this.maxIconSizeBytes) {
+      return 'Category banner must be 2 MB or smaller.';
+    }
+
+    return '';
   }
 }

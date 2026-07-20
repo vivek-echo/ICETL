@@ -15,7 +15,6 @@ import { NgxSpinnerService } from 'ngx-spinner';
 import { lastValueFrom, timeout } from 'rxjs';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { FormValidationService } from '../../../../commonServices/form-validation-service';
-import { FormValidationRules } from '../../../../commonServices/form-validation-rules';
 import { ROLE } from '../../../../commonServices/constants.service';
 import { Course } from '../../services/course';
 import { OfflineCourseInstructor, OfflineCourseItem } from '../../services/offline-course';
@@ -111,12 +110,12 @@ export class AddOfflineCourse implements OnInit {
   ) {
     this.courseForm = this.fb.group(
       {
-        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(50)]],
+        title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(120)]],
         isSpecial: [false],
         categoryId: ['', Validators.required],
         parentCourseId: [''],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-        city: ['', FormValidationRules.requiredName()],
+        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
+        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
         startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         endDate: ['', [this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],

@@ -232,6 +232,10 @@ class CoursesController extends Controller
                 );
             }
 
+            $categoryIcon = $request->has('categoryIcon')
+                ? $request->input('categoryIcon')
+                : ($category->categoryIcon ?? null);
+
             DB::table('coursecategories')
                 ->where('id', $categoryId)
                 ->update([
@@ -239,7 +243,7 @@ class CoursesController extends Controller
                     'slug' => Str::slug($request->categoryName),
                     'status' => $request->status,
                     'icon' => $iconPath,
-                    'categoryIcon' => $request->categoryIcon,
+                    'categoryIcon' => $categoryIcon,
                     'updated_at' => now()
                 ]);
 
@@ -377,6 +381,28 @@ class CoursesController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function invalidInstructorIds(array $instructorIds): array
+    {
+        if (empty($instructorIds)) {
+            return [];
+        }
+
+        $query = DB::table('users')
+            ->whereIn('id', $instructorIds)
+            ->where('role', self::ROLE_INSTRUCTOR);
+
+        if (Schema::hasColumn('users', 'deletedFlag')) {
+            $query->where('deletedFlag', 0);
+        }
+
+        $validInstructorIds = $query
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        return array_values(array_diff($instructorIds, $validInstructorIds));
     }
 
     private function normalizeCourseHighlights(mixed $value): array
@@ -810,7 +836,7 @@ class CoursesController extends Controller
                 'min:5',
                 'max:100'
             ],
-            'category' => 'required|numeric',
+            'category' => 'required|integer|exists:coursecategories,id',
             'isSpecial' => 'nullable|boolean',
             'parentCourseId' => [
                 Rule::requiredIf(fn() => $request->boolean('isSpecial')),
@@ -890,6 +916,18 @@ class CoursesController extends Controller
                     'message' => 'Validation failed',
                     'errors' => [
                         'instructor' => ['Please select at least one valid instructor.']
+                    ]
+                ], 422);
+            }
+
+            if (!empty($this->invalidInstructorIds($instructorIds))) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'instructor' => ['Please select only valid instructors.']
                     ]
                 ], 422);
             }
@@ -1048,6 +1086,16 @@ class CoursesController extends Controller
                 'message' => 'Validation failed',
                 'errors' => [
                     'instructor' => ['Please select at least one valid instructor.']
+                ]
+            ], 422);
+        }
+
+        if (!empty($this->invalidInstructorIds($instructorIds))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'instructor' => ['Please select only valid instructors.']
                 ]
             ], 422);
         }
@@ -4285,6 +4333,16 @@ class CoursesController extends Controller
             ], 422);
         }
 
+        if (!empty($this->invalidInstructorIds($instructorIds))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'instructor' => ['Please select only valid instructors.']
+                ]
+            ], 422);
+        }
+
         if ($isSpecial && !$this->isValidParentAcademicCourse($parentCourseId, (int) $request->input('category'))) {
             return response()->json([
                 'status' => false,
@@ -5587,6 +5645,16 @@ class CoursesController extends Controller
                 'message' => 'Validation failed',
                 'errors' => [
                     'instructor' => ['Please select at least one instructor.']
+                ]
+            ], 422);
+        }
+
+        if (!empty($this->invalidInstructorIds($instructorIds))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => [
+                    'instructor' => ['Please select only valid instructors.']
                 ]
             ], 422);
         }

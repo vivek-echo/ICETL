@@ -8,6 +8,7 @@ export interface DashboardMetric {
   value: number | string;
   helper?: string;
   icon?: string;
+  route?: string | null;
 }
 
 export interface DashboardChartPoint {
@@ -216,6 +217,27 @@ export interface AdminDashboardData {
   workflow?: AdminWorkflowData;
 }
 
+export interface DynamicDashboardAction {
+  id?: number | string;
+  label: string;
+  route: string;
+  icon?: string | null;
+  helper?: string | null;
+}
+
+export interface DynamicDashboardData {
+  role: {
+    id: number | null;
+    name: string;
+    dashboardUrl?: string | null;
+  };
+  kind: 'admin' | 'instructor' | 'learner' | 'generic';
+  summary: DashboardMetric[];
+  menuModules: DynamicDashboardAction[];
+  activity: WorkflowActivity[];
+  payload?: AdminDashboardData | InstructorDashboardData | LearnerDashboardData | Record<string, unknown>;
+}
+
 interface DashboardResponse<T> {
   success: boolean;
   message: string;
@@ -242,5 +264,9 @@ export class DashboardService {
 
   getAdminDashboard(): Observable<DashboardResponse<AdminDashboardData>> {
     return this.http.get<DashboardResponse<AdminDashboardData>>(`${this.apiUrl}/dashboard/admin`);
+  }
+
+  getCurrentDashboard(): Observable<DashboardResponse<DynamicDashboardData>> {
+    return this.http.get<DashboardResponse<DynamicDashboardData>>(`${this.apiUrl}/dashboard`);
   }
 }

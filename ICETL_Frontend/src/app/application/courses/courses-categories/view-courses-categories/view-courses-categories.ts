@@ -18,6 +18,7 @@ interface CourseCategory {
   slug: string;
   status: number | string;
   icon: string | null;
+  categoryIcon?: string | null;
   iconUrl?: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -61,6 +62,8 @@ export class ViewCoursesCategories implements OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private backendBaseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
   private editPreviewObjectUrl: string | null = null;
+  private readonly allowedIconTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
+  private readonly maxIconSizeBytes = 2 * 1024 * 1024;
 
   loading = false;
   isSavingEdit = false;
@@ -77,8 +80,9 @@ export class ViewCoursesCategories implements OnDestroy {
   editIconPreview: string | null = null;
 
   editCategoryForm = this.fb.group({
-    categoryName: ['', FormValidationRules.requiredName()],
+    categoryName: ['', FormValidationRules.requiredName(50)],
     status: ['1', Validators.required],
+    categoryIcon: ['', Validators.pattern(/^fa-[a-z]+ fa-[a-z-]+$/)],
     icon: [null as File | null],
   });
 
@@ -231,6 +235,7 @@ export class ViewCoursesCategories implements OnDestroy {
     this.editCategoryForm.reset({
       categoryName: category.categoryName,
       status: `${category.status}`,
+      categoryIcon: category.categoryIcon || '',
       icon: null,
     });
   }
@@ -248,6 +253,7 @@ export class ViewCoursesCategories implements OnDestroy {
     this.editCategoryForm.reset({
       categoryName: '',
       status: '1',
+      categoryIcon: '',
       icon: null,
     });
   }
@@ -264,6 +270,17 @@ export class ViewCoursesCategories implements OnDestroy {
     }
 
     const file = input.files[0];
+    const validationMessage = this.validateIconFile(file);
+
+    if (validationMessage) {
+      input.value = '';
+      this.selectedEditFile = null;
+      this.editCategoryForm.patchValue({ icon: null });
+      this.clearEditPreviewObjectUrl();
+      this.editIconPreview = this.editingCategory ? this.getCategoryIconUrl(this.editingCategory) : null;
+      void this.alertHelper.error(validationMessage);
+      return;
+    }
 
     this.selectedEditFile = file;
     this.editCategoryForm.patchValue({
@@ -294,6 +311,12 @@ export class ViewCoursesCategories implements OnDestroy {
     formData.append('id', `${this.editingCategory.id}`);
     formData.append('categoryName', `${this.editCategoryForm.value.categoryName ?? ''}`.trim());
     formData.append('status', `${this.editCategoryForm.value.status ?? '1'}`);
+
+    const categoryIcon = `${this.editCategoryForm.value.categoryIcon ?? ''}`.trim();
+
+    if (categoryIcon) {
+      formData.append('categoryIcon', categoryIcon);
+    }
 
     if (this.selectedEditFile) {
       formData.append('icon', this.selectedEditFile);
@@ -356,7 +379,8 @@ export class ViewCoursesCategories implements OnDestroy {
     const map: Record<string, string> = {
       categoryName: 'Category Name',
       status: 'Status',
-      icon: 'Category Icon',
+      categoryIcon: 'Category Icon',
+      icon: 'Category Banner',
     };
 
     return map[field] || field;
@@ -385,6 +409,18 @@ export class ViewCoursesCategories implements OnDestroy {
     }
 
     return apiError?.message || 'Something went wrong. Please try again.';
+  }
+
+  private validateIconFile(file: File): string {
+    if (!this.allowedIconTypes.includes(file.type)) {
+      return 'Category banner must be a PNG, JPG, or SVG image.';
+    }
+
+    if (file.size > this.maxIconSizeBytes) {
+      return 'Category banner must be 2 MB or smaller.';
+    }
+
+    return '';
   }
 
   private resetMetrics(): void {
