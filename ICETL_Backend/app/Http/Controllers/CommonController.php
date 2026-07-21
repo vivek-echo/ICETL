@@ -21,12 +21,20 @@ class CommonController extends Controller
     {
 
         try {
-            $requestData = $request->all();
-            $profileData = $requestData['userProfile'] ?? null;
-            // $isAdmin = $profileData && isset($profileData['role']) && $profileData['role'] === 1;
-            
-            $insId = $requestData['instructorId'] ? Crypt::decryptString($requestData['instructorId']) : null;
-            $ins = DB::table('users')->where('role', 3)->wherenotnull('name')->where('deletedFlag', 0)->select('id', 'name', 'email', 'code');
+            $insId = $this->resolveInstructorId($request);
+
+            if ($insId === false) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid instructor id'
+                ], 422);
+            }
+
+            $ins = DB::table('users')
+                ->where('role', 3)
+                ->whereNotNull('name')
+                ->where('deletedFlag', 0)
+                ->select('id', 'name', 'email', 'code');
 
             if (!empty($insId)) {
                 $ins->where('id', $insId);
@@ -43,6 +51,47 @@ class CommonController extends Controller
                 'status' => false,
                 'message' => 'Failed to fetch instructor list'
             ], 500);
+        }
+    }
+
+    private function resolveInstructorId(Request $request): int|false|null
+    {
+        $authenticatedUser = $request->user();
+
+        if ($authenticatedUser && (int) $authenticatedUser->role === 3) {
+            return (int) $authenticatedUser->id;
+        }
+
+        $instructorId = $request->input('instructorId');
+
+        if ($instructorId === null || $instructorId === '') {
+            return null;
+        }
+
+        if (is_numeric($instructorId)) {
+            $resolvedInstructorId = (int) $instructorId;
+
+            return $resolvedInstructorId > 0 ? $resolvedInstructorId : false;
+        }
+
+        if (!is_string($instructorId)) {
+            return false;
+        }
+
+        try {
+            $decryptedInstructorId = Crypt::decryptString($instructorId);
+
+            if (!is_numeric($decryptedInstructorId)) {
+                return false;
+            }
+
+            $resolvedInstructorId = (int) $decryptedInstructorId;
+
+            return $resolvedInstructorId > 0 ? $resolvedInstructorId : false;
+        } catch (Throwable $e) {
+            Log::warning('Invalid instructor id payload: ' . $e->getMessage());
+
+            return false;
         }
     }
 }

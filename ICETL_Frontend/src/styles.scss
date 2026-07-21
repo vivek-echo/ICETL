@@ -1212,9 +1212,7 @@ button {
   padding: clamp(16px, 1.7vw, 22px);
 }
 
-.icetl-form-section + .icetl-form-section {
-  margin-top: var(--icetl-space-4);
-}
+
 
 .icetl-form-section-header,
 .icetl-form-section-title {
@@ -1569,8 +1567,8 @@ button {
   border-collapse: separate;
   border-spacing: 0;
   margin: 0;
-  min-width: 720px;
-  width: 100%;
+  min-width: 100%;
+  width: max-content;
 }
 
 .icetl-table th,
@@ -1578,6 +1576,7 @@ button {
   border-bottom: 1px solid var(--icetl-border);
   padding: var(--icetl-table-cell-y) var(--icetl-table-cell-x);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .icetl-table th {
@@ -1720,6 +1719,20 @@ button {
   display: grid;
   gap: var(--icetl-space-3);
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.icetl-filter-grid > .icetl-filter-search {
+  grid-column: 1 / -1 !important;
+  justify-self: stretch;
+  max-width: calc((100% - var(--icetl-space-3)) / 2) !important;
+  min-width: 0;
+  width: 100% !important;
+}
+
+@media (max-width: 767px) {
+  .icetl-filter-grid > .icetl-filter-search {
+    max-width: 100% !important;
+  }
 }
 
 .icetl-filter-actions {

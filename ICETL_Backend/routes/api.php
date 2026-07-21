@@ -64,8 +64,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // administration routes
     Route::get('/administration/states', [AdministrationController::class, 'states']);
     Route::get('/administration/districts', [AdministrationController::class, 'districts']);
+    Route::get('/administration/roles', [AdministrationController::class, 'roles']);
     Route::post('/administration/branches', [AdministrationController::class, 'storeBranch']);
     Route::get('/administration/branches', [AdministrationController::class, 'branches']);
+    Route::post('/administration/employees', [AdministrationController::class, 'storeEmployee']);
+    Route::get('/administration/employees', [AdministrationController::class, 'employees']);
+    Route::get('/administration/users/{userId}/instructor-profile', [AdministrationController::class, 'instructorDetails'])
+        ->whereNumber('userId');
+    Route::post('/administration/employees/{employeeId}/reset-password', [AdministrationController::class, 'resetEmployeePassword'])
+        ->whereNumber('employeeId');
+    Route::post('/administration/employees/{employeeId}/status', [AdministrationController::class, 'updateEmployeeStatus'])
+        ->whereNumber('employeeId');
 
     // course category routes
     Route::post('/addCourseCategory', [CoursesController::class, 'addCourseCategory']);

@@ -22,7 +22,12 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'profile/instructor',
-        loadComponent: () => import('./profile/instructor/profile').then((m) => m.Profile),
+        pathMatch: 'full',
+        redirectTo: '/application/profile',
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./profile/profile').then((m) => m.Profile),
         title: 'Instructor Profile | ICETL',
       },
       {

@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.employee-add__eyebrow {
+  color: var(--icetl-primary, #2457e6);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.employee-add__form {
+  margin: 0;
+}
+
+.employee-add__actions {
+  border-top: 1px solid var(--icetl-border, #e4e9f2);
+  padding-top: 16px;
+}
+
+#employee-default-password {
+  background: var(--icetl-surface-muted, #f8fafc);
+  color: var(--icetl-text, #1f2937);
+  font-weight: 750;
+}
+
+@media (max-width: 575px) {
+  .employee-add__header :is(a, button),
+  .employee-add__actions :is(a, button) {
+    width: 100%;
+  }
+}

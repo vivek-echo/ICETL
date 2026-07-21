@@ -962,6 +962,10 @@ class AuthController extends Controller
         }
 
         if (str_starts_with($normalizedPath, 'uploads/instructors/')) {
+            if (in_array((int) ($user->role ?? 0), [1, 4], true)) {
+                return true;
+            }
+
             $legacyPath = $this->legacyInstructorPath($normalizedPath);
 
             return InstructorDocument::query()

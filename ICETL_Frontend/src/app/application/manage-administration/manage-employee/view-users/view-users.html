@@ -1,0 +1,530 @@
+<section class="users-view" aria-labelledby="view-users-title">
+  <header class="users-view__header icetl-page-header">
+    <div>
+      <span class="users-view__eyebrow">Manage Administration</span>
+      <h1 id="view-users-title">View Users</h1>
+      <p>Search users by name, email, phone, code, role, location, branch, and status.</p>
+    </div>
+
+    <div class="icetl-page-actions">
+      <button
+        type="button"
+        class="icetl-btn icetl-btn-outline"
+        (click)="loadUsers()"
+        [disabled]="loading"
+        title="Refresh users">
+        <i [class]="loading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'" aria-hidden="true"></i>
+        <span>Refresh</span>
+      </button>
+
+      <a class="icetl-btn icetl-btn-primary" routerLink="../addEmployee">
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+        <span>Add Employee</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="users-view__metrics icetl-metric-grid">
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-users" aria-hidden="true"></i>
+      <span>Total Users</span>
+      <strong>{{ summary.totalUsers }}</strong>
+      <small>Users table records</small>
+    </article>
+
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+      <span>Active</span>
+      <strong>{{ summary.activeUsers }}</strong>
+      <small>Allowed to sign in</small>
+    </article>
+
+    <article class="icetl-metric-card">
+      <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+      <span>Inactive</span>
+      <strong>{{ summary.inactiveUsers }}</strong>
+      <small>Currently deactivated</small>
+    </article>
+  </div>
+
+  <div class="user-filters icetl-filter-panel">
+    <div class="icetl-filter-toolbar">
+      <div class="user-filters__title">
+        <span class="user-filters__icon">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        </span>
+        <strong>Filters</strong>
+      </div>
+    </div>
+
+    <div class="icetl-filter-grid" [hidden]="!showFilters">
+      <label class="user-filter icetl-filter-search">
+        <span>Search</span>
+        <div class="icetl-search-field">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input
+            type="search"
+            [(ngModel)]="filters.search"
+            (keyup.enter)="applyFilters()"
+            placeholder="Name, email, phone, code">
+        </div>
+      </label>
+
+      <label class="user-filter">
+        <span>State</span>
+        <select [(ngModel)]="filters.stateCode" (change)="onFilterStateChange()">
+          <option value="">{{ loadingStates ? 'Loading states...' : 'All states' }}</option>
+          @for (state of states; track state.stateCode) {
+          <option [value]="state.stateCode">{{ state.stateName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="user-filter">
+        <span>District/City</span>
+        <select
+          [(ngModel)]="filters.districtCode"
+          (change)="onFilterDistrictChange()"
+          [disabled]="!filters.stateCode || loadingDistricts">
+          <option value="">
+            @if (loadingDistricts) {
+            Loading districts/cities...
+            } @else if (!filters.stateCode) {
+            Select state first
+            } @else {
+            All districts/cities
+            }
+          </option>
+          @for (district of districts; track district.districtCode) {
+          <option [value]="district.districtCode">{{ district.districtName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="user-filter">
+        <span>Branch</span>
+        <select
+          [(ngModel)]="filters.branchId"
+          [disabled]="!filters.districtCode || loadingBranches">
+          <option value="">
+            @if (loadingBranches) {
+            Loading branches...
+            } @else if (!filters.districtCode) {
+            Select district/city first
+            } @else {
+            All branches
+            }
+          </option>
+          @for (branch of branches; track branch.id) {
+          <option [value]="branch.id">{{ branch.branchName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="user-filter">
+        <span>Status</span>
+        <select [(ngModel)]="filters.status">
+          @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="user-filter">
+        <span>Role</span>
+        <select [(ngModel)]="filters.role" [disabled]="loadingRoles">
+          <option value="all">{{ loadingRoles ? 'Loading roles...' : 'All roles' }}</option>
+          @for (role of roles; track role.id) {
+          <option [value]="role.id">{{ role.roleName }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="user-filter">
+        <span>Per Page</span>
+        <select [(ngModel)]="meta.perPage" (change)="onPerPageChange()">
+          @for (option of perPageOptions; track option) {
+          <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="user-filters__actions icetl-filter-actions">
+        <button type="button" class="icetl-btn icetl-btn-primary" (click)="applyFilters()" [disabled]="loading">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          <span>Search</span>
+        </button>
+
+        <button type="button" class="icetl-btn icetl-btn-outline" (click)="resetFilters()" [disabled]="loading">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          <span>Reset</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="icetl-spinner-wrap">
+    <span class="icetl-inline-spinner" aria-hidden="true"></span>
+    Loading users...
+  </div>
+  }
+
+  @if (!loading && apiError) {
+  <div class="icetl-state icetl-state--error">
+    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+    <strong>Unable to load users</strong>
+    <p>{{ apiError }}</p>
+  </div>
+  }
+
+  @if (!loading && !apiError && users.length === 0) {
+  <div class="icetl-empty-state">
+    <i class="fa-solid fa-users" aria-hidden="true"></i>
+    <h2>No users found</h2>
+    <p>Adjust the current filters or add an employee user.</p>
+  </div>
+  }
+
+  @if (!loading && !apiError && users.length > 0) {
+  <div class="users-table-wrap icetl-table-shell">
+    <table class="users-table icetl-table">
+      <thead>
+        <tr>
+          <th>Serial No.</th>
+          <th>User</th>
+          <th>Role</th>
+          <th>Phone</th>
+          <th>State</th>
+          <th>District/City</th>
+          <th>Branch</th>
+          <th>Gender</th>
+          <th>Status</th>
+          <th>Created Date</th>
+          <th aria-label="Actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users; track trackByUserId($index, user)) {
+        <tr>
+          <td data-label="Serial No.">
+            <strong>{{ getSerialNumber($index) }}</strong>
+          </td>
+          <td data-label="User">
+            <div class="user-name-cell">
+              
+              <div>
+                <strong>{{ user.name }}</strong>
+                <span>{{ user.email }}</span>
+                @if (user.code) {
+                <small>{{ user.code }}</small>
+                }
+              </div>
+            </div>
+          </td>
+          <td data-label="Role">
+            <span class="user-role-badge">{{ formatRole(user) }}</span>
+          </td>
+          <td data-label="Phone">{{ user.phone || 'N/A' }}</td>
+          <td data-label="State">{{ user.stateName || 'N/A' }}</td>
+          <td data-label="District/City">{{ user.districtName || 'N/A' }}</td>
+          <td data-label="Branch">{{ user.branchName || 'N/A' }}</td>
+          <td data-label="Gender">{{ formatGender(user.gender) }}</td>
+          <td data-label="Status">
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="isActive(user)"
+              [class.icetl-badge--inactive]="!isActive(user)">
+              {{ user.statusLabel }}
+            </span>
+          </td>
+          <td data-label="Created Date">{{ formatDate(user.createdAt) }}</td>
+          <td data-label="Actions">
+            <div class="icetl-table-actions users-table__actions">
+              @if (isInstructor(user)) {
+              <button
+                type="button"
+                class="icetl-icon-btn"
+                (click)="openInstructorDetails(user)"
+                [disabled]="isInstructorDetailBusy(user)"
+                title="View instructor details">
+                <i
+                  [class]="isInstructorDetailBusy(user) ? 'fa-solid fa-spinner fa-spin' : 'fa-regular fa-eye'"
+                  aria-hidden="true"></i>
+              </button>
+              }
+
+              <button
+                type="button"
+                class="icetl-icon-btn"
+                (click)="resetPassword(user)"
+                [disabled]="isActionBusy(user)"
+                title="Reset password to default">
+                <i
+                  [class]="resettingUserId === user.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-key'"
+                  aria-hidden="true"></i>
+              </button>
+
+              <button
+                type="button"
+                class="icetl-icon-btn"
+                (click)="toggleUserStatus(user)"
+                [disabled]="isActionBusy(user)"
+                [title]="isActive(user) ? 'Deactivate user' : 'Activate user'">
+                <i
+                  [class]="statusUpdatingUserId === user.id
+                    ? 'fa-solid fa-spinner fa-spin'
+                    : isActive(user)
+                      ? 'fa-solid fa-user-slash'
+                      : 'fa-solid fa-user-check'"
+                  aria-hidden="true"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="icetl-pagination">
+    <span>Showing {{ resultStart }}-{{ resultEnd }} of {{ meta.total }} user{{ meta.total === 1 ? '' : 's' }}</span>
+    <div class="icetl-pagination__controls">
+      <button
+        type="button"
+        class="icetl-icon-btn"
+        (click)="goToPage(meta.currentPage - 1)"
+        [disabled]="meta.currentPage <= 1"
+        title="Previous page">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      <strong>{{ meta.currentPage }} / {{ meta.lastPage }}</strong>
+      <button
+        type="button"
+        class="icetl-icon-btn"
+        (click)="goToPage(meta.currentPage + 1)"
+        [disabled]="meta.currentPage >= meta.lastPage"
+        title="Next page">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </footer>
+  }
+</section>
+
+@if (selectedInstructorUser) {
+<div class="instructor-details-backdrop" (click)="closeInstructorDetails()"></div>
+<section class="instructor-details" role="dialog" aria-modal="true" aria-labelledby="instructor-details-title">
+  <div
+    class="instructor-details__dialog"
+    appModalWindow
+    #instructorDetailsWindow="appModalWindow"
+    appModalWindowTitle="Instructor details">
+    <header class="instructor-details__header app-modal-window-header" data-app-modal-header>
+      <div class="app-modal-window-title">
+        <span>Instructor Details</span>
+        <h2 id="instructor-details-title">{{ selectedInstructorUser.name }}</h2>
+      </div>
+      <app-modal-window-controls
+        [modal]="instructorDetailsWindow"
+        closeLabel="Close instructor details"
+        (closed)="closeInstructorDetails()">
+      </app-modal-window-controls>
+    </header>
+
+    <div class="instructor-details__body" data-app-modal-body>
+      @if (loadingInstructorDetails) {
+      <div class="icetl-spinner-wrap">
+        <span class="icetl-inline-spinner" aria-hidden="true"></span>
+        Loading instructor details...
+      </div>
+      }
+
+      @if (!loadingInstructorDetails && instructorDetailsError) {
+      <div class="icetl-state icetl-state--error">
+        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+        <strong>Unable to load instructor details</strong>
+        <p>{{ instructorDetailsError }}</p>
+      </div>
+      }
+
+      @if (!loadingInstructorDetails && !instructorDetailsError && selectedInstructorDetails; as details) {
+      <section class="instructor-profile-hero">
+        <div class="instructor-profile-hero__photo">
+          @if (details.profile?.profilePhotoUrl || details.user.profileImgUrl) {
+          <img [src]="details.profile?.profilePhotoUrl || details.user.profileImgUrl" [alt]="details.user.name">
+          } @else {
+          <span>{{ details.user.name.charAt(0) || 'I' }}</span>
+          }
+        </div>
+
+        <div class="instructor-profile-hero__content">
+          <span class="instructor-profile-hero__eyebrow">{{ details.user.code || 'Instructor' }}</span>
+          <h3>{{ details.user.name }}</h3>
+          <p>{{ details.profile?.headline || 'No professional headline added yet.' }}</p>
+
+          <div class="instructor-profile-hero__meta">
+            <span class="icetl-badge icetl-badge--active">{{ details.user.roleName || 'Instructor' }}</span>
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="details.user.status === 1"
+              [class.icetl-badge--inactive]="details.user.status !== 1">
+              {{ details.user.statusLabel }}
+            </span>
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="details.profile?.onboardingCompleted"
+              [class.icetl-badge--inactive]="!details.profile?.onboardingCompleted">
+              {{ details.profile?.onboardingCompleted ? 'Onboarding Complete' : 'Onboarding Pending' }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      @if (!details.profile) {
+      <div class="icetl-state">
+        <i class="fa-solid fa-user-clock" aria-hidden="true"></i>
+        <strong>Instructor profile draft not found</strong>
+        <p>This user has the Instructor role, but no instructor onboarding detail record is available yet.</p>
+      </div>
+      }
+
+      <div class="instructor-details__grid">
+        <article class="instructor-details-card">
+          <h3>Account Details</h3>
+          <dl class="instructor-detail-list">
+            @for (item of accountDetailItems(details); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ formatValue(item.value) }}</dd>
+            </div>
+            }
+          </dl>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Location Details</h3>
+          <dl class="instructor-detail-list">
+            @for (item of locationDetailItems(details); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ formatValue(item.value) }}</dd>
+            </div>
+            }
+          </dl>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Professional Details</h3>
+          <dl class="instructor-detail-list">
+            @for (item of professionalDetailItems(details); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ formatValue(item.value) }}</dd>
+            </div>
+            }
+          </dl>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Onboarding Details</h3>
+          <dl class="instructor-detail-list">
+            @for (item of onboardingDetailItems(details); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ formatValue(item.value) }}</dd>
+            </div>
+            }
+          </dl>
+        </article>
+
+        <article class="instructor-details-card instructor-details-card--wide">
+          <h3>Bio</h3>
+          <p class="instructor-bio">{{ details.profile?.bio || 'No bio added yet.' }}</p>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Skills</h3>
+          <div class="instructor-chip-list">
+            @if (details.profile?.skills?.length) {
+            @for (skill of details.profile?.skills || []; track skill) {
+            <span>{{ skill }}</span>
+            }
+            } @else {
+            <small>No skills added.</small>
+            }
+          </div>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Teaching Categories</h3>
+          <div class="instructor-chip-list">
+            @if (details.profile?.categories?.length) {
+            @for (category of details.profile?.categories || []; track category) {
+            <span>{{ category }}</span>
+            }
+            } @else {
+            <small>No teaching categories added.</small>
+            }
+          </div>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Teaching Languages</h3>
+          <div class="instructor-chip-list">
+            @if (details.profile?.languagesYouCanTeach?.length) {
+            @for (language of details.profile?.languagesYouCanTeach || []; track language) {
+            <span>{{ language }}</span>
+            }
+            } @else {
+            <small>No teaching languages added.</small>
+            }
+          </div>
+        </article>
+
+        <article class="instructor-details-card">
+          <h3>Social Links</h3>
+          @if (socialLinks(details).length) {
+          <div class="instructor-link-list">
+            @for (link of socialLinks(details); track link.label) {
+            <a [href]="link.url" target="_blank" rel="noopener noreferrer">
+              <i [class]="link.icon" aria-hidden="true"></i>
+              <span>{{ link.label }}</span>
+            </a>
+            }
+          </div>
+          } @else {
+          <p class="instructor-muted">No social links added.</p>
+          }
+        </article>
+
+        <article class="instructor-details-card instructor-details-card--wide">
+          <h3>Documents</h3>
+          @if (details.profile?.documents?.length) {
+          <div class="instructor-document-list">
+            @for (document of details.profile?.documents || []; track trackByDocumentId($index, document)) {
+            <a
+              class="instructor-document"
+              [class.is-disabled]="!document.fileUrl"
+              [href]="document.fileUrl || null"
+              target="_blank"
+              rel="noopener noreferrer">
+              <i [class]="documentIcon(document)" aria-hidden="true"></i>
+              <span>
+                <strong>{{ documentLabel(document.documentType) }}</strong>
+                <small>{{ document.fileName || 'Document file' }}</small>
+              </span>
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </a>
+            }
+          </div>
+          } @else {
+          <p class="instructor-muted">No documents uploaded.</p>
+          }
+        </article>
+      </div>
+      }
+    </div>
+  </div>
+</section>
+}

@@ -24,7 +24,7 @@
 
   @if (showFilters) {
   <section class="admin-payment-filters" aria-label="Payment filters">
-    <label>
+    <label class="icetl-filter-search">
       <span>Search</span>
       <input type="search" [(ngModel)]="search" (keyup.enter)="applyFilters()" placeholder="Order, invoice, code, transaction">
     </label>

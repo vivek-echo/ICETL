@@ -58,7 +58,7 @@ export const manageAdministrationRoutes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'manageBranch',
+        redirectTo: getRedirectRoute('/application/administration', 'manageBranch'),
       },
       {
         path: 'manageBranch',
@@ -84,6 +84,34 @@ export const manageAdministrationRoutes: Routes = [
             loadComponent: () =>
               import('./manage-branch/view-branch/view-branch').then((m) => m.ViewBranch),
             title: 'View Branch | ICETL',
+          },
+        ],
+      },
+      {
+        path: 'manageEmployee',
+        loadComponent: () =>
+          import('./manage-employee/manage-employee').then((m) => m.ManageEmployee),
+        title: 'Manage Employee | ICETL',
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: getRedirectRoute(
+              '/application/administration/manageEmployee',
+              'addEmployee',
+            ),
+          },
+          {
+            path: 'addEmployee',
+            loadComponent: () =>
+              import('./manage-employee/add-employee/add-employee').then((m) => m.AddEmployee),
+            title: 'Add Employee | ICETL',
+          },
+          {
+            path: 'viewUsers',
+            loadComponent: () =>
+              import('./manage-employee/view-users/view-users').then((m) => m.ViewUsers),
+            title: 'View Users | ICETL',
           },
         ],
       },

@@ -57,7 +57,7 @@
       </section>
 
       <div class="profile-grid profile-grid--enhanced">
-        <section class="profile-card icetl-form-section">
+        <section class="profile-card profile-card--expertise icetl-form-section">
           <div class="profile-card__head icetl-form-section-header">
             <span>Identity</span>
             <h4>Core Account Details</h4>
@@ -257,7 +257,7 @@
           </div>
         </section>
 
-        <section class="profile-card icetl-form-section">
+        <section class="profile-card profile-card--documents icetl-form-section">
           <div class="profile-card__head icetl-form-section-header">
             <span>Expertise</span>
             <h4>Skills and Categories</h4>
@@ -305,9 +305,15 @@
             <div class="col-lg-6 col-md-6 col-12">
               <div class="rbt-form-group">
                 <label for="government-id">Government ID *</label>
-                <input id="government-id" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp"
+                <input class="profile-file-input" id="government-id" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp"
                   (change)="onDocumentChange($event, 'governmentId')">
-                <small class="profile-note">PDF, JPG, PNG or WEBP up to 5 MB.</small>
+                <label class="profile-upload-zone" for="government-id">
+                  <span class="profile-upload-zone__icon"><i class="feather-upload-cloud"></i></span>
+                  <span class="profile-upload-zone__copy">
+                    <strong>Upload Government ID</strong>
+                    <small>PDF, JPG, PNG or WEBP up to 5 MB</small>
+                  </span>
+                </label>
                 @if (documentDisplayItems('governmentId').length) {
                 <div class="profile-file-list">
                   @for (item of documentDisplayItems('governmentId'); track item.id; let i = $index) {
@@ -332,9 +338,15 @@
             <div class="col-lg-6 col-md-6 col-12">
               <div class="rbt-form-group">
                 <label for="resume">Resume / CV *</label>
-                <input id="resume" type="file" accept=".pdf,.doc,.docx"
+                <input class="profile-file-input" id="resume" type="file" accept=".pdf,.doc,.docx"
                   (change)="onDocumentChange($event, 'resume')">
-                <small class="profile-note">PDF, DOC or DOCX up to 10 MB.</small>
+                <label class="profile-upload-zone" for="resume">
+                  <span class="profile-upload-zone__icon"><i class="feather-file-text"></i></span>
+                  <span class="profile-upload-zone__copy">
+                    <strong>Upload Resume / CV</strong>
+                    <small>PDF, DOC or DOCX up to 10 MB</small>
+                  </span>
+                </label>
                 @if (documentDisplayItems('resume').length) {
                 <div class="profile-file-list">
                   @for (item of documentDisplayItems('resume'); track item.id; let i = $index) {
@@ -359,9 +371,15 @@
             <div class="col-12">
               <div class="rbt-form-group">
                 <label for="certifications">Certifications *</label>
-                <input id="certifications" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                <input class="profile-file-input" id="certifications" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
                   multiple (change)="onDocumentChange($event, 'certifications')">
-                <small class="profile-note">Upload one or more certificates.</small>
+                <label class="profile-upload-zone profile-upload-zone--wide" for="certifications">
+                  <span class="profile-upload-zone__icon"><i class="feather-award"></i></span>
+                  <span class="profile-upload-zone__copy">
+                    <strong>Upload Certifications</strong>
+                    <small>Upload one or more certificates</small>
+                  </span>
+                </label>
                 @if (documentDisplayItems('certifications').length) {
                 <div class="profile-file-list">
                   @for (item of documentDisplayItems('certifications'); track item.id; let i = $index) {

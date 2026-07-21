@@ -13,6 +13,7 @@ class EntityCodeService
     public const PREFIX_SEMINAR = 'SM';
     public const PREFIX_LEARNER = 'LR';
     public const PREFIX_INSTRUCTOR = 'INS';
+    public const PREFIX_EMPLOYEE = 'EMP';
 
     public static function generateEntityCode(string $prefix, int $id): string
     {

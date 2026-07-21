@@ -36,6 +36,9 @@ class User extends Authenticatable
         'thumbnailImg',
         'coverImg',
         'profileStage',
+        'stateCode',
+        'districtCode',
+        'branchId',
         'role'
     ];
 

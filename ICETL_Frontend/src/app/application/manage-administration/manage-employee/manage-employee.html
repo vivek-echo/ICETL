@@ -1,0 +1,42 @@
+<div class="rbt-dashboard-content bg-color-white rbt-shadow-box mb--60 administration-employee-page">
+  <div class="content">
+    <div class="advance-tab-button administration-tabbar mb--30">
+      <ul
+        class="nav nav-tabs tab-button-style-2 justify-content-start administration-tabs icetl-tab-list"
+        role="tablist">
+        @for (tab of tabs; track tab.id) {
+        <li role="presentation">
+          <a
+            class="tab-button icetl-tab-button"
+            role="tab"
+            [routerLink]="[tab.route]"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            #activeTab="routerLinkActive"
+            [attr.aria-current]="activeTab.isActive ? 'page' : null"
+            [attr.aria-selected]="activeTab.isActive">
+            <span class="title">{{ tab.label }}</span>
+          </a>
+        </li>
+        }
+      </ul>
+
+      @if (hasFilterToggle) {
+      <button
+        type="button"
+        class="administration-tabbar__filter-toggle"
+        (click)="toggleActiveFilters()"
+        [attr.aria-expanded]="filtersVisible"
+        aria-label="Toggle filters">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+        <span>{{ filtersVisible ? 'Hide Filters' : 'Show Filters' }}</span>
+        <i [class]="filtersVisible ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+      }
+    </div>
+
+    <router-outlet
+      (activate)="onRouteComponentActivate($event)"
+      (deactivate)="onRouteComponentDeactivate()" />
+  </div>
+</div>

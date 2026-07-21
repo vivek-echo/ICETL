@@ -8,13 +8,12 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { IDropdownSettings, NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { lastValueFrom, Subscription } from 'rxjs';
-import { AlertHelperService } from '../../../commonServices/alert-helper-service';
-import { FormValidationService } from '../../../commonServices/form-validation-service';
-import { FormValidationRules } from '../../../commonServices/form-validation-rules';
-import { UserProfile, UserProfileService } from '../../../commonServices/user-profile.service';
+import { AlertHelperService } from '../../commonServices/alert-helper-service';
+import { FormValidationService } from '../../commonServices/form-validation-service';
+import { FormValidationRules } from '../../commonServices/form-validation-rules';
+import { UserProfile, UserProfileService } from '../../commonServices/user-profile.service';
 import {
   DropdownOption,
   InstructorDocumentRecord,
@@ -23,8 +22,8 @@ import {
   SaveDocumentsAndSocialLinksFormValue,
   SaveProfessionalInformationFormValue,
   SaveSkillsAndCategoriesPayload,
-} from '../../../services/instructor-registration.model';
-import { InstructorRegistrationService } from '../../../services/instructor-registration.service';
+} from '../../services/instructor-registration.model';
+import { InstructorRegistrationService } from '../../services/instructor-registration.service';
 
 type InstructorUploadKey = 'profilePhoto' | 'governmentId' | 'resume' | 'certifications';
 type DocumentDisplayItem = {
@@ -34,7 +33,7 @@ type DocumentDisplayItem = {
 };
 
 @Component({
-  selector: 'app-instructor-profile',
+  selector: 'app-profile',
   imports: [CommonModule, ReactiveFormsModule, NgMultiSelectDropDownModule],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',

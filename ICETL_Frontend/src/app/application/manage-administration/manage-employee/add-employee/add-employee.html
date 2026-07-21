@@ -1,0 +1,197 @@
+<section class="employee-add icetl-form-page" aria-labelledby="add-employee-title">
+  <header class="employee-add__header icetl-page-header">
+    <div>
+      <span class="employee-add__eyebrow">Manage Administration</span>
+      <h1 id="add-employee-title">Add Employee</h1>
+      <p>Create a role-4 employee user for a selected state, district/city, and branch.</p>
+    </div>
+
+    <a class="icetl-btn icetl-btn-outline" routerLink="../viewUsers">
+      <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+      <span>View Users</span>
+    </a>
+  </header>
+
+  <form class="row g-4 icetl-form-card employee-add__form" [formGroup]="employeeForm" (ngSubmit)="submitEmployee()">
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-state">State <span class="icetl-required">*</span></label>
+        <select
+          id="employee-state"
+          formControlName="stateCode"
+          name="stateCode"
+          (change)="onStateChange()">
+          <option value="">{{ loadingStates ? 'Loading states...' : 'Select state' }}</option>
+          @for (state of states; track state.stateCode) {
+          <option [value]="state.stateCode">{{ state.stateName }}</option>
+          }
+        </select>
+        @if (isInvalid('stateCode')) {
+        <small class="icetl-error-text">State is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-district">District/City <span class="icetl-required">*</span></label>
+        <select
+          id="employee-district"
+          formControlName="districtCode"
+          name="districtCode"
+          (change)="onDistrictChange()">
+          <option value="">
+            @if (loadingDistricts) {
+            Loading districts/cities...
+            } @else if (!selectedStateCode) {
+            Select state first
+            } @else {
+            Select district/city
+            }
+          </option>
+          @for (district of districts; track district.districtCode) {
+          <option [value]="district.districtCode">{{ district.districtName }}</option>
+          }
+        </select>
+        @if (isInvalid('districtCode')) {
+        <small class="icetl-error-text">District/City is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-branch">Branch <span class="icetl-required">*</span></label>
+        <select id="employee-branch" formControlName="branchId" name="branchId">
+          <option value="">
+            @if (loadingBranches) {
+            Loading branches...
+            } @else if (!selectedDistrictCode) {
+            Select district/city first
+            } @else {
+            Select branch
+            }
+          </option>
+          @for (branch of branches; track branch.id) {
+          <option [value]="branch.id">{{ branch.branchName }}</option>
+          }
+        </select>
+        @if (isInvalid('branchId')) {
+        <small class="icetl-error-text">Branch is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label for="employee-name">Employee Name <span class="icetl-required">*</span></label>
+        <input
+          id="employee-name"
+          type="text"
+          formControlName="name"
+          name="name"
+          maxlength="150"
+          placeholder="Enter employee name">
+        @if (isInvalid('name')) {
+        <small class="icetl-error-text">Employee name is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label for="employee-email">Email <span class="icetl-required">*</span></label>
+        <input
+          id="employee-email"
+          type="email"
+          formControlName="email"
+          name="email"
+          maxlength="150"
+          placeholder="Enter email address">
+        @if (isInvalid('email')) {
+        <small class="icetl-error-text">Valid email is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-phone">Phone <span class="icetl-required">*</span></label>
+        <input
+          id="employee-phone"
+          type="tel"
+          formControlName="phone"
+          name="phone"
+          maxlength="10"
+          inputmode="numeric"
+          placeholder="Enter 10 digit phone">
+        @if (isInvalid('phone')) {
+        <small class="icetl-error-text">10 digit phone is required</small>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-dob">Date of Birth</label>
+        <input id="employee-dob" type="date" formControlName="dob" name="dob">
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="rbt-form-group">
+        <label for="employee-gender">Gender</label>
+        <select id="employee-gender" formControlName="gender" name="gender">
+          <option value="">Select gender</option>
+          <option value="1">Male</option>
+          <option value="2">Female</option>
+          <option value="3">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label for="employee-status">Status <span class="icetl-required">*</span></label>
+        <select id="employee-status" formControlName="status" name="status">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="rbt-form-group">
+        <label for="employee-default-password">Default Password</label>
+        <input
+          id="employee-default-password"
+          type="text"
+          [value]="defaultPassword"
+          readonly
+          aria-readonly="true">
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="employee-add__actions icetl-form-actions">
+        <button
+          type="button"
+          class="icetl-btn icetl-btn-outline"
+          routerLink="../viewUsers"
+          [disabled]="isSubmitting">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Cancel</span>
+        </button>
+
+        <button
+          type="submit"
+          class="rbt-btn btn-gradient icetl-btn icetl-btn-primary"
+          [disabled]="isSubmitting"
+          [attr.aria-busy]="isSubmitting">
+          <i [class]="isSubmitting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-user-plus'" aria-hidden="true"></i>
+          <span>{{ isSubmitting ? 'Saving...' : 'Add Employee' }}</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</section>

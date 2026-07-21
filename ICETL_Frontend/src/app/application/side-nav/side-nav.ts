@@ -31,6 +31,7 @@ export class SideNav implements OnInit, OnDestroy {
     '/application/workshopSeminar/workshop',
     '/application/workshopSeminar/seminar',
     '/application/administration/manageBranch',
+    '/application/administration/manageEmployee',
   ]);
   menuItems: MenuNode[] = [];
   dashboardSetting: DashboardSetting | null = null;

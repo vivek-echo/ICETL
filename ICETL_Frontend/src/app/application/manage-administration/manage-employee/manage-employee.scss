@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.administration-employee-page {
+  overflow: hidden;
+}
+
+.administration-tabbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.administration-tabs {
+  flex: 1 1 auto;
+  min-width: 240px;
+}
+
+.administration-tabbar__filter-toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(36, 87, 230, 0.22);
+  border-radius: 8px;
+  color: var(--icetl-primary, #2457e6);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 750;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+@media (max-width: 575px) {
+  .administration-tabbar__filter-toggle {
+    width: 100%;
+  }
+}

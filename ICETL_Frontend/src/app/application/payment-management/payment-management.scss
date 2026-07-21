@@ -83,6 +83,14 @@
   gap: 6px;
 }
 
+.admin-payment-filters > .icetl-filter-search {
+  grid-column: 1 / -1 !important;
+  justify-self: stretch;
+  max-width: calc((100% - 14px) / 2) !important;
+  min-width: 0;
+  width: 100% !important;
+}
+
 .admin-payment-filters label span {
   color: #64748b;
   font-size: 12px;
@@ -262,6 +270,12 @@
 
   .admin-payment-filters {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-payment-filters > .icetl-filter-search {
+    max-width: 100% !important;
   }
 }
 
