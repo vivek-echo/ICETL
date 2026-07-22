@@ -431,6 +431,23 @@
   text-decoration: line-through;
 }
 
+.course-price small,
+.course-price em {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  gap: 2px;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.course-price em {
+  color: var(--primary);
+}
+
 .course-price i,
 .summary-lines i,
 .summary-total i {

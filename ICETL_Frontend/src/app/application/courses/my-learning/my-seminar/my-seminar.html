@@ -62,7 +62,7 @@
       <span>Search</span>
       <div>
         <i class="feather-search"></i>
-        <input type="search" [(ngModel)]="search" placeholder="Title, topic, speaker, city">
+        <input type="search" [(ngModel)]="search" placeholder="Title, topic, speaker, branch">
       </div>
     </label>
 
@@ -156,7 +156,10 @@
         <div class="program-library-row__meta">
           <span><i class="feather-calendar"></i>{{ getDateRange(program) }}</span>
           <span><i class="feather-clock"></i>{{ getTimeRange(program) }}</span>
-          <span><i class="feather-map-pin"></i>{{ program.venue || 'Venue TBA' }}, {{ program.city || 'City TBA' }}</span>
+          <span><i class="feather-map-pin"></i>{{ getProgramLocationLabel(program) }}</span>
+          @if (getProgramAddress(program)) {
+          <span><i class="feather-navigation"></i>{{ getProgramAddress(program) }}</span>
+          }
           <span><i class="feather-user"></i>{{ program.speakerName || 'Speaker TBA' }}</span>
         </div>
 

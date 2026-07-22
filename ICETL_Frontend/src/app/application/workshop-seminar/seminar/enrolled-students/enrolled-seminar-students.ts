@@ -184,6 +184,19 @@ export class EnrolledSeminarStudents implements OnInit {
       : student.programStartTime;
   }
 
+  getProgramLocationLabel(student: SeminarEnrolledStudent): string {
+    return (
+      student.programLocationLabel ||
+      [student.programBranchName, student.programDistrictName, student.programStateName].filter(Boolean).join(', ') ||
+      [student.programVenue, student.programCity].filter(Boolean).join(', ') ||
+      'N/A'
+    );
+  }
+
+  getProgramAddress(student: SeminarEnrolledStudent): string {
+    return `${student.programBranchAddress || ''}`.trim();
+  }
+
   getPaginationLabel(): string {
     return `Showing ${this.meta.from || 0}-${this.meta.to || 0} of ${this.meta.total} seminar enrollments`;
   }

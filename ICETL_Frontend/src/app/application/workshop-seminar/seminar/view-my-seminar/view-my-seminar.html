@@ -43,7 +43,7 @@
         <input
           id="mySeminarSearch"
           type="text"
-          placeholder="Seminar, topic, speaker..."
+          placeholder="Seminar, topic, speaker, branch..."
           autocomplete="off"
           [(ngModel)]="search"
           (keyup.enter)="onSearch()">
@@ -186,12 +186,14 @@
           </span>
           <span>
             <i class="feather-map-pin"></i>
-            {{ seminar.venue }}
+            {{ getProgramLocationLabel(seminar) }}
           </span>
+          @if (getProgramAddress(seminar)) {
           <span>
             <i class="feather-navigation"></i>
-            {{ seminar.city }}
+            {{ getProgramAddress(seminar) }}
           </span>
+          }
           <span>
             <i class="feather-calendar"></i>
             {{ formatDate(seminar.eventDate) }}

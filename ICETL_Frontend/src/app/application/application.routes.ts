@@ -78,16 +78,19 @@ export const applicationRoutes: Routes = [
       },
       {
         path: 'yourCart',
+        data: { authOnly: true },
         loadComponent: () => import('./your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },
       {
         path: 'cart',
+        data: { authOnly: true },
         loadComponent: () => import('./your-cart/your-cart').then((m) => m.YourCart),
         title: 'Your Cart | ICETL',
       },
       {
         path: 'paymentLog',
+        data: { authOnly: true },
         loadComponent: () =>
           import('./payment-log/payment-log').then((m) => m.PaymentLogComponent),
         title: 'Payment Log | ICETL',

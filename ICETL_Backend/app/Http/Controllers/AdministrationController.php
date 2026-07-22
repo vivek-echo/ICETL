@@ -534,6 +534,161 @@ class AdministrationController extends Controller
         }
     }
 
+    public function updateInstructorBankVerification(Request $request, int $userId)
+    {
+        if (!$this->canManageAdministration($request)) {
+            return $this->unauthorizedResponse();
+        }
+
+        if (!Schema::hasTable('users')) {
+            return $this->missingUsersTableResponse();
+        }
+
+        if (!Schema::hasTable('instructors')) {
+            return response()->json([
+                'status' => false,
+                'success' => false,
+                'message' => 'Instructors table not found.',
+            ], 500);
+        }
+
+        if (!Schema::hasColumn('instructors', 'bankVerificationStatus')) {
+            return response()->json([
+                'status' => false,
+                'success' => false,
+                'message' => 'Bank verification status column not found. Please run the instructor bank details ALTER query or migration.',
+            ], 500);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => [
+                'required',
+                'in:' . implode(',', AdministrationService::ADMIN_BANK_VERIFICATION_STATUSES),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationResponse($validator);
+        }
+
+        try {
+            $details = $this->administrationService->getInstructorDetails($userId);
+
+            if (!$details || !$details['profile']) {
+                return response()->json([
+                    'status' => false,
+                    'success' => false,
+                    'message' => 'Instructor profile was not found.',
+                ], 404);
+            }
+
+            if (!$this->administrationService->instructorHasCompleteBankDetails($userId)) {
+                return response()->json([
+                    'status' => false,
+                    'success' => false,
+                    'message' => 'Bank details are incomplete. Verification cannot be initiated yet.',
+                ], 422);
+            }
+
+            $nextStatus = (string) $request->input('status');
+
+            if (
+                !$this->administrationService->updateInstructorBankVerificationStatus(
+                    $userId,
+                    $nextStatus,
+                    $request->user()?->id
+                )
+            ) {
+                return response()->json([
+                    'status' => false,
+                    'success' => false,
+                    'message' => 'Instructor profile was not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => true,
+                'success' => true,
+                'message' => 'Bank verification status updated successfully',
+                'data' => $this->administrationService->getInstructorDetails($userId),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating instructor bank verification: ' . $e->getMessage());
+
+            return $this->exceptionResponse($e);
+        }
+    }
+
+    public function instructorPayoutSummary(Request $request, int $userId)
+    {
+        if (!$this->canManageAdministration($request)) {
+            return $this->unauthorizedResponse();
+        }
+
+        try {
+            $details = $this->administrationService->getInstructorDetails($userId);
+
+            if (!$details || !$details['profile']) {
+                return response()->json([
+                    'status' => false,
+                    'success' => false,
+                    'message' => 'Instructor profile was not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => true,
+                'success' => true,
+                'message' => 'Instructor payout summary fetched successfully',
+                'data' => $this->administrationService->instructorPayoutSummary($userId, true),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching instructor payout summary: ' . $e->getMessage());
+
+            return $this->exceptionResponse($e);
+        }
+    }
+
+    public function initiateInstructorPayout(Request $request, int $userId)
+    {
+        if (!$this->canManageAdministration($request)) {
+            return $this->unauthorizedResponse();
+        }
+
+        try {
+            $result = $this->administrationService->initiateInstructorPayout(
+                $userId,
+                (int) $request->user()?->id,
+                $request->ip(),
+                $request->userAgent()
+            );
+
+            return response()->json([
+                'status' => true,
+                'success' => true,
+                'message' => 'Instructor payout initiated successfully',
+                'data' => $result,
+            ], 201);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'status' => false,
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => $this->administrationService->instructorPayoutSummary($userId, true),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => false,
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Error initiating instructor payout: ' . $e->getMessage());
+
+            return $this->exceptionResponse($e);
+        }
+    }
+
     private function canManageAdministration(Request $request): bool
     {
         $user = $request->user();

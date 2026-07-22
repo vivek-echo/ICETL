@@ -38,7 +38,7 @@ export const roleGuard: CanActivateFn = (
 function isAuthOnlyRoute(route: ActivatedRouteSnapshot, url: string): boolean {
   const currentRoute = normalizeRoute(url).toLowerCase();
 
-  return route.data['authOnly'] === true && currentRoute === getApplicationDashboardRoute();
+  return route.data['authOnly'] === true || currentRoute === getApplicationDashboardRoute();
 }
 
 function getDashboardUrlTree(router: Router, user: StoredUser | null) {

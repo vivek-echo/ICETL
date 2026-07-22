@@ -257,6 +257,19 @@ export class MyCourses implements OnInit {
     return this.normalizeExternalUrl(course.meetingLink);
   }
 
+  getCourseLocationLabel(course: MyLearningCourse): string {
+    return (
+      course.locationLabel ||
+      [course.branchName, course.districtName, course.stateName].filter(Boolean).join(', ') ||
+      [course.venue, course.city].filter(Boolean).join(', ') ||
+      'N/A'
+    );
+  }
+
+  getCourseAddress(course: MyLearningCourse): string {
+    return `${course.branchAddress || ''}`.trim();
+  }
+
   formatAmount(value: number | string | null | undefined): string {
     return this.amountFormatter.format(Number(value) || 0);
   }
@@ -285,7 +298,12 @@ export class MyCourses implements OnInit {
         !term ||
         course.title.toLowerCase().includes(term) ||
         (course.categoryName || '').toLowerCase().includes(term) ||
-        (course.instructorName || '').toLowerCase().includes(term);
+        (course.instructorName || '').toLowerCase().includes(term) ||
+        (course.locationLabel || '').toLowerCase().includes(term) ||
+        (course.branchName || '').toLowerCase().includes(term) ||
+        (course.branchAddress || '').toLowerCase().includes(term) ||
+        (course.districtName || '').toLowerCase().includes(term) ||
+        (course.stateName || '').toLowerCase().includes(term);
       const matchesStatus =
         this.statusFilter === 'all' ||
         (this.statusFilter === 'active' && Number(course.status) === 1) ||

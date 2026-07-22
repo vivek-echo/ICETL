@@ -6,6 +6,7 @@ import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
 import { PaymentService } from '../courses/services/payment';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 declare var Razorpay: any;
 @Component({
   selector: 'app-your-cart',
@@ -17,13 +18,14 @@ declare var Razorpay: any;
 export class YourCart implements OnInit {
   private selectionInitialized = false;
   private readonly indianNumberFormatter = new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   });
 
   readonly placeholderImage = 'assets/images/course/course-01.png';
   readonly skeletonRows = [1, 2, 3];
   readonly discountPercent = 0;
-  readonly taxPercent = 0;
+  private readonly configuredTaxPercent = Number(environment.gstPercent) || 18;
   items: CourseCartItem[] = [];
   selectedCourseIds = new Set<number>();
   loading = false;
@@ -106,6 +108,26 @@ export class YourCart implements OnInit {
     return this.indianNumberFormatter.format(Number(value) || 0);
   }
 
+  courseGst(item: CourseCartItem): number {
+    const apiTaxAmount = Number(item.taxAmount);
+
+    if (Number.isFinite(apiTaxAmount) && item.taxAmount !== null && item.taxAmount !== undefined) {
+      return this.roundMoney(apiTaxAmount);
+    }
+
+    return this.roundMoney((this.coursePrice(item) * this.taxPercent) / 100);
+  }
+
+  courseTotal(item: CourseCartItem): number {
+    const apiTotalAmount = Number(item.totalAmount);
+
+    if (Number.isFinite(apiTotalAmount) && apiTotalAmount > 0) {
+      return this.roundMoney(apiTotalAmount);
+    }
+
+    return this.roundMoney(this.coursePrice(item) + this.courseGst(item));
+  }
+
   isZeroAmount(value: number | string | null): boolean {
     const amount = Number(value);
 
@@ -149,8 +171,18 @@ export class YourCart implements OnInit {
     return this.selectedCourseIds.size;
   }
 
+  get taxPercent(): number {
+    const selectedItemTaxPercent = this.selectedItems
+      .map((item) => Number(item.taxPercent))
+      .find((percent) => Number.isFinite(percent) && percent > 0);
+
+    return selectedItemTaxPercent ?? this.configuredTaxPercent;
+  }
+
   get total(): number {
-    return this.selectedItems.reduce((total, item) => total + (Number(item.price) || 0), 0);
+    return this.roundMoney(
+      this.selectedItems.reduce((total, item) => total + this.coursePrice(item), 0),
+    );
   }
 
   get subtotal(): number {
@@ -158,15 +190,15 @@ export class YourCart implements OnInit {
   }
 
   get discount(): number {
-    return Math.round((this.subtotal * this.discountPercent) / 100);
+    return this.roundMoney((this.subtotal * this.discountPercent) / 100);
   }
 
   get tax(): number {
-    return Math.round(((this.subtotal - this.discount) * this.taxPercent) / 100);
+    return this.roundMoney(((this.subtotal - this.discount) * this.taxPercent) / 100);
   }
 
   get finalTotal(): number {
-    return Math.max(this.subtotal - this.discount + this.tax, 0);
+    return this.roundMoney(Math.max(this.subtotal - this.discount + this.tax, 0));
   }
 
   get isFreeCheckout(): boolean {
@@ -238,6 +270,12 @@ export class YourCart implements OnInit {
 
       const checkoutData = {
         orderId: response.orderId,
+
+        subtotalAmount: response.subtotalAmount,
+
+        taxPercent: response.taxPercent,
+
+        taxAmount: response.taxAmount,
 
         totalAmount: response.totalAmount,
 
@@ -464,7 +502,7 @@ export class YourCart implements OnInit {
       return `Enroll in ${this.selectedCount} ${courseLabel} for free?`;
     }
 
-    return `Purchase ${this.selectedCount} ${courseLabel} for Rs. ${this.formatAmount(this.finalTotal)}?`;
+    return `Purchase ${this.selectedCount} ${courseLabel} for Rs. ${this.formatAmount(this.finalTotal)} including GST?`;
   }
 
   private getStoredUser(): { name?: string; email?: string; phone?: string } {
@@ -473,5 +511,13 @@ export class YourCart implements OnInit {
     } catch {
       return {};
     }
+  }
+
+  private coursePrice(item: CourseCartItem): number {
+    return Number(item.price) || 0;
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((Number(value) || 0) * 100) / 100;
   }
 }

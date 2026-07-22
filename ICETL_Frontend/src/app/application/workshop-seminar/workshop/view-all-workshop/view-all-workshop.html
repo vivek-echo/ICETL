@@ -3,7 +3,7 @@
     <div>
       <span>Workshop Management</span>
       <h1>All Workshops</h1>
-      <p>Review workshops across creators, timeline, city, status, and pricing.</p>
+      <p>Review workshops across creators, timeline, branch, status, and pricing.</p>
     </div>
   </header> -->
 
@@ -69,7 +69,7 @@
         <input
           id="allWorkshopSearch"
           type="text"
-          placeholder="Workshop, topic, speaker..."
+          placeholder="Workshop, topic, speaker, branch..."
           autocomplete="off"
           [(ngModel)]="search"
           (keyup.enter)="onSearch()">
@@ -211,12 +211,14 @@
           </span>
           <span>
             <i class="feather-map-pin"></i>
-            {{ workshop.venue }}
+            {{ getProgramLocationLabel(workshop) }}
           </span>
+          @if (getProgramAddress(workshop)) {
           <span>
             <i class="feather-navigation"></i>
-            {{ workshop.city }}
+            {{ getProgramAddress(workshop) }}
           </span>
+          }
           <span>
             <i class="feather-calendar"></i>
             {{ formatDateRange(workshop) }}

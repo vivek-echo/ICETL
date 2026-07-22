@@ -8,12 +8,14 @@ import { AlertHelperService } from '../../../../commonServices/alert-helper-serv
 import { ModalWindowControlsComponent, ModalWindowDirective } from '../../../../shared/modal-window';
 import {
   AdministrationService,
+  AdminBankVerificationStatus,
   Branch,
   EmployeeListMeta,
   EmployeeListSummary,
   EmployeeUser,
   InstructorAdminDetails,
   InstructorAdminDocument,
+  InstructorPayoutSummary,
   LocationDistrict,
   LocationState,
   RoleOption,
@@ -44,6 +46,11 @@ interface InstructorSocialLink {
   styleUrl: './view-users.scss',
 })
 export class ViewUsers implements OnInit {
+  private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
   readonly perPageOptions = [10, 20, 50, 100];
   readonly statusOptions = [
     { label: 'All statuses', value: 'all' },
@@ -68,6 +75,8 @@ export class ViewUsers implements OnInit {
   showFilters = false;
   resettingUserId: number | null = null;
   statusUpdatingUserId: number | null = null;
+  bankVerificationUpdatingStatus: AdminBankVerificationStatus | null = null;
+  payoutInitiatingUserId: number | null = null;
   selectedInstructorUser: EmployeeUser | null = null;
   selectedInstructorDetails: InstructorAdminDetails | null = null;
 
@@ -380,6 +389,7 @@ export class ViewUsers implements OnInit {
 
       if (response.status || response.success) {
         this.selectedInstructorDetails = response.data;
+        this.syncInstructorPayoutSummary(user.id, response.data?.payoutSummary ?? null);
       } else {
         this.instructorDetailsError = response.message || 'Unable to load instructor details.';
       }
@@ -396,6 +406,7 @@ export class ViewUsers implements OnInit {
     this.selectedInstructorDetails = null;
     this.loadingInstructorDetails = false;
     this.instructorDetailsError = '';
+    this.bankVerificationUpdatingStatus = null;
   }
 
   trackByUserId(_: number, user: EmployeeUser): number {
@@ -422,6 +433,40 @@ export class ViewUsers implements OnInit {
 
   isInstructorDetailBusy(user: EmployeeUser): boolean {
     return this.loadingInstructorDetails && this.selectedInstructorUser?.id === user.id;
+  }
+
+  isPayoutBusy(user: EmployeeUser | { id: number }): boolean {
+    return this.payoutInitiatingUserId === user.id;
+  }
+
+  isBankVerificationBusy(status?: AdminBankVerificationStatus): boolean {
+    return status
+      ? this.bankVerificationUpdatingStatus === status
+      : this.bankVerificationUpdatingStatus !== null;
+  }
+
+  instructorPayoutAmount(user: EmployeeUser): number {
+    return Number(user.instructorPayout?.eligiblePayoutAmount) || 0;
+  }
+
+  hasInstructorPayoutAmount(user: EmployeeUser): boolean {
+    return this.isInstructor(user) && this.instructorPayoutAmount(user) > 0;
+  }
+
+  payoutSummaryForDetails(details: InstructorAdminDetails): InstructorPayoutSummary | null {
+    return details.payoutSummary ?? this.selectedInstructorUser?.instructorPayout ?? null;
+  }
+
+  payoutButtonTitle(user: EmployeeUser): string {
+    if (!this.hasInstructorPayoutAmount(user)) {
+      return 'No payable instructor amount';
+    }
+
+    if (!user.instructorPayout?.bankVerified) {
+      return 'Verify bank account before payout';
+    }
+
+    return 'Initiate instructor bank payment';
   }
 
   getSerialNumber(index: number): number {
@@ -474,6 +519,10 @@ export class ViewUsers implements OnInit {
     return normalizedValue || 'N/A';
   }
 
+  formatAmount(value: number | string | null | undefined): string {
+    return this.amountFormatter.format(Number(value) || 0);
+  }
+
   formatBoolean(value: boolean | null | undefined): string {
     return value ? 'Yes' : 'No';
   }
@@ -488,6 +537,171 @@ export class ViewUsers implements OnInit {
     return normalizedValue
       .replace(/[_-]+/g, ' ')
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  formatBankVerificationStatus(value: string | null | undefined): string {
+    const normalizedValue = this.formatApprovalStatus(value);
+
+    return normalizedValue === 'Draft' ? 'Not Submitted' : normalizedValue;
+  }
+
+  isBankVerified(value: string | null | undefined): boolean {
+    return this.formatBankVerificationStatus(value).toLowerCase() === 'verified';
+  }
+
+  isBankRejected(value: string | null | undefined): boolean {
+    const status = this.formatBankVerificationStatus(value).toLowerCase();
+
+    return status === 'rejected' || status === 'not submitted';
+  }
+
+  hasSubmittedBankDetails(details: InstructorAdminDetails): boolean {
+    const profile = details.profile;
+
+    if (!profile) {
+      return false;
+    }
+
+    return [
+      profile.bankAccountHolderName,
+      profile.bankName,
+      profile.bankAccountNumber,
+      profile.bankIfscCode,
+      profile.bankAccountType,
+      profile.bankBranchName,
+    ].every((value) => `${value ?? ''}`.trim() !== '');
+  }
+
+  canInitiateBankVerification(details: InstructorAdminDetails): boolean {
+    const status = this.formatBankVerificationStatus(details.profile?.bankVerificationStatus);
+
+    return this.hasSubmittedBankDetails(details) && ['Not Submitted', 'Rejected'].includes(status);
+  }
+
+  canResolveBankVerification(details: InstructorAdminDetails): boolean {
+    return this.hasSubmittedBankDetails(details)
+      && this.formatBankVerificationStatus(details.profile?.bankVerificationStatus) === 'Pending';
+  }
+
+  async updateBankVerificationStatus(
+    details: InstructorAdminDetails,
+    nextStatus: AdminBankVerificationStatus,
+  ): Promise<void> {
+    if (!details.profile || !this.hasSubmittedBankDetails(details) || this.isBankVerificationBusy()) {
+      return;
+    }
+
+    const actionLabel = this.bankVerificationActionLabel(nextStatus);
+    const confirmed = await this.alertHelper.confirm(
+      `${actionLabel} for ${details.user.name}?`,
+      'Bank Verification',
+      actionLabel,
+      'Cancel',
+      nextStatus === 'Rejected' ? 'warning' : 'question',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.bankVerificationUpdatingStatus = nextStatus;
+    this.cdr.detectChanges();
+
+    try {
+      const response = await lastValueFrom(
+        this.administrationService.updateInstructorBankVerificationStatus(details.user.id, nextStatus),
+      );
+
+      if (response.status || response.success) {
+        this.selectedInstructorDetails = response.data;
+        this.syncInstructorPayoutSummary(details.user.id, response.data?.payoutSummary ?? null);
+        await this.alertHelper.success(
+          response.message || 'Bank verification status updated successfully.',
+          'Bank Verification',
+        );
+      }
+    } catch (error: any) {
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to update bank verification status. Please try again.',
+        'Bank Verification',
+      );
+    } finally {
+      this.bankVerificationUpdatingStatus = null;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async initiateInstructorPayout(
+    user: EmployeeUser,
+    summary: InstructorPayoutSummary | null | undefined = user.instructorPayout,
+  ): Promise<void> {
+    if (!this.isInstructor(user) || this.isPayoutBusy(user)) {
+      return;
+    }
+
+    const payoutSummary = summary ?? user.instructorPayout ?? null;
+    const payoutAmount = Number(payoutSummary?.eligiblePayoutAmount) || 0;
+
+    if (payoutAmount <= 0) {
+      await this.alertHelper.info('There is no payable instructor amount right now.', 'Instructor Payout');
+      return;
+    }
+
+    if (!payoutSummary?.bankVerified) {
+      await this.alertHelper.warning(
+        'Instructor bank account must be verified before payment can be initiated.',
+        'Bank Verification Required',
+      );
+      await this.openInstructorDetails(user);
+      return;
+    }
+
+    const confirmed = await this.alertHelper.confirm(
+      `Initiate bank payment of Rs. ${this.formatAmount(payoutAmount)} to ${user.name}?`,
+      'Instructor Payout',
+      'Initiate Payment',
+      'Cancel',
+      'question',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.payoutInitiatingUserId = user.id;
+    this.cdr.detectChanges();
+
+    try {
+      const response = await lastValueFrom(this.administrationService.initiateInstructorPayout(user.id));
+
+      if (response.status || response.success) {
+        const payout = response.data?.payout;
+        const nextSummary = response.data?.summary ?? null;
+
+        this.syncInstructorPayoutSummary(user.id, nextSummary);
+
+        if (this.selectedInstructorUser?.id === user.id && response.data?.instructorDetails) {
+          this.selectedInstructorDetails = response.data.instructorDetails;
+        }
+
+        await this.alertHelper.success(
+          `Payment initiated successfully. Invoice: ${payout?.invoiceNumber || 'generated'}.`,
+          'Instructor Payout',
+        );
+      }
+    } catch (error: any) {
+      const message = error?.error?.message || 'Unable to initiate instructor payment. Please try again.';
+
+      if (error?.status === 422) {
+        await this.alertHelper.warning(message, 'Instructor Payout');
+        await this.openInstructorDetails(user);
+      } else {
+        await this.alertHelper.error(message, 'Instructor Payout');
+      }
+    } finally {
+      this.payoutInitiatingUserId = null;
+      this.cdr.detectChanges();
+    }
   }
 
   documentLabel(documentType: string | null | undefined): string {
@@ -564,11 +778,38 @@ export class ViewUsers implements OnInit {
     return [
       { label: 'Approval Status', value: this.formatApprovalStatus(profile?.approvalStatus) },
       { label: 'Instructor Status', value: profile?.statusLabel },
-      { label: 'Onboarding Step', value: profile?.onboardingStep ? `${profile.onboardingStep} / 5` : null },
+      { label: 'Onboarding Step', value: profile?.onboardingStep ? `${profile.onboardingStep} / 6` : null },
       { label: 'Onboarding Completed', value: this.formatBoolean(profile?.onboardingCompleted) },
       { label: 'Profile Created', value: this.formatDate(profile?.createdAt) },
       { label: 'Profile Updated', value: this.formatDate(profile?.updatedAt) },
     ];
+  }
+
+  bankSettlementDetailItems(details: InstructorAdminDetails): InstructorDetailItem[] {
+    const profile = details.profile;
+
+    return [
+      { label: 'Account Holder Name', value: profile?.bankAccountHolderName },
+      { label: 'Bank Name', value: profile?.bankName },
+      { label: 'Account Number', value: profile?.bankAccountNumber },
+      { label: 'IFSC Code', value: profile?.bankIfscCode },
+      { label: 'Account Type', value: profile?.bankAccountType },
+      { label: 'Bank Branch Name', value: profile?.bankBranchName },
+      {
+        label: 'Bank Verification Status',
+        value: this.formatBankVerificationStatus(profile?.bankVerificationStatus),
+      },
+    ];
+  }
+
+  private bankVerificationActionLabel(status: AdminBankVerificationStatus): string {
+    const labels: Record<AdminBankVerificationStatus, string> = {
+      Pending: 'Initiate Verification',
+      Verified: 'Mark Verified',
+      Rejected: 'Reject Details',
+    };
+
+    return labels[status];
   }
 
   locationDetailItems(details: InstructorAdminDetails): InstructorDetailItem[] {
@@ -590,6 +831,31 @@ export class ViewUsers implements OnInit {
       { label: 'YouTube', icon: 'fa-brands fa-youtube', url: profile?.youtubeUrl || '' },
       { label: 'Portfolio', icon: 'fa-solid fa-globe', url: profile?.portfolioUrl || '' },
     ].filter((link) => link.url.trim() !== '');
+  }
+
+  private syncInstructorPayoutSummary(
+    userId: number,
+    summary: InstructorPayoutSummary | null | undefined,
+  ): void {
+    if (!summary) {
+      return;
+    }
+
+    this.users = this.users.map((user) =>
+      user.id === userId
+        ? {
+            ...user,
+            instructorPayout: summary,
+          }
+        : user,
+    );
+
+    if (this.selectedInstructorUser?.id === userId) {
+      this.selectedInstructorUser = {
+        ...this.selectedInstructorUser,
+        instructorPayout: summary,
+      };
+    }
   }
 
   private createEmptyMeta(): EmployeeListMeta {

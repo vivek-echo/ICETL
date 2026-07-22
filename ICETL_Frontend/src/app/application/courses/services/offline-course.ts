@@ -18,6 +18,14 @@ export interface OfflineCoursePayload {
   parentCourseId?: number | null;
   parentCourseTitle?: string | null;
   parentCourseCode?: string | null;
+  stateCode?: number | null;
+  stateName?: string | null;
+  districtCode?: number | null;
+  districtName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
+  branchAddress?: string | null;
+  locationLabel?: string | null;
   venue: string;
   city: string;
   startDate: string;

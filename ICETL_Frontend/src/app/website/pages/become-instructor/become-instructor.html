@@ -299,7 +299,7 @@
                 (ngSubmit)="submitEmail()"
               >
                 <div class="stage-card__header">
-                  <span class="section-badge">Step 0 of 5</span>
+                  <span class="section-badge">Step 0 of 6</span>
                   <h2>Verify your email to unlock the instructor onboarding workspace.</h2>
                   <p>
                     We'll check your instructor status, send a secure 6-digit OTP, and restore any
@@ -1489,15 +1489,287 @@
                   </div>
                 </div>
 
-                <div class="form-step" [style.display]="currentStep === 4 ? 'block' : 'none'" formGroupName="agreements">
+                <div
+                  class="form-step"
+                  [style.display]="currentStep === 4 ? 'block' : 'none'"
+                  formGroupName="bankSettlement"
+                >
                   <div class="step-panel">
                     <div class="step-panel__intro">
-                      <span class="step-panel__eyebrow">Final review</span>
-                      <h3>Confirm your accuracy, accept the platform policies, and submit with confidence.</h3>
+                      <span class="step-panel__eyebrow">Settlement setup</span>
+                      <h3>Bank and Settlement Details</h3>
                       <p>
-                        This is the final step before your instructor application moves into
-                        review.
+                        Add the bank account where approved instructor payouts should be settled.
+                        Verification status is controlled by ICE Technology Lab.
                       </p>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.accountHolderName')"
+                          [class.is-filled]="hasControlValue('bankSettlement.accountHolderName')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.accountHolderName')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Account Holder Name</span>
+                            </legend>
+                            <input
+                              id="accountHolderName"
+                              type="text"
+                              class="form-control"
+                              formControlName="accountHolderName"
+                              placeholder=" "
+                              aria-label="Account Holder Name"
+                              maxlength="150"
+                              [class.is-invalid]="isInvalid('bankSettlement.accountHolderName')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.accountHolderName')">
+                          {{ errorFor('bankSettlement.accountHolderName') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.bankName')"
+                          [class.is-filled]="hasControlValue('bankSettlement.bankName')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.bankName')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Bank Name</span>
+                            </legend>
+                            <input
+                              id="bankName"
+                              type="text"
+                              class="form-control"
+                              formControlName="bankName"
+                              placeholder=" "
+                              aria-label="Bank Name"
+                              maxlength="150"
+                              [class.is-invalid]="isInvalid('bankSettlement.bankName')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.bankName')">
+                          {{ errorFor('bankSettlement.bankName') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.accountNumber')"
+                          [class.is-filled]="hasControlValue('bankSettlement.accountNumber')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.accountNumber')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Account Number</span>
+                            </legend>
+                            <input
+                              id="accountNumber"
+                              type="text"
+                              class="form-control"
+                              formControlName="accountNumber"
+                              placeholder=" "
+                              aria-label="Account Number"
+                              inputmode="numeric"
+                              maxlength="30"
+                              autocomplete="off"
+                              [class.is-invalid]="isInvalid('bankSettlement.accountNumber')"
+                              (input)="sanitizeBankAccountNumberInput($event, 'accountNumber')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.accountNumber')">
+                          {{ errorFor('bankSettlement.accountNumber') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.confirmAccountNumber')"
+                          [class.is-filled]="hasControlValue('bankSettlement.confirmAccountNumber')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.confirmAccountNumber')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Confirm Account Number</span>
+                            </legend>
+                            <input
+                              id="confirmAccountNumber"
+                              type="text"
+                              class="form-control"
+                              formControlName="confirmAccountNumber"
+                              placeholder=" "
+                              aria-label="Confirm Account Number"
+                              inputmode="numeric"
+                              maxlength="30"
+                              autocomplete="off"
+                              [class.is-invalid]="isInvalid('bankSettlement.confirmAccountNumber')"
+                              (input)="sanitizeBankAccountNumberInput($event, 'confirmAccountNumber')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.confirmAccountNumber')">
+                          {{ errorFor('bankSettlement.confirmAccountNumber') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.ifscCode')"
+                          [class.is-filled]="hasControlValue('bankSettlement.ifscCode')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.ifscCode')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>IFSC Code</span>
+                            </legend>
+                            <input
+                              id="ifscCode"
+                              type="text"
+                              class="form-control"
+                              formControlName="ifscCode"
+                              placeholder=" "
+                              aria-label="IFSC Code"
+                              maxlength="11"
+                              [class.is-invalid]="isInvalid('bankSettlement.ifscCode')"
+                              (input)="sanitizeIfscInput($event)"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.ifscCode')">
+                          {{ errorFor('bankSettlement.ifscCode') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-field--select"
+                          [class.is-invalid]="isInvalid('bankSettlement.accountType')"
+                          [class.is-filled]="hasControlValue('bankSettlement.accountType')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.accountType')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Account Type</span>
+                            </legend>
+                            <select
+                              id="accountType"
+                              class="form-select"
+                              formControlName="accountType"
+                              aria-label="Account Type"
+                              [class.is-invalid]="isInvalid('bankSettlement.accountType')"
+                            >
+                              <option value="" disabled>Select account type</option>
+                              @for (type of accountTypeOptions; track type) {
+                                <option [value]="type">{{ type }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.accountType')">
+                          {{ errorFor('bankSettlement.accountType') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field"
+                          [class.is-invalid]="isInvalid('bankSettlement.bankBranchName')"
+                          [class.is-filled]="hasControlValue('bankSettlement.bankBranchName')"
+                          [class.is-success]="isControlSuccessful('bankSettlement.bankBranchName')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Bank Branch Name</span>
+                            </legend>
+                            <input
+                              id="bankBranchName"
+                              type="text"
+                              class="form-control"
+                              formControlName="bankBranchName"
+                              placeholder=" "
+                              aria-label="Bank Branch Name"
+                              maxlength="150"
+                              [class.is-invalid]="isInvalid('bankSettlement.bankBranchName')"
+                            />
+                          </fieldset>
+                        </div>
+                        <div class="invalid-feedback d-block" *ngIf="isInvalid('bankSettlement.bankBranchName')">
+                          {{ errorFor('bankSettlement.bankBranchName') }}
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div
+                          class="premium-field premium-field--select premium-field--readonly"
+                          [class.is-filled]="hasControlValue('bankSettlement.bankVerificationStatus')"
+                        >
+                          <fieldset class="premium-field__outline">
+                            <legend class="premium-field__legend">
+                              <span>Bank Verification Status</span>
+                            </legend>
+                            <select
+                              id="bankVerificationStatus"
+                              class="form-select"
+                              formControlName="bankVerificationStatus"
+                              aria-label="Bank Verification Status"
+                            >
+                              @for (status of bankVerificationStatusOptions; track status) {
+                                <option [value]="status">{{ status }}</option>
+                              }
+                            </select>
+                          </fieldset>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-step" [style.display]="currentStep === 5 ? 'block' : 'none'" formGroupName="agreements">
+                  <div class="step-panel">
+                    <div class="step-panel__intro">
+                      <span class="step-panel__eyebrow">Final agreement</span>
+                      <h3>Review and accept the instructor contractual terms.</h3>
+                      <p>
+                        Submission confirms that you understand the performance-based
+                        contractual engagement and related obligations.
+                      </p>
+                    </div>
+
+                    <div class="terms-panel">
+                      <div class="terms-panel__header">
+                        <span>ICE Technology Lab Instructor Agreement</span>
+                        <strong>Offer-cum-Joining Terms</strong>
+                      </div>
+
+                      <div class="terms-grid">
+                        @for (term of instructorAgreementTerms; track term.title) {
+                          <article class="term-card">
+                            <div class="term-card__icon">
+                              <i [class]="term.icon"></i>
+                            </div>
+                            <div class="term-card__body">
+                              <h4>{{ term.title }}</h4>
+                              <ul>
+                                @for (point of term.points; track point) {
+                                  <li>{{ point }}</li>
+                                }
+                              </ul>
+                            </div>
+                          </article>
+                        }
+                      </div>
                     </div>
 
                     <div class="agreements-panel">
@@ -1505,8 +1777,10 @@
                         <input type="checkbox" formControlName="acceptTerms" />
                         <span class="agreement-item__control" aria-hidden="true"></span>
                         <span class="agreement-item__text">
-                          I accept the ICETL terms and conditions for publishing and managing
-                          instructor content.
+                          I have read and accept the ICE Technology Lab contractual terms,
+                          including contractual appointment, remuneration, non-compete,
+                          confidentiality, course completion, termination, resignation,
+                          penalties, and legal recovery clauses.
                         </span>
                       </label>
                       <div class="invalid-feedback d-block" *ngIf="isInvalid('agreements.acceptTerms')">
@@ -1520,8 +1794,9 @@
                         <input type="checkbox" formControlName="acceptInstructorPolicy" />
                         <span class="agreement-item__control" aria-hidden="true"></span>
                         <span class="agreement-item__text">
-                          I agree to the instructor quality policy, learner trust guidelines, and
-                          community standards.
+                          I agree to follow ICE Technology Lab policies, protect student data
+                          and course materials, and avoid poaching, diversion, private tuition,
+                          unauthorized freelance training, or competing activity described above.
                         </span>
                       </label>
                       <div
@@ -1538,8 +1813,9 @@
                         <input type="checkbox" formControlName="verifyInformation" />
                         <span class="agreement-item__control" aria-hidden="true"></span>
                         <span class="agreement-item__text">
-                          I confirm that all details and uploaded documents are accurate and belong
-                          to me.
+                          I confirm that all details and uploaded documents are accurate and
+                          belong to me, and I accept this as a performance-based contractual
+                          instructor role.
                         </span>
                       </label>
                       <div
@@ -1553,8 +1829,9 @@
                     <div class="review-card">
                       <h3>Ready to submit</h3>
                       <p>
-                        Your verified email, saved draft, uploaded documents, and final agreements
-                        will now be packaged into one instructor application.
+                        Your verified email, saved draft, uploaded documents, and accepted
+                        contractual declarations will now be packaged into one instructor
+                        application.
                       </p>
                       <ul>
                         <li><i class="fa-solid fa-check"></i> Profile completion: {{ completionPercentage }}%</li>

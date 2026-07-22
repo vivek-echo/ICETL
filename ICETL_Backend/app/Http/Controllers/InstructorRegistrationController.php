@@ -29,6 +29,15 @@ class InstructorRegistrationController extends Controller
     private const MAX_DOCUMENT_SIZE_KB = 5120;
     private const MAX_RESUME_SIZE_KB = 10240;
     private const MAX_CERTIFICATION_SIZE_KB = 5120;
+    private const BANK_ACCOUNT_TYPES = ['Savings', 'Current'];
+    private const BANK_VERIFICATION_NOT_SUBMITTED = 'Not Submitted';
+    private const BANK_VERIFICATION_PENDING = 'Pending';
+    private const BANK_VERIFICATION_STATUSES = [
+        self::BANK_VERIFICATION_NOT_SUBMITTED,
+        self::BANK_VERIFICATION_PENDING,
+        'Verified',
+        'Rejected',
+    ];
 
     public function sendInstructorOtp(Request $request)
     {
@@ -505,7 +514,7 @@ class InstructorRegistrationController extends Controller
                 $instructor->portfolioUrl = $this->sanitizeUrl($payload['portfolioWebsite'] ?? null);
                 $this->syncUserProfileStage($user, 4);
                 $user->save();
-                $instructor->onboardingStep = 5;
+                $instructor->onboardingStep = max(5, $this->normalizeStep((int) ($instructor->onboardingStep ?: 1)));
                 $instructor->save();
             });
 
@@ -525,6 +534,68 @@ class InstructorRegistrationController extends Controller
 
             return $this->errorResponse(
                 'Unable to save documents and social links right now. Please try again later.',
+                [],
+                500
+            );
+        }
+    }
+
+    public function saveBankAndSettlementDetails(Request $request)
+    {
+        $context = $this->resolveInstructorContext($request);
+        if ($context['response']) {
+            return $context['response'];
+        }
+
+        /** @var User $user */
+        $user = $context['user'];
+        /** @var Instructor $instructor */
+        $instructor = $context['instructor'];
+
+        $validator = Validator::make($request->all(), [
+            'accountHolderName' => ['required', 'string', 'min:2', 'max:150', "regex:/^[A-Za-z][A-Za-z .'-]*$/"],
+            'bankName' => ['required', 'string', 'min:2', 'max:150'],
+            'accountNumber' => ['required', 'string', 'regex:/^[0-9]{6,30}$/'],
+            'confirmAccountNumber' => ['required', 'same:accountNumber'],
+            'ifscCode' => ['required', 'string', 'regex:/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/'],
+            'accountType' => ['required', 'in:' . implode(',', self::BANK_ACCOUNT_TYPES)],
+            'bankBranchName' => ['required', 'string', 'min:2', 'max:150'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Validation failed', $validator->errors()->toArray(), 422);
+        }
+
+        $payload = $validator->validated();
+
+        try {
+            DB::transaction(function () use ($user, $instructor, $payload): void {
+                $instructor->bankAccountHolderName = $this->sanitizeText($payload['accountHolderName']);
+                $instructor->bankName = $this->sanitizeText($payload['bankName']);
+                $instructor->bankAccountNumber = preg_replace('/\D+/', '', (string) $payload['accountNumber']) ?? '';
+                $instructor->bankIfscCode = strtoupper($this->sanitizeText($payload['ifscCode']));
+                $instructor->bankAccountType = $this->sanitizeText($payload['accountType']);
+                $instructor->bankBranchName = $this->sanitizeText($payload['bankBranchName']);
+                $instructor->bankVerificationStatus = self::BANK_VERIFICATION_NOT_SUBMITTED;
+
+                $this->syncUserProfileStage($user, 5);
+                $user->save();
+                $instructor->onboardingStep = 6;
+                $instructor->save();
+            });
+
+            return $this->successResponse('Bank and settlement details saved successfully.', [
+                'currentStep' => 6,
+                'instructor' => $this->formatInstructorProfile($this->loadInstructorProfile($user->id)),
+            ]);
+        } catch (Throwable $exception) {
+            Log::error('Instructor bank and settlement details save failed', [
+                'userId' => $user->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $this->errorResponse(
+                'Unable to save bank and settlement details right now. Please try again later.',
                 [],
                 500
             );
@@ -560,11 +631,11 @@ class InstructorRegistrationController extends Controller
 
         try {
             DB::transaction(function () use ($user, $instructor): void {
-                $this->syncUserProfileStage($user, 5);
+                $this->syncUserProfileStage($user, 6);
                 $user->save();
                 $this->assignInstructorCodeIfMissing($user);
                 $instructor->onboardingCompleted = true;
-                $instructor->onboardingStep = 5;
+                $instructor->onboardingStep = 6;
                 $instructor->approvalStatus = 'pending';
                 $instructor->status = 1;
                 $instructor->save();
@@ -574,7 +645,7 @@ class InstructorRegistrationController extends Controller
             $request->user()?->currentAccessToken()?->delete();
 
             return $this->successResponse('Instructor onboarding completed successfully.', [
-                'currentStep' => 5,
+                'currentStep' => 6,
                 'onboardingCompleted' => true,
                 'instructor' => $this->formatInstructorProfile($profile),
             ]);
@@ -872,6 +943,13 @@ class InstructorRegistrationController extends Controller
             'githubUrl' => $instructor->githubUrl,
             'youtubeUrl' => $instructor->youtubeUrl,
             'portfolioUrl' => $instructor->portfolioUrl,
+            'bankAccountHolderName' => $instructor->bankAccountHolderName,
+            'bankName' => $instructor->bankName,
+            'bankAccountNumber' => $instructor->bankAccountNumber,
+            'bankIfscCode' => $instructor->bankIfscCode,
+            'bankAccountType' => $instructor->bankAccountType,
+            'bankBranchName' => $instructor->bankBranchName,
+            'bankVerificationStatus' => $this->normalizeBankVerificationStatus($instructor->bankVerificationStatus ?? null),
             'onboardingStep' => $this->normalizeStep((int) ($instructor->onboardingStep ?: 1)),
             'onboardingCompleted' => (bool) $instructor->onboardingCompleted,
             'approvalStatus' => $instructor->approvalStatus ?: 'draft',
@@ -950,6 +1028,12 @@ class InstructorRegistrationController extends Controller
             'currentJobTitle' => $instructor->currentJobTitle,
             'currentOrganization' => $instructor->currentOrganization,
             'highestQualification' => $instructor->qualification,
+            'accountHolderName' => $instructor->bankAccountHolderName,
+            'bankName' => $instructor->bankName,
+            'accountNumber' => $instructor->bankAccountNumber,
+            'ifscCode' => $instructor->bankIfscCode,
+            'accountType' => $instructor->bankAccountType,
+            'bankBranchName' => $instructor->bankBranchName,
         ];
 
         foreach ($requiredInstructorFields as $field => $value) {
@@ -1044,7 +1128,20 @@ class InstructorRegistrationController extends Controller
 
     private function normalizeStep(int $step): int
     {
-        return max(1, min(5, $step));
+        return max(1, min(6, $step));
+    }
+
+    private function normalizeBankVerificationStatus(?string $status): string
+    {
+        $normalizedStatus = trim((string) $status);
+
+        foreach (self::BANK_VERIFICATION_STATUSES as $allowedStatus) {
+            if (strcasecmp($normalizedStatus, $allowedStatus) === 0) {
+                return $allowedStatus;
+            }
+        }
+
+        return self::BANK_VERIFICATION_NOT_SUBMITTED;
     }
 
     private function syncUserProfileStage(User $user, int $stage): void

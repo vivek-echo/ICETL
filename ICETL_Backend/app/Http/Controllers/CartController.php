@@ -11,12 +11,17 @@ use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller
 {
+    private const DEFAULT_GST_PERCENT = 18.0;
+
     public function getCartItems(Request $request)
     {
         try {
             $items = $this->cartItemsQuery($request)
                 ->orderBy('cart.id', 'DESC')
                 ->get();
+            $subtotal = round((float) $items->sum(fn($item) => (float) ($item->price ?? 0)), 2);
+            $taxAmount = $this->gstAmount($subtotal);
+            $totalAmount = round($subtotal + $taxAmount, 2);
 
             return response()->json([
                 'status' => true,
@@ -24,7 +29,10 @@ class CartController extends Controller
                 'data' => $this->formatCartItems($request, $items),
                 'summary' => [
                     'totalItems' => $items->count(),
-                    'totalAmount' => $items->sum(fn($item) => (float) ($item->price ?? 0)),
+                    'subtotalAmount' => $subtotal,
+                    'taxPercent' => $this->gstPercent(),
+                    'taxAmount' => $taxAmount,
+                    'totalAmount' => $totalAmount,
                 ],
             ], 200);
         } catch (\Exception $e) {
@@ -238,6 +246,9 @@ class CartController extends Controller
                         'name' => (string) ($fallbackInstructors[(int) $id] ?? 'Instructor'),
                     ]);
 
+            $price = $this->moneyAmount($course->price ?? 0);
+            $taxAmount = $this->gstAmount($price);
+
             return [
                 'cartId' => (int) $course->cartId,
                 'id' => (int) $course->id,
@@ -247,7 +258,10 @@ class CartController extends Controller
                 'instructorName' => $instructors->pluck('name')->filter()->join(', '),
                 'duration' => $course->duration,
                 'durationUnit' => $course->durationUnit,
-                'price' => $course->price,
+                'price' => $price,
+                'taxPercent' => $this->gstPercent(),
+                'taxAmount' => $taxAmount,
+                'totalAmount' => round($price + $taxAmount, 2),
                 'oldPrice' => $course->oldPrice,
                 'description' => $course->description,
                 'courseHighlights' => $this->decodeCourseHighlights($course->courseHighlights ?? null),
@@ -294,6 +308,24 @@ class CartController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function gstPercent(): float
+    {
+        $percent = config('services.gst.percent', self::DEFAULT_GST_PERCENT);
+        $percent = is_numeric($percent) ? (float) $percent : self::DEFAULT_GST_PERCENT;
+
+        return round(max($percent, 0), 2);
+    }
+
+    private function moneyAmount(mixed $value): float
+    {
+        return round(max(is_numeric($value) ? (float) $value : 0, 0), 2);
+    }
+
+    private function gstAmount(float $amount): float
+    {
+        return round(max($amount, 0) * $this->gstPercent() / 100, 2);
     }
 
     private function decodeCourseHighlights(?string $courseHighlights): array

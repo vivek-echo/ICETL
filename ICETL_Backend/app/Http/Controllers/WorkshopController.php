@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AdministrationService;
 use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -17,6 +18,10 @@ class WorkshopController extends Controller
     private const SCHEDULE_UPCOMING = 'upcoming';
     private const SCHEDULE_ONGOING = 'ongoing';
     private const SCHEDULE_COMPLETED = 'completed';
+
+    public function __construct(private readonly AdministrationService $administrationService)
+    {
+    }
 
     public function createWorkshop(Request $request)
     {
@@ -46,19 +51,25 @@ class WorkshopController extends Controller
             ], 422);
         }
 
+        $location = $this->validatedProgramLocation($request);
+
+        if (!$location) {
+            return $this->programLocationValidationResponse();
+        }
+
         DB::beginTransaction();
         $bannerImagePath = null;
 
         try {
             $bannerImagePath = $this->storeBannerImage($request);
-            $workshopId = DB::table('workshops')->insertGetId([
-                ...$this->workshopPayload($request, $bannerImagePath),
+            $workshopId = DB::table('workshops')->insertGetId($this->filterExistingColumns('workshops', [
+                ...$this->workshopPayload($request, $bannerImagePath, $location),
                 'createdBy' => (int) $user->id,
                 'createdByRoleId' => $user->role ?? null,
                 'deletedFlag' => 0,
                 'createdOn' => now(),
                 'updatedOn' => now(),
-            ]);
+            ]));
 
             $workshopCode = EntityCodeService::assignIfMissing(
                 'workshops',
@@ -246,6 +257,12 @@ class WorkshopController extends Controller
             ], 422);
         }
 
+        $location = $this->validatedProgramLocation($request);
+
+        if (!$location) {
+            return $this->programLocationValidationResponse();
+        }
+
         $bannerImagePath = null;
 
         try {
@@ -276,10 +293,10 @@ class WorkshopController extends Controller
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
                 ->where('deletedFlag', 0)
-                ->update([
-                    ...$this->workshopPayload($request, $bannerImagePath),
+                ->update($this->filterExistingColumns('workshops', [
+                    ...$this->workshopPayload($request, $bannerImagePath, $location),
                     'updatedOn' => now(),
-                ]);
+                ]));
 
             if ($bannerImagePath) {
                 $this->deleteBannerImage($currentBannerImage);
@@ -544,16 +561,27 @@ class WorkshopController extends Controller
 
     private function baseWorkshopQuery()
     {
-        return DB::table('workshops as w')
+        $query = DB::table('workshops as w')
             ->leftJoin('users as creator', 'creator.id', '=', 'w.createdBy')
-            ->where('w.deletedFlag', 0)
-            ->select(
+            ->where('w.deletedFlag', 0);
+
+        if ($this->programTableHasLocationColumns('workshops')) {
+            $query
+                ->leftJoin('branches as branch', 'branch.id', '=', 'w.branchId')
+                ->leftJoinSub($this->administrationService->locationLookupQuery(), 'workshopLocation', function ($join): void {
+                    $join->on('workshopLocation.state_code', '=', 'w.stateCode')
+                        ->on('workshopLocation.district_code', '=', 'w.districtCode');
+                });
+        }
+
+        return $query->select(array_merge([
                 'w.id',
                 EntityCodeService::codeSelect('workshops', 'w'),
                 'w.title',
                 'w.topic',
                 'w.venue',
                 'w.city',
+            ], $this->programLocationSelects('workshops', 'w', 'branch', 'workshopLocation'), [
                 'w.startDate',
                 'w.endDate',
                 'w.startTime',
@@ -570,7 +598,7 @@ class WorkshopController extends Controller
                 'creator.email as createdByEmail',
                 'w.createdOn',
                 'w.updatedOn'
-            );
+            ]));
     }
 
     private function validateWorkshopPayload(Request $request, bool $isUpdate = false)
@@ -580,8 +608,11 @@ class WorkshopController extends Controller
         $rules = [
             'title' => ['required', 'string', 'min:5', 'max:120'],
             'topic' => ['required', 'string', 'min:3', 'max:120'],
-            'venue' => ['required', 'string', 'min:3', 'max:150'],
-            'city' => ['required', 'string', 'min:2', 'max:100'],
+            'stateCode' => 'required|integer|min:1',
+            'districtCode' => 'required|integer|min:1',
+            'branchId' => 'required|integer|min:1',
+            'venue' => ['nullable', 'string', 'max:150'],
+            'city' => ['nullable', 'string', 'max:100'],
             'startDate' => 'required|date|after_or_equal:today',
             'endDate' => 'required|date|after:startDate',
             'startTime' => 'required|date_format:H:i',
@@ -603,15 +634,20 @@ class WorkshopController extends Controller
         return Validator::make($request->all(), $rules);
     }
 
-    private function workshopPayload(Request $request, ?string $bannerImagePath = null): array
+    private function workshopPayload(Request $request, ?string $bannerImagePath = null, ?object $location = null): array
     {
         $takeaways = $this->normalizeTakeaways($request->input('takeaways', []));
+        $branchName = trim((string) ($location->branchName ?? $request->input('venue')));
+        $districtName = trim((string) ($location->districtName ?? $request->input('city')));
 
         $payload = [
             'title' => trim((string) $request->input('title')),
             'topic' => trim((string) $request->input('topic')),
-            'venue' => trim((string) $request->input('venue')),
-            'city' => trim((string) $request->input('city')),
+            'stateCode' => $location ? (int) $location->stateCode : (int) $request->input('stateCode'),
+            'districtCode' => $location ? (int) $location->districtCode : (int) $request->input('districtCode'),
+            'branchId' => $location ? (int) $location->branchId : (int) $request->input('branchId'),
+            'venue' => $branchName,
+            'city' => $districtName,
             'startDate' => $request->input('startDate'),
             'endDate' => $request->input('endDate') ?: null,
             'startTime' => $request->input('startTime'),
@@ -633,10 +669,12 @@ class WorkshopController extends Controller
 
     private function applyFilters($query, Request $request): void
     {
+        $hasLocationColumns = $this->programTableHasLocationColumns('workshops');
+
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
 
-            $query->where(function ($subQuery) use ($search) {
+            $query->where(function ($subQuery) use ($search, $hasLocationColumns) {
                 $subQuery->where('w.title', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.topic', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.venue', 'LIKE', '%' . $search . '%')
@@ -645,13 +683,30 @@ class WorkshopController extends Controller
                     ->orWhere('w.description', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.name', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.email', 'LIKE', '%' . $search . '%');
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $search . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $search . '%')
+                        ->orWhere('workshopLocation.state_name_english', 'LIKE', '%' . $search . '%')
+                        ->orWhere('workshopLocation.district_name_english', 'LIKE', '%' . $search . '%');
+                }
                 EntityCodeService::orWhereCode($subQuery, 'workshops', 'w.code', $search);
             });
         }
 
         if ($request->filled('city')) {
             $city = trim((string) $request->input('city'));
-            $query->where('w.city', 'LIKE', '%' . $city . '%');
+            $query->where(function ($subQuery) use ($city, $hasLocationColumns) {
+                $subQuery->where('w.city', 'LIKE', '%' . $city . '%');
+
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $city . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $city . '%')
+                        ->orWhere('workshopLocation.state_name_english', 'LIKE', '%' . $city . '%')
+                        ->orWhere('workshopLocation.district_name_english', 'LIKE', '%' . $city . '%');
+                }
+            });
         }
 
         if ($request->input('status') !== null && $request->input('status') !== '') {
@@ -737,22 +792,42 @@ class WorkshopController extends Controller
 
     private function applyPublicFilters($query, Request $request): void
     {
+        $hasLocationColumns = $this->programTableHasLocationColumns('workshops');
+
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
 
-            $query->where(function ($subQuery) use ($search) {
+            $query->where(function ($subQuery) use ($search, $hasLocationColumns) {
                 $subQuery->where('w.title', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.topic', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.venue', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.city', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.speakerName', 'LIKE', '%' . $search . '%')
                     ->orWhere('w.description', 'LIKE', '%' . $search . '%');
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $search . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $search . '%')
+                        ->orWhere('workshopLocation.state_name_english', 'LIKE', '%' . $search . '%')
+                        ->orWhere('workshopLocation.district_name_english', 'LIKE', '%' . $search . '%');
+                }
                 EntityCodeService::orWhereCode($subQuery, 'workshops', 'w.code', $search);
             });
         }
 
         if ($request->filled('city')) {
-            $query->where('w.city', 'LIKE', '%' . trim((string) $request->input('city')) . '%');
+            $city = trim((string) $request->input('city'));
+            $query->where(function ($subQuery) use ($city, $hasLocationColumns) {
+                $subQuery->where('w.city', 'LIKE', '%' . $city . '%');
+
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $city . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $city . '%')
+                        ->orWhere('workshopLocation.state_name_english', 'LIKE', '%' . $city . '%')
+                        ->orWhere('workshopLocation.district_name_english', 'LIKE', '%' . $city . '%');
+                }
+            });
         }
     }
 
@@ -843,6 +918,11 @@ class WorkshopController extends Controller
         $startDate = $workshop->startDate ? (string) $workshop->startDate : '';
         $endDate = $workshop->endDate ? (string) $workshop->endDate : null;
         $bannerImage = $workshop->bannerImage ? (string) $workshop->bannerImage : null;
+        $location = $this->administrationService->formatProgramLocation(
+            $workshop,
+            $workshop->venue ?? null,
+            $workshop->city ?? null
+        );
 
         return [
             'id' => (int) $workshop->id,
@@ -850,8 +930,9 @@ class WorkshopController extends Controller
             'type' => 'workshop',
             'title' => (string) $workshop->title,
             'topic' => (string) $workshop->topic,
-            'venue' => (string) $workshop->venue,
-            'city' => (string) $workshop->city,
+            ...$location,
+            'venue' => (string) ($workshop->venue ?: $location['branchName']),
+            'city' => (string) ($workshop->city ?: $location['districtName']),
             'eventDate' => $startDate,
             'startDate' => $startDate,
             'endDate' => $endDate,
@@ -967,6 +1048,74 @@ class WorkshopController extends Controller
             && $startTime !== ''
             && $endTime !== ''
             && $endTime <= $startTime;
+    }
+
+    private function programTableHasLocationColumns(string $table): bool
+    {
+        return Schema::hasColumn($table, 'stateCode')
+            && Schema::hasColumn($table, 'districtCode')
+            && Schema::hasColumn($table, 'branchId');
+    }
+
+    private function programLocationSelects(
+        string $table,
+        string $tableAlias,
+        string $branchAlias,
+        string $locationAlias
+    ): array {
+        if (!$this->programTableHasLocationColumns($table)) {
+            return [
+                DB::raw('NULL as stateCode'),
+                DB::raw('NULL as stateName'),
+                DB::raw('NULL as districtCode'),
+                DB::raw('NULL as districtName'),
+                DB::raw('NULL as branchId'),
+                DB::raw('NULL as branchName'),
+                DB::raw('NULL as branchAddress'),
+            ];
+        }
+
+        return [
+            "{$tableAlias}.stateCode",
+            DB::raw("{$locationAlias}.state_name_english as stateName"),
+            "{$tableAlias}.districtCode",
+            DB::raw("{$locationAlias}.district_name_english as districtName"),
+            "{$tableAlias}.branchId",
+            DB::raw("{$branchAlias}.branchName as branchName"),
+            DB::raw("{$branchAlias}.branchAddress as branchAddress"),
+        ];
+    }
+
+    private function validatedProgramLocation(Request $request): ?object
+    {
+        return $this->administrationService->getBranchLocation(
+            (int) $request->input('branchId'),
+            (int) $request->input('stateCode'),
+            (int) $request->input('districtCode'),
+            true
+        );
+    }
+
+    private function programLocationValidationResponse()
+    {
+        return response()->json([
+            'status' => false,
+            'message' => 'Validation failed',
+            'errors' => [
+                'branchId' => ['Selected branch is not active for the selected state and district/city.'],
+            ],
+        ], 422);
+    }
+
+    private function filterExistingColumns(string $table, array $payload): array
+    {
+        static $columnsByTable = [];
+
+        if (!isset($columnsByTable[$table])) {
+            $columnsByTable[$table] = array_flip(Schema::getColumnListing($table));
+        }
+
+        return array_intersect_key($payload, $columnsByTable[$table]);
     }
 
     private function validationResponse($validator)

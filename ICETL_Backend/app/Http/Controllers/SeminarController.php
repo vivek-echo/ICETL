@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AdministrationService;
 use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -17,6 +18,10 @@ class SeminarController extends Controller
     private const SCHEDULE_UPCOMING = 'upcoming';
     private const SCHEDULE_ONGOING = 'ongoing';
     private const SCHEDULE_COMPLETED = 'completed';
+
+    public function __construct(private readonly AdministrationService $administrationService)
+    {
+    }
 
     public function createSeminar(Request $request)
     {
@@ -46,19 +51,25 @@ class SeminarController extends Controller
             ], 422);
         }
 
+        $location = $this->validatedProgramLocation($request);
+
+        if (!$location) {
+            return $this->programLocationValidationResponse();
+        }
+
         DB::beginTransaction();
         $bannerImagePath = null;
 
         try {
             $bannerImagePath = $this->storeBannerImage($request);
-            $seminarId = DB::table('seminars')->insertGetId([
-                ...$this->seminarPayload($request, $bannerImagePath),
+            $seminarId = DB::table('seminars')->insertGetId($this->filterExistingColumns('seminars', [
+                ...$this->seminarPayload($request, $bannerImagePath, $location),
                 'createdBy' => (int) $user->id,
                 'createdByRoleId' => $user->role ?? null,
                 'deletedFlag' => 0,
                 'createdOn' => now(),
                 'updatedOn' => now(),
-            ]);
+            ]));
 
             $seminarCode = EntityCodeService::assignIfMissing(
                 'seminars',
@@ -246,6 +257,12 @@ class SeminarController extends Controller
             ], 422);
         }
 
+        $location = $this->validatedProgramLocation($request);
+
+        if (!$location) {
+            return $this->programLocationValidationResponse();
+        }
+
         $bannerImagePath = null;
 
         try {
@@ -276,10 +293,10 @@ class SeminarController extends Controller
                 ->where('id', (int) $request->input('id'))
                 ->where('createdBy', (int) $user->id)
                 ->where('deletedFlag', 0)
-                ->update([
-                    ...$this->seminarPayload($request, $bannerImagePath),
+                ->update($this->filterExistingColumns('seminars', [
+                    ...$this->seminarPayload($request, $bannerImagePath, $location),
                     'updatedOn' => now(),
-                ]);
+                ]));
 
             if ($bannerImagePath) {
                 $this->deleteBannerImage($currentBannerImage);
@@ -544,16 +561,27 @@ class SeminarController extends Controller
 
     private function baseSeminarQuery()
     {
-        return DB::table('seminars as s')
+        $query = DB::table('seminars as s')
             ->leftJoin('users as creator', 'creator.id', '=', 's.createdBy')
-            ->where('s.deletedFlag', 0)
-            ->select(
+            ->where('s.deletedFlag', 0);
+
+        if ($this->programTableHasLocationColumns('seminars')) {
+            $query
+                ->leftJoin('branches as branch', 'branch.id', '=', 's.branchId')
+                ->leftJoinSub($this->administrationService->locationLookupQuery(), 'seminarLocation', function ($join): void {
+                    $join->on('seminarLocation.state_code', '=', 's.stateCode')
+                        ->on('seminarLocation.district_code', '=', 's.districtCode');
+                });
+        }
+
+        return $query->select(array_merge([
                 's.id',
                 EntityCodeService::codeSelect('seminars', 's'),
                 's.title',
                 's.topic',
                 's.venue',
                 's.city',
+            ], $this->programLocationSelects('seminars', 's', 'branch', 'seminarLocation'), [
                 's.eventDate',
                 's.startTime',
                 's.endTime',
@@ -569,7 +597,7 @@ class SeminarController extends Controller
                 'creator.email as createdByEmail',
                 's.createdOn',
                 's.updatedOn'
-            );
+            ]));
     }
 
     private function validateSeminarPayload(Request $request, bool $isUpdate = false)
@@ -579,8 +607,11 @@ class SeminarController extends Controller
         $rules = [
             'title' => ['required', 'string', 'min:5', 'max:120'],
             'topic' => ['required', 'string', 'min:3', 'max:120'],
-            'venue' => ['required', 'string', 'min:3', 'max:150'],
-            'city' => ['required', 'string', 'min:2', 'max:100'],
+            'stateCode' => 'required|integer|min:1',
+            'districtCode' => 'required|integer|min:1',
+            'branchId' => 'required|integer|min:1',
+            'venue' => ['nullable', 'string', 'max:150'],
+            'city' => ['nullable', 'string', 'max:100'],
             'eventDate' => 'required|date|after_or_equal:today',
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'nullable|date_format:H:i',
@@ -601,15 +632,20 @@ class SeminarController extends Controller
         return Validator::make($request->all(), $rules);
     }
 
-    private function seminarPayload(Request $request, ?string $bannerImagePath = null): array
+    private function seminarPayload(Request $request, ?string $bannerImagePath = null, ?object $location = null): array
     {
         $takeaways = $this->normalizeTakeaways($request->input('takeaways', []));
+        $branchName = trim((string) ($location->branchName ?? $request->input('venue')));
+        $districtName = trim((string) ($location->districtName ?? $request->input('city')));
 
         $payload = [
             'title' => trim((string) $request->input('title')),
             'topic' => trim((string) $request->input('topic')),
-            'venue' => trim((string) $request->input('venue')),
-            'city' => trim((string) $request->input('city')),
+            'stateCode' => $location ? (int) $location->stateCode : (int) $request->input('stateCode'),
+            'districtCode' => $location ? (int) $location->districtCode : (int) $request->input('districtCode'),
+            'branchId' => $location ? (int) $location->branchId : (int) $request->input('branchId'),
+            'venue' => $branchName,
+            'city' => $districtName,
             'eventDate' => $request->input('eventDate'),
             'startTime' => $request->input('startTime'),
             'endTime' => $request->input('endTime') ?: null,
@@ -630,10 +666,12 @@ class SeminarController extends Controller
 
     private function applyFilters($query, Request $request): void
     {
+        $hasLocationColumns = $this->programTableHasLocationColumns('seminars');
+
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
 
-            $query->where(function ($subQuery) use ($search) {
+            $query->where(function ($subQuery) use ($search, $hasLocationColumns) {
                 $subQuery->where('s.title', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.topic', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.venue', 'LIKE', '%' . $search . '%')
@@ -642,13 +680,30 @@ class SeminarController extends Controller
                     ->orWhere('s.description', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.name', 'LIKE', '%' . $search . '%')
                     ->orWhere('creator.email', 'LIKE', '%' . $search . '%');
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $search . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $search . '%')
+                        ->orWhere('seminarLocation.state_name_english', 'LIKE', '%' . $search . '%')
+                        ->orWhere('seminarLocation.district_name_english', 'LIKE', '%' . $search . '%');
+                }
                 EntityCodeService::orWhereCode($subQuery, 'seminars', 's.code', $search);
             });
         }
 
         if ($request->filled('city')) {
             $city = trim((string) $request->input('city'));
-            $query->where('s.city', 'LIKE', '%' . $city . '%');
+            $query->where(function ($subQuery) use ($city, $hasLocationColumns) {
+                $subQuery->where('s.city', 'LIKE', '%' . $city . '%');
+
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $city . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $city . '%')
+                        ->orWhere('seminarLocation.state_name_english', 'LIKE', '%' . $city . '%')
+                        ->orWhere('seminarLocation.district_name_english', 'LIKE', '%' . $city . '%');
+                }
+            });
         }
 
         if ($request->input('status') !== null && $request->input('status') !== '') {
@@ -729,22 +784,42 @@ class SeminarController extends Controller
 
     private function applyPublicFilters($query, Request $request): void
     {
+        $hasLocationColumns = $this->programTableHasLocationColumns('seminars');
+
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
 
-            $query->where(function ($subQuery) use ($search) {
+            $query->where(function ($subQuery) use ($search, $hasLocationColumns) {
                 $subQuery->where('s.title', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.topic', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.venue', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.city', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.speakerName', 'LIKE', '%' . $search . '%')
                     ->orWhere('s.description', 'LIKE', '%' . $search . '%');
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $search . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $search . '%')
+                        ->orWhere('seminarLocation.state_name_english', 'LIKE', '%' . $search . '%')
+                        ->orWhere('seminarLocation.district_name_english', 'LIKE', '%' . $search . '%');
+                }
                 EntityCodeService::orWhereCode($subQuery, 'seminars', 's.code', $search);
             });
         }
 
         if ($request->filled('city')) {
-            $query->where('s.city', 'LIKE', '%' . trim((string) $request->input('city')) . '%');
+            $city = trim((string) $request->input('city'));
+            $query->where(function ($subQuery) use ($city, $hasLocationColumns) {
+                $subQuery->where('s.city', 'LIKE', '%' . $city . '%');
+
+                if ($hasLocationColumns) {
+                    $subQuery
+                        ->orWhere('branch.branchName', 'LIKE', '%' . $city . '%')
+                        ->orWhere('branch.branchAddress', 'LIKE', '%' . $city . '%')
+                        ->orWhere('seminarLocation.state_name_english', 'LIKE', '%' . $city . '%')
+                        ->orWhere('seminarLocation.district_name_english', 'LIKE', '%' . $city . '%');
+                }
+            });
         }
     }
 
@@ -832,6 +907,11 @@ class SeminarController extends Controller
     {
         $eventDate = $seminar->eventDate ? (string) $seminar->eventDate : '';
         $bannerImage = $seminar->bannerImage ? (string) $seminar->bannerImage : null;
+        $location = $this->administrationService->formatProgramLocation(
+            $seminar,
+            $seminar->venue ?? null,
+            $seminar->city ?? null
+        );
 
         return [
             'id' => (int) $seminar->id,
@@ -839,8 +919,9 @@ class SeminarController extends Controller
             'type' => 'seminar',
             'title' => (string) $seminar->title,
             'topic' => (string) $seminar->topic,
-            'venue' => (string) $seminar->venue,
-            'city' => (string) $seminar->city,
+            ...$location,
+            'venue' => (string) ($seminar->venue ?: $location['branchName']),
+            'city' => (string) ($seminar->city ?: $location['districtName']),
             'eventDate' => $eventDate,
             'startDate' => $eventDate,
             'endDate' => null,
@@ -940,6 +1021,74 @@ class SeminarController extends Controller
         $endTime = (string) $request->input('endTime');
 
         return $startTime !== '' && $endTime !== '' && $endTime <= $startTime;
+    }
+
+    private function programTableHasLocationColumns(string $table): bool
+    {
+        return Schema::hasColumn($table, 'stateCode')
+            && Schema::hasColumn($table, 'districtCode')
+            && Schema::hasColumn($table, 'branchId');
+    }
+
+    private function programLocationSelects(
+        string $table,
+        string $tableAlias,
+        string $branchAlias,
+        string $locationAlias
+    ): array {
+        if (!$this->programTableHasLocationColumns($table)) {
+            return [
+                DB::raw('NULL as stateCode'),
+                DB::raw('NULL as stateName'),
+                DB::raw('NULL as districtCode'),
+                DB::raw('NULL as districtName'),
+                DB::raw('NULL as branchId'),
+                DB::raw('NULL as branchName'),
+                DB::raw('NULL as branchAddress'),
+            ];
+        }
+
+        return [
+            "{$tableAlias}.stateCode",
+            DB::raw("{$locationAlias}.state_name_english as stateName"),
+            "{$tableAlias}.districtCode",
+            DB::raw("{$locationAlias}.district_name_english as districtName"),
+            "{$tableAlias}.branchId",
+            DB::raw("{$branchAlias}.branchName as branchName"),
+            DB::raw("{$branchAlias}.branchAddress as branchAddress"),
+        ];
+    }
+
+    private function validatedProgramLocation(Request $request): ?object
+    {
+        return $this->administrationService->getBranchLocation(
+            (int) $request->input('branchId'),
+            (int) $request->input('stateCode'),
+            (int) $request->input('districtCode'),
+            true
+        );
+    }
+
+    private function programLocationValidationResponse()
+    {
+        return response()->json([
+            'status' => false,
+            'message' => 'Validation failed',
+            'errors' => [
+                'branchId' => ['Selected branch is not active for the selected state and district/city.'],
+            ],
+        ], 422);
+    }
+
+    private function filterExistingColumns(string $table, array $payload): array
+    {
+        static $columnsByTable = [];
+
+        if (!isset($columnsByTable[$table])) {
+            $columnsByTable[$table] = array_flip(Schema::getColumnListing($table));
+        }
+
+        return array_intersect_key($payload, $columnsByTable[$table]);
     }
 
     private function validationResponse($validator)

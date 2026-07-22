@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AdministrationService;
 use App\Services\EntityCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,11 @@ use Throwable;
 class PaymentController extends Controller
 {
     private const CURRENCY = 'INR';
-    private const TAX_PERCENT = 0;
+    private const DEFAULT_GST_PERCENT = 18.0;
+
+    public function __construct(private readonly AdministrationService $administrationService)
+    {
+    }
 
     public function cartCheckoutInit(Request $request)
     {
@@ -61,7 +66,7 @@ class PaymentController extends Controller
             }
 
             $subtotal = round((float) $courses->sum(fn($course) => (float) $course->price), 2);
-            $taxAmount = round($subtotal * self::TAX_PERCENT / 100, 2);
+            $taxAmount = $this->gstAmount($subtotal);
             $totalAmount = round($subtotal + $taxAmount, 2);
 
             if ($totalAmount <= 0) {
@@ -98,16 +103,7 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $orderItems = $courses->map(fn($course) => [
-                'orderId' => $orderId,
-                'courseId' => (int) $course->id,
-                'price' => (float) $course->price,
-                'taxAmount' => 0,
-                'totalAmount' => (float) $course->price,
-                'deletedFlag' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->all();
+            $orderItems = $this->courseOrderItemRows($courses, $orderId, $taxAmount);
 
             DB::table('order_items')->insert($orderItems);
             $this->updateOrderItemsPaymentStatus($orderId, 'pending');
@@ -160,6 +156,7 @@ class PaymentController extends Controller
                 'razorpayKey' => config('services.razorpay.key', env('RAZORPAY_KEY')),
                 'currency' => self::CURRENCY,
                 'subtotalAmount' => $subtotal,
+                'taxPercent' => $this->gstPercent(),
                 'taxAmount' => $taxAmount,
                 'totalAmount' => $totalAmount,
                 'amountInPaise' => (int) round($totalAmount * 100),
@@ -230,7 +227,7 @@ class PaymentController extends Controller
             }
 
             $subtotal = round((float) $program->price, 2);
-            $taxAmount = round($subtotal * self::TAX_PERCENT / 100, 2);
+            $taxAmount = 0.0;
             $totalAmount = round($subtotal + $taxAmount, 2);
 
             if ($totalAmount <= 0) {
@@ -336,6 +333,7 @@ class PaymentController extends Controller
                 'razorpayKey' => config('services.razorpay.key', env('RAZORPAY_KEY')),
                 'currency' => self::CURRENCY,
                 'subtotalAmount' => $subtotal,
+                'taxPercent' => 0,
                 'taxAmount' => $taxAmount,
                 'totalAmount' => $totalAmount,
                 'amountInPaise' => (int) round($totalAmount * 100),
@@ -388,16 +386,7 @@ class PaymentController extends Controller
             'updated_at' => now(),
         ]);
 
-        $orderItems = $courses->map(fn($course) => [
-            'orderId' => $orderId,
-            'courseId' => (int) $course->id,
-            'price' => (float) $course->price,
-            'taxAmount' => 0,
-            'totalAmount' => (float) $course->price,
-            'deletedFlag' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ])->all();
+        $orderItems = $this->courseOrderItemRows($courses, $orderId, $taxAmount);
 
         DB::table('order_items')->insert($orderItems);
         $this->updateOrderItemsPaymentStatus($orderId, 'success');
@@ -482,6 +471,7 @@ class PaymentController extends Controller
             'razorpayKey' => null,
             'currency' => self::CURRENCY,
             'subtotalAmount' => $subtotal,
+            'taxPercent' => $this->gstPercent(),
             'taxAmount' => $taxAmount,
             'totalAmount' => $totalAmount,
             'amountInPaise' => 0,
@@ -1284,9 +1274,12 @@ class PaymentController extends Controller
             ->leftJoin('invoices as i', function ($join) {
                 $join->on('i.orderId', '=', 'o.id')->where('i.deletedFlag', 0);
             })
-            ->where('o.userId', $userId)
             ->where('o.deletedFlag', 0)
             ->whereIn('o.status', ['paid', 'failed', 'cancelled', 'pending']);
+
+        if (!$this->isAdmin($request)) {
+            $query->where('o.userId', $userId);
+        }
 
         if ($hasOfflinePaymentColumns) {
             $query->leftJoin('payment_logs as pl', function ($join) {
@@ -1369,6 +1362,9 @@ class PaymentController extends Controller
                 $order->razorpayPaymentId
             );
 
+            $invoiceItemCount = $this->invoiceItemCountFromJson($order->invoiceData ?? null);
+            $courseCount = (int) ($courseCounts[$order->id] ?? 0);
+
             return [
                 'id' => (int) $order->id,
                 'orderReference' => $order->orderReference,
@@ -1396,7 +1392,7 @@ class PaymentController extends Controller
                 'entityTitle' => $order->offlineEntityTitle ?? $order->entityTitle ?? ($invoiceEntity['entityTitle'] ?? ($orderEntity['entityTitle'] ?? null)),
                 'failureReason' => $order->failureReason,
                 'created_at' => $order->created_at,
-                'courseCount' => (int) ($courseCounts[$order->id] ?? 0),
+                'courseCount' => $courseCount > 0 ? $courseCount : $invoiceItemCount,
                 'refundStatus' => $order->paymentStatus === 'refunded' ? 'refunded' : null,
             ];
         })->values();
@@ -1418,15 +1414,26 @@ class PaymentController extends Controller
     {
         $userId = (int) $request->user()->id;
 
-        $courses = DB::table('enrollments as e')
+        $coursesQuery = DB::table('enrollments as e')
             ->join('courses as c', 'c.id', '=', 'e.courseId')
             ->leftJoin('coursecategories as cc', 'cc.id', '=', 'c.categoryId')
             ->leftJoin('orders as o', 'o.id', '=', 'e.orderId')
             ->leftJoin('invoices as i', 'i.orderId', '=', 'e.orderId')
             ->where('e.userId', $userId)
             ->where('e.deletedFlag', 0)
-            ->where('c.deletedFlag', 0)
-            ->select(
+            ->where('c.deletedFlag', 0);
+
+        if ($this->programTableHasLocationColumns('courses')) {
+            $coursesQuery
+                ->leftJoin('branches as branch', 'branch.id', '=', 'c.branchId')
+                ->leftJoinSub($this->administrationService->locationLookupQuery(), 'courseLocation', function ($join): void {
+                    $join->on('courseLocation.state_code', '=', 'c.stateCode')
+                        ->on('courseLocation.district_code', '=', 'c.districtCode');
+                });
+        }
+
+        $courses = $coursesQuery
+            ->select(array_merge([
                 'e.id as enrollmentId',
                 'e.created_at as enrolledAt',
                 'e.orderId',
@@ -1447,13 +1454,16 @@ class PaymentController extends Controller
                 'c.thumbnail',
                 'c.status',
                 'c.courseType',
+                'c.venue',
+                'c.city',
+            ], $this->programLocationSelects('courses', 'c', 'branch', 'courseLocation'), [
                 'c.startDate',
                 'c.endDate',
                 'c.youtubeLiveUrl',
                 'c.meetingLink',
                 'o.razorpayOrderId',
                 'i.invoiceNumber'
-            )
+            ]))
             ->orderByDesc('e.id')
             ->get();
 
@@ -1483,6 +1493,11 @@ class PaymentController extends Controller
                     'id' => (int) $id,
                     'name' => (string) ($fallbackInstructors[(int) $id] ?? 'Instructor'),
                 ]);
+            $location = $this->administrationService->formatProgramLocation(
+                $course,
+                $course->venue ?? null,
+                $course->city ?? null
+            );
 
             return [
                 'enrollmentId' => (int) $course->enrollmentId,
@@ -1503,6 +1518,9 @@ class PaymentController extends Controller
                 'status' => (int) $course->status,
                 'statusLabel' => ((int) $course->status) === 1 ? 'Active' : 'Inactive',
                 'courseType' => (int) ($course->courseType ?? 1),
+                ...$location,
+                'venue' => $course->venue ?: ($location['branchName'] ?: null),
+                'city' => $course->city ?: ($location['districtName'] ?: null),
                 'youtubeLiveUrl' => $course->youtubeLiveUrl,
                 'meetingLink' => $course->meetingLink,
                 'progressPercent' => (int) ($course->progressPercent ?? 0),
@@ -1566,6 +1584,8 @@ class PaymentController extends Controller
             $hasOrderItemEntityId ? 'oi.entityId' : null,
             $hasInvoiceEntityId ? 'i.entityId' : null,
         ]));
+        $hasWorkshopLocationColumns = $this->programTableHasLocationColumns('workshops');
+        $hasSeminarLocationColumns = $this->programTableHasLocationColumns('seminars');
 
         $rows = DB::table('order_items as oi')
             ->join('orders as o', function ($join) {
@@ -1592,6 +1612,22 @@ class PaymentController extends Controller
                     ->whereRaw("{$effectiveTypeSql} = ?", ['seminar'])
                     ->where('s.deletedFlag', 0);
             })
+            ->when($hasWorkshopLocationColumns, function ($query) {
+                $query
+                    ->leftJoin('branches as workshopBranch', 'workshopBranch.id', '=', 'w.branchId')
+                    ->leftJoinSub($this->administrationService->locationLookupQuery(), 'workshopLocation', function ($join): void {
+                        $join->on('workshopLocation.state_code', '=', 'w.stateCode')
+                            ->on('workshopLocation.district_code', '=', 'w.districtCode');
+                    });
+            })
+            ->when($hasSeminarLocationColumns, function ($query) {
+                $query
+                    ->leftJoin('branches as seminarBranch', 'seminarBranch.id', '=', 's.branchId')
+                    ->leftJoinSub($this->administrationService->locationLookupQuery(), 'seminarLocation', function ($join): void {
+                        $join->on('seminarLocation.state_code', '=', 's.stateCode')
+                            ->on('seminarLocation.district_code', '=', 's.districtCode');
+                    });
+            })
             ->where('o.userId', $userId)
             ->where('oi.deletedFlag', 0)
             ->where(function ($query) use ($effectiveTypeSql, $programTypes) {
@@ -1603,7 +1639,7 @@ class PaymentController extends Controller
                         });
                     });
             })
-            ->select(
+            ->select(array_merge([
                 'oi.id as purchaseItemId',
                 'oi.orderId',
                 DB::raw("{$effectiveTypeSql} as normalizedEntityType"),
@@ -1627,6 +1663,7 @@ class PaymentController extends Controller
                 'w.topic as workshopTopic',
                 'w.venue as workshopVenue',
                 'w.city as workshopCity',
+            ], $this->programLocationSelects('workshops', 'w', 'workshopBranch', 'workshopLocation', 'workshop'), [
                 'w.startDate as workshopStartDate',
                 'w.endDate as workshopEndDate',
                 'w.startTime as workshopStartTime',
@@ -1642,6 +1679,7 @@ class PaymentController extends Controller
                 's.topic as seminarTopic',
                 's.venue as seminarVenue',
                 's.city as seminarCity',
+            ], $this->programLocationSelects('seminars', 's', 'seminarBranch', 'seminarLocation', 'seminar'), [
                 's.eventDate as seminarEventDate',
                 's.startTime as seminarStartTime',
                 's.endTime as seminarEndTime',
@@ -1652,7 +1690,7 @@ class PaymentController extends Controller
                 's.takeaways as seminarTakeaways',
                 's.bannerImage as seminarBannerImage',
                 's.status as seminarStatus'
-            )
+            ]))
             ->orderByDesc('o.id')
             ->orderByDesc('oi.id')
             ->get();
@@ -1739,6 +1777,7 @@ class PaymentController extends Controller
         $hasProgramTopic = Schema::hasColumn($programTable, 'topic');
         $hasProgramVenue = Schema::hasColumn($programTable, 'venue');
         $hasProgramCity = Schema::hasColumn($programTable, 'city');
+        $hasProgramLocationColumns = $this->programTableHasLocationColumns($programTable);
         $hasProgramStartDate = Schema::hasColumn($programTable, 'startDate');
         $hasProgramEndDate = Schema::hasColumn($programTable, 'endDate');
         $hasProgramEventDate = Schema::hasColumn($programTable, 'eventDate');
@@ -1868,6 +1907,14 @@ class PaymentController extends Controller
                     ->whereRaw("({$effectiveTypeSql}) = ?", [$programType])
                     ->where('program.deletedFlag', 0);
             })
+            ->when($hasProgramLocationColumns, function ($query) {
+                $query
+                    ->leftJoin('branches as programBranch', 'programBranch.id', '=', 'program.branchId')
+                    ->leftJoinSub($this->administrationService->locationLookupQuery(), 'programLocation', function ($join): void {
+                        $join->on('programLocation.state_code', '=', 'program.stateCode')
+                            ->on('programLocation.district_code', '=', 'program.districtCode');
+                    });
+            })
             ->where('oi.deletedFlag', 0);
 
         if ($programId > 0) {
@@ -1920,6 +1967,7 @@ class PaymentController extends Controller
                 $search,
                 $hasProgramCode,
                 $hasProgramTopic,
+                $hasProgramLocationColumns,
                 $hasStudentCode
             ) {
                 $subQuery
@@ -1940,6 +1988,14 @@ class PaymentController extends Controller
                     $subQuery->orWhere('program.code', 'like', "%{$search}%");
                 }
 
+                if ($hasProgramLocationColumns) {
+                    $subQuery
+                        ->orWhere('programBranch.branchName', 'like', "%{$search}%")
+                        ->orWhere('programBranch.branchAddress', 'like', "%{$search}%")
+                        ->orWhere('programLocation.state_name_english', 'like', "%{$search}%")
+                        ->orWhere('programLocation.district_name_english', 'like', "%{$search}%");
+                }
+
                 if ($hasStudentCode) {
                     $subQuery->orWhere('student.code', 'like', "%{$search}%");
                 }
@@ -1952,7 +2008,7 @@ class PaymentController extends Controller
         $totalStudents = (clone $summaryQuery)->distinct()->count('student.id');
         $totalPaid = (float) (clone $summaryQuery)->sum(DB::raw('COALESCE(oi.totalAmount, p.totalAmount, o.totalAmount, 0)'));
 
-        $query->select(
+        $query->select(array_merge([
             'oi.id as purchaseItemId',
             'oi.orderId',
             'oi.price as itemPrice',
@@ -1977,6 +2033,7 @@ class PaymentController extends Controller
             $hasProgramTopic ? 'program.topic as programTopic' : DB::raw('NULL as programTopic'),
             $hasProgramVenue ? 'program.venue as programVenue' : DB::raw('NULL as programVenue'),
             $hasProgramCity ? 'program.city as programCity' : DB::raw('NULL as programCity'),
+        ], $this->programLocationSelects($programTable, 'program', 'programBranch', 'programLocation', 'program'), [
 
             DB::raw("{$startDateColumn} as programStartDate"),
             DB::raw("{$endDateColumn} as programEndDate"),
@@ -1996,7 +2053,7 @@ class PaymentController extends Controller
             'i.paymentReference as invoicePaymentReference',
             'i.entityType as invoiceEntityType',
             'i.entityId as invoiceEntityId'
-        );
+        ]));
 
         $this->applyProgramStudentSort($query, $sortBy);
 
@@ -2260,9 +2317,21 @@ class PaymentController extends Controller
     private function adminPaymentSummary(Request $request, bool $hasOfflinePaymentColumns): array
     {
         if (!$this->hasAdminPaymentFilters($request)) {
+            $revenuePayments = DB::table('payments as p')
+                ->where('p.status', 'success')
+                ->where('p.deletedFlag', 0)
+                ->whereNotExists(function ($query): void {
+                    $query
+                        ->select(DB::raw(1))
+                        ->from('invoices as payout_invoice')
+                        ->whereColumn('payout_invoice.orderId', 'p.orderId')
+                        ->where('payout_invoice.invoiceType', AdministrationService::INSTRUCTOR_PAYOUT_INVOICE_TYPE)
+                        ->where('payout_invoice.deletedFlag', 0);
+                });
+
             return [
-                'revenue' => (float) DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->sum('totalAmount'),
-                'successfulPayments' => DB::table('payments')->where('status', 'success')->where('deletedFlag', 0)->count(),
+                'revenue' => (float) (clone $revenuePayments)->sum('p.totalAmount'),
+                'successfulPayments' => (clone $revenuePayments)->count(),
                 'failedPayments' => DB::table('payments')->whereIn('status', ['failed', 'cancelled'])->where('deletedFlag', 0)->count(),
                 'refundRequests' => Schema::hasTable('refund_requests')
                     ? DB::table('refund_requests')->where('deletedFlag', 0)->count()
@@ -2272,11 +2341,17 @@ class PaymentController extends Controller
 
         $base = $this->adminPaymentRowsQuery($request, $hasOfflinePaymentColumns);
 
+        $revenueBase = (clone $base)->where(function ($query): void {
+            $query
+                ->whereNull('i.invoiceType')
+                ->orWhere('i.invoiceType', '<>', AdministrationService::INSTRUCTOR_PAYOUT_INVOICE_TYPE);
+        });
+
         return [
-            'revenue' => (float) (clone $base)->where(function ($query) {
+            'revenue' => (float) (clone $revenueBase)->where(function ($query) {
                 $query->where('o.status', 'paid')->orWhere('p.status', 'success');
             })->sum('o.totalAmount'),
-            'successfulPayments' => (clone $base)->where(function ($query) {
+            'successfulPayments' => (clone $revenueBase)->where(function ($query) {
                 $query->where('o.status', 'paid')->orWhere('p.status', 'success');
             })->count('o.id'),
             'failedPayments' => (clone $base)->where(function ($query) {
@@ -3044,6 +3119,9 @@ class PaymentController extends Controller
             $order->razorpayPaymentId
         );
 
+        $subtotal = (float) ($order->subtotalAmount ?? array_sum(array_map(fn($item) => (float) $item['price'], $items)));
+        $taxAmount = (float) ($order->taxAmount ?? 0);
+
         return [
             'invoiceNo' => $invoice->invoiceNumber ?? 'INV-' . date('Y') . '-' . str_pad((string) $orderId, 6, '0', STR_PAD_LEFT),
             'orderId' => (int) $order->id,
@@ -3077,8 +3155,9 @@ class PaymentController extends Controller
             'entityId' => $singleItemInvoice ? ($firstItem['entityId'] ?? $firstItem['courseId'] ?? null) : null,
             'entityCode' => $singleItemInvoice ? ($firstItem['entityCode'] ?? null) : null,
             'entityTitle' => $singleItemInvoice ? ($firstItem['entityTitle'] ?? null) : count($items) . ' Courses',
-            'subtotal' => (float) ($order->subtotalAmount ?? array_sum(array_map(fn($item) => (float) $item['price'], $items))),
-            'tax' => (float) ($order->taxAmount ?? 0),
+            'subtotal' => $subtotal,
+            'taxPercent' => $this->taxPercentFromAmounts($subtotal, $taxAmount),
+            'tax' => $taxAmount,
             'totalAmount' => (float) $order->totalAmount,
         ];
     }
@@ -3255,52 +3334,82 @@ class PaymentController extends Controller
         $today = now()->toDateString();
 
         if ($entityType === 'seminar') {
-            return DB::table('seminars as s')
+            $query = DB::table('seminars as s')
                 ->where('s.id', $entityId)
                 ->where('s.status', 1)
                 ->where('s.deletedFlag', 0)
-                ->where('s.eventDate', '>=', $today)
-                ->select(
+                ->where('s.eventDate', '>=', $today);
+
+            if ($this->programTableHasLocationColumns('seminars')) {
+                $query
+                    ->leftJoin('branches as branch', 'branch.id', '=', 's.branchId')
+                    ->leftJoinSub($this->administrationService->locationLookupQuery(), 'seminarLocation', function ($join): void {
+                        $join->on('seminarLocation.state_code', '=', 's.stateCode')
+                            ->on('seminarLocation.district_code', '=', 's.districtCode');
+                    });
+            }
+
+            return $query
+                ->select(array_merge([
                     's.id',
                     EntityCodeService::codeSelect('seminars', 's'),
                     's.title',
                     's.topic',
                     's.venue',
                     's.city',
+                ], $this->programLocationSelects('seminars', 's', 'branch', 'seminarLocation'), [
                     's.eventDate',
                     DB::raw('NULL as endDate'),
                     's.startTime',
                     's.endTime',
                     's.speakerName',
                     's.price'
-                )
+                ]))
                 ->first();
         }
 
-        return DB::table('workshops as w')
+        $query = DB::table('workshops as w')
             ->where('w.id', $entityId)
             ->where('w.status', 1)
             ->where('w.deletedFlag', 0)
-            ->whereRaw('COALESCE(w.endDate, w.startDate) >= ?', [$today])
-            ->select(
+            ->whereRaw('COALESCE(w.endDate, w.startDate) >= ?', [$today]);
+
+        if ($this->programTableHasLocationColumns('workshops')) {
+            $query
+                ->leftJoin('branches as branch', 'branch.id', '=', 'w.branchId')
+                ->leftJoinSub($this->administrationService->locationLookupQuery(), 'workshopLocation', function ($join): void {
+                    $join->on('workshopLocation.state_code', '=', 'w.stateCode')
+                        ->on('workshopLocation.district_code', '=', 'w.districtCode');
+                });
+        }
+
+        return $query
+            ->select(array_merge([
                 'w.id',
                 EntityCodeService::codeSelect('workshops', 'w'),
                 'w.title',
                 'w.topic',
                 'w.venue',
                 'w.city',
+            ], $this->programLocationSelects('workshops', 'w', 'branch', 'workshopLocation'), [
                 'w.startDate as eventDate',
                 'w.endDate',
                 'w.startTime',
                 'w.endTime',
                 'w.speakerName',
                 'w.price'
-            )
+            ]))
             ->first();
     }
 
     private function programResponsePayload(object $program, string $entityType, string $entityLabel): array
     {
+        $location = $this->administrationService->formatProgramLocation(
+            $program,
+            $program->venue ?? null,
+            $program->city ?? null
+        );
+
         return [
             'id' => (int) $program->id,
             'entityType' => $entityType,
@@ -3308,8 +3417,9 @@ class PaymentController extends Controller
             'code' => $program->code ?? null,
             'title' => (string) $program->title,
             'topic' => (string) ($program->topic ?? ''),
-            'venue' => (string) ($program->venue ?? ''),
-            'city' => (string) ($program->city ?? ''),
+            ...$location,
+            'venue' => (string) (($program->venue ?: $location['branchName']) ?? ''),
+            'city' => (string) (($program->city ?: $location['districtName']) ?? ''),
             'eventDate' => $program->eventDate ?? null,
             'endDate' => $program->endDate ?? null,
             'startTime' => $program->startTime ?? null,
@@ -3335,6 +3445,15 @@ class PaymentController extends Controller
         $topic = ($isSeminar ? ($row->seminarTopic ?? null) : ($row->workshopTopic ?? null)) ?? ($details->topic ?? null);
         $venue = ($isSeminar ? ($row->seminarVenue ?? null) : ($row->workshopVenue ?? null)) ?? ($details->venue ?? null);
         $city = ($isSeminar ? ($row->seminarCity ?? null) : ($row->workshopCity ?? null)) ?? ($details->city ?? null);
+        $location = $this->administrationService->formatProgramLocation((object) [
+            'stateCode' => ($isSeminar ? ($row->seminarStateCode ?? null) : ($row->workshopStateCode ?? null)) ?? ($details->stateCode ?? null),
+            'stateName' => ($isSeminar ? ($row->seminarStateName ?? null) : ($row->workshopStateName ?? null)) ?? ($details->stateName ?? null),
+            'districtCode' => ($isSeminar ? ($row->seminarDistrictCode ?? null) : ($row->workshopDistrictCode ?? null)) ?? ($details->districtCode ?? null),
+            'districtName' => ($isSeminar ? ($row->seminarDistrictName ?? null) : ($row->workshopDistrictName ?? null)) ?? ($details->districtName ?? null),
+            'branchId' => ($isSeminar ? ($row->seminarBranchId ?? null) : ($row->workshopBranchId ?? null)) ?? ($details->branchId ?? null),
+            'branchName' => ($isSeminar ? ($row->seminarBranchName ?? null) : ($row->workshopBranchName ?? null)) ?? ($details->branchName ?? null),
+            'branchAddress' => ($isSeminar ? ($row->seminarBranchAddress ?? null) : ($row->workshopBranchAddress ?? null)) ?? ($details->branchAddress ?? null),
+        ], $venue, $city);
         $startDate = ($isSeminar ? ($row->seminarEventDate ?? null) : ($row->workshopStartDate ?? null)) ?? ($details->startDate ?? null);
         $endDate = ($isSeminar ? null : ($row->workshopEndDate ?? null)) ?? ($details->endDate ?? null);
         $startTime = ($isSeminar ? ($row->seminarStartTime ?? null) : ($row->workshopStartTime ?? null)) ?? ($details->startTime ?? null);
@@ -3357,8 +3476,9 @@ class PaymentController extends Controller
             'code' => $entityCode,
             'title' => (string) ($title ?: ($entityTitle ?? $entityLabel)),
             'topic' => (string) ($topic ?? ''),
-            'venue' => (string) ($venue ?? ''),
-            'city' => (string) ($city ?? ''),
+            ...$location,
+            'venue' => (string) (($venue ?: $location['branchName']) ?? ''),
+            'city' => (string) (($city ?: $location['districtName']) ?? ''),
             'eventDate' => $startDate ? (string) $startDate : '',
             'startDate' => $startDate ? (string) $startDate : '',
             'endDate' => $endDate ? (string) $endDate : null,
@@ -3401,15 +3521,27 @@ class PaymentController extends Controller
         }
 
         if ($programType === 'seminar') {
-            return DB::table('seminars as s')
+            $query = DB::table('seminars as s')
                 ->where('s.id', $entityId)
-                ->where('s.deletedFlag', 0)
-                ->select(
+                ->where('s.deletedFlag', 0);
+
+            if ($this->programTableHasLocationColumns('seminars')) {
+                $query
+                    ->leftJoin('branches as branch', 'branch.id', '=', 's.branchId')
+                    ->leftJoinSub($this->administrationService->locationLookupQuery(), 'seminarLocation', function ($join): void {
+                        $join->on('seminarLocation.state_code', '=', 's.stateCode')
+                            ->on('seminarLocation.district_code', '=', 's.districtCode');
+                    });
+            }
+
+            return $query
+                ->select(array_merge([
                     EntityCodeService::codeSelect('seminars', 's'),
                     's.title',
                     's.topic',
                     's.venue',
                     's.city',
+                ], $this->programLocationSelects('seminars', 's', 'branch', 'seminarLocation'), [
                     's.eventDate as startDate',
                     DB::raw('NULL as endDate'),
                     's.startTime',
@@ -3421,19 +3553,31 @@ class PaymentController extends Controller
                     's.takeaways',
                     's.bannerImage',
                     's.status'
-                )
+                ]))
                 ->first();
         }
 
-        return DB::table('workshops as w')
+        $query = DB::table('workshops as w')
             ->where('w.id', $entityId)
-            ->where('w.deletedFlag', 0)
-            ->select(
+            ->where('w.deletedFlag', 0);
+
+        if ($this->programTableHasLocationColumns('workshops')) {
+            $query
+                ->leftJoin('branches as branch', 'branch.id', '=', 'w.branchId')
+                ->leftJoinSub($this->administrationService->locationLookupQuery(), 'workshopLocation', function ($join): void {
+                    $join->on('workshopLocation.state_code', '=', 'w.stateCode')
+                        ->on('workshopLocation.district_code', '=', 'w.districtCode');
+                });
+        }
+
+        return $query
+            ->select(array_merge([
                 EntityCodeService::codeSelect('workshops', 'w'),
                 'w.title',
                 'w.topic',
                 'w.venue',
                 'w.city',
+            ], $this->programLocationSelects('workshops', 'w', 'branch', 'workshopLocation'), [
                 'w.startDate',
                 'w.endDate',
                 'w.startTime',
@@ -3445,8 +3589,47 @@ class PaymentController extends Controller
                 'w.takeaways',
                 'w.bannerImage',
                 'w.status'
-            )
+            ]))
             ->first();
+    }
+
+    private function programTableHasLocationColumns(string $table): bool
+    {
+        return Schema::hasColumn($table, 'stateCode')
+            && Schema::hasColumn($table, 'districtCode')
+            && Schema::hasColumn($table, 'branchId');
+    }
+
+    private function programLocationSelects(
+        string $table,
+        string $tableAlias,
+        string $branchAlias,
+        string $locationAlias,
+        string $prefix = ''
+    ): array {
+        $alias = fn(string $name): string => $prefix === '' ? $name : $prefix . ucfirst($name);
+
+        if (!$this->programTableHasLocationColumns($table)) {
+            return [
+                DB::raw('NULL as ' . $alias('stateCode')),
+                DB::raw('NULL as ' . $alias('stateName')),
+                DB::raw('NULL as ' . $alias('districtCode')),
+                DB::raw('NULL as ' . $alias('districtName')),
+                DB::raw('NULL as ' . $alias('branchId')),
+                DB::raw('NULL as ' . $alias('branchName')),
+                DB::raw('NULL as ' . $alias('branchAddress')),
+            ];
+        }
+
+        return [
+            DB::raw("{$tableAlias}.stateCode as " . $alias('stateCode')),
+            DB::raw("{$locationAlias}.state_name_english as " . $alias('stateName')),
+            DB::raw("{$tableAlias}.districtCode as " . $alias('districtCode')),
+            DB::raw("{$locationAlias}.district_name_english as " . $alias('districtName')),
+            DB::raw("{$tableAlias}.branchId as " . $alias('branchId')),
+            DB::raw("{$branchAlias}.branchName as " . $alias('branchName')),
+            DB::raw("{$branchAlias}.branchAddress as " . $alias('branchAddress')),
+        ];
     }
 
     private function applyProgramStudentSort($query, string $sortBy): void
@@ -3466,6 +3649,15 @@ class PaymentController extends Controller
     private function formatProgramEnrolledStudentRow(object $row, string $programType): array
     {
         $amount = (float) ($row->itemTotalAmount ?? $row->paymentTotalAmount ?? $row->orderTotalAmount ?? 0);
+        $location = $this->administrationService->formatProgramLocation((object) [
+            'stateCode' => $row->programStateCode ?? null,
+            'stateName' => $row->programStateName ?? null,
+            'districtCode' => $row->programDistrictCode ?? null,
+            'districtName' => $row->programDistrictName ?? null,
+            'branchId' => $row->programBranchId ?? null,
+            'branchName' => $row->programBranchName ?? null,
+            'branchAddress' => $row->programBranchAddress ?? null,
+        ], $row->programVenue ?? null, $row->programCity ?? null);
 
         return [
             'id' => (int) $row->purchaseItemId,
@@ -3482,8 +3674,16 @@ class PaymentController extends Controller
             'programCode' => $row->programCode ?? null,
             'programTitle' => (string) ($row->programTitle ?? $this->programEntityLabel($programType)),
             'programTopic' => (string) ($row->programTopic ?? ''),
-            'programVenue' => (string) ($row->programVenue ?? ''),
-            'programCity' => (string) ($row->programCity ?? ''),
+            'programVenue' => (string) (($row->programVenue ?: $location['branchName']) ?? ''),
+            'programCity' => (string) (($row->programCity ?: $location['districtName']) ?? ''),
+            'programStateCode' => $location['stateCode'],
+            'programStateName' => $location['stateName'],
+            'programDistrictCode' => $location['districtCode'],
+            'programDistrictName' => $location['districtName'],
+            'programBranchId' => $location['branchId'],
+            'programBranchName' => $location['branchName'],
+            'programBranchAddress' => $location['branchAddress'],
+            'programLocationLabel' => $location['locationLabel'],
             'programStartDate' => $row->programStartDate ?? null,
             'programEndDate' => $row->programEndDate ?? null,
             'programStartTime' => $this->formatProgramTime($row->programStartTime ?? null),
@@ -3732,12 +3932,81 @@ class PaymentController extends Controller
         ];
     }
 
+    private function invoiceItemCountFromJson(?string $invoiceData): int
+    {
+        if (!$invoiceData) {
+            return 0;
+        }
+
+        $payload = json_decode($invoiceData, true);
+
+        return is_array($payload) && isset($payload['items']) && is_array($payload['items'])
+            ? count($payload['items'])
+            : 0;
+    }
+
     private function razorpay(): Api
     {
         return new Api(
             config('services.razorpay.key', env('RAZORPAY_KEY')),
             config('services.razorpay.secret', env('RAZORPAY_SECRET'))
         );
+    }
+
+    private function gstPercent(): float
+    {
+        $percent = config('services.gst.percent', self::DEFAULT_GST_PERCENT);
+        $percent = is_numeric($percent) ? (float) $percent : self::DEFAULT_GST_PERCENT;
+
+        return round(max($percent, 0), 2);
+    }
+
+    private function moneyAmount(mixed $value): float
+    {
+        return round(max(is_numeric($value) ? (float) $value : 0, 0), 2);
+    }
+
+    private function gstAmount(float $amount): float
+    {
+        return round(max($amount, 0) * $this->gstPercent() / 100, 2);
+    }
+
+    private function taxPercentFromAmounts(float $subtotal, float $taxAmount): float
+    {
+        if ($subtotal <= 0 || $taxAmount <= 0) {
+            return 0.0;
+        }
+
+        return round(($taxAmount / $subtotal) * 100, 2);
+    }
+
+    private function courseOrderItemRows($courses, int $orderId, float $orderTaxAmount): array
+    {
+        $courseItems = collect($courses)->values();
+        $lastIndex = $courseItems->count() - 1;
+        $allocatedTax = 0.0;
+
+        return $courseItems
+            ->map(function ($course, int $index) use ($orderId, $orderTaxAmount, $lastIndex, &$allocatedTax) {
+                $price = $this->moneyAmount($course->price ?? 0);
+                $itemTaxAmount = $index === $lastIndex
+                    ? round(max($orderTaxAmount - $allocatedTax, 0), 2)
+                    : $this->gstAmount($price);
+
+                $allocatedTax = round($allocatedTax + $itemTaxAmount, 2);
+
+                return [
+                    'orderId' => $orderId,
+                    'courseId' => (int) $course->id,
+                    'price' => $price,
+                    'taxAmount' => $itemTaxAmount,
+                    'totalAmount' => round($price + $itemTaxAmount, 2),
+                    'deletedFlag' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->all();
     }
 
     private function validationResponse($validator)
@@ -3904,18 +4173,32 @@ class PaymentController extends Controller
             $entityType = $item['entityType'] ?? 'Course';
             $entityCode = $item['entityCode'] ?? $item['code'] ?? null;
             $codeHtml = $entityCode ? '<br><span class="code">' . e($entityType) . ' Code: ' . e($entityCode) . '</span>' : '';
+            $itemAmount = $item['price'] ?? $item['totalAmount'] ?? 0;
 
-            return '<tr><td>' . e($item['title']) . $codeHtml . '</td><td>' . e($item['categoryName']) . '</td><td style="text-align:right">Rs. ' . number_format((float) $item['totalAmount'], 2) . '</td></tr>';
+            return '<tr><td>' . e($item['title']) . $codeHtml . '</td><td>' . e($item['categoryName']) . '</td><td style="text-align:right">Rs. ' . number_format((float) $itemAmount, 2) . '</td></tr>';
         })->join('');
         $paymentDisplayId = $invoice['paymentDisplayId'] ?? $this->paymentDisplayId($invoice['razorpayPaymentId'] ?? null, $invoice['transactionNo'] ?? null, $invoice['paymentReference'] ?? null);
         $paymentMethod = $invoice['paymentBy'] ?? $invoice['paymentMethod'] ?? (($invoice['razorpayPaymentId'] ?? null) ? 'RAZORPAY' : null);
         $orderReference = $invoice['orderReference'] ?? $invoice['razorpayOrderId'] ?? '';
+        $subtotal = (float) ($invoice['subtotal'] ?? $invoice['totalAmount'] ?? 0);
+        $taxAmount = (float) ($invoice['tax'] ?? 0);
+        $taxPercent = (float) ($invoice['taxPercent'] ?? $this->taxPercentFromAmounts($subtotal, $taxAmount));
+        $taxLabel = $taxPercent > 0
+            ? 'GST (' . rtrim(rtrim(number_format($taxPercent, 2, '.', ''), '0'), '.') . '%)'
+            : 'GST';
+        $summaryHtml = '<div class="invoice-summary"><p><span>Subtotal</span><strong>Rs. ' . number_format($subtotal, 2) . '</strong></p>';
+
+        if ($taxAmount > 0) {
+            $summaryHtml .= '<p><span>' . e($taxLabel) . '</span><strong>Rs. ' . number_format($taxAmount, 2) . '</strong></p>';
+        }
+
+        $summaryHtml .= '<p class="invoice-summary__total"><span>Total Paid</span><strong>Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</strong></p></div>';
         $logoDataUri = $this->invoiceLogoDataUri();
         $logoHtml = $logoDataUri
             ? '<img class="logo-mark" src="' . e($logoDataUri) . '" alt="ICETL logo">'
             : '<div class="logo-mark logo-mark--fallback">IC</div>';
 
-        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.brand-left{display:flex;align-items:center;gap:12px}.logo-mark{width:52px;height:52px;object-fit:contain;padding:5px;border-radius:8px;background:#fff;border:1px solid #e6e8ef;box-sizing:border-box}.logo-mark--fallback{display:inline-flex;align-items:center;justify-content:center;color:#2458d3;font-weight:900}.brand h1,.brand h2{margin:0}.brand p{margin:5px 0 0}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.code{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));color:#4f46e5;font:700 12px monospace;border:1px solid rgba(79,70,229,.18)}.total{font-size:24px;font-weight:800;text-align:right;margin-top:24px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div class="brand-left">' . $logoHtml . '<div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Entity</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead><tbody>' . $rows . '</tbody></table><p class="total">Total Paid: Rs. ' . number_format((float) $invoice['totalAmount'], 2) . '</p><p class="muted">Thank you for learning with ICETL.</p></body></html>';
+        return '<!doctype html><html><head><meta charset="utf-8"><title>' . e($invoice['invoiceNo']) . '</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:40px}.brand{display:flex;justify-content:space-between;border-bottom:3px solid #5b5cf6;padding-bottom:20px}.brand-left{display:flex;align-items:center;gap:12px}.logo-mark{width:52px;height:52px;object-fit:contain;padding:5px;border-radius:8px;background:#fff;border:1px solid #e6e8ef;box-sizing:border-box}.logo-mark--fallback{display:inline-flex;align-items:center;justify-content:center;color:#2458d3;font-weight:900}.brand h1,.brand h2{margin:0}.brand p{margin:5px 0 0}.muted{color:#667085}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e6e8ef;padding:12px;text-align:left}th{background:#f7f7ff}.code{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));color:#4f46e5;font:700 12px monospace;border:1px solid rgba(79,70,229,.18)}.invoice-summary{border:1px solid #e6e8ef;border-radius:8px;margin:24px 0 0 auto;max-width:360px;overflow:hidden}.invoice-summary p{display:flex;justify-content:space-between;margin:0;padding:12px 16px}.invoice-summary__total{background:#f7f7ff;font-size:20px;font-weight:800}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><section class="brand"><div class="brand-left">' . $logoHtml . '<div><h1>ICETL</h1><p class="muted">Ice Technology Lab</p></div></div><div><h2>Invoice</h2><strong>' . e($invoice['invoiceNo']) . '</strong></div></section><section class="grid"><div><span class="muted">Billed To</span><h3>' . e($invoice['customer']['name'] ?? 'Customer') . '</h3><p>' . e($invoice['customer']['email'] ?? '') . '</p></div><div><span class="muted">Payment</span><p>Order: ' . e($orderReference) . '</p><p>Transaction: ' . e($paymentDisplayId ?? '') . '</p><p>Method: ' . e($paymentMethod ?? '') . '</p><p>Date: ' . e($invoice['invoiceDate']) . '</p></div></section><table><thead><tr><th>Entity</th><th>Category</th><th style="text-align:right">Course Price</th></tr></thead><tbody>' . $rows . '</tbody></table>' . $summaryHtml . '<p class="muted">Thank you for learning with ICETL.</p></body></html>';
     }
 
     private function invoiceLogoDataUri(): ?string

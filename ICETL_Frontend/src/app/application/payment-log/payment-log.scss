@@ -382,7 +382,8 @@
   border-collapse: separate;
   border-spacing: 0;
   margin: 0;
-  min-width: 1080px;
+  min-width: 1260px;
+  table-layout: fixed;
   width: 100%;
 }
 
@@ -408,6 +409,8 @@
 .payment-table td {
   color: var(--text-primary);
   font-size: 13px;
+  min-width: 0;
+  white-space: normal;
 }
 
 .payment-table tbody tr {
@@ -422,28 +425,32 @@
   border-bottom: 0;
 }
 
-.payment-table td:nth-child(1) {
-  width: 330px;
+.payment-table :is(th, td):nth-child(1) {
+  width: 21%;
 }
 
-.payment-table td:nth-child(2) {
-  width: 150px;
+.payment-table :is(th, td):nth-child(2) {
+  width: 9.5%;
 }
 
-.payment-table td:nth-child(3) {
-  width: 120px;
+.payment-table :is(th, td):nth-child(3) {
+  width: 7.5%;
 }
 
-.payment-table td:nth-child(4) {
-  width: 135px;
+.payment-table :is(th, td):nth-child(4) {
+  width: 9%;
 }
 
-.payment-table td:nth-child(5) {
-  width: 160px;
+.payment-table :is(th, td):nth-child(5) {
+  width: 20%;
 }
 
-.payment-table td:nth-child(7) {
-  width: 150px;
+.payment-table :is(th, td):nth-child(6) {
+  width: 20%;
+}
+
+.payment-table :is(th, td):nth-child(7) {
+  width: 13%;
 }
 
 .payment-invoice-cell {
@@ -597,7 +604,9 @@
   font-weight: 750;
   line-height: 1.4;
   margin-top: 7px;
-  max-width: 260px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .payment-failure-reason--alert {
@@ -606,6 +615,13 @@
 
 .payment-transaction {
   max-width: 260px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.payment-transaction strong,
+.payment-transaction span {
+  max-width: 100%;
 }
 
 .payment-table__action {
@@ -1204,6 +1220,7 @@
     grid-template-columns: minmax(110px, max-content) minmax(0, 1fr);
     min-width: 0;
     padding: 14px 16px;
+    width: auto;
   }
 
   .payment-table td::before {

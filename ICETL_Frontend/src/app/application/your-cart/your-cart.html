@@ -171,6 +171,10 @@
               <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.price) }}
               }
             </strong>
+            @if (!isZeroAmount(item.price)) {
+            <small>+ GST {{ taxPercent }}%: <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(courseGst(item)) }}</small>
+            <em>Total <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(courseTotal(item)) }}</em>
+            }
             @if (item.oldPrice) {
             <span><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(item.oldPrice) }}</span>
             }
@@ -210,7 +214,7 @@
           <strong>- <i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(discount) }}</strong>
         </div>
         <div>
-          <span>Tax</span>
+          <span>GST ({{ taxPercent }}%)</span>
           <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(tax) }}</strong>
         </div>
       </div>

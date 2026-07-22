@@ -31,6 +31,10 @@ type DocumentDisplayItem = {
   name: string;
   url: string | null;
 };
+type BankSettlementDetailItem = {
+  label: string;
+  value: string;
+};
 
 @Component({
   selector: 'app-profile',
@@ -206,6 +210,27 @@ export class Profile implements OnInit, OnDestroy {
 
   get coverImageSrc(): string {
     return this.coverImagePreview || this.userProfile?.coverImgUrl || '';
+  }
+
+  get bankSettlementDetailItems(): BankSettlementDetailItem[] {
+    const profile = this.instructorProfile;
+
+    return [
+      { label: 'Account holder name', value: this.bankDetailValue(profile?.bankAccountHolderName) },
+      { label: 'Bank name', value: this.bankDetailValue(profile?.bankName) },
+      { label: 'Account number', value: this.bankDetailValue(profile?.bankAccountNumber) },
+      { label: 'IFSC code', value: this.bankDetailValue(profile?.bankIfscCode) },
+      { label: 'Account type', value: this.bankDetailValue(profile?.bankAccountType) },
+      { label: 'Bank branch name', value: this.bankDetailValue(profile?.bankBranchName) },
+    ];
+  }
+
+  get bankVerificationStatusLabel(): string {
+    return this.normalizeBankVerificationStatus(this.instructorProfile?.bankVerificationStatus);
+  }
+
+  get bankVerificationStatusClass(): string {
+    return `profile-status-pill--${this.bankVerificationStatusLabel.toLowerCase().replace(/\s+/g, '-')}`;
   }
 
   async submitProfileUpdate(): Promise<void> {
@@ -687,6 +712,24 @@ export class Profile implements OnInit, OnDestroy {
     return rawPath.startsWith('uploads/instructors/')
       ? rawPath
       : `uploads/instructors/${rawPath}`;
+  }
+
+  private bankDetailValue(value: string | number | null | undefined): string {
+    const text = `${value ?? ''}`.trim();
+
+    return text || 'Not provided';
+  }
+
+  private normalizeBankVerificationStatus(value: string | null | undefined): string {
+    const status = `${value ?? ''}`.trim().toLowerCase();
+    const labels: Record<string, string> = {
+      'not submitted': 'Not Submitted',
+      pending: 'Pending',
+      verified: 'Verified',
+      rejected: 'Rejected',
+    };
+
+    return labels[status] || 'Not Submitted';
   }
 
   private scheduleProfileSync(profile: UserProfile | null): void {

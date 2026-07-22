@@ -2,7 +2,7 @@
   <div>
     <span>Offline Course</span>
     <h1>Add Offline Course</h1>
-    <p>Create classroom, workshop, and campus training entries with venue, schedule, and pricing.</p>
+    <p>Create classroom, workshop, and campus training entries with branch, schedule, and pricing.</p>
   </div>
 
   <a class="offline-builder__view-link" routerLink="/application/courses/manageOfflineCourses/viewMyOfflineCourses">
@@ -130,26 +130,67 @@
       <div class="offline-form__heading icetl-form-section-header">
         <span>02</span>
         <div>
-          <h2>Venue & Schedule</h2>
+          <h2>Branch & Schedule</h2>
           <p>Where and when learners should attend.</p>
         </div>
       </div>
 
       <div class="rbt-form-group">
-        <label for="offlineVenue">Venue</label>
-        <input id="offlineVenue" type="text" formControlName="venue" placeholder="ICETL Training Hall"
-          [class.is-invalid]="isInvalid('venue')">
-        @if (getFieldError('venue')) {
-        <small class="offline-field-error">{{ getFieldError('venue') }}</small>
+        <label for="offlineState">State</label>
+        <select id="offlineState" formControlName="stateCode" [class.is-invalid]="isInvalid('stateCode')"
+          (change)="onStateChange()">
+          <option value="">{{ loadingStates ? 'Loading states...' : 'Select state' }}</option>
+          @for (state of states; track state.stateCode) {
+          <option [value]="state.stateCode">{{ state.stateName }}</option>
+          }
+        </select>
+        @if (getFieldError('stateCode')) {
+        <small class="offline-field-error">{{ getFieldError('stateCode') }}</small>
         }
       </div>
 
       <div class="rbt-form-group">
-        <label for="offlineCity">City</label>
-        <input id="offlineCity" type="text" formControlName="city" placeholder="Bhubaneswar"
-          [class.is-invalid]="isInvalid('city')">
-        @if (getFieldError('city')) {
-        <small class="offline-field-error">{{ getFieldError('city') }}</small>
+        <label for="offlineDistrict">District/City</label>
+        <select id="offlineDistrict" formControlName="districtCode" [class.is-invalid]="isInvalid('districtCode')"
+          (change)="onDistrictChange()">
+          <option value="">
+            @if (loadingDistricts) {
+            Loading districts/cities...
+            } @else if (!selectedStateCode) {
+            Select state first
+            } @else {
+            Select district/city
+            }
+          </option>
+          @for (district of districts; track district.districtCode) {
+          <option [value]="district.districtCode">{{ district.districtName }}</option>
+          }
+        </select>
+        @if (getFieldError('districtCode')) {
+        <small class="offline-field-error">{{ getFieldError('districtCode') }}</small>
+        }
+      </div>
+
+      <div class="rbt-form-group offline-form__full">
+        <label for="offlineBranch">Branch</label>
+        <select id="offlineBranch" formControlName="branchId" [class.is-invalid]="isInvalid('branchId')">
+          <option value="">
+            @if (loadingBranches) {
+            Loading branches...
+            } @else if (!selectedDistrictCode) {
+            Select district/city first
+            } @else {
+            Select branch
+            }
+          </option>
+          @for (branch of branches; track branch.id) {
+          <option [value]="branch.id">{{ branch.branchName }}</option>
+          }
+        </select>
+        @if (getFieldError('branchId')) {
+        <small class="offline-field-error">{{ getFieldError('branchId') }}</small>
+        } @else if (selectedBranch?.branchAddress) {
+        <small class="offline-field-note">{{ selectedBranch?.branchAddress }}</small>
         }
       </div>
 
@@ -456,12 +497,18 @@
     <div class="offline-preview__meta">
       <span>
         <i class="feather-map-pin"></i>
-        {{ f['venue'].value || 'Venue' }}
+        {{ selectedBranch?.branchName || 'Branch' }}
       </span>
       <span>
         <i class="feather-navigation"></i>
-        {{ f['city'].value || 'City' }}
+        {{ locationLabel }}
       </span>
+      @if (selectedBranch?.branchAddress) {
+      <span>
+        <i class="feather-home"></i>
+        {{ selectedBranch?.branchAddress }}
+      </span>
+      }
       <span>
         <i class="feather-calendar"></i>
         {{ dateRangeLabel }}

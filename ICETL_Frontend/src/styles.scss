@@ -1874,6 +1874,14 @@ body {
   color: var(--icetl-text);
 }
 
+body.icetl-invoice-modal-open {
+  overflow: hidden;
+}
+
+body.icetl-invoice-modal-open .application-shell .rbt-section-overlayping-top {
+  z-index: 30000;
+}
+
 .rbt-dashboard-area .container-fluid.p-5 {
   padding: clamp(16px, 2vw, 26px) !important;
 }

@@ -46,6 +46,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/instructors/professional-information', [InstructorRegistrationController::class, 'saveProfessionalInformation']);
     Route::post('/instructors/skills-and-categories', [InstructorRegistrationController::class, 'saveSkillsAndCategories']);
     Route::post('/instructors/documents-and-social-links', [InstructorRegistrationController::class, 'saveDocumentsAndSocialLinks']);
+    Route::post('/instructors/bank-and-settlement-details', [InstructorRegistrationController::class, 'saveBankAndSettlementDetails']);
     Route::post('/instructors/complete-onboarding', [InstructorRegistrationController::class, 'completeInstructorOnboarding']);
     Route::get('/instructors/profile', [InstructorRegistrationController::class, 'getInstructorProfile']);
     Route::get('/instructor/assigned-modules', [ModuleMaterialController::class, 'assignedModules']);
@@ -70,6 +71,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/administration/employees', [AdministrationController::class, 'storeEmployee']);
     Route::get('/administration/employees', [AdministrationController::class, 'employees']);
     Route::get('/administration/users/{userId}/instructor-profile', [AdministrationController::class, 'instructorDetails'])
+        ->whereNumber('userId');
+    Route::post('/administration/users/{userId}/bank-verification', [AdministrationController::class, 'updateInstructorBankVerification'])
+        ->whereNumber('userId');
+    Route::get('/administration/users/{userId}/instructor-payout-summary', [AdministrationController::class, 'instructorPayoutSummary'])
+        ->whereNumber('userId');
+    Route::post('/administration/users/{userId}/instructor-payouts/initiate', [AdministrationController::class, 'initiateInstructorPayout'])
         ->whereNumber('userId');
     Route::post('/administration/employees/{employeeId}/reset-password', [AdministrationController::class, 'resetEmployeePassword'])
         ->whereNumber('employeeId');

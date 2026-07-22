@@ -16,6 +16,12 @@ import { FormValidationService } from '../../../../commonServices/form-validatio
 import { FormValidationRules } from '../../../../commonServices/form-validation-rules';
 import { AlertHelperService } from '../../../../commonServices/alert-helper-service';
 import { WorkshopItem, WorkshopPayload, WorkshopService } from '../../services/workshop';
+import {
+  AdministrationService,
+  Branch,
+  LocationDistrict,
+  LocationState,
+} from '../../../manage-administration/services/administration';
 
 type WorkshopDateControl = 'startDate' | 'endDate';
 
@@ -56,8 +62,16 @@ export class AddWorkshop implements OnInit {
   readonly calendarYearOptions = this.buildCalendarYearOptions();
   formMessage = '';
   itemForm: FormGroup;
+  states: LocationState[] = [];
+  districts: LocationDistrict[] = [];
+  branches: Branch[] = [];
   loading = false;
   saving = false;
+  loadingStates = false;
+  loadingDistricts = false;
+  loadingBranches = false;
+  selectedStateCode = '';
+  selectedDistrictCode = '';
   openCalendar: WorkshopDateControl | null = null;
   calendarViews: Record<WorkshopDateControl, Date> = {
     startDate: this.defaultCalendarView(),
@@ -118,13 +132,15 @@ export class AddWorkshop implements OnInit {
     private readonly alertHelper: AlertHelperService,
     private readonly el: ElementRef,
     private readonly cdr: ChangeDetectorRef,
+    private readonly administrationService: AdministrationService,
   ) {
     this.itemForm = this.fb.group(
       {
         title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(120)]],
         topic: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
-        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+        stateCode: ['', Validators.required],
+        districtCode: [{ value: '', disabled: true }, Validators.required],
+        branchId: [{ value: '', disabled: true }, Validators.required],
         startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         endDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
@@ -142,6 +158,7 @@ export class AddWorkshop implements OnInit {
   }
 
   ngOnInit(): void {
+    void this.loadStates();
     const routeWorkshopId = Number(this.route.snapshot.paramMap.get('id'));
 
     if (Number.isFinite(routeWorkshopId) && routeWorkshopId > 0) {
@@ -224,6 +241,141 @@ export class AddWorkshop implements OnInit {
 
   get endDateCalendarDays(): CalendarDay[] {
     return this.buildCalendarDays('endDate');
+  }
+
+  get selectedStateName(): string {
+    const stateCode = Number(this.f['stateCode'].value || 0);
+
+    return this.states.find((state) => Number(state.stateCode) === stateCode)?.stateName || '';
+  }
+
+  get selectedDistrictName(): string {
+    const districtCode = Number(this.f['districtCode'].value || 0);
+
+    return this.districts.find((district) => Number(district.districtCode) === districtCode)?.districtName || '';
+  }
+
+  get selectedBranch(): Branch | null {
+    const branchId = Number(this.f['branchId'].value || 0);
+
+    return this.branches.find((branch) => Number(branch.id) === branchId) || null;
+  }
+
+  get locationLabel(): string {
+    return [this.selectedBranch?.branchName, this.selectedDistrictName, this.selectedStateName]
+      .filter(Boolean)
+      .join(', ') || 'Branch Location';
+  }
+
+  async loadStates(): Promise<void> {
+    this.loadingStates = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(this.administrationService.getStates().pipe(timeout(15000)));
+      this.states = response.status ? response.data : [];
+    } catch (error: any) {
+      this.states = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load states. Please try again.',
+        'Workshop Location',
+      );
+    } finally {
+      this.loadingStates = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onStateChange(): void {
+    this.selectedStateCode = `${this.itemForm.get('stateCode')?.value ?? ''}`;
+    this.selectedDistrictCode = '';
+    const stateCode = Number(this.selectedStateCode || 0);
+    const districtControl = this.itemForm.get('districtCode');
+    const branchControl = this.itemForm.get('branchId');
+
+    districtControl?.reset('');
+    branchControl?.reset('');
+    this.districts = [];
+    this.branches = [];
+    branchControl?.disable();
+
+    if (!stateCode) {
+      districtControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    districtControl?.enable();
+    this.cdr.markForCheck();
+    void this.loadDistricts(stateCode);
+  }
+
+  async loadDistricts(stateCode: number): Promise<void> {
+    this.loadingDistricts = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(this.administrationService.getDistricts(stateCode).pipe(timeout(15000)));
+      this.districts = response.status ? response.data : [];
+    } catch (error: any) {
+      this.districts = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load districts/cities. Please try again.',
+        'Workshop Location',
+      );
+    } finally {
+      this.loadingDistricts = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onDistrictChange(): void {
+    this.selectedDistrictCode = `${this.itemForm.get('districtCode')?.value ?? ''}`;
+    const stateCode = Number(this.selectedStateCode || 0);
+    const districtCode = Number(this.selectedDistrictCode || 0);
+    const branchControl = this.itemForm.get('branchId');
+
+    branchControl?.reset('');
+    this.branches = [];
+
+    if (!stateCode || !districtCode) {
+      branchControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    branchControl?.enable();
+    this.cdr.markForCheck();
+    void this.loadBranches(stateCode, districtCode);
+  }
+
+  async loadBranches(stateCode: number, districtCode: number): Promise<void> {
+    this.loadingBranches = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(
+        this.administrationService
+          .getBranches({
+            page: 1,
+            perPage: 'all',
+            stateCode,
+            districtCode,
+            status: '1',
+          })
+          .pipe(timeout(15000)),
+      );
+      this.branches = response.status ? response.data : [];
+    } catch (error: any) {
+      this.branches = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load branches. Please try again.',
+        'Workshop Location',
+      );
+    } finally {
+      this.loadingBranches = false;
+      this.cdr.markForCheck();
+    }
   }
 
   @HostListener('document:click')
@@ -396,8 +548,9 @@ export class AddWorkshop implements OnInit {
     this.itemForm.reset({
       title: '',
       topic: '',
-      venue: '',
-      city: '',
+      stateCode: '',
+      districtCode: '',
+      branchId: '',
       startDate: '',
       endDate: '',
       startTime: '',
@@ -413,6 +566,12 @@ export class AddWorkshop implements OnInit {
     this.existingBannerImageUrl = null;
     this.setBannerPreviewUrl(null);
     this.formMessage = '';
+    this.selectedStateCode = '';
+    this.selectedDistrictCode = '';
+    this.districts = [];
+    this.branches = [];
+    this.itemForm.get('districtCode')?.disable();
+    this.itemForm.get('branchId')?.disable();
     this.syncCalendarView('startDate');
     this.syncCalendarView('endDate');
   }
@@ -550,8 +709,6 @@ export class AddWorkshop implements OnInit {
     this.itemForm.patchValue({
       title: workshop.title,
       topic: workshop.topic,
-      venue: workshop.venue,
-      city: workshop.city,
       startDate: workshop.startDate,
       endDate: workshop.endDate || workshop.startDate,
       startTime: workshop.startTime,
@@ -569,18 +726,61 @@ export class AddWorkshop implements OnInit {
     const workshopTakeaways = Array.isArray(workshop.takeaways) ? workshop.takeaways : [];
     const takeaways = workshopTakeaways.length ? workshopTakeaways : [''];
     takeaways.forEach((takeaway) => this.takeaways.push(this.fb.control(takeaway)));
+    void this.applyLocationForEdit(workshop);
     this.syncCalendarView('startDate');
     this.syncCalendarView('endDate');
   }
 
+  private async applyLocationForEdit(workshop: WorkshopItem): Promise<void> {
+    const stateCode = Number(workshop.stateCode || 0);
+    const districtCode = Number(workshop.districtCode || 0);
+    const branchId = Number(workshop.branchId || 0);
+    const districtControl = this.itemForm.get('districtCode');
+    const branchControl = this.itemForm.get('branchId');
+
+    this.districts = [];
+    this.branches = [];
+    this.selectedStateCode = stateCode ? `${stateCode}` : '';
+    this.selectedDistrictCode = districtCode ? `${districtCode}` : '';
+
+    if (!stateCode) {
+      this.itemForm.patchValue({ stateCode: '', districtCode: '', branchId: '' }, { emitEvent: false });
+      districtControl?.disable();
+      branchControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.itemForm.patchValue({ stateCode: `${stateCode}`, districtCode: '', branchId: '' }, { emitEvent: false });
+    districtControl?.enable({ emitEvent: false });
+    await this.loadDistricts(stateCode);
+
+    if (!districtCode) {
+      branchControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.itemForm.patchValue({ districtCode: `${districtCode}`, branchId: '' }, { emitEvent: false });
+    branchControl?.enable({ emitEvent: false });
+    await this.loadBranches(stateCode, districtCode);
+
+    this.itemForm.patchValue({ branchId: branchId ? `${branchId}` : '' }, { emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
   private getPayload(): WorkshopPayload {
-    const value = this.itemForm.value;
+    const value = this.itemForm.getRawValue();
+    const selectedBranch = this.selectedBranch;
 
     return {
       title: `${value.title}`.trim(),
       topic: `${value.topic}`.trim(),
-      venue: `${value.venue}`.trim(),
-      city: `${value.city}`.trim(),
+      stateCode: Number(value.stateCode) || null,
+      districtCode: Number(value.districtCode) || null,
+      branchId: Number(value.branchId) || null,
+      venue: `${selectedBranch?.branchName || ''}`.trim(),
+      city: `${this.selectedDistrictName || selectedBranch?.districtName || ''}`.trim(),
       eventDate: value.startDate,
       startDate: value.startDate,
       endDate: value.endDate,
@@ -616,6 +816,9 @@ export class AddWorkshop implements OnInit {
 
     formData.append('title', payload.title);
     formData.append('topic', payload.topic);
+    formData.append('stateCode', `${payload.stateCode || ''}`);
+    formData.append('districtCode', `${payload.districtCode || ''}`);
+    formData.append('branchId', `${payload.branchId || ''}`);
     formData.append('venue', payload.venue);
     formData.append('city', payload.city);
     formData.append('eventDate', payload.eventDate);
@@ -685,8 +888,9 @@ export class AddWorkshop implements OnInit {
     const map: Record<string, string> = {
       title: 'Workshop Title',
       topic: 'Topic',
-      venue: 'Venue',
-      city: 'City',
+      stateCode: 'State',
+      districtCode: 'District/City',
+      branchId: 'Branch',
       startDate: 'Start Date',
       endDate: 'End Date',
       startTime: 'Start Time',

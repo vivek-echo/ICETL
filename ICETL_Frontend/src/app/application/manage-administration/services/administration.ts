@@ -106,6 +106,7 @@ export interface EmployeeUser {
   deletedFlag: number;
   createdAt: string | null;
   updatedAt: string | null;
+  instructorPayout?: InstructorPayoutSummary | null;
 }
 
 export interface EmployeeListMeta {
@@ -169,6 +170,13 @@ export interface InstructorAdminProfile {
   githubUrl: string;
   youtubeUrl: string;
   portfolioUrl: string;
+  bankAccountHolderName: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankIfscCode: string;
+  bankAccountType: string;
+  bankBranchName: string;
+  bankVerificationStatus: string;
   onboardingStep: number;
   onboardingCompleted: boolean;
   approvalStatus: string;
@@ -186,6 +194,87 @@ export interface InstructorAdminProfile {
 export interface InstructorAdminDetails {
   user: InstructorAdminUserDetails;
   profile: InstructorAdminProfile | null;
+  payoutSummary?: InstructorPayoutSummary | null;
+}
+
+export type AdminBankVerificationStatus = 'Pending' | 'Verified' | 'Rejected';
+
+export interface InstructorPayoutItem {
+  orderItemId: number;
+  orderId: number;
+  paymentId?: number | null;
+  orderReference?: string | null;
+  purchasedAt?: string | null;
+  learnerUserId?: number | null;
+  learnerName?: string | null;
+  learnerEmail?: string | null;
+  courseId: number;
+  courseCode?: string | null;
+  courseTitle: string;
+  saleAmount: number;
+  taxAmount: number;
+  saleTotalAmount: number;
+  commissionPercent: number;
+  payoutAmount: number;
+}
+
+export interface InstructorPayoutHistory {
+  id: number;
+  payoutReference: string;
+  invoiceNumber?: string | null;
+  invoiceId?: number | null;
+  orderId?: number | null;
+  invoiceDownloadUrl?: string | null;
+  totalSalesAmount: number;
+  commissionPercent: number;
+  payoutAmount: number;
+  currency: string;
+  status: string;
+  initiatedAt?: string | null;
+}
+
+export interface InstructorPayoutSummary {
+  commissionPercent: number;
+  eligiblePurchaseCount: number;
+  eligibleSalesAmount: number;
+  eligibleTaxAmount: number;
+  eligibleSalesTotalAmount: number;
+  eligiblePayoutAmount: number;
+  paidPayoutCount: number;
+  paidPayoutAmount: number;
+  paidSalesAmount: number;
+  lastPayoutAt?: string | null;
+  bankVerificationStatus: string;
+  bankDetailsComplete: boolean;
+  bankVerified: boolean;
+  bankAccountNumberMasked?: string | null;
+  bankName?: string | null;
+  bankIfscCode?: string | null;
+  canInitiatePayout: boolean;
+  eligibleItems?: InstructorPayoutItem[];
+  recentPayouts?: InstructorPayoutHistory[];
+}
+
+export interface InstructorPayoutInitiation {
+  payout: {
+    id: number;
+    payoutReference: string;
+    orderId: number;
+    paymentId: number;
+    invoiceId: number;
+    invoiceNumber: string;
+    eligiblePurchaseCount: number;
+    salesAmount: number;
+    taxAmount: number;
+    salesTotalAmount: number;
+    commissionPercent: number;
+    payoutAmount: number;
+    currency: string;
+    status: string;
+    initiatedAt?: string | null;
+  };
+  summary: InstructorPayoutSummary;
+  instructorDetails: InstructorAdminDetails;
 }
 
 @Injectable({
@@ -277,6 +366,30 @@ export class AdministrationService {
     return this.http.get<AdministrationApiResponse<InstructorAdminDetails>>(
       `${this.apiUrl}/administration/users/${userId}/instructor-profile`,
       this.backgroundRequestOptions(),
+    );
+  }
+
+  updateInstructorBankVerificationStatus(
+    userId: number,
+    status: AdminBankVerificationStatus,
+  ): Observable<AdministrationApiResponse<InstructorAdminDetails>> {
+    return this.http.post<AdministrationApiResponse<InstructorAdminDetails>>(
+      `${this.apiUrl}/administration/users/${userId}/bank-verification`,
+      { status },
+    );
+  }
+
+  getInstructorPayoutSummary(userId: number): Observable<AdministrationApiResponse<InstructorPayoutSummary>> {
+    return this.http.get<AdministrationApiResponse<InstructorPayoutSummary>>(
+      `${this.apiUrl}/administration/users/${userId}/instructor-payout-summary`,
+      this.backgroundRequestOptions(),
+    );
+  }
+
+  initiateInstructorPayout(userId: number): Observable<AdministrationApiResponse<InstructorPayoutInitiation>> {
+    return this.http.post<AdministrationApiResponse<InstructorPayoutInitiation>>(
+      `${this.apiUrl}/administration/users/${userId}/instructor-payouts/initiate`,
+      {},
     );
   }
 

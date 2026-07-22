@@ -133,6 +133,8 @@ export interface InvoiceItem {
   title: string;
   categoryName: string;
   price: number | string;
+  taxAmount?: number | string | null;
+  totalAmount?: number | string | null;
 }
 
 export interface Invoice {
@@ -167,6 +169,8 @@ export interface Invoice {
   };
   items: InvoiceItem[];
   subtotal: number | string;
+  taxPercent?: number | string | null;
+  tax?: number | string | null;
   totalAmount: number | string;
 }
 
@@ -189,6 +193,16 @@ export interface MyLearningCourse {
   status: number;
   statusLabel?: string;
   courseType?: number | string | null;
+  stateCode?: number | null;
+  stateName?: string | null;
+  districtCode?: number | null;
+  districtName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
+  branchAddress?: string | null;
+  locationLabel?: string | null;
+  venue?: string | null;
+  city?: string | null;
   youtubeLiveUrl?: string | null;
   meetingLink?: string | null;
   enrolledAt: string;
@@ -215,6 +229,14 @@ export interface MyProgram {
   topic?: string | null;
   venue?: string | null;
   city?: string | null;
+  stateCode?: number | null;
+  stateName?: string | null;
+  districtCode?: number | null;
+  districtName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
+  branchAddress?: string | null;
+  locationLabel?: string | null;
   eventDate?: string | null;
   startDate?: string | null;
   endDate?: string | null;

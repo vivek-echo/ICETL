@@ -3,7 +3,7 @@
     <div>
       <span>Seminar Management</span>
       <h1>All Seminars</h1>
-      <p>Review seminars across creators, timeline, city, status, capacity, and pricing.</p>
+      <p>Review seminars across creators, timeline, branch, status, capacity, and pricing.</p>
     </div>
   </header> -->
 
@@ -63,7 +63,7 @@
 
     <!-- <div class="program-toolbar__heading">
       <h2>Filter Seminars</h2>
-      <p>Search by seminar, speaker, creator, city, timeline, and status.</p>
+      <p>Search by seminar, speaker, creator, branch, timeline, and status.</p>
     </div> -->
 
     <div id="allSeminarFiltersPanel" class="program-toolbar__body program-toolbar__body--all icetl-filter-grid" [hidden]="!showFilters">
@@ -74,7 +74,7 @@
         <input
           id="allSeminarSearch"
           type="text"
-          placeholder="Seminar, topic, speaker..."
+          placeholder="Seminar, topic, speaker, branch..."
           autocomplete="off"
           [(ngModel)]="search"
           (keyup.enter)="onSearch()">
@@ -82,10 +82,10 @@
     </div>
 
     <!-- <div class="rbt-form-group program-toolbar__field">
-      <label for="allSeminarCity">City</label>
+      <label for="allSeminarCity">Location</label>
       <div class="program-field">
         <i class="feather-map-pin"></i>
-        <input id="allSeminarCity" type="text" placeholder="City" autocomplete="off" [(ngModel)]="city"
+        <input id="allSeminarCity" type="text" placeholder="Branch, district, or state" autocomplete="off" [(ngModel)]="city"
           (keyup.enter)="onFilterChange()">
       </div>
     </div> -->
@@ -224,12 +224,14 @@
           </span>
           <span>
             <i class="feather-map-pin"></i>
-            {{ seminar.venue }}
+            {{ getProgramLocationLabel(seminar) }}
           </span>
+          @if (getProgramAddress(seminar)) {
           <span>
             <i class="feather-navigation"></i>
-            {{ seminar.city }}
+            {{ getProgramAddress(seminar) }}
           </span>
+          }
           <span>
             <i class="feather-calendar"></i>
             {{ formatDate(seminar.eventDate) }}

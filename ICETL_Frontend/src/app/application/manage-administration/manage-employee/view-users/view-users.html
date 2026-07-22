@@ -201,6 +201,7 @@
           <th>Gender</th>
           <th>Status</th>
           <th>Created Date</th>
+          <th>Instructor Cut</th>
           <th aria-label="Actions">Actions</th>
         </tr>
       </thead>
@@ -239,9 +240,37 @@
             </span>
           </td>
           <td data-label="Created Date">{{ formatDate(user.createdAt) }}</td>
+          <td data-label="Instructor Cut">
+            @if (isInstructor(user)) {
+            <div class="instructor-payout-cell">
+              <strong>
+                <i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i>
+                {{ formatAmount(user.instructorPayout?.eligiblePayoutAmount) }}
+              </strong>
+              <span>
+                {{ user.instructorPayout?.eligiblePurchaseCount || 0 }}
+                payable buy{{ (user.instructorPayout?.eligiblePurchaseCount || 0) === 1 ? '' : 's' }}
+              </span>
+              <small>Bank: {{ formatBankVerificationStatus(user.instructorPayout?.bankVerificationStatus) }}</small>
+            </div>
+            } @else {
+            <span class="instructor-muted">N/A</span>
+            }
+          </td>
           <td data-label="Actions">
             <div class="icetl-table-actions users-table__actions">
               @if (isInstructor(user)) {
+              <button
+                type="button"
+                class="icetl-icon-btn"
+                (click)="initiateInstructorPayout(user)"
+                [disabled]="isPayoutBusy(user) || !hasInstructorPayoutAmount(user)"
+                [title]="payoutButtonTitle(user)">
+                <i
+                  [class]="isPayoutBusy(user) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-money-bill-transfer'"
+                  aria-hidden="true"></i>
+              </button>
+
               <button
                 type="button"
                 class="icetl-icon-btn"
@@ -377,6 +406,14 @@
               [class.icetl-badge--inactive]="!details.profile?.onboardingCompleted">
               {{ details.profile?.onboardingCompleted ? 'Onboarding Complete' : 'Onboarding Pending' }}
             </span>
+            @if (details.profile) {
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="isBankVerified(details.profile.bankVerificationStatus)"
+              [class.icetl-badge--inactive]="isBankRejected(details.profile.bankVerificationStatus)">
+              Bank: {{ formatBankVerificationStatus(details.profile.bankVerificationStatus) }}
+            </span>
+            }
           </div>
         </div>
       </section>
@@ -430,6 +467,102 @@
           <h3>Onboarding Details</h3>
           <dl class="instructor-detail-list">
             @for (item of onboardingDetailItems(details); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ formatValue(item.value) }}</dd>
+            </div>
+            }
+          </dl>
+        </article>
+
+        <article class="instructor-details-card instructor-details-card--wide">
+          <div class="instructor-details-card__head">
+            <h3>Bank and Settlement Details</h3>
+            @if (details.profile) {
+            <span
+              class="icetl-badge"
+              [class.icetl-badge--active]="isBankVerified(details.profile.bankVerificationStatus)"
+              [class.icetl-badge--inactive]="isBankRejected(details.profile.bankVerificationStatus)">
+              {{ formatBankVerificationStatus(details.profile.bankVerificationStatus) }}
+            </span>
+            }
+          </div>
+
+          @if (payoutSummaryForDetails(details); as payoutSummary) {
+          <div class="instructor-payout-summary" aria-label="Instructor payout summary">
+            <div>
+              <span>Payable Cut</span>
+              <strong>
+                <i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i>
+                {{ formatAmount(payoutSummary.eligiblePayoutAmount) }}
+              </strong>
+              <small>{{ payoutSummary.commissionPercent }}% of paid course price</small>
+            </div>
+            <div>
+              <span>Payable Buys</span>
+              <strong>{{ payoutSummary.eligiblePurchaseCount }}</strong>
+              <small>Settled: <i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i>{{ formatAmount(payoutSummary.paidPayoutAmount) }}</small>
+            </div>
+            <button
+              type="button"
+              class="icetl-btn icetl-btn-primary"
+              (click)="initiateInstructorPayout(details.user, payoutSummary)"
+              [disabled]="isPayoutBusy(details.user) || payoutSummary.eligiblePayoutAmount <= 0">
+              <i
+                [class]="isPayoutBusy(details.user) ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-money-bill-transfer'"
+                aria-hidden="true"></i>
+              <span>{{ isPayoutBusy(details.user) ? 'Initiating' : 'Initiate Payment' }}</span>
+            </button>
+          </div>
+          }
+
+          @if (details.profile && hasSubmittedBankDetails(details)) {
+          <div class="bank-verification-actions" aria-label="Bank verification actions">
+            @if (canInitiateBankVerification(details)) {
+            <button
+              type="button"
+              class="icetl-btn icetl-btn-primary"
+              (click)="updateBankVerificationStatus(details, 'Pending')"
+              [disabled]="isBankVerificationBusy()">
+              <i
+                [class]="isBankVerificationBusy('Pending') ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-play'"
+                aria-hidden="true"></i>
+              <span>Initiate Verification</span>
+            </button>
+            }
+
+            @if (canResolveBankVerification(details)) {
+            <button
+              type="button"
+              class="icetl-btn icetl-btn-primary bank-verification-actions__approve"
+              (click)="updateBankVerificationStatus(details, 'Verified')"
+              [disabled]="isBankVerificationBusy()">
+              <i
+                [class]="isBankVerificationBusy('Verified') ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-circle-check'"
+                aria-hidden="true"></i>
+              <span>Mark Verified</span>
+            </button>
+
+            <button
+              type="button"
+              class="icetl-btn icetl-btn-outline bank-verification-actions__reject"
+              (click)="updateBankVerificationStatus(details, 'Rejected')"
+              [disabled]="isBankVerificationBusy()">
+              <i
+                [class]="isBankVerificationBusy('Rejected') ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-circle-xmark'"
+                aria-hidden="true"></i>
+              <span>Reject Details</span>
+            </button>
+            }
+          </div>
+          } @else {
+          <p class="instructor-muted bank-verification-note">
+            Bank details are not complete yet. Verification can be initiated after the instructor submits all required bank details.
+          </p>
+          }
+
+          <dl class="instructor-detail-list">
+            @for (item of bankSettlementDetailItems(details); track item.label) {
             <div>
               <dt>{{ item.label }}</dt>
               <dd>{{ formatValue(item.value) }}</dd>

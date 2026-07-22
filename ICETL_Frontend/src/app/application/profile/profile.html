@@ -295,6 +295,28 @@
           </div>
         </section>
 
+        <section class="profile-card profile-card--bank icetl-form-section">
+          <div class="profile-card__head icetl-form-section-header">
+            <span>Settlement</span>
+            <h4>Bank and Settlement Details</h4>
+          </div>
+
+          <div class="profile-readonly-grid" aria-label="Bank and settlement details">
+            @for (item of bankSettlementDetailItems; track item.label) {
+            <div class="profile-readonly-item">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+            }
+            <div class="profile-readonly-item profile-readonly-item--status">
+              <span>Bank verification status</span>
+              <strong class="profile-status-pill" [ngClass]="bankVerificationStatusClass">
+                {{ bankVerificationStatusLabel }}
+              </strong>
+            </div>
+          </div>
+        </section>
+
         <section class="profile-card icetl-form-section">
           <div class="profile-card__head icetl-form-section-header">
             <span>Trust Signals</span>

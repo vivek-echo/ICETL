@@ -341,6 +341,19 @@ export class ViewMyWorkshop implements OnInit {
     return workshop.endTime ? `${workshop.startTime} - ${workshop.endTime}` : workshop.startTime;
   }
 
+  getProgramLocationLabel(workshop: WorkshopItem): string {
+    return (
+      workshop.locationLabel ||
+      [workshop.branchName, workshop.districtName, workshop.stateName].filter(Boolean).join(', ') ||
+      [workshop.venue, workshop.city].filter(Boolean).join(', ') ||
+      'N/A'
+    );
+  }
+
+  getProgramAddress(workshop: WorkshopItem): string {
+    return `${workshop.branchAddress || ''}`.trim();
+  }
+
   getTakeaways(workshop: WorkshopItem, limit = 3): string[] {
     return (Array.isArray(workshop.takeaways) ? workshop.takeaways : []).slice(0, limit);
   }

@@ -37,6 +37,7 @@ import {
   InstructorFlowType,
   InstructorProfile,
   SaveAccountInformationPayload,
+  SaveBankAndSettlementDetailsPayload,
   SaveDocumentsAndSocialLinksFormValue,
   SaveProfessionalInformationFormValue,
   SaveSkillsAndCategoriesPayload,
@@ -69,6 +70,12 @@ interface StatisticItem {
   label: string;
   value: string;
   icon: string;
+}
+
+interface InstructorAgreementTerm {
+  icon: string;
+  title: string;
+  points: string[];
 }
 
 interface UploadState {
@@ -174,9 +181,77 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       icon: 'fa-solid fa-file-shield',
     },
     {
+      title: 'Bank and Settlement Details',
+      caption: 'Add the bank account where instructor payouts should be settled.',
+      icon: 'fa-solid fa-building-columns',
+    },
+    {
       title: 'Final Agreement',
       caption: 'Confirm policy acceptance and submit your instructor application for review.',
       icon: 'fa-solid fa-circle-check',
+    },
+  ];
+  readonly instructorAgreementTerms: InstructorAgreementTerm[] = [
+    {
+      icon: 'fa-solid fa-file-contract',
+      title: 'Contractual appointment',
+      points: [
+        'The engagement is contractual, performance-based, and not permanent employment.',
+        'No fixed salary, PF, ESIC, or employee benefits apply to this instructor role.',
+        'Training services may be delivered in online, offline, or hybrid mode.',
+        'The engagement is governed by the Indian Contract Act, 1872 and applicable laws.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-indian-rupee-sign',
+      title: 'Remuneration',
+      points: [
+        'The instructor will receive 40% of the total course fee per student for each batch taught.',
+        'Payment is released only after the student completes the course and ICE Technology Lab receives the full course fee.',
+        'No advance, partial, or early payment will be made under any circumstances.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-user-shield',
+      title: 'Non-compete, anti-poaching, and anti-diversion',
+      points: [
+        'During engagement and for 24 months after resignation or termination, the instructor must not provide private tuition to ICE students, independently enroll them, divert inquiries, or conduct unauthorized training for current or former ICE students.',
+        'The instructor must not start, operate, or associate with a competing training centre or coaching institute within a 10 km radius of ICE Technology Lab.',
+        'ICE goodwill, brand name, student base, resources, inquiries, databases, or leads must not be used, shared, sold, transferred, or referred to competitors or third parties.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-lock',
+      title: 'Confidentiality and materials',
+      points: [
+        'Study materials, course content, videos, student databases, and internal documents must not be used, copied, distributed, or reproduced for personal or commercial purposes.',
+        'Student records, fee structures, business strategies, internal operations, and course content must remain strictly confidential.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-chalkboard-user',
+      title: 'Course completion and liability',
+      points: [
+        'Once a batch or student is assigned, the instructor is bound to complete the course.',
+        'Discontinuation without written approval may result in a full batch or course fee penalty, withholding of pending payments, and legal recovery action.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-person-walking-arrow-right',
+      title: 'Termination and resignation',
+      points: [
+        'ICE Technology Lab may terminate the agreement without prior notice for breach, student diversion, private tuition activity, misconduct, absenteeism, poor performance, or policy non-compliance.',
+        'Resignation requires 30 days written notice, and all ongoing batches must be completed before exit.',
+        'Failure to comply may result in non-payment of dues and penalties under the agreement.',
+      ],
+    },
+    {
+      icon: 'fa-solid fa-scale-balanced',
+      title: 'Breach consequences',
+      points: [
+        'Any breach may result in monetary penalty, immediate forfeiture of pending payments, immediate termination, legal action, and recovery proceedings under applicable laws.',
+        'ICE Technology Lab reserves full legal rights in such cases.',
+      ],
     },
   ];
   readonly journeyHighlights: HighlightItem[] = [
@@ -254,6 +329,8 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     { label: 'Male', value: '1' },
     { label: 'Female', value: '2' },
   ];
+  readonly accountTypeOptions = ['Savings', 'Current'];
+  readonly bankVerificationStatusOptions = ['Not Submitted', 'Pending', 'Verified', 'Rejected'];
   readonly qualifications = [
     "Bachelor's Degree",
     "Master's Degree",
@@ -405,6 +482,30 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       youTubeUrl: ['', Validators.pattern(/^https?:\/\/.+/i)],
       portfolioWebsite: ['', Validators.pattern(/^https?:\/\/.+/i)],
     }),
+    bankSettlement: this.fb.group(
+      {
+        accountHolderName: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(2),
+            Validators.maxLength(150),
+            Validators.pattern(/^[A-Za-z][A-Za-z .'-]*$/),
+          ],
+        ],
+        bankName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(150)]],
+        accountNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{6,30}$/)]],
+        confirmAccountNumber: ['', Validators.required],
+        ifscCode: ['', [Validators.required, Validators.pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)]],
+        accountType: ['', Validators.required],
+        bankBranchName: [
+          '',
+          [Validators.required, Validators.minLength(2), Validators.maxLength(150)],
+        ],
+        bankVerificationStatus: [{ value: 'Not Submitted', disabled: true }],
+      },
+      { validators: bankAccountMatchValidator() },
+    ),
     agreements: this.fb.group({
       acceptTerms: [false, Validators.requiredTrue],
       acceptInstructorPolicy: [false, Validators.requiredTrue],
@@ -473,6 +574,10 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     return this.registrationForm.get('documents') as FormGroup;
   }
 
+  get bankSettlementGroup(): FormGroup {
+    return this.registrationForm.get('bankSettlement') as FormGroup;
+  }
+
   get agreementsGroup(): FormGroup {
     return this.registrationForm.get('agreements') as FormGroup;
   }
@@ -502,6 +607,13 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       'documents.governmentId',
       'documents.resume',
       'documents.certifications',
+      'bankSettlement.accountHolderName',
+      'bankSettlement.bankName',
+      'bankSettlement.accountNumber',
+      'bankSettlement.confirmAccountNumber',
+      'bankSettlement.ifscCode',
+      'bankSettlement.accountType',
+      'bankSettlement.bankBranchName',
       'agreements.acceptTerms',
       'agreements.acceptInstructorPolicy',
       'agreements.verifyInformation',
@@ -934,8 +1046,8 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       }
 
       this.applyInstructorProfile(response.data.instructor);
-      this.currentStep = 4;
-      this.furthestStepReached = 4;
+      this.currentStep = this.stepMeta.length - 1;
+      this.furthestStepReached = this.stepMeta.length - 1;
       this.isSubmitting = false;
       this.spinner.hide(this.submitSpinnerKey);
 
@@ -991,8 +1103,16 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     const isTouched = !!control && (control.touched || control.dirty);
     const isConfirmPasswordMismatch =
       path === 'account.confirmPassword' && this.accountGroup.hasError('mismatch') && isTouched;
+    const isConfirmAccountMismatch =
+      path === 'bankSettlement.confirmAccountNumber'
+      && this.bankSettlementGroup.hasError('accountMismatch')
+      && isTouched;
 
-    return (!!control && control.invalid && isTouched) || isConfirmPasswordMismatch;
+    return (
+      (!!control && control.invalid && isTouched)
+      || isConfirmPasswordMismatch
+      || isConfirmAccountMismatch
+    );
   }
 
   errorFor(path: string): string {
@@ -1000,6 +1120,13 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
 
     if (path === 'account.confirmPassword' && this.accountGroup.hasError('mismatch')) {
       return 'Passwords do not match.';
+    }
+
+    if (
+      path === 'bankSettlement.confirmAccountNumber'
+      && this.bankSettlementGroup.hasError('accountMismatch')
+    ) {
+      return 'Account numbers do not match.';
     }
 
     if (!control?.errors || !(control.touched || control.dirty)) {
@@ -1039,6 +1166,21 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
         return 'Years of experience must be a whole number.';
       }
 
+      if (path === 'bankSettlement.accountHolderName') {
+        return 'Account holder name can contain only letters, spaces, apostrophes, hyphens, and periods.';
+      }
+
+      if (
+        path === 'bankSettlement.accountNumber'
+        || path === 'bankSettlement.confirmAccountNumber'
+      ) {
+        return 'Account number must contain 6 to 30 digits.';
+      }
+
+      if (path === 'bankSettlement.ifscCode') {
+        return 'IFSC code must use the format ABCD0XXXXXX.';
+      }
+
       return 'Enter a valid value in the expected format.';
     }
 
@@ -1074,6 +1216,26 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     if (input.value !== sanitized) {
       input.value = sanitized;
       this.accountGroup.get('mobileNumber')?.setValue(sanitized);
+    }
+  }
+
+  sanitizeBankAccountNumberInput(event: Event, controlName: 'accountNumber' | 'confirmAccountNumber'): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D+/g, '').slice(0, 30);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+      this.bankSettlementGroup.get(controlName)?.setValue(sanitized);
+    }
+  }
+
+  sanitizeIfscInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/[^A-Za-z0-9]+/g, '').toUpperCase().slice(0, 11);
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+      this.bankSettlementGroup.get('ifscCode')?.setValue(sanitized);
     }
   }
 
@@ -1217,6 +1379,10 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
         return this.instructorRegistrationService.saveDocumentsAndSocialLinks(
           this.buildDocumentsAndSocialLinksPayload(),
         );
+      case 4:
+        return this.instructorRegistrationService.saveBankAndSettlementDetails(
+          this.buildBankAndSettlementDetailsPayload(),
+        );
       default:
         throw new Error(`Unsupported onboarding step index: ${stepIndex}`);
     }
@@ -1273,8 +1439,31 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
     };
   }
 
+  private buildBankAndSettlementDetailsPayload(): SaveBankAndSettlementDetailsPayload {
+    return {
+      accountHolderName: `${this.bankSettlementGroup.get('accountHolderName')?.value ?? ''}`.trim(),
+      bankName: `${this.bankSettlementGroup.get('bankName')?.value ?? ''}`.trim(),
+      accountNumber: `${this.bankSettlementGroup.get('accountNumber')?.value ?? ''}`.trim(),
+      confirmAccountNumber:
+        `${this.bankSettlementGroup.get('confirmAccountNumber')?.value ?? ''}`.trim(),
+      ifscCode: `${this.bankSettlementGroup.get('ifscCode')?.value ?? ''}`.trim().toUpperCase(),
+      accountType: `${this.bankSettlementGroup.get('accountType')?.value ?? ''}`.trim(),
+      bankBranchName: `${this.bankSettlementGroup.get('bankBranchName')?.value ?? ''}`.trim(),
+    };
+  }
+
   private selectedTextValues(values: DropdownOption[] | null | undefined): string[] {
     return (values ?? []).map((item) => item.itemText);
+  }
+
+  private normalizeBankVerificationStatus(status: string | null | undefined): string {
+    const normalizedStatus = `${status ?? ''}`.trim();
+
+    return (
+      this.bankVerificationStatusOptions.find(
+        (option) => option.toLowerCase() === normalizedStatus.toLowerCase(),
+      ) ?? 'Not Submitted'
+    );
   }
 
   private applyInstructorProfile(profile: InstructorProfile): void {
@@ -1325,6 +1514,22 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
         gitHubUrl: profile.githubUrl || '',
         youTubeUrl: profile.youtubeUrl || '',
         portfolioWebsite: profile.portfolioUrl || '',
+      },
+      { emitEvent: false },
+    );
+
+    this.bankSettlementGroup.patchValue(
+      {
+        accountHolderName: profile.bankAccountHolderName || '',
+        bankName: profile.bankName || '',
+        accountNumber: profile.bankAccountNumber || '',
+        confirmAccountNumber: profile.bankAccountNumber || '',
+        ifscCode: profile.bankIfscCode || '',
+        accountType: profile.bankAccountType || '',
+        bankBranchName: profile.bankBranchName || '',
+        bankVerificationStatus: this.normalizeBankVerificationStatus(
+          profile.bankVerificationStatus,
+        ),
       },
       { emitEvent: false },
     );
@@ -1450,6 +1655,7 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       this.professionalGroup,
       this.expertiseGroup,
       this.documentsGroup,
+      this.bankSettlementGroup,
       this.agreementsGroup,
     ][stepIndex];
 
@@ -1496,6 +1702,14 @@ export class BecomeInstructor implements AfterViewInit, OnDestroy {
       gitHubUrl: 'GitHub URL',
       youTubeUrl: 'YouTube URL',
       portfolioWebsite: 'Portfolio Website',
+      accountHolderName: 'Account Holder Name',
+      bankName: 'Bank Name',
+      accountNumber: 'Account Number',
+      confirmAccountNumber: 'Confirm Account Number',
+      ifscCode: 'IFSC Code',
+      accountType: 'Account Type',
+      bankBranchName: 'Bank Branch Name',
+      bankVerificationStatus: 'Bank Verification Status',
       acceptTerms: 'Terms and Conditions',
       acceptInstructorPolicy: 'Instructor Policy',
       verifyInformation: 'Information Verification',
@@ -1777,5 +1991,18 @@ function passwordMatchValidator(): ValidatorFn {
     }
 
     return password === confirmPassword ? null : { mismatch: true };
+  };
+}
+
+function bankAccountMatchValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const accountNumber = `${control.get('accountNumber')?.value ?? ''}`.trim();
+    const confirmAccountNumber = `${control.get('confirmAccountNumber')?.value ?? ''}`.trim();
+
+    if (!accountNumber || !confirmAccountNumber) {
+      return null;
+    }
+
+    return accountNumber === confirmAccountNumber ? null : { accountMismatch: true };
   };
 }

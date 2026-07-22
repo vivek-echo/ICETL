@@ -393,7 +393,7 @@
           <tr>
             <th>Entity</th>
             <th>Category</th>
-            <th>Amount</th>
+            <th>Course Price</th>
           </tr>
         </thead>
         <tbody>
@@ -422,6 +422,12 @@
         <span>Subtotal</span>
         <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.subtotal) }}</strong>
       </div>
+      @if (invoiceTaxAmount(selectedInvoice) > 0) {
+      <div>
+        <span>{{ invoiceTaxLabel(selectedInvoice) }}</span>
+        <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(invoiceTaxAmount(selectedInvoice)) }}</strong>
+      </div>
+      }
       <div class="invoice-summary__total">
         <span>Total Paid</span>
         <strong><i class="fa-solid fa-indian-rupee-sign"></i>{{ formatAmount(selectedInvoice.totalAmount) }}</strong>

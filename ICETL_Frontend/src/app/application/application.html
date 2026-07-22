@@ -78,6 +78,12 @@
 
                         <nav class="mainmenu-nav">
                           <ul class="dashboard-mainmenu rbt-default-sidebar-list">
+                            <li><a routerLink="/application/yourCart" routerLinkActive="active"
+                                [routerLinkActiveOptions]="{ exact: true }"><i
+                                  class="feather-shopping-cart"></i><span>Cart</span></a></li>
+                            <li><a routerLink="/application/paymentLog" routerLinkActive="active"
+                                [routerLinkActiveOptions]="{ exact: true }"><i
+                                  class="feather-credit-card"></i><span>Payment Logs</span></a></li>
                             <li><a (click)="openProfileSettings($event)" href="javascript:void(0);"><i
                                   class="feather-settings"></i><span>Settings</span></a></li>
                             <li><a href="javascript:void(0);" (click)="logoutUser($event)"><i

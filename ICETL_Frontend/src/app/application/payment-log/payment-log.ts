@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
@@ -14,11 +14,13 @@ import { ModalWindowControlsComponent, ModalWindowDirective } from '../../shared
   templateUrl: './payment-log.html',
   styleUrl: './payment-log.scss',
 })
-export class PaymentLogComponent implements OnInit {
+export class PaymentLogComponent implements OnInit, OnDestroy {
   readonly invoiceLogoPath = 'assets/images/logo/logo.jpeg';
+  private readonly invoiceModalBodyClass = 'icetl-invoice-modal-open';
 
   private readonly amountFormatter = new Intl.NumberFormat('en-IN', {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   });
 
   logs: PaymentLog[] = [];
@@ -46,6 +48,10 @@ export class PaymentLogComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadPaymentLogs();
+  }
+
+  ngOnDestroy(): void {
+    this.setInvoiceModalBodyState(false);
   }
 
   async loadPaymentLogs(): Promise<void> {
@@ -92,6 +98,7 @@ export class PaymentLogComponent implements OnInit {
         ...response.data,
         orderId: Number(response.data?.orderId || orderId),
       };
+      this.setInvoiceModalBodyState(true);
     } catch (error: any) {
       await this.alertHelper.error(
         error?.error?.message || 'Unable to fetch invoice',
@@ -167,6 +174,15 @@ export class PaymentLogComponent implements OnInit {
 
   closeInvoice(): void {
     this.selectedInvoice = null;
+    this.setInvoiceModalBodyState(false);
+  }
+
+  private setInvoiceModalBodyState(isOpen: boolean): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.body.classList.toggle(this.invoiceModalBodyClass, isOpen);
   }
 
   private async loadPaymentWorkflow(): Promise<void> {
@@ -285,6 +301,27 @@ export class PaymentLogComponent implements OnInit {
     return this.amountFormatter.format(Number(value) || 0);
   }
 
+  invoiceTaxAmount(invoice: Invoice | null | undefined): number {
+    return Number(invoice?.tax) || 0;
+  }
+
+  invoiceTaxLabel(invoice: Invoice | null | undefined): string {
+    const configuredPercent = Number(invoice?.taxPercent);
+
+    if (Number.isFinite(configuredPercent) && configuredPercent > 0) {
+      return `GST (${this.formatPercent(configuredPercent)}%)`;
+    }
+
+    const subtotal = Number(invoice?.subtotal) || 0;
+    const taxAmount = this.invoiceTaxAmount(invoice);
+
+    if (subtotal > 0 && taxAmount > 0) {
+      return `GST (${this.formatPercent((taxAmount / subtotal) * 100)}%)`;
+    }
+
+    return 'GST';
+  }
+
   formatDate(value: string | null | undefined): string {
     if (!value) {
       return 'N/A';
@@ -354,6 +391,8 @@ export class PaymentLogComponent implements OnInit {
       UPI: 'UPI',
       NETBANKING: 'Netbanking',
       RAZORPAY: 'Razorpay',
+      BANK_TRANSFER: 'Bank Transfer',
+      FREE: 'Free',
     };
 
     return labels[normalized] || value || '';
@@ -439,6 +478,14 @@ export class PaymentLogComponent implements OnInit {
     const paymentMode = this.paymentMethodLabel(invoice);
     const entityCode = invoice.entityCode || '';
     const logoUrl = this.invoiceLogoUrl();
+    const taxAmount = this.invoiceTaxAmount(invoice);
+    const taxSummaryLine =
+      taxAmount > 0
+        ? `<div>
+            <span class="label">${this.escapeHtml(this.invoiceTaxLabel(invoice))}</span>
+            <strong>&#8377;${this.escapeHtml(this.formatAmount(taxAmount))}</strong>
+          </div>`
+        : '';
 
     return `<!doctype html>
 <html>
@@ -765,7 +812,7 @@ export class PaymentLogComponent implements OnInit {
           <tr>
             <th>Entity</th>
             <th>Category</th>
-            <th>Amount</th>
+            <th>Course Price</th>
           </tr>
         </thead>
         <tbody>${itemRows}</tbody>
@@ -778,6 +825,7 @@ export class PaymentLogComponent implements OnInit {
           <span class="label">Subtotal</span>
           <strong>&#8377;${this.escapeHtml(this.formatAmount(invoice.subtotal))}</strong>
         </div>
+        ${taxSummaryLine}
         <div>
           <span class="label">Total Paid</span>
           <strong>&#8377;${this.escapeHtml(this.formatAmount(invoice.totalAmount))}</strong>
@@ -793,6 +841,10 @@ export class PaymentLogComponent implements OnInit {
 
   private invoiceLogoUrl(): string {
     return new URL(this.invoiceLogoPath, document.baseURI).href;
+  }
+
+  private formatPercent(value: number): string {
+    return `${Math.round(value * 100) / 100}`.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
   }
 
   private escapeHtml(value: string | number | null | undefined): string {

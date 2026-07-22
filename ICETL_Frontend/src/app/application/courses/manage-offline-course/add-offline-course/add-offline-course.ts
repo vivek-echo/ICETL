@@ -18,6 +18,12 @@ import { FormValidationService } from '../../../../commonServices/form-validatio
 import { ROLE } from '../../../../commonServices/constants.service';
 import { Course } from '../../services/course';
 import { OfflineCourseInstructor, OfflineCourseItem } from '../../services/offline-course';
+import {
+  AdministrationService,
+  Branch,
+  LocationDistrict,
+  LocationState,
+} from '../../../manage-administration/services/administration';
 
 interface CourseCategory {
   id: number;
@@ -62,12 +68,20 @@ export class AddOfflineCourse implements OnInit {
   readonly calendarYearOptions = this.buildCalendarYearOptions();
   courseForm: FormGroup;
   categories: CourseCategory[] = [];
+  states: LocationState[] = [];
+  districts: LocationDistrict[] = [];
+  branches: Branch[] = [];
   parentAcademicCourses: OfflineCourseItem[] = [];
   instructorList: OfflineCourseInstructor[] = [];
   instructorSearchTerm = '';
   isInstructorPickerOpen = false;
   isParentCoursesLoading = false;
   parentCoursesMessage = '';
+  loadingStates = false;
+  loadingDistricts = false;
+  loadingBranches = false;
+  selectedStateCode = '';
+  selectedDistrictCode = '';
   openCalendar: OfflineDateControl | null = null;
   calendarViews: Record<OfflineDateControl, Date> = {
     startDate: this.defaultCalendarView(),
@@ -107,6 +121,7 @@ export class AddOfflineCourse implements OnInit {
     private readonly spinner: NgxSpinnerService,
     private readonly alertHelper: AlertHelperService,
     private readonly router: Router,
+    private readonly administrationService: AdministrationService,
   ) {
     this.courseForm = this.fb.group(
       {
@@ -114,8 +129,9 @@ export class AddOfflineCourse implements OnInit {
         isSpecial: [false],
         categoryId: ['', Validators.required],
         parentCourseId: [''],
-        venue: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
-        city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+        stateCode: ['', Validators.required],
+        districtCode: [{ value: '', disabled: true }, Validators.required],
+        branchId: [{ value: '', disabled: true }, Validators.required],
         startDate: ['', [Validators.required, this.dateNotBeforeTodayValidator]],
         endDate: ['', [this.dateNotBeforeTodayValidator]],
         startTime: ['', Validators.required],
@@ -156,7 +172,7 @@ export class AddOfflineCourse implements OnInit {
   }
 
   async initializeFormData(): Promise<void> {
-    await Promise.all([this.loadCategories(), this.loadInstructorList()]);
+    await Promise.all([this.loadCategories(), this.loadInstructorList(), this.loadStates()]);
 
     if (this.editCourseId) {
       await this.loadCourseForEdit(this.editCourseId);
@@ -185,6 +201,30 @@ export class AddOfflineCourse implements OnInit {
     const categoryId = Number(this.f['categoryId'].value);
 
     return this.categories.find((category) => category.id === categoryId)?.categoryName || 'Category';
+  }
+
+  get selectedStateName(): string {
+    const stateCode = Number(this.f['stateCode'].value || 0);
+
+    return this.states.find((state) => Number(state.stateCode) === stateCode)?.stateName || '';
+  }
+
+  get selectedDistrictName(): string {
+    const districtCode = Number(this.f['districtCode'].value || 0);
+
+    return this.districts.find((district) => Number(district.districtCode) === districtCode)?.districtName || '';
+  }
+
+  get selectedBranch(): Branch | null {
+    const branchId = Number(this.f['branchId'].value || 0);
+
+    return this.branches.find((branch) => Number(branch.id) === branchId) || null;
+  }
+
+  get locationLabel(): string {
+    return [this.selectedBranch?.branchName, this.selectedDistrictName, this.selectedStateName]
+      .filter(Boolean)
+      .join(', ') || 'Branch Location';
   }
 
   get selectedInstructors(): OfflineCourseInstructor[] {
@@ -317,6 +357,117 @@ export class AddOfflineCourse implements OnInit {
     }
   }
 
+  async loadStates(): Promise<void> {
+    this.loadingStates = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(this.administrationService.getStates().pipe(timeout(15000)));
+      this.states = response.status ? response.data : [];
+    } catch (error: any) {
+      this.states = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load states. Please try again.',
+        'Course Location',
+      );
+    } finally {
+      this.loadingStates = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onStateChange(): void {
+    this.selectedStateCode = `${this.courseForm.get('stateCode')?.value ?? ''}`;
+    this.selectedDistrictCode = '';
+    const stateCode = Number(this.selectedStateCode || 0);
+    const districtControl = this.courseForm.get('districtCode');
+    const branchControl = this.courseForm.get('branchId');
+
+    districtControl?.reset('');
+    branchControl?.reset('');
+    this.districts = [];
+    this.branches = [];
+    branchControl?.disable();
+
+    if (!stateCode) {
+      districtControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    districtControl?.enable();
+    this.cdr.markForCheck();
+    void this.loadDistricts(stateCode);
+  }
+
+  async loadDistricts(stateCode: number): Promise<void> {
+    this.loadingDistricts = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(this.administrationService.getDistricts(stateCode).pipe(timeout(15000)));
+      this.districts = response.status ? response.data : [];
+    } catch (error: any) {
+      this.districts = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load districts/cities. Please try again.',
+        'Course Location',
+      );
+    } finally {
+      this.loadingDistricts = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onDistrictChange(): void {
+    this.selectedDistrictCode = `${this.courseForm.get('districtCode')?.value ?? ''}`;
+    const stateCode = Number(this.selectedStateCode || 0);
+    const districtCode = Number(this.selectedDistrictCode || 0);
+    const branchControl = this.courseForm.get('branchId');
+
+    branchControl?.reset('');
+    this.branches = [];
+
+    if (!stateCode || !districtCode) {
+      branchControl?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    branchControl?.enable();
+    this.cdr.markForCheck();
+    void this.loadBranches(stateCode, districtCode);
+  }
+
+  async loadBranches(stateCode: number, districtCode: number): Promise<void> {
+    this.loadingBranches = true;
+    this.cdr.markForCheck();
+
+    try {
+      const response = await lastValueFrom(
+        this.administrationService
+          .getBranches({
+            page: 1,
+            perPage: 'all',
+            stateCode,
+            districtCode,
+            status: '1',
+          })
+          .pipe(timeout(15000)),
+      );
+      this.branches = response.status ? response.data : [];
+    } catch (error: any) {
+      this.branches = [];
+      await this.alertHelper.error(
+        error?.error?.message || 'Unable to load branches. Please try again.',
+        'Course Location',
+      );
+    } finally {
+      this.loadingBranches = false;
+      this.cdr.markForCheck();
+    }
+  }
+
   async loadInstructorList(): Promise<void> {
     const userProfile = this.getStoredUser();
     const payload: any = {
@@ -379,8 +530,6 @@ export class AddOfflineCourse implements OnInit {
         isSpecial,
         categoryId: course.categoryId ? `${course.categoryId}` : '',
         parentCourseId: '',
-        venue: course.venue || '',
-        city: course.city || '',
         startDate: course.startDate || '',
         endDate: course.endDate || '',
         startTime: course.startTime || '',
@@ -411,12 +560,48 @@ export class AddOfflineCourse implements OnInit {
     }
 
     this.setHighlightsFromCourse(this.getSelectedCourseHighlights(course));
+    await this.applyLocationForEdit(course);
     this.selectedBannerImage = null;
     this.setBannerPreviewUrl(course.thumbnailUrl || null);
     this.syncCalendarView('startDate');
     this.syncCalendarView('endDate');
     this.courseForm.markAsPristine();
     this.courseForm.markAsUntouched();
+  }
+
+  private async applyLocationForEdit(course: OfflineCourseItem): Promise<void> {
+    const stateCode = Number(course.stateCode || 0);
+    const districtCode = Number(course.districtCode || 0);
+    const branchId = Number(course.branchId || 0);
+    const districtControl = this.courseForm.get('districtCode');
+    const branchControl = this.courseForm.get('branchId');
+
+    this.districts = [];
+    this.branches = [];
+    this.selectedStateCode = stateCode ? `${stateCode}` : '';
+    this.selectedDistrictCode = districtCode ? `${districtCode}` : '';
+
+    if (!stateCode) {
+      this.courseForm.patchValue({ stateCode: '', districtCode: '', branchId: '' }, { emitEvent: false });
+      districtControl?.disable();
+      branchControl?.disable();
+      return;
+    }
+
+    this.courseForm.patchValue({ stateCode: `${stateCode}`, districtCode: '', branchId: '' }, { emitEvent: false });
+    districtControl?.enable({ emitEvent: false });
+    await this.loadDistricts(stateCode);
+
+    if (!districtCode) {
+      branchControl?.disable();
+      return;
+    }
+
+    this.courseForm.patchValue({ districtCode: `${districtCode}`, branchId: '' }, { emitEvent: false });
+    branchControl?.enable({ emitEvent: false });
+    await this.loadBranches(stateCode, districtCode);
+
+    this.courseForm.patchValue({ branchId: branchId ? `${branchId}` : '' }, { emitEvent: false });
   }
 
   @HostListener('document:click', ['$event'])
@@ -737,8 +922,9 @@ export class AddOfflineCourse implements OnInit {
       isSpecial: this.isInstructorUser,
       categoryId: '',
       parentCourseId: '',
-      venue: '',
-      city: '',
+      stateCode: '',
+      districtCode: '',
+      branchId: '',
       startDate: '',
       endDate: '',
       startTime: '',
@@ -757,6 +943,12 @@ export class AddOfflineCourse implements OnInit {
     this.applyInstructorSelectionDefaults();
     this.parentAcademicCourses = [];
     this.parentCoursesMessage = '';
+    this.selectedStateCode = '';
+    this.selectedDistrictCode = '';
+    this.districts = [];
+    this.branches = [];
+    this.courseForm.get('districtCode')?.disable();
+    this.courseForm.get('branchId')?.disable();
     this.highlights.clear();
     this.addHighlight();
     this.selectedBannerImage = null;
@@ -847,8 +1039,9 @@ export class AddOfflineCourse implements OnInit {
       isSpecial: 'Special Course',
       categoryId: 'Category',
       parentCourseId: 'Parent Academic Course',
-      venue: 'Venue',
-      city: 'City',
+      stateCode: 'State',
+      districtCode: 'District/City',
+      branchId: 'Branch',
       startDate: 'Start Date',
       endDate: 'End Date',
       startTime: 'Start Time',
@@ -867,8 +1060,9 @@ export class AddOfflineCourse implements OnInit {
   }
 
   private getPayload(): FormData {
-    const value = this.courseForm.value;
+    const value = this.courseForm.getRawValue();
     const categoryId = Number(value.categoryId);
+    const selectedBranch = this.selectedBranch;
     const formData = new FormData();
 
     formData.append('title', `${value.title}`.trim());
@@ -876,8 +1070,11 @@ export class AddOfflineCourse implements OnInit {
     formData.append('parentCourseId', this.isSpecialCourse ? `${Number(value.parentCourseId) || ''}` : '');
     formData.append('category', `${Number.isFinite(categoryId) ? categoryId : ''}`);
     formData.append('instructor', JSON.stringify(this.selectedInstructors.map((instructor) => instructor.id)));
-    formData.append('venue', `${value.venue}`.trim());
-    formData.append('city', `${value.city}`.trim());
+    formData.append('stateCode', `${Number(value.stateCode) || ''}`);
+    formData.append('districtCode', `${Number(value.districtCode) || ''}`);
+    formData.append('branchId', `${Number(value.branchId) || ''}`);
+    formData.append('venue', `${selectedBranch?.branchName || ''}`.trim());
+    formData.append('city', `${this.selectedDistrictName || selectedBranch?.districtName || ''}`.trim());
     formData.append('startDate', value.startDate);
     formData.append('endDate', value.endDate || '');
     formData.append('startTime', value.startTime);

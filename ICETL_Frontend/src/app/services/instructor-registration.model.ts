@@ -66,6 +66,13 @@ export interface InstructorProfile {
   githubUrl?: string | null;
   youtubeUrl?: string | null;
   portfolioUrl?: string | null;
+  bankAccountHolderName?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankIfscCode?: string | null;
+  bankAccountType?: string | null;
+  bankBranchName?: string | null;
+  bankVerificationStatus?: string | null;
   onboardingStep: number;
   onboardingCompleted: boolean;
   approvalStatus: string;
@@ -148,6 +155,16 @@ export interface SaveDocumentsAndSocialLinksFormValue extends SaveDocumentsAndSo
   certifications?: File[];
 }
 
+export interface SaveBankAndSettlementDetailsPayload {
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  confirmAccountNumber: string;
+  ifscCode: string;
+  accountType: string;
+  bankBranchName: string;
+}
+
 export interface CompleteInstructorOnboardingPayload {
   acceptTerms: boolean;
   acceptInstructorPolicy: boolean;
@@ -162,6 +179,7 @@ export const INSTRUCTOR_REGISTRATION_ENDPOINTS = {
   saveProfessionalInformation: '/instructors/professional-information',
   saveSkillsAndCategories: '/instructors/skills-and-categories',
   saveDocumentsAndSocialLinks: '/instructors/documents-and-social-links',
+  saveBankAndSettlementDetails: '/instructors/bank-and-settlement-details',
   completeOnboarding: '/instructors/complete-onboarding',
   profile: '/instructors/profile',
 } as const;

@@ -135,6 +135,8 @@ export class PaymentManagement implements OnInit {
       UPI: 'UPI',
       NETBANKING: 'Netbanking',
       RAZORPAY: 'Razorpay',
+      BANK_TRANSFER: 'Bank Transfer',
+      FREE: 'Free',
     };
 
     return labels[normalized] || value || '';

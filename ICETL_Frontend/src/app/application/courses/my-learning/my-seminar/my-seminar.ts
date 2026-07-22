@@ -228,6 +228,19 @@ export class MySeminar implements OnInit {
     return (program.takeaways ?? []).slice(0, limit);
   }
 
+  getProgramLocationLabel(program: MyProgram): string {
+    return (
+      program.locationLabel ||
+      [program.branchName, program.districtName, program.stateName].filter(Boolean).join(', ') ||
+      [program.venue, program.city].filter(Boolean).join(', ') ||
+      'Location TBA'
+    );
+  }
+
+  getProgramAddress(program: MyProgram): string {
+    return `${program.branchAddress || ''}`.trim();
+  }
+
   formatAmount(value: number | string | null | undefined): string {
     return this.amountFormatter.format(Number(value) || 0);
   }
@@ -269,6 +282,11 @@ export class MySeminar implements OnInit {
         (program.topic || '').toLowerCase().includes(term) ||
         (program.speakerName || '').toLowerCase().includes(term) ||
         (program.city || '').toLowerCase().includes(term) ||
+        (program.locationLabel || '').toLowerCase().includes(term) ||
+        (program.branchName || '').toLowerCase().includes(term) ||
+        (program.branchAddress || '').toLowerCase().includes(term) ||
+        (program.districtName || '').toLowerCase().includes(term) ||
+        (program.stateName || '').toLowerCase().includes(term) ||
         (program.code || '').toLowerCase().includes(term);
       const matchesSchedule =
         this.scheduleFilter === 'all' || program.scheduleStatus === this.scheduleFilter;

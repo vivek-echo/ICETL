@@ -11,6 +11,7 @@ import {
   InstructorRegistrationResponse,
   InstructorStepResponseData,
   SaveAccountInformationPayload,
+  SaveBankAndSettlementDetailsPayload,
   SaveDocumentsAndSocialLinksFormValue,
   SaveProfessionalInformationFormValue,
   SaveSkillsAndCategoriesPayload,
@@ -60,6 +61,16 @@ export class InstructorRegistrationService {
     return this.http.post<InstructorRegistrationResponse<InstructorStepResponseData>>(
       `${this.baseUrl}${INSTRUCTOR_REGISTRATION_ENDPOINTS.saveDocumentsAndSocialLinks}`,
       this.buildDocumentsAndSocialLinksFormData(payload),
+      {
+        headers: this.getOnboardingHeaders(),
+      },
+    );
+  }
+
+  saveBankAndSettlementDetails(payload: SaveBankAndSettlementDetailsPayload) {
+    return this.http.post<InstructorRegistrationResponse<InstructorStepResponseData>>(
+      `${this.baseUrl}${INSTRUCTOR_REGISTRATION_ENDPOINTS.saveBankAndSettlementDetails}`,
+      payload,
       {
         headers: this.getOnboardingHeaders(),
       },

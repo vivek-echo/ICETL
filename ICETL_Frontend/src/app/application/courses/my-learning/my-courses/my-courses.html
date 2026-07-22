@@ -78,7 +78,7 @@
       <span>Search Library</span>
       <div class="learning-toolbar__field">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="search" [(ngModel)]="search" placeholder="Course, category, or instructor">
+        <input type="search" [(ngModel)]="search" placeholder="Course, category, instructor, or branch">
       </div>
     </label>
     <label>
@@ -177,6 +177,18 @@
             <i class="fa-solid fa-rotate"></i>
             {{ getResumeLabel(course) }}
           </span>
+          @if (isAcademicCourse(course) && getCourseLocationLabel(course) !== 'N/A') {
+          <span>
+            <i class="fa-solid fa-location-dot"></i>
+            {{ getCourseLocationLabel(course) }}
+          </span>
+          }
+          @if (isAcademicCourse(course) && getCourseAddress(course)) {
+          <span>
+            <i class="fa-solid fa-building"></i>
+            {{ getCourseAddress(course) }}
+          </span>
+          }
           @if (course.invoiceNo) {
           <span>
             <i class="fa-solid fa-receipt"></i>

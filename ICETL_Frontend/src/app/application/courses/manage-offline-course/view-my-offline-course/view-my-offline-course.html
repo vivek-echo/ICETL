@@ -219,7 +219,7 @@
           <th>Creator Role</th>
           <th>Start</th>
           <th>End</th>
-          <th>Venue</th>
+          <th>Branch</th>
           <th>Fee</th>
           <th>Approval</th>
           <th>Publish</th>
@@ -261,7 +261,12 @@
           <td>{{ course.createdByRoleName || course.createdByRole || 'Unknown Role' }}</td>
           <td>{{ formatDateValue(course.startDate) }}</td>
           <td>{{ formatDateValue(course.endDate) }}</td>
-          <td>{{ course.venue || 'N/A' }}</td>
+          <td>
+            <strong>{{ getCourseLocationLabel(course) }}</strong>
+            @if (getCourseAddress(course)) {
+            <small>{{ getCourseAddress(course) }}</small>
+            }
+          </td>
           <td>{{ formatPrice(course.price) }}</td>
           <td>
             <span class="offline-status-badge icetl-badge" [ngClass]="getApprovalBadgeClass(course)">

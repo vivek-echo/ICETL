@@ -37,4 +37,8 @@ return [
         'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
     ],
 
+    'gst' => [
+        'percent' => env('GST_PERCENT', 18),
+    ],
+
 ];

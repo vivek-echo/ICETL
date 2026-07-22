@@ -174,7 +174,10 @@
           }
           <span><i class="feather-activity"></i>{{ student.programStatusLabel }}</span>
           <span><i class="feather-calendar"></i>{{ student.scheduleStatus }}</span>
-          <span><i class="feather-map-pin"></i>{{ student.programCity || student.programVenue }}</span>
+          <span><i class="feather-map-pin"></i>{{ getProgramLocationLabel(student) }}</span>
+          @if (getProgramAddress(student)) {
+          <span><i class="feather-navigation"></i>{{ getProgramAddress(student) }}</span>
+          }
           <span><i class="feather-clock"></i>{{ formatDateRange(student) }} · {{ formatTimeRange(student) }}</span>
         </div>
       </section>

@@ -15,6 +15,9 @@ export interface CourseCartItem {
   duration: number | string | null;
   durationUnit: number | string | null;
   price: number | string;
+  taxPercent?: number | string | null;
+  taxAmount?: number | string | null;
+  totalAmount?: number | string | null;
   oldPrice: number | string | null;
   description: string | null;
   courseHighlights?: string[] | string | null;

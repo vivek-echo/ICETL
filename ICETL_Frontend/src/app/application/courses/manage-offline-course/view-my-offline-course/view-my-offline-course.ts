@@ -203,8 +203,8 @@ export class ViewMyOfflineCourse implements OnInit {
 
   get pageDescription(): string {
     return this.isAllCoursesView
-      ? 'Review every classroom course across creators, venues, schedules, and publish status.'
-      : 'Review classroom course schedules, venue details, and publish status from one workspace.';
+      ? 'Review every classroom course across creators, branches, schedules, and publish status.'
+      : 'Review classroom course schedules, branch details, and publish status from one workspace.';
   }
 
   get totalSummaryLabel(): string {
@@ -685,7 +685,8 @@ export class ViewMyOfflineCourse implements OnInit {
         <p><strong>Code:</strong> ${this.escapeHtml(course.code || 'N/A')}</p>
         <p><strong>Category:</strong> ${this.escapeHtml(course.categoryName || 'Uncategorized')}</p>
         <p><strong>Instructor:</strong> ${this.escapeHtml(course.instructorName || 'Instructor')}</p>
-        <p><strong>Venue:</strong> ${this.escapeHtml(course.venue || 'N/A')}</p>
+        <p><strong>Branch:</strong> ${this.escapeHtml(this.getCourseLocationLabel(course))}</p>
+        ${this.getCourseAddress(course) ? `<p><strong>Address:</strong> ${this.escapeHtml(this.getCourseAddress(course))}</p>` : ''}
       <p><strong>Schedule:</strong> ${this.escapeHtml(this.formatDateRange(course))}</p>
       <p><strong>Approval:</strong> ${this.escapeHtml(this.getApprovalStatusLabel(course))}</p>
       <p><strong>Publish:</strong> ${this.escapeHtml(this.getPublishStatusLabel(course))}</p>
@@ -1000,6 +1001,19 @@ export class ViewMyOfflineCourse implements OnInit {
     }
 
     return `${startDate} - ${this.formatDate(course.endDate)}`;
+  }
+
+  getCourseLocationLabel(course: OfflineCourseItem): string {
+    return (
+      course.locationLabel ||
+      [course.branchName, course.districtName, course.stateName].filter(Boolean).join(', ') ||
+      [course.venue, course.city].filter(Boolean).join(', ') ||
+      'N/A'
+    );
+  }
+
+  getCourseAddress(course: OfflineCourseItem): string {
+    return `${course.branchAddress || ''}`.trim();
   }
 
   formatDateValue(value: string | null | undefined): string {

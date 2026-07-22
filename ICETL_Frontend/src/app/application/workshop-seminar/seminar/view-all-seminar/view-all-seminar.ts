@@ -464,6 +464,19 @@ export class ViewAllSeminar implements OnInit {
     return seminar.endTime ? `${seminar.startTime} - ${seminar.endTime}` : seminar.startTime;
   }
 
+  getProgramLocationLabel(seminar: SeminarItem): string {
+    return (
+      seminar.locationLabel ||
+      [seminar.branchName, seminar.districtName, seminar.stateName].filter(Boolean).join(', ') ||
+      [seminar.venue, seminar.city].filter(Boolean).join(', ') ||
+      'N/A'
+    );
+  }
+
+  getProgramAddress(seminar: SeminarItem): string {
+    return `${seminar.branchAddress || ''}`.trim();
+  }
+
   getTakeaways(seminar: SeminarItem, limit = 3): string[] {
     return (Array.isArray(seminar.takeaways) ? seminar.takeaways : []).slice(0, limit);
   }

@@ -7,7 +7,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../layout/header/header';
 import { FooterComponent } from '../layout/footer/footer';
 import { Subscription } from 'rxjs';
@@ -27,6 +27,8 @@ import { ModalWindowControlsComponent, ModalWindowDirective } from '../shared/mo
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
+    RouterLinkActive,
     RouterOutlet,
     HeaderComponent,
     FooterComponent,
